@@ -69,10 +69,14 @@ scripts/            # Agent rule sync and project scripts
 5. **Visual QA** — desktop (1440), tablet (768), mobile (390); check hover, focus, empty, loading, and error states
 6. **No drive-by refactors** — change only what the task requires; match existing patterns
 
+## Skills
+- **Superpowers = default build/debug workflow** (global OpenCode plugin). Sequence: `brainstorming` → `writing-plans` → `executing-plans` (or `subagent-driven-development`) → `test-driven-development` → `systematic-debugging` (on breakage) → `verification-before-completion` (before any done claim). Don't skip brainstorm → plan for multi-step features.
+- **improve = advisor only** (project skill at `.agents/skills/improve/`, source `shadcn/improve`). Read-only audits and self-contained plans under `plans/`; NEVER edits `src/`.
+
 ## MOST IMPORTANT NOTES
 - When launching agent teams, ALWAYS have each teammate work in their own worktree branch and merge everyone's work at the end, resolving merge conflicts with full orchestrator context.
 - After editing `AGENTS.md`, run `bash scripts/sync-agent-rules.sh` to regenerate platform-specific instruction files.
-- Skills live in `skills/` (and platform skill dirs when added). Do not invent skills unless the user asks.
+- Skills: Superpowers via global OpenCode plugin; project skills in `.agents/skills/`. Do not invent skills unless the user asks.
 - Fill `{{PLACEHOLDER}}` values in docs before starting a real product build.
 
 @docs/conventions.md
