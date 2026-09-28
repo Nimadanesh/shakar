@@ -1,0 +1,22 @@
+# Dependencies
+PWA_app/node_modules/
+
+# Next.js build output
+PWA_app/.next/
+PWA_app/out/
+PWA_app/tsconfig.tsbuildinfo
+
+# Test / coverage output
+PWA_app/coverage/
+
+# Env and secrets (never commit)
+PWA_app/.env*
+
+# Advisor plans land here by convention (improve skill); keep the dir, ignore contents
+# Uncomment if plans/ should stay untracked:
+# PWA_app/plans/
+# PWA_app/advisor-plans/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
