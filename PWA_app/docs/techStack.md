@@ -438,7 +438,7 @@ ESLint + Prettier (as provided by template_2)
 
 
 
-Quality gate: npm run check (lint + typecheck + build)
+Quality gate: npm run check (lint + typecheck + test + build)
 
 
 

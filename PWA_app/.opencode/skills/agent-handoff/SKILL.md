@@ -12,7 +12,7 @@ Use this skill when a task may be continued by another coding-agent session.
 
 ## Rules
 - Keep durable decisions in repository docs, not only in chat.
-- Before finishing a non-trivial task, update the most relevant doc (`docs/project-brief.md`, `docs/design-system.md`, or `docs/specs/*` when present) if behavior or durable decisions changed.
+- Before finishing a non-trivial task, update the most relevant doc (`docs/brief.md`, `docs/designSystem.md`, or `docs/specs/*` when present) if behavior or durable decisions changed.
 - Record important assumptions and unresolved risks.
 - Do not document behavior that does not exist.
 - Keep names, routes, and identifiers consistent with the current codebase; treat legacy or placeholder references as debt unless changing them is safe and explicitly required.

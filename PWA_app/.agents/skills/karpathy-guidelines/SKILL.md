@@ -7,7 +7,7 @@ license: MIT
 # Karpathy Guidelines — Shekar Adaptation
 
 These guidelines bias toward caution over speed. For trivial tasks, use judgment.
-They complement `AGENTS.md`, `docs/conventions.md`, and `docs/workflows.md`; they do not override `docs/project-brief.md`, `docs/design-system.md`, or explicit user instructions.
+They complement `AGENTS.md`, `docs/conventions.md`, and `docs/workflows.md`; they do not override `docs/brief.md`, `docs/designSystem.md`, or explicit user instructions.
 
 ## 1. Think Before Coding
 
@@ -53,7 +53,7 @@ Translate vague implementation requests into observable outcomes.
 Examples:
 - "Add validation" → tests prove invalid inputs are rejected and valid inputs remain accepted.
 - "Fix the bug" → reproduce it with a test, fix it, then verify the regression test.
-- "Redesign this screen" → verify the requested UX outcome plus `docs/design-system.md` requirements and states.
+- "Redesign this screen" → verify the requested UX outcome plus `docs/designSystem.md` requirements and states.
 
 For multi-step work, maintain a short plan:
 1. Step → verification.
@@ -64,8 +64,8 @@ Do not declare success because code merely compiles.
 
 ## Shekar completion gates
 Before declaring a task complete, check:
-- Does it respect `AGENTS.md` and the scope in `docs/project-brief.md`?
-- Does it follow `docs/design-system.md` and tokens in `src/app/globals.css` for UI work?
+- Does it respect `AGENTS.md` and the scope in `docs/brief.md`?
+- Does it follow `docs/designSystem.md` and tokens in `src/app/globals.css` for UI work?
 - Does it follow `docs/conventions.md` (named exports, Server Components by default, `cn()`, Tailwind tokens, mobile-first)?
 - Does it follow `docs/workflows.md` (spec before build, foundation first, build stays green)?
 - Did the change stay within the user's requested scope?

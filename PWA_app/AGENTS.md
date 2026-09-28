@@ -21,7 +21,7 @@ A reusable starter template for designing and building original UI/UX with AI co
 - `npm run build` — Production build
 - `npm run lint` — ESLint check
 - `npm run typecheck` — TypeScript check
-- `npm run check` — Run lint + typecheck + build
+- `npm run check` — Run lint + typecheck + test + build
 
 ## Code Style
 - TypeScript strict mode, no `any`
@@ -34,7 +34,7 @@ A reusable starter template for designing and building original UI/UX with AI co
 - **Beauty-first** — every pixel matters; polish spacing, type, motion, and hierarchy
 - **Spec before build** — write component specs (structure, tokens, states, responsive) before dispatching builders
 - **Small tasks, perfect results** — one focused component per builder; split when a prompt exceeds ~150 lines of spec
-- **Design system as source of truth** — colors, type, spacing, and components live in `docs/design-system.md` and tokens in `globals.css`
+- **Design system as source of truth** — colors, type, spacing, and components live in `docs/designSystem.md` and tokens in `globals.css`
 - **Original work** — design and build from the project brief; do not reverse-engineer or copy third-party sites
 - **Build must always compile** — every builder verifies `npx tsc --noEmit`; after merges, `npm run build` must pass
 
@@ -53,16 +53,24 @@ public/
   videos/           # Project videos
   seo/              # Favicons, OG images, webmanifest
 docs/
-  project-brief.md  # Goals, audience, brand, constraints
-  design-system.md  # Tokens, type, components
-  conventions.md    # Code style and folder patterns
-  workflows.md      # Plan → design → build → review → iterate
+  brief.md        # Goals, audience, brand, constraints
+  requirements.md # Functional + non-functional requirements
+  designSystem.md # Tokens, type, components
+  dataModels.md   # Schema: users, saved searches, favorites
+  userFlow.md     # Key user flows
+  techStack.md    # Stack, backends, deferred decisions
+  roadmap.md      # Phases and milestones
+  pwa.md          # Manifest, offline, performance budgets
+  testing.md      # Test levels, rules, gates
+  integrations.md # divar-mcp + DB + auth boundaries
+  conventions.md  # Code style and folder patterns
+  workflows.md    # Plan → design → build → review → iterate
 skills/             # Agent skills (add later)
 scripts/            # Agent rule sync and project scripts
 ```
 
 ## Agent Behavior
-1. **Read project context first** — `docs/project-brief.md`, `docs/design-system.md`, `docs/conventions.md`, `docs/workflows.md`
+1. **Read project context first** — `docs/brief.md`, `docs/requirements.md`, `docs/designSystem.md`, `docs/conventions.md`, `docs/workflows.md`
 2. **Plan before coding** — confirm goals, pages, and component inventory with the user when scope is unclear
 3. **Foundation first** — tokens, fonts, layout shell, shared primitives before feature sections
 4. **Spec → build → merge** — write specs, dispatch small builder tasks (prefer worktrees for parallel work), merge carefully
@@ -78,7 +86,6 @@ scripts/            # Agent rule sync and project scripts
 - When launching agent teams, ALWAYS have each teammate work in their own worktree branch and merge everyone's work at the end, resolving merge conflicts with full orchestrator context.
 - After editing `AGENTS.md`, run `bash scripts/sync-agent-rules.sh` to regenerate platform-specific instruction files.
 - Skills: Superpowers via global OpenCode plugin; project skills in `.opencode/skills/` and `.agents/skills/`. Do not invent skills unless the user asks.
-- Fill `{{PLACEHOLDER}}` values in docs before starting a real product build.
 
 @docs/conventions.md
 @docs/workflows.md

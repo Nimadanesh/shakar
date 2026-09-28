@@ -12,7 +12,7 @@ Use this skill before non-trivial implementation work.
 
 ## Discovery order
 1. `AGENTS.md`, plus `docs/workflows.md` and `docs/conventions.md`.
-2. `docs/project-brief.md` and `docs/design-system.md` relevant to the task, plus `docs/specs/*` when present.
+2. `docs/brief.md` and `docs/designSystem.md` relevant to the task, plus `docs/specs/*` when present.
 3. `package.json` manifest and scripts.
 4. Target route/page entry point under `src/app/`.
 5. Components, hooks, services, and data boundaries used by the target.

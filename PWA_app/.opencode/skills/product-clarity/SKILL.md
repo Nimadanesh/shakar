@@ -12,7 +12,7 @@ Use this skill whenever a user request is informal, incomplete, or outcome-orien
 
 ## Workflow
 1. Read `AGENTS.md` first (single source of truth).
-2. Read the relevant project docs before making product decisions: `docs/project-brief.md`, `docs/design-system.md`, `docs/conventions.md`, `docs/workflows.md`, plus `docs/specs/*` when present.
+2. Read the relevant project docs before making product decisions: `docs/brief.md`, `docs/designSystem.md`, `docs/conventions.md`, `docs/workflows.md`, plus `docs/specs/*` when present.
 3. Inspect the existing implementation before proposing a change.
 4. Derive **Intent**, **Scope**, **Acceptance**, and **Risks**.
 5. If repository context supports one low-risk interpretation, state the assumption briefly and proceed.
@@ -20,7 +20,7 @@ Use this skill whenever a user request is informal, incomplete, or outcome-orien
 7. Never ask the user to restate information already present in repository docs.
 
 ## Intent translation
-- "make this more premium" → inspect hierarchy, spacing, typography, states, interaction quality, and `docs/design-system.md` before changing visuals.
+- "make this more premium" → inspect hierarchy, spacing, typography, states, interaction quality, and `docs/designSystem.md` before changing visuals.
 - "make this easier" → identify actual friction in the flow and reduce steps or cognitive load.
 - "fix this page" → inspect the whole affected flow, fix the highest-impact defects, and avoid unrelated redesign.
 - "make it production ready" → validate behavior, states, responsive UX, accessibility basics, error handling, and `npm run check`.
