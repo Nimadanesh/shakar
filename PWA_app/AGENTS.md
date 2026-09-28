@@ -72,11 +72,12 @@ scripts/            # Agent rule sync and project scripts
 ## Skills
 - **Superpowers = default build/debug workflow** (global OpenCode plugin). Sequence: `brainstorming` → `writing-plans` → `executing-plans` (or `subagent-driven-development`) → `test-driven-development` → `systematic-debugging` (on breakage) → `verification-before-completion` (before any done claim). Don't skip brainstorm → plan for multi-step features.
 - **improve = advisor only** (project skill at `.agents/skills/improve/`, source `shadcn/improve`). Read-only audits and self-contained plans under `plans/`; NEVER edits `src/`.
+- **Workflow skills** (project skills, autoinvoke): `.opencode/skills/product-clarity` (ground informal requests into intent/scope/acceptance), `.opencode/skills/repo-intelligence` (discovery before non-trivial work), `.opencode/skills/release-readiness` (done-gate before release), `.opencode/skills/agent-handoff` (handoff between sessions), `.agents/skills/karpathy-guidelines` (simplicity-first, surgical diffs, verify success criteria).
 
 ## MOST IMPORTANT NOTES
 - When launching agent teams, ALWAYS have each teammate work in their own worktree branch and merge everyone's work at the end, resolving merge conflicts with full orchestrator context.
 - After editing `AGENTS.md`, run `bash scripts/sync-agent-rules.sh` to regenerate platform-specific instruction files.
-- Skills: Superpowers via global OpenCode plugin; project skills in `.agents/skills/`. Do not invent skills unless the user asks.
+- Skills: Superpowers via global OpenCode plugin; project skills in `.opencode/skills/` and `.agents/skills/`. Do not invent skills unless the user asks.
 - Fill `{{PLACEHOLDER}}` values in docs before starting a real product build.
 
 @docs/conventions.md
