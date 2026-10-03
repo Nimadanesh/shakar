@@ -1,0 +1,168 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "name": "Shakar Design Tokens V2",
+  "version": "2.0",
+  "color": {
+    "brand": {
+      "100": "#E9E7FF",
+      "400": "#8174FF",
+      "500": "#6D5EF5",
+      "600": "#5B4CE0",
+      "900": "#211D50"
+    },
+    "signal": {
+      "400": "#4AD8C5",
+      "500": "#27C7B0",
+      "600": "#159F8D",
+      "100-dark": "#123A36",
+      "100-light": "#DDF7F2"
+    },
+    "warning": {
+      "500-dark": "#F2B84B",
+      "500-light": "#B97900"
+    },
+    "danger": {
+      "500-dark": "#F06A7A",
+      "500-light": "#C9364D"
+    },
+    "semantic-dark": {
+      "surface-page": "#0A0F15",
+      "surface-base": "#111821",
+      "surface-raised": "#1B232D",
+      "surface-overlay": "#222C38",
+      "text-primary": "#F5F7FA",
+      "text-secondary": "#CBD3DE",
+      "text-muted": "#AAB5C3",
+      "text-disabled": "#5C6877",
+      "border-subtle": "#1E2731",
+      "border-default": "#2A333E",
+      "border-strong": "#3E4855",
+      "action-primary": "#6D5EF5",
+      "signal": "#27C7B0",
+      "warning": "#F2B84B",
+      "danger": "#F06A7A",
+      "focus-ring": "#8174FF"
+    },
+    "semantic-light": {
+      "surface-page": "#F7F9FC",
+      "surface-base": "#FFFFFF",
+      "surface-raised": "#FFFFFF",
+      "surface-overlay": "#FFFFFF",
+      "text-primary": "#111821",
+      "text-secondary": "#3E4855",
+      "text-muted": "#5C6877",
+      "text-disabled": "#AAB5C3",
+      "border-subtle": "#E8ECF2",
+      "border-default": "#CBD3DE",
+      "border-strong": "#AAB5C3",
+      "action-primary": "#5B4DE8",
+      "signal": "#159F8D",
+      "warning": "#B97900",
+      "danger": "#C9364D",
+      "focus-ring": "#5B4DE8"
+    }
+  },
+  "typography": {
+    "font-family": [
+      "Vazirmatn",
+      "Inter",
+      "ui-sans-serif",
+      "system-ui",
+      "sans-serif"
+    ],
+    "display-lg": {
+      "size": "40px",
+      "lineHeight": 1.12,
+      "weight": 600
+    },
+    "display-md": {
+      "size": "32px",
+      "lineHeight": 1.15,
+      "weight": 600
+    },
+    "heading-xl": {
+      "size": "24px",
+      "lineHeight": 1.25,
+      "weight": 600
+    },
+    "heading-lg": {
+      "size": "20px",
+      "lineHeight": 1.35,
+      "weight": 600
+    },
+    "heading-md": {
+      "size": "18px",
+      "lineHeight": 1.4,
+      "weight": 600
+    },
+    "body-lg": {
+      "size": "16px",
+      "lineHeight": 1.55,
+      "weight": 400
+    },
+    "body-md": {
+      "size": "15px",
+      "lineHeight": 1.55,
+      "weight": 400
+    },
+    "body-sm": {
+      "size": "14px",
+      "lineHeight": 1.5,
+      "weight": 400
+    },
+    "label-md": {
+      "size": "13px",
+      "lineHeight": 1.4,
+      "weight": 500
+    },
+    "label-sm": {
+      "size": "12px",
+      "lineHeight": 1.35,
+      "weight": 500
+    },
+    "caption": {
+      "size": "11px",
+      "lineHeight": 1.35,
+      "weight": 400
+    }
+  },
+  "spacing": {
+    "0": "0px",
+    "1": "2px",
+    "2": "4px",
+    "3": "8px",
+    "4": "12px",
+    "5": "16px",
+    "6": "20px",
+    "7": "24px",
+    "8": "32px",
+    "9": "40px",
+    "10": "48px",
+    "11": "64px",
+    "12": "80px",
+    "13": "96px"
+  },
+  "radius": {
+    "none": "0px",
+    "sm": "4px",
+    "md": "8px",
+    "lg": "12px",
+    "xl": "16px",
+    "2xl": "20px",
+    "pill": "9999px"
+  },
+  "motion": {
+    "micro": {
+      "duration": "150ms",
+      "easing": "cubic-bezier(0.23,1,0.32,1)"
+    },
+    "standard": {
+      "duration": "200ms",
+      "easing": "cubic-bezier(0.23,1,0.32,1)"
+    },
+    "complex": {
+      "duration": "250ms",
+      "easing": "cubic-bezier(0.23,1,0.32,1)"
+    }
+  }
+}
