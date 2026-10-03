@@ -1,0 +1,10 @@
+export default function ProfilePage() {
+  return (
+    <main className="flex flex-1 flex-col gap-2 py-6">
+      <h1 className="text-xl font-bold leading-8">پروفایل</h1>
+      <p className="text-sm leading-6 text-muted-foreground">
+        حساب، وضعیت اشتراک و تنظیمات اینجا می‌آید (P1).
+      </p>
+    </main>
+  );
+}

@@ -22,15 +22,15 @@ Phase 0 — Foundation (Current)
 
 
 
-[ ] Project scaffolding from template_2
+[x] Project scaffolding from template_2
 
 
 
-[ ] Design system tokens implemented in globals.css / Tailwind
+[x] Design system tokens implemented in globals.css / Tailwind
 
 
 
-[ ] Root layout: RTL + Vazirmatn + dark theme
+[x] Root layout: RTL + Vazirmatn + dark theme
 
 Phase 1 — MVP (Core Value)
 

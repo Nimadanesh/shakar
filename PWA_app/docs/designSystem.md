@@ -85,25 +85,29 @@ Spacing & Layout
 
 
 
-Base unit: 4px
+Spacing & Layout (8pt grid — law, not suggestion)
 
+Base unit: 4px. Every margin, padding, gap, size, and radius comes from this scale:
 
+Scale: 4 · 8 · 12 · 16 · 20 · 24 · 32 · 48
 
-Scale: 4, 8, 12, 16, 20, 24, 32, 48
+Odd values (5, 7, 10, 13, 15…) are forbidden — if it is not on the scale, it does not ship.
 
+Hierarchy rules (vertical rhythm inside a form/card):
+- Label → field: 8px (`gap-2` / `space-y-2`)
+- Related fields (include ↔ exclude): 12–16px
+- Unrelated groups (filters ↔ actions): 20–24px
+- Card internal padding: 16px mobile (`p-4`), 20px tablet+
+- Page gutters: 16px (`px-4`); section rhythm 16–24px
+- Touch targets: min 44px height for inputs/selects/buttons (`h-11`); icon-only buttons 40px (`size-10`)
+- Icon spacing: icon-to-container-edge ≥ 12px; icon-to-text 8px (`gap-2`); trailing select chevron sits 16px from the edge with the text padded away from it (`pe-12`)
 
+Radius nesting rule (researched):
+- Inner radius is ALWAYS smaller than its container: step down one scale level (outer 20 → inner ≤ 12–14; outer 24 → inner ≤ 14–16). Equal radii stacked create ugly "tunnels".
+- Never nest deeper than 2 levels (page → container → field; no field-inside-field-inside-card).
+- Prefer flattening over nesting: separate elements with space, not boxes inside boxes.
 
 Content max-width: full-width on mobile; constrained on larger screens only if needed
-
-
-
-Page padding: 16px horizontal
-
-
-
-Section vertical rhythm: 16–24px
-
-
 
 Grid: Mobile-first single column; card lists stack vertically. No complex multi-column grids required for MVP.
 
@@ -111,12 +115,14 @@ Radius, Shadow, Motion
 
 | Token           | Value                 | Usage                  |
 | --------------- | --------------------- | ---------------------- |
-| Radius          | 8px–12px (cards), 6px–8px (buttons/inputs) | buttons, cards, inputs, badges |
-| Shadow sm/md/lg | subtle dark shadows only | elevation (use sparingly) |
+| Radius          | 16–20px cards, 999px pills/floating bars, 10–14px inputs/buttons | cards, pills, floating chrome, inputs |
+| Shadow          | floating chrome only: soft large shadow + 1px top highlight | floating header / tab bar |
+| Elevation       | glass: semi-transparent surface + blur + hairline border | floating bars |
 | Motion duration | 150–250 ms            | default transitions    |
 | Motion easing   | ease-out / standard   | default easing         |
 
 Motion principles: Subtle only. Respect prefers-reduced-motion. No large decorative animations.
+Floating chrome enters with translateY(8px) + fade, 200ms ease-out — content scrolls underneath, never shifts layout.
 
 Breakpoints
 
@@ -133,15 +139,17 @@ Iconography
 
 
 
-Library: Lucide React (default)
+Library: Lucide React (default). Monochrome only — every icon inherits `currentColor`, single tone. No multi-color decorative icons in forms or inputs.
 
 
 
-Default size: 20px (actions), 24px (tab icons)
+Default size: 18–20px (actions/inputs), 22–24px (tab icons), 14–16px (inline hints/chips)
 
 
 
 Stroke: match shadcn / Lucide defaults (usually 2)
+
+Keyword entry pattern: chip/tag input, never a bare text field. Typing + Enter/comma commits a chip; each chip shows the exact term + an X remove button; Backspace on empty input removes the last chip. One term per chip — separators (space, half-space/ZWNJ) never split or confuse. No helper copy about keyboards; the interaction teaches itself.
 
 Components
 
@@ -205,7 +213,7 @@ Navigation
 
 
 
-Pattern: Bottom tab bar (primary on mobile)
+Pattern: Floating glass pill tab bar (primary on mobile, content scrolls underneath)
 
 
 
@@ -213,11 +221,11 @@ Tabs: آگهی‌ها | شکار من | کشف بازار | پروفایل
 
 
 
-Mobile behavior: fixed bottom, safe-area aware, active tab in primary color
+Mobile behavior: fixed bottom with 16px side margins + safe-area bottom margin, rounded-full pill, glass surface (semi-transparent + backdrop-blur-xl + hairline border + soft shadow). Active tab gets a tinted pill (`bg-primary/15`, primary icon + label); inactive tabs show muted icon + label.
 
 
 
-Header: elevated surface, logo “شکار” in primary, search trigger
+Header: ONE floating search pill — no avatar, no bell (profile/notifications live in the tab bar). Tapping it smooth-scrolls to and focuses the main query field. The card query input is the single place where searching happens; the header pill is a shortcut to it, never a second search box. Same glass tokens as the tab bar; sticky with 12px top offset.
 
 Feedback
 
