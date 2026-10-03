@@ -234,24 +234,78 @@ For prices, counts and comparison-heavy numeric UI, use tabular numerals when su
 
 ## 11. Spacing
 
-Base unit: 4px.
+Shakar follows an **8px primary rhythm** for page-level composition, with **4px micro-spacing** available inside controls. This preserves the spacious/editorial discipline of the reference while remaining practical for a dense professional search product.
 
-Canonical scale:
-0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96.
+### Canonical spacing tokens
 
-Common rules:
-- icon to text: 8px
-- label to field: 8px
-- related controls: 12px
-- card padding mobile: 16px
-- card padding desktop: 20px
-- related groups: 16–24px
-- section separation: 24–32px
-- major page separation: 40–64px
-- page gutter mobile: 16px
-- page gutter desktop: 24–32px
+| Token | Value | Primary use |
+|---|---:|---|
+| space-1 | 4px | icon/text micro-gap, tight internal adjustment |
+| space-2 | 8px | label→field, icon→text, chip internals |
+| space-3 | 12px | related controls, compact card groups |
+| space-4 | 16px | standard mobile gap, card padding, control groups |
+| space-5 | 24px | section internals, desktop card padding |
+| space-6 | 32px | major internal separation |
+| space-7 | 48px | mobile section separation / large group |
+| space-8 | 64px | desktop section separation |
+| space-9 | 80px | major editorial separation |
+| space-10 | 120px | rare large desktop separation |
 
-Avoid arbitrary values unless a platform constraint requires them.
+### Mobile spacing rules — 360–480px
+
+Mobile is **not** a shrunken desktop. It uses a deliberate compact rhythm so professional users can scan more without feeling cramped.
+
+- page gutter: **16px**
+- minimum safe content width: 328px at 360px viewport
+- section-to-section: **32px**, increasing to **48px** only for true major transitions
+- heading→supporting copy: **8–12px**
+- field/control groups: **12px**
+- label→field: **8px**
+- chip rows/groups: **8–12px**
+- card internal padding: **16px**
+- result-to-result gap: **12px**
+- primary CTA group: **12px**
+- bottom-nav clearance: **at least 16px + safe-area inset**
+- floating controls from viewport edge: **16px + safe-area inset**
+
+### Desktop spacing rules — 768px+
+
+- page gutter: **24–32px**
+- section-to-section: **48–64px**
+- major section transition: **80px**; 120px only when composition genuinely benefits
+- card padding: **20–24px**
+- result-to-result gap: **16px**
+- content measure should remain readable; extra width becomes whitespace, not extra UI chrome
+
+### Spacing hierarchy
+
+Use spacing to communicate grouping:
+
+1. **4–8px** = belongs together
+2. **12–16px** = related items
+3. **24–32px** = separate groups
+4. **48–64px** = separate sections
+5. **80–120px** = major editorial transition
+
+Do not create extra cards or dividers when spacing can establish the hierarchy.
+
+### Mobile anti-drift rules
+
+- Do not mix 16px, 18px, 20px, 22px and 24px gaps for equivalent relationships.
+- Equivalent relationships must use the same token.
+- Prefer 8/12/16/24/32/48 over one-off values.
+- A component may use a smaller internal token than its parent, but should not invent a new rhythm.
+- Vertical rhythm is more important than decorative symmetry.
+- Never compensate for a weak hierarchy by adding extra padding.
+
+### Density rule
+
+Shakar has:
+- **low density** between major sections
+- **medium density** inside the search workspace
+- **high information density only where it improves result scanning**
+
+The result list may be information-dense, but page chrome should remain quiet.
 
 ## 12. Layout
 
