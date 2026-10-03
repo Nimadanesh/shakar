@@ -1650,7 +1650,7 @@ The experience is correct when:
 12. no subscription economics are hard-coded into V1.
 
 
-# 42. Performance Perception
+# 27. Performance Perception
 
 The interface should feel fast even when retrieval is not instant.
 
@@ -1686,7 +1686,7 @@ Repeated scanning must not create:
 
 ---
 
-# 42. Mobile UX
+# 28. Mobile UX
 
 ## 27.1 360–390px
 
@@ -1730,7 +1730,7 @@ Respect safe-area insets.
 
 ---
 
-# 42. Desktop UX
+# 29. Desktop UX
 
 At 1280–1440px:
 
@@ -1751,7 +1751,7 @@ Desktop may be wider, but the product logic remains the same.
 
 ---
 
-# 42. Accessibility
+# 30. Accessibility
 
 ## 29.1 Keyboard
 
@@ -1793,7 +1793,7 @@ Do not announce the entire result list.
 
 ---
 
-# 42. Motion
+# 31. Motion
 
 Motion communicates state, not personality.
 
@@ -1818,7 +1818,7 @@ Respect reduced-motion preferences.
 
 ---
 
-# 42. Copy
+# 32. Copy
 
 Voice:
 
@@ -1858,7 +1858,7 @@ The product is a tool, not a campaign.
 
 ---
 
-# 42. Truthfulness Rules
+# 33. Truthfulness Rules
 
 Never invent:
 
@@ -1883,7 +1883,7 @@ Never use fake production-looking listings to fill empty states.
 
 ---
 
-# 42. AI Boundary
+# 34. AI Boundary
 
 AI helps compress intent into structured search.
 
@@ -1921,7 +1921,7 @@ AI is additive, not a single point of failure.
 
 ---
 
-# 42. Component Contract
+# 35. Component Contract
 
 Prefer reuse of:
 
@@ -1957,7 +1957,7 @@ Variants are justified only by genuine context differences such as compact, mobi
 
 ---
 
-# 42. Data / Engineering Boundary
+# 36. Data / Engineering Boundary
 
 This document defines product behavior, not permission to replace repository architecture.
 
@@ -1983,7 +1983,7 @@ Do not:
 
 ---
 
-# 42. Responsive Acceptance Matrix
+# 37. Responsive Acceptance Matrix
 
 | Capability | 360px | 390px | 480px | 768px | 1280px+ |
 |---|---|---|---|---|---|
@@ -1997,7 +1997,7 @@ Do not:
 
 ---
 
-# 42. Visual QA
+# 38. Visual QA
 
 The Agent must inspect rendered UI, not only code.
 
@@ -2045,7 +2045,7 @@ Verify:
 
 ---
 
-# 42. UX Self-QA Before PASS
+# 39. UX Self-QA Before PASS
 
 The Agent must answer these from the user's perspective.
 
@@ -2094,7 +2094,7 @@ A clearly negative answer means the Agent must fix the issue before PASS.
 
 ---
 
-# 42. First Implementation Slice
+# 40. First Implementation Slice
 
 The first coding slice derived from this document should establish the core workspace experience.
 
@@ -2127,7 +2127,7 @@ Do not use this slice to invent:
 
 ---
 
-# 42. Recommended Implementation Sequence
+# 41. Recommended Implementation Sequence
 
 ~~~text
 1. Read source-of-truth docs
