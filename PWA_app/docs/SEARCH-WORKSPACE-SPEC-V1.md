@@ -38,7 +38,7 @@ TRIAGE
  ↓
 VERIFY
  ↓
-SAVE / MONITOR
+SAVE / MONITOR / RADAR
 ~~~
 
 Search Workspace owns SEARCH → PRECISION → TRIAGE.
@@ -46,6 +46,8 @@ Search Workspace owns SEARCH → PRECISION → TRIAGE.
 The detail page owns VERIFY.
 
 My Shakar owns SAVE / MONITOR.
+
+Radar is an active monitoring layer over a canonical search. It is created from Search Workspace and managed from My Shakar; it is not a separate search destination.
 
 The user should experience these as one continuous hunt.
 
@@ -147,6 +149,7 @@ priceMax
 extraFilters
 sort
 result position/context
+radar state/context (when active)
 ~~~
 
 The actual repository type is authoritative for implementation. This conceptual contract must not be duplicated into incompatible state models.
@@ -161,7 +164,8 @@ The same semantic search must be understood consistently by:
 - result explanation;
 - saved search;
 - auth resume;
-- detail back-navigation.
+- detail back-navigation;
+- Radar activation and monitoring.
 
 ---
 
@@ -1243,7 +1247,410 @@ The user must not return to an empty home state.
 
 ---
 
-# 26. Performance Perception
+
+---
+
+# 26. Radar — Active Hunt Layer
+
+Radar extends the current hunt from **what exists now** to **what appears next**.
+
+Core mental model:
+
+~~~text
+Search = الان چی پیدا شده؟
+Radar = از این به بعد چی پیدا بشه؟
+~~~
+
+Radar is not a separate page, a second search system, or a chatbot.
+
+It is a persistent monitoring layer on top of the same canonical Search Context used by Search Workspace.
+
+## 26.1 Canonical use case
+
+Example:
+
+~~~text
+1. User searches:
+   «پیانو اکوستیک یاماها U3 تهران زیر ۲۰۰ میلیون»
+
+2. Search returns:
+   ۰ نتیجه
+
+3. Workspace offers:
+   «می‌خواهی شکار را ادامه بدهم؟»
+   [فعال کردن رادار]
+
+4. Radar becomes active.
+
+5. A new listing later matches the same canonical search semantics.
+
+6. Shakar surfaces the new match through the supported notification/in-app mechanism.
+~~~
+
+The important promise is continuity:
+
+> «لازم نیست فردا دوباره همین جستجو را انجام بدهم.»
+
+## 26.2 Why Radar belongs in Search Workspace
+
+Radar is a natural continuation of professional search behavior.
+
+Do not force this flow:
+
+~~~text
+Search
+ ↓
+No results
+ ↓
+My Shakar
+ ↓
+Saved Searches
+ ↓
+Find the search
+ ↓
+Turn on monitoring
+~~~
+
+Preferred:
+
+~~~text
+Search
+ ↓
+No results
+ ↓
+Activate Radar
+~~~
+
+The user should be able to continue the hunt at the moment they realize that waiting is useful.
+
+## 26.3 Activation entry points
+
+### Zero results
+
+Primary opportunity:
+
+> «با این شرایط نتیجه‌ای پیدا نشد.»
+
+Then, when monitoring is supported:
+
+> «می‌خواهی شکار را ادامه بدهم؟»
+
+Action:
+
+> **فعال کردن رادار**
+
+This action must use the exact current canonical Search Context.
+
+### Results exist
+
+Radar may be offered as a secondary action after a meaningful search:
+
+> **فعال کردن رادار برای این جستجو**
+
+It must not compete visually with the primary result-scanning flow.
+
+## 26.4 Active state
+
+After activation, communicate clearly but quietly:
+
+> **رادار فعاله**
+
+Supporting copy:
+
+> «اگر آگهی جدیدی مطابق این جستجو پیدا بشه، بهت خبر می‌دیم.»
+
+The UI must not promise a notification channel, frequency, speed, or matching quality that the current backend does not actually support.
+
+## 26.5 Radar states
+
+The conceptual product states are:
+
+~~~text
+OFF
+ACTIVE
+PAUSED
+~~~
+
+An implementation may have additional technical states such as error or provisioning, but those must not be exposed as product states unless the backend and UX define their meaning.
+
+### OFF
+
+No active monitoring exists.
+
+### ACTIVE
+
+The canonical search context is being monitored for future matching listings.
+
+### PAUSED
+
+The Radar configuration remains available, but active monitoring is temporarily disabled.
+
+Pause/resume must preserve the monitored Search Context.
+
+## 26.6 What exactly does Radar monitor?
+
+Radar monitors the **canonical Search Context**, not merely the raw query string.
+
+That means the monitoring definition may include:
+
+~~~text
+query
+includeKeywords[]
+excludeKeywords[]
+category
+city
+neighborhood
+priceMin
+priceMax
+extraFilters
+~~~
+
+The exact persisted schema belongs to the actual repository/data model.
+
+Critical rule:
+
+> A Radar must not silently relax or change explicit search constraints.
+
+If the user activated Radar for:
+
+~~~text
+query: پیانو اکوستیک یاماها U3
+city: تهران
+priceMax: 200000000
+exclude: دیجیتال, طرح اکوستیک
+~~~
+
+the future matching process must use the same supported semantics.
+
+## 26.7 Search changes after Radar activation
+
+A Radar is a snapshot of the search meaning at the time it was activated unless the user explicitly updates it.
+
+If the user changes the current Search Workspace afterward, do **not** silently mutate the active Radar.
+
+Example:
+
+~~~text
+Current Radar:
+تهران · تا ۲۰۰ میلیون · U3
+
+User changes current search:
+تا ۲۵۰ میلیون
+~~~
+
+The Radar should remain attached to its previous context until the user explicitly chooses an update action.
+
+A future implementation may expose:
+
+> «رادار فعلی با این جستجو فرق داره.»
+
+with an explicit action such as:
+
+> «به‌روزرسانی رادار»
+
+The exact interaction can be refined during implementation, but silent mutation is forbidden.
+
+## 26.8 Search Context identity
+
+Two searches are equivalent for Radar purposes only when their effective canonical search semantics are equivalent.
+
+Do not deduplicate Radars using raw query text alone.
+
+For example:
+
+~~~text
+«پیانو یاماها تهران»
+~~~
+
+and:
+
+~~~text
+«پیانو یاماها»
+city = تهران
+~~~
+
+may be semantically equivalent if the canonical model says so.
+
+The implementation should use the canonical search representation rather than ad-hoc string comparison.
+
+## 26.9 New match behavior
+
+When a future listing matches an active Radar:
+
+1. verify the listing against the same supported search semantics;
+2. deduplicate by stable listing identity where available;
+3. surface only real listings;
+4. preserve evidence provenance;
+5. reuse the same result/card semantics as normal search;
+6. allow the user to open the listing and continue into VERIFY;
+7. do not fabricate match scores, reasons, counts, or notification metadata.
+
+A Radar match should feel like:
+
+~~~text
+Radar
+ ↓
+New matching listing
+ ↓
+Triage
+ ↓
+Verify
+~~~
+
+not like a separate content type that requires learning a new interface.
+
+## 26.10 Duplicate prevention
+
+The same listing must not repeatedly appear as a new Radar match merely because the monitoring job ran again.
+
+Deduplication should use a stable listing ID when the source provides one.
+
+If stable identity is unavailable, the implementation must define a documented fallback; never pretend that two visually similar listings are definitely different listings.
+
+## 26.11 Missing / changed listings
+
+A listing that was previously surfaced may later disappear, become unavailable, or change.
+
+Radar must not imply that a previously seen listing is still available unless the backend actually confirms current availability.
+
+If a monitoring result becomes stale, the UI should use the same truthfulness rules as normal search/detail.
+
+## 26.12 Auth interruption
+
+If Radar activation requires authentication:
+
+~~~text
+Activate Radar
+ ↓
+Auth
+ ↓
+Resume Radar activation
+~~~
+
+The exact Search Context must survive the interruption.
+
+Do not send the user back to an empty Search Workspace or ask them to reconstruct the search.
+
+## 26.13 Relationship to Saved Search
+
+Saved Search and Radar are related but not identical:
+
+| Concept | Purpose |
+|---|---|
+| Saved Search | Remember this search so I can run it again |
+| Radar | Actively monitor this search for future matching listings |
+
+A Radar may be represented internally as a monitoring configuration associated with a saved search/context, but the product must preserve the conceptual distinction.
+
+Do not create two competing search-context models.
+
+## 26.14 Relationship to My Shakar
+
+Search Workspace is where a Radar is naturally created.
+
+My Shakar is where active monitoring can later be managed:
+
+~~~text
+My Shakar
+├── Saved Searches
+└── Active Radars
+~~~
+
+The exact information architecture can be refined later.
+
+Management should eventually support, where actually implemented:
+
+- view monitored search summary;
+- open the underlying search;
+- pause;
+- resume;
+- deactivate/delete;
+- see meaningful recent matches;
+- understand current state.
+
+Do not expose controls whose backend behavior does not exist.
+
+## 26.15 Notification semantics
+
+Notification is a delivery mechanism, not the definition of Radar.
+
+Radar may eventually surface a match through:
+
+- in-app indication;
+- notification;
+- another supported channel.
+
+The current UX contract must not promise:
+
+- instant notification;
+- a specific delivery channel;
+- a specific monitoring interval;
+- guaranteed processing priority;
+- guaranteed match completeness.
+
+Those are backend/product capabilities to be defined when implemented.
+
+## 26.16 Future subscription extension
+
+Radar is intentionally designed as a future monetization extension point.
+
+Possible future subscription dimensions include:
+
+- maximum active Radars;
+- monitoring frequency;
+- processing priority;
+- notification priority/speed;
+- monitoring history;
+- advanced matching capabilities.
+
+These are **future capability dimensions, not V1 pricing decisions**.
+
+Do not add:
+
+- tier prices;
+- paywalls;
+- quotas;
+- priority labels;
+- monetization copy;
+
+to the current Search Workspace implementation unless separately approved.
+
+## 26.17 Radar UX principles
+
+Radar must:
+
+- feel like continuing the current hunt;
+- use the same Search Context;
+- preserve explicit constraints;
+- avoid a new mental model;
+- remain secondary to active result scanning;
+- make active state understandable;
+- never silently mutate;
+- avoid fake monitoring;
+- avoid fake notifications;
+- avoid fake match counts;
+- avoid duplicate matches;
+- preserve auth continuity.
+
+## 26.18 Radar acceptance criteria
+
+The experience is correct when:
+
+1. a user can activate Radar directly from a meaningful search where supported;
+2. zero results can naturally lead to Radar activation;
+3. activation preserves the exact canonical Search Context;
+4. active state is visible;
+5. current search edits do not silently mutate the Radar;
+6. future matches use the same supported search semantics;
+7. duplicate future matches are prevented;
+8. Radar matches reuse normal triage/detail behavior;
+9. auth interruption can resume activation where auth is required;
+10. My Shakar can be the management surface where implemented;
+11. unsupported notification/monitoring promises are absent;
+12. no subscription economics are hard-coded into V1.
+
+
+# 42. Performance Perception
 
 The interface should feel fast even when retrieval is not instant.
 
@@ -1279,7 +1686,7 @@ Repeated scanning must not create:
 
 ---
 
-# 27. Mobile UX
+# 42. Mobile UX
 
 ## 27.1 360–390px
 
@@ -1323,7 +1730,7 @@ Respect safe-area insets.
 
 ---
 
-# 28. Desktop UX
+# 42. Desktop UX
 
 At 1280–1440px:
 
@@ -1344,7 +1751,7 @@ Desktop may be wider, but the product logic remains the same.
 
 ---
 
-# 29. Accessibility
+# 42. Accessibility
 
 ## 29.1 Keyboard
 
@@ -1386,7 +1793,7 @@ Do not announce the entire result list.
 
 ---
 
-# 30. Motion
+# 42. Motion
 
 Motion communicates state, not personality.
 
@@ -1411,7 +1818,7 @@ Respect reduced-motion preferences.
 
 ---
 
-# 31. Copy
+# 42. Copy
 
 Voice:
 
@@ -1451,7 +1858,7 @@ The product is a tool, not a campaign.
 
 ---
 
-# 32. Truthfulness Rules
+# 42. Truthfulness Rules
 
 Never invent:
 
@@ -1476,7 +1883,7 @@ Never use fake production-looking listings to fill empty states.
 
 ---
 
-# 33. AI Boundary
+# 42. AI Boundary
 
 AI helps compress intent into structured search.
 
@@ -1514,7 +1921,7 @@ AI is additive, not a single point of failure.
 
 ---
 
-# 34. Component Contract
+# 42. Component Contract
 
 Prefer reuse of:
 
@@ -1550,7 +1957,7 @@ Variants are justified only by genuine context differences such as compact, mobi
 
 ---
 
-# 35. Data / Engineering Boundary
+# 42. Data / Engineering Boundary
 
 This document defines product behavior, not permission to replace repository architecture.
 
@@ -1576,7 +1983,7 @@ Do not:
 
 ---
 
-# 36. Responsive Acceptance Matrix
+# 42. Responsive Acceptance Matrix
 
 | Capability | 360px | 390px | 480px | 768px | 1280px+ |
 |---|---|---|---|---|---|
@@ -1590,7 +1997,7 @@ Do not:
 
 ---
 
-# 37. Visual QA
+# 42. Visual QA
 
 The Agent must inspect rendered UI, not only code.
 
@@ -1638,7 +2045,7 @@ Verify:
 
 ---
 
-# 38. UX Self-QA Before PASS
+# 42. UX Self-QA Before PASS
 
 The Agent must answer these from the user's perspective.
 
@@ -1687,7 +2094,7 @@ A clearly negative answer means the Agent must fix the issue before PASS.
 
 ---
 
-# 39. First Implementation Slice
+# 42. First Implementation Slice
 
 The first coding slice derived from this document should establish the core workspace experience.
 
@@ -1704,7 +2111,8 @@ Priority order:
 9. loading/empty/error states;
 10. responsive behavior;
 11. accessibility;
-12. search/detail continuity.
+12. search/detail continuity;
+13. Radar activation/continuity where supported.
 
 Do not use this slice to invent:
 
@@ -1714,11 +2122,12 @@ Do not use this slice to invent:
 - unsupported filters;
 - fake live data;
 - fake monitoring;
+- fake Radar matches;
 - fake result counts.
 
 ---
 
-# 40. Recommended Implementation Sequence
+# 42. Recommended Implementation Sequence
 
 ~~~text
 1. Read source-of-truth docs
@@ -1745,20 +2154,22 @@ Do not use this slice to invent:
         ↓
 12. Verify back/context preservation
         ↓
-13. Full RTL/mobile/accessibility QA
+13. Establish Radar activation/state contract where supported
         ↓
-14. Fix all discovered UX issues
+14. Full RTL/mobile/accessibility QA
         ↓
-15. Typecheck/build/tests
+15. Fix all discovered UX issues
         ↓
-16. Visual self-QA
+16. Typecheck/build/tests
         ↓
-17. PASS only after all applicable checks pass
+17. Visual self-QA
+        ↓
+18. PASS only after all applicable checks pass
 ~~~
 
 ---
 
-# 41. Definition of Done
+# 42. Definition of Done
 
 Search Workspace is complete only when:
 
