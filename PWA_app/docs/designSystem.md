@@ -1,345 +1,563 @@
-Design System
+# Shakar Design System V2
 
+Status: Foundation / pre-UI-design
+Version: 2.0
+Direction: Signal-driven professional search workspace
 
+This document is the visual source of truth for Shakar before page-level UI design begins.
 
-Shekar design tokens and component rules. Implement tokens in src/app/globals.css (CSS variables / Tailwind v4 @theme).
+## 1. Design intent
 
-Brand Summary
+Shakar is a professional hunting instrument for people who repeatedly search high-volume marketplaces.
 
+The visual language must communicate precision, speed, signal over noise, confidence without arrogance, calm under dense information, modern product quality, and long-session comfort.
 
+Brand idea:
 
+**Hunt · Signal · Precision**
 
+The interface should feel closer to a precision instrument than a social feed or marketplace clone.
 
-Direction: Professional dark theme, familiar to Divar users but cleaner and more modern. High contrast for long sessions. Mobile-first PWA, fully RTL.
+We borrow the discipline of mature design systems, not another company's appearance: token-first implementation, semantic color roles, restrained palette, deliberate typography hierarchy, consistent spacing, predictable component states, accessibility, reusable primitives, and separation of raw values from semantic meaning.
 
+Stripe's public design-language study is a useful methodology reference for palette, typography, spacing/layout and motion. Shakar must remain visually independent.
 
+What Shakar must NOT become:
+- a copy of Divar
+- a copy of Stripe
+- a generic blue SaaS dashboard
+- a neon AI product
+- a glassmorphism showcase
+- a card-heavy analytics dashboard
+- a marketing landing page
 
-Light / dark: dark only
+## 2. Brand DNA
 
+Personality:
+- Professional: high
+- Calm: high
+- Precise: very high
+- Energetic: controlled
+- Luxurious: subtle
+- Playful: low
+- Technical: medium
+- Trustworthy: very high
 
+Visual principles:
+1. Signal earns color. Color is not decoration.
+2. Information before decoration.
+3. Contrast creates hierarchy.
+4. Quiet surfaces.
+5. No visual shouting.
+6. Brand is cumulative: typography + spacing + surfaces + signal color + geometry + evidence-first UI.
 
-Density: compact (power-user product; readable but space-efficient)
+## 3. Theme architecture
 
-Color
+Shakar supports Dark and Light from the same semantic token system.
 
-Map brand colors to semantic tokens. Prefer oklch when convenient; hex values below are authoritative for MVP.
+Raw palette tokens answer: "What color is this?"
+Semantic tokens answer: "What does this color mean here?"
 
-Shekar is dark-only. Light column is left as reference / future-proofing but is not used.
+Components must consume semantic tokens only.
 
-| Token                | Light (unused)          | Dark                   | Usage                          |
-| -------------------- | ----------------------- | ---------------------- | ------------------------------ |
-| `background`         | —                       | `#0B0B0D`              | Page background                |
-| `foreground`         | —                       | `#F4F4F5`              | Primary text                   |
-| `card` / surface     | —                       | `#161618`              | Ad cards, boxes                |
-| `card-foreground`    | —                       | `#F4F4F5`              | Text on cards                  |
-| `popover`            | —                       | `#1E1E21`              | Elevated surfaces, modals      |
-| `popover-foreground` | —                       | `#F4F4F5`              |                                |
-| `primary`            | —                       | `#FF4D3A`              | Logo, primary CTAs, active tab, “شکار” tag |
-| `primary-foreground` | —                       | `#FFFFFF`              | Text / icons on primary        |
-| `secondary`          | —                       | `#1E1E21`              | Secondary surfaces, header, tab bar |
-| `secondary-foreground`| —                      | `#F4F4F5`              |                                |
-| `muted`              | —                       | `#27272A`              | Subtle backgrounds             |
-| `muted-foreground`   | —                       | `#A1A1AA`              | Descriptions, metadata, placeholders |
-| `accent`             | —                       | `#F5A623`              | Shekar Score, important badges, highlights |
-| `accent-foreground`  | —                       | `#0B0B0D`              | Text on accent                 |
-| `destructive`        | —                       | `#EF4444`              | Errors / danger / delete       |
-| `destructive-foreground` | —                   | `#FFFFFF`              |                                |
-| `border`             | —                       | `#27272A`              | Borders, dividers, card strokes|
-| `input`              | —                       | `#27272A`              | Input borders                  |
-| `ring`               | —                       | `#FF4D3A`              | Focus rings                    |
-| `success`            | —                       | `#22C55E`              | Positive status                |
+Never put a brand HEX directly inside a component. A future rebrand must be possible by changing the token layer rather than rewriting component markup.
 
-Brand palette (raw)
-
-
-
-
-
-Brand primary: #FF4D3A (Shekar red/orange)
-
-
-
-Brand accent / score: #F5A623
-
-
-
-Success / warning / info: success #22C55E; destructive #EF4444; warning can reuse accent
-
-Typography
-
-| Role    | Family             | Size / line-height          | Weight          | Notes                          |
-| ------- | ------------------ | --------------------------- | --------------- | ------------------------------ |
-| Display | Vazirmatn          | 20–24 px / 1.3              | Bold (700)      | Rare; page-level emphasis      |
-| Heading | Vazirmatn          | h1–h6 scale (18–20 px base) | Bold / Medium   | Section & page titles          |
-| Body    | Vazirmatn          | 13–14 px / 1.6–1.7          | Regular (400)   | Default copy, descriptions     |
-| Label   | Vazirmatn          | 11–12 px / 1.4              | Regular / Medium| Tags, metadata, captions       |
-| Mono    | Inter / system mono| 13 px                       | Regular         | Numbers, codes if needed       |
-
-Loading: next/font/google or next/font/local in src/app/layout.tsx.
-Primary: Vazirmatn (weights 400, 500, 700). Secondary/fallback for English & numbers: Inter.
-Entire app is RTL; apply dir="rtl" at root.
-
-Spacing & Layout
-
-
-
-
-
-Spacing & Layout (8pt grid — law, not suggestion)
-
-Base unit: 4px. Every margin, padding, gap, size, and radius comes from this scale:
-
-Scale: 4 · 8 · 12 · 16 · 20 · 24 · 32 · 48
-
-Odd values (5, 7, 10, 13, 15…) are forbidden — if it is not on the scale, it does not ship.
-
-Hierarchy rules (vertical rhythm inside a form/card):
-- Label → field: 8px (`gap-2` / `space-y-2`)
-- Related fields (include ↔ exclude): 12–16px
-- Unrelated groups (filters ↔ actions): 20–24px
-- Card internal padding: 16px mobile (`p-4`), 20px tablet+
-- Page gutters: 16px (`px-4`); section rhythm 16–24px
-- Touch targets: min 44px height for inputs/selects/buttons (`h-11`); icon-only buttons 40px (`size-10`)
-- Icon spacing: icon-to-container-edge ≥ 12px; icon-to-text 8px (`gap-2`); trailing select chevron sits 16px from the edge with the text padded away from it (`pe-12`)
-
-Radius nesting rule (researched):
-- Inner radius is ALWAYS smaller than its container: step down one scale level (outer 20 → inner ≤ 12–14; outer 24 → inner ≤ 14–16). Equal radii stacked create ugly "tunnels".
-- Never nest deeper than 2 levels (page → container → field; no field-inside-field-inside-card).
-- Prefer flattening over nesting: separate elements with space, not boxes inside boxes.
-
-Content max-width: full-width on mobile; constrained on larger screens only if needed
-
-Grid: Mobile-first single column; card lists stack vertically. No complex multi-column grids required for MVP.
-
-Radius, Shadow, Motion
-
-| Token           | Value                 | Usage                  |
-| --------------- | --------------------- | ---------------------- |
-| Radius          | 16–20px cards, 999px pills/floating bars, 10–14px inputs/buttons | cards, pills, floating chrome, inputs |
-| Shadow          | floating chrome only: soft large shadow + 1px top highlight | floating header / tab bar |
-| Elevation       | glass: semi-transparent surface + blur + hairline border | floating bars |
-| Motion duration | 150–250 ms            | default transitions    |
-| Motion easing   | ease-out / standard   | default easing         |
-
-Motion principles: Subtle only. Respect prefers-reduced-motion. No large decorative animations.
-Floating chrome enters with translateY(8px) + fade, 200ms ease-out — content scrolls underneath, never shifts layout.
-
-Breakpoints
-
-| Name    | Width           | Notes                  |
-| ------- | --------------- | ---------------------- |
-| Mobile  | ~390px          | default (mobile-first) |
-| Tablet  | ~768px          | optional refinements   |
-| Desktop | ~1440px         | not primary focus for MVP |
-| Custom  | —               | —                      |
-
-Iconography
-
-
-
-
-
-Library: Lucide React (default). Monochrome only — every icon inherits `currentColor`, single tone. No multi-color decorative icons in forms or inputs.
-
-
-
-Default size: 18–20px (actions/inputs), 22–24px (tab icons), 14–16px (inline hints/chips)
-
-
-
-Stroke: match shadcn / Lucide defaults (usually 2)
-
-Keyword entry pattern: chip/tag input, never a bare text field. Typing + Enter/comma commits a chip; each chip shows the exact term + an X remove button; Backspace on empty input removes the last chip. One term per chip — separators (space, half-space/ZWNJ) never split or confuse. No helper copy about keyboards; the interaction teaches itself.
-
-Components
-
-Document each shared component as you add it.
-
-Button
-
-
-
-
-
-Variants: default (primary), secondary, outline, ghost, destructive
-
-
-
-Sizes: default, sm, lg, icon
-
-
-
-States: default, hover, focus-visible, active, disabled, loading
-
-
-
-Notes: Primary uses brand #FF4D3A. Keep high contrast.
-
-Input / Form
-
-
-
-
-
-Types: text, search, number (price), tel (mobile)
-
-
-
-Validation / error display: inline message under field in Persian + destructive color
-
-
-
-Notes: Dark surface inputs, clear focus ring using ring token. Include/Exclude keyword fields should be visually distinct.
-
-Card
-
-
-
-
-
-Structure: image (top) → title → price → short description → score + tags → meta (location / time)
-
-
-
-Variants: default ad card, compact list card if needed
-
-
-
-Notes: Background surface (#161618), subtle border, compact padding (12–16px).
-
-Navigation
-
-
-
-
-
-Pattern: Floating glass pill tab bar (primary on mobile, content scrolls underneath)
-
-
-
-Tabs: آگهی‌ها | شکار من | کشف بازار | پروفایل
-
-
-
-Mobile behavior: fixed bottom with 16px side margins + safe-area bottom margin, rounded-full pill, glass surface (semi-transparent + backdrop-blur-xl + hairline border + soft shadow). Active tab gets a tinted pill (`bg-primary/15`, primary icon + label); inactive tabs show muted icon + label.
-
-
-
-Header: ONE floating search pill — no avatar, no bell (profile/notifications live in the tab bar). Tapping it smooth-scrolls to and focuses the main query field. The card query input is the single place where searching happens; the header pill is a shortcut to it, never a second search box. Same glass tokens as the tab bar; sticky with 12px top offset.
-
-Feedback
-
-
-
-
-
-Toast / dialog / empty / skeleton: use shadcn patterns; all copy in Persian
-
-
-
-Empty states and error messages must be clear and actionable
-
-
-
-Skeletons for list and detail loading
-
-Additional components (MVP)
-
-| Component            | Path (suggested)              | Variants       | Notes                          |
-| -------------------- | ----------------------------- | -------------- | ------------------------------ |
-| AdCard               | `src/components/ads/AdCard`   | default        | Score badge + smart tags       |
-| ShekarScoreBadge     | `src/components/ads/...`      | default        | Accent color                   |
-| SearchFilters        | `src/components/search/...`   | —              | Include/exclude keywords       |
-| SavedSearchList      | `src/components/search/...`   | —              |                                |
-| BottomTabBar         | `src/components/layout/...`   | —              | Fixed, RTL                     |
-
-Content Guidelines
-
-
-
-
-
-Voice: Professional, direct, time-saving. Avoid marketing fluff. See project brief.
-
-
-
-Placeholder policy: Persian placeholders that describe the expected input (e.g. «کلمات کلیدی که باید در توضیحات باشد»)
-
-
-
-Image style: Real ad photos from Divar; maintain aspect ratio; graceful fallback when missing
-
-Do / Don't
-
-
-
-
-
-
-
-Do
-
-
-
-Don't
-
-
-
-
-
-Use semantic tokens from this doc
-
-
-
-Hard-code one-off hex in components
-
-
-
-
-
-Spec states before building
-
-
-
-Ship default-only UI
-
-
-
-
-
-Match spacing scale
-
-
-
-Magic numbers outside the scale
-
-
-
-
-
-Keep density compact but readable
-
-
-
-Add light theme or LTR layouts
-
-
-
-
-
-Put all MCP / data logic server-side
-
-
-
-Call divar-mcp from the client
-
-
-
-
-
-Write UI strings in Persian
-
-
-
-Mix English UI copy
-
+Architecture:
+
+raw palette -> semantic tokens -> component tokens -> components
+
+## 4. Brand palette
+
+Shakar uses a cool indigo-violet brand anchor. It is intentionally not Stripe Purple and is not used as a decorative wash.
+
+Core brand:
+- brand-500: #6D5EF5
+- brand-400: #8174FF
+- brand-600: #5B4CE0
+- brand-100: #E9E7FF
+- brand-900: #211D50
+
+Use brand for primary CTA, active navigation, focus, selected controls and important interactive links.
+
+Do not use brand for every heading, badge, card border or decorative background.
+
+## 5. Signal palette
+
+Signal is Shakar's distinctive decision-support color. It represents useful evidence, a confirmed match, or a meaningful discovery.
+
+- signal-500: #27C7B0
+- signal-400: #4AD8C5
+- signal-600: #159F8D
+- signal-100 dark: #123A36
+- signal-100 light: #DDF7F2
+
+Signal must remain sparse. If everything is Signal-colored, nothing is a signal.
+
+## 6. Status palette
+
+Warning:
+- warning-500 dark: #F2B84B
+- warning-500 light: #B97900
+- warning surface dark: #3A2E18
+- warning surface light: #FFF3D6
+
+Danger:
+- danger-500 dark: #F06A7A
+- danger-500 light: #C9364D
+- danger surface dark: #3C1D25
+- danger surface light: #FDE7EA
+
+Warning is for ambiguity, incomplete evidence and attention.
+Danger is for errors and destructive actions.
+Neither is branding.
+
+## 7. Neutral palette
+
+Dark foundation:
+- neutral-0 #FFFFFF
+- neutral-50 #F5F7FA
+- neutral-100 #E8ECF2
+- neutral-200 #CBD3DE
+- neutral-300 #AAB5C3
+- neutral-400 #7F8B9A
+- neutral-500 #5C6877
+- neutral-600 #3E4855
+- neutral-700 #2A333E
+- neutral-800 #1B232D
+- neutral-900 #111821
+- neutral-950 #0A0F15
+- neutral-1000 #070B10
+
+## 8. Semantic colors
+
+### Dark
+
+| Semantic | Value | Meaning |
+|---|---|---|
+| surface-page | #0A0F15 | page canvas |
+| surface-base | #111821 | main content |
+| surface-raised | #1B232D | cards, sheets, popovers |
+| surface-overlay | #222C38 | highest temporary surface |
+| surface-brand | #211D50 | subtle brand tint |
+| surface-signal | #123A36 | signal tint |
+| text-primary | #F5F7FA | primary content |
+| text-secondary | #CBD3DE | supporting content |
+| text-muted | #AAB5C3 | metadata/placeholders |
+| text-disabled | #5C6877 | disabled content |
+| text-on-brand | #FFFFFF | content on brand |
+| text-on-signal | #061512 | content on signal |
+| border-subtle | #1E2731 | quiet dividers |
+| border-default | #2A333E | standard borders |
+| border-strong | #3E4855 | emphasized borders |
+| action-primary | #6D5EF5 | primary actions |
+| action-primary-hover | #8174FF | primary hover |
+| action-primary-active | #5B4CE0 | primary active |
+| signal | #27C7B0 | useful match/evidence |
+| warning | #F2B84B | attention |
+| danger | #F06A7A | error/destructive |
+| focus-ring | #8174FF | keyboard focus |
+
+### Light
+
+| Semantic | Value | Meaning |
+|---|---|---|
+| surface-page | #F7F9FC | page canvas |
+| surface-base | #FFFFFF | main content |
+| surface-raised | #FFFFFF | cards, sheets, popovers |
+| surface-overlay | #FFFFFF | highest temporary surface |
+| surface-brand | #EEECFF | subtle brand tint |
+| surface-signal | #DDF7F2 | signal tint |
+| text-primary | #111821 | primary content |
+| text-secondary | #3E4855 | supporting content |
+| text-muted | #5C6877 | metadata/placeholders |
+| text-disabled | #AAB5C3 | disabled content |
+| text-on-brand | #FFFFFF | content on brand |
+| text-on-signal | #061512 | content on signal |
+| border-subtle | #E8ECF2 | quiet dividers |
+| border-default | #CBD3DE | standard borders |
+| border-strong | #AAB5C3 | emphasized borders |
+| action-primary | #5B4DE8 | primary actions |
+| action-primary-hover | #6D5EF5 | primary hover |
+| action-primary-active | #4D40C7 | primary active |
+| signal | #159F8D | useful match/evidence |
+| warning | #B97900 | attention |
+| danger | #C9364D | error/destructive |
+| focus-ring | #5B4DE8 | keyboard focus |
+
+## 9. Color usage rules
+
+Target visual distribution is approximately 80–90% neutral, 5–15% brand, and very small Signal/Warning/Danger usage. These are design targets, not hard implementation percentages.
+
+Primary brand: interaction and navigation.
+Signal: actual evidence or useful match.
+Warning: uncertainty or attention.
+Danger: failure or destructive action.
+Neutral: most of the interface.
+
+Never use a strong match treatment when a major requirement is unresolved.
+
+## 10. Typography
+
+Shakar is Persian-first. We must not blindly reproduce a Latin typography system.
+
+Primary family:
+Vazirmatn
+
+Fallback:
+Inter, system-ui, sans-serif
+
+Mono:
+ui-monospace, SFMono-Regular, Menlo, Consolas, monospace
+
+Use one primary UI family. Do not add a decorative display font.
+
+Type scale:
+
+| Token | Size | Line height | Weight | Use |
+|---|---:|---:|---:|---|
+| display-lg | 40px | 1.12 | 600 | rare major statement |
+| display-md | 32px | 1.15 | 600 | major section |
+| heading-xl | 24px | 1.25 | 600 | page title |
+| heading-lg | 20px | 1.35 | 600 | section title |
+| heading-md | 18px | 1.4 | 600 | card/section heading |
+| body-lg | 16px | 1.55 | 400 | explanatory copy |
+| body-md | 15px | 1.55 | 400 | default body |
+| body-sm | 14px | 1.5 | 400 | compact body |
+| label-md | 13px | 1.4 | 500 | controls |
+| label-sm | 12px | 1.35 | 500 | metadata/tags |
+| caption | 11px | 1.35 | 400 | low-priority metadata |
+| mono-md | 13px | 1.45 | 400 | technical/numeric |
+
+Allowed default weights: 400, 500, 600. Use 700 only when genuinely necessary.
+
+For prices, counts and comparison-heavy numeric UI, use tabular numerals when supported.
+
+## 11. Spacing
+
+Base unit: 4px.
+
+Canonical scale:
+0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96.
+
+Common rules:
+- icon to text: 8px
+- label to field: 8px
+- related controls: 12px
+- card padding mobile: 16px
+- card padding desktop: 20px
+- related groups: 16–24px
+- section separation: 24–32px
+- major page separation: 40–64px
+- page gutter mobile: 16px
+- page gutter desktop: 24–32px
+
+Avoid arbitrary values unless a platform constraint requires them.
+
+## 12. Layout
+
+Target widths:
+- 360
+- 390
+- 430
+- 480
+- 768
+- 1280+
+- 1440
+
+Mobile:
+- single column
+- one-handed core actions
+- no horizontal page overflow
+- safe-area-aware bottom navigation
+- result cards optimized for scanning
+
+Tablet:
+- additional breathing room
+- two-column composition only when it improves the hunt
+- never become a dashboard
+
+Desktop:
+- centered content
+- comfortable reading width
+- search remains primary
+- no decorative analytics sidebar
+
+Suggested maximum content width: 1200px.
+
+## 13. Radius
+
+| Token | Value | Use |
+|---|---:|---|
+| radius-none | 0 | structural exceptions |
+| radius-sm | 4px | compact controls |
+| radius-md | 8px | inputs/buttons/small cards |
+| radius-lg | 12px | cards/sheets |
+| radius-xl | 16px | prominent containers |
+| radius-2xl | 20px | major floating surfaces |
+| radius-pill | 9999px | chips/pills/floating nav |
+
+Inner elements should normally have a smaller radius than their container. Avoid deeply nested rounded boxes.
+
+## 14. Borders
+
+Use:
+- border-subtle
+- border-default
+- border-strong
+
+Borders establish hierarchy. Do not outline every child. Avoid double borders on nested surfaces.
+
+## 15. Elevation
+
+Shakar is relatively flat.
+
+Preferred hierarchy:
+1. surface contrast
+2. border
+3. backdrop treatment for floating chrome
+4. shadow only when necessary
+
+Use three conceptual levels:
+- elevation-0: none
+- elevation-1: subtle floating control
+- elevation-2: sheet/popover/dialog
+- elevation-3: rare system overlay
+
+Avoid decorative shadows on ordinary cards.
+
+## 16. Glass
+
+Glass is a utility, not the brand.
+
+Allowed mainly for:
+- floating header
+- bottom navigation
+- temporary floating controls
+
+Recipe:
+translucent semantic surface + backdrop blur + hairline border + restrained shadow.
+
+Ordinary result cards should not become glass cards.
+
+## 17. Motion
+
+Durations:
+- micro: 150ms
+- standard: 200ms
+- complex: 250ms
+
+Easing:
+cubic-bezier(0.23, 1, 0.32, 1)
+
+Use motion for state changes, filtering, navigation continuity and result insertion.
+
+Avoid bounce, particles, decorative parallax and attention-seeking animation.
+
+Respect prefers-reduced-motion.
+
+## 18. Interaction states
+
+Every interactive component defines:
+- default
+- hover
+- focus-visible
+- active/pressed
+- selected
+- disabled
+- loading
+- error where relevant
+
+Focus must be visible and not rely only on color.
+
+Minimum touch target: 44x44px.
+Icon-only controls: normally at least 40x40px.
+
+## 19. Component rules
+
+### Button
+Variants: primary, secondary, outline, ghost, destructive.
+States: default, hover, focus-visible, pressed, disabled, loading.
+Primary uses action-primary.
+
+### Input
+Types: search, text, number, tel, password if needed.
+Must support label, placeholder, value, focus, error, disabled and loading where applicable.
+
+### Search input
+The main query input is the only true search input. It should dominate ordinary controls without becoming oversized.
+
+### Include / Exclude chips
+Shared chip primitive.
+Include = must be present.
+Exclude = must not be present.
+Difference must remain understandable without color alone.
+
+### Card
+A card is a structural container, not the default pattern for every UI block.
+
+AdCard hierarchy:
+1. image
+2. title
+3. price
+4. evidence
+5. match signal
+6. location/time
+7. favorite/action
+
+### Badge
+Use only for meaningful metadata. Do not badge everything.
+
+### Bottom navigation
+May use controlled glass treatment, safe-area handling and a clear active state.
+
+### Sheet/Dialog
+Use surface hierarchy rather than heavy shadows.
+Filter sheets preserve draft state until Apply.
+
+## 20. Iconography
+
+Library: Lucide React.
+
+Rules:
+- monochrome
+- currentColor
+- no decorative multi-color icons
+- 18–20px default
+- 22–24px tab icons
+- 14–16px inline icons
+- consistent stroke weight
+
+Icons support meaning; they do not replace necessary labels.
+
+## 21. Search-specific visual language
+
+Most important surface:
+Query -> Meaning -> Precision -> Results -> Evidence
+
+Visual priority:
+1. query
+2. active constraints
+3. result count/sort
+4. listing title/price
+5. evidence
+6. metadata
+7. secondary actions
+
+The UI rewards precision, not decoration.
+
+Signal language:
+- verified supporting evidence -> Signal
+- uncertain evidence -> Warning or neutral
+- no evidence -> no positive signal
+
+## 22. Evidence language
+
+Shakar distinguishes:
+- Direct evidence
+- Detected evidence
+- Inferred interpretation
+- Unknown
+
+Example:
+✓ یاماها
+✓ U3
+؟ وضعیت آکوستیک مشخص نیست
+
+Never show a strong match treatment when a major requirement is unresolved.
+
+## 23. Accessibility
+
+Requirements:
+- keyboard navigable
+- visible focus
+- WCAG AA contrast target for normal text
+- semantic HTML
+- accessible names for icon buttons
+- no color-only meaning
+- reduced-motion support
+- logical RTL reading order
+
+Both themes must be contrast-tested before UI slices are considered complete.
+
+## 24. RTL and bilingual robustness
+
+Shakar is Persian-first and RTL.
+
+Rules:
+- root dir=rtl
+- prefer logical CSS properties
+- do not hard-code left/right when start/end is appropriate
+- numbers may remain visually LTR where appropriate
+- URLs/codes use appropriate LTR isolation
+- mixed Persian/English content must not break layout
+
+## 25. Agent implementation rules
+
+Before modifying UI, read:
+1. this document
+2. PWA_app/docs/userFlow.md
+3. PWA_app/docs/PAGE-EXPERIENCE-SPECS-V1.md
+4. PWA_app/docs/SEARCH-WORKSPACE-SPEC-V1.md
+5. current globals.css
+6. relevant components and data boundaries
+
+Resolve conflicts before coding.
+
+During implementation:
+- use semantic tokens
+- never hard-code brand HEX values in components
+- do not invent colors
+- do not invent arbitrary spacing
+- do not create one-off radii
+- reuse primitives
+- preserve RTL and responsive behavior
+- preserve product semantics
+- never invent unsupported backend behavior
+
+## 26. Visual QA matrix
+
+Check every meaningful UI slice at:
+360x800, 390x844, 430x932, 480x840, 768x1024, 1280x800, 1440x900.
+
+Check:
+- hierarchy
+- contrast
+- spacing rhythm
+- RTL
+- long Persian strings
+- mixed Persian/English
+- touch targets
+- focus states
+- overflow
+- safe-area
+- dark/light parity
+- empty/loading/error states
+
+## 27. Design-system acceptance criteria
+
+- Dark and Light semantic architecture exists.
+- Raw palette and semantic roles are separated.
+- Typography scale is explicit.
+- Spacing scale is explicit.
+- Radius scale is explicit.
+- Border/elevation/motion rules are explicit.
+- Interaction states are explicit.
+- Accessibility rules are explicit.
+- RTL rules are explicit.
+- Search-specific visual language is explicit.
+- Component rules are explicit.
+- Agent implementation rules are explicit.
+- Components do not need brand HEX values.
+- Theme can be changed centrally.
+- Both themes are included in visual QA.
+
+## 28. Final principle
+
+> **Shakar should look calm when the data is noisy.**
+
+The product wins when hundreds of listings feel manageable because the interface makes signal obvious, keeps irrelevant information quiet, and lets a professional user move from need to decision with minimal friction.
+
+### Reference
+
+Stripe design language study:
+https://stripe.design/
