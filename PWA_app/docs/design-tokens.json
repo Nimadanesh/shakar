@@ -127,20 +127,16 @@
     }
   },
   "spacing": {
-    "0": "0px",
-    "1": "2px",
-    "2": "4px",
-    "3": "8px",
-    "4": "12px",
-    "5": "16px",
-    "6": "20px",
-    "7": "24px",
-    "8": "32px",
-    "9": "40px",
-    "10": "48px",
-    "11": "64px",
-    "12": "80px",
-    "13": "96px"
+    "1": "4px",
+    "2": "8px",
+    "3": "12px",
+    "4": "16px",
+    "5": "24px",
+    "6": "32px",
+    "7": "48px",
+    "8": "64px",
+    "9": "80px",
+    "10": "120px"
   },
   "radius": {
     "none": "0px",
@@ -164,5 +160,24 @@
       "duration": "250ms",
       "easing": "cubic-bezier(0.23,1,0.32,1)"
     }
+  },
+  "layout": {
+    "mobile": {
+      "gutter": "16px",
+      "sectionGap": "32px",
+      "majorSectionGap": "48px",
+      "cardPadding": "16px",
+      "resultGap": "12px",
+      "controlGroupGap": "12px"
+    },
+    "desktop": {
+      "gutter": "24px",
+      "gutterWide": "32px",
+      "sectionGap": "48px",
+      "majorSectionGap": "80px",
+      "cardPadding": "20px",
+      "resultGap": "16px"
+    },
+    "contentMax": "1200px"
   }
 }
