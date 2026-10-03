@@ -10,6 +10,17 @@
   --font-sans: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --font-heading: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 80px;
+  --space-10: 120px;
   --color-surface-page: var(--surface-page);
   --color-surface-base: var(--surface-base);
   --color-surface-raised: var(--surface-raised);
