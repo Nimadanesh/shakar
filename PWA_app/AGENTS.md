@@ -4,6 +4,22 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## REDESIGN PHASE OVERRIDE (Soft Dark transfer — active until revoked)
+
+- "Match existing patterns" is SUSPENDED for the redesign scope. The existing
+  visual patterns (capsule-everywhere, solid-purple fills, stacked filter rows)
+  are the problem being fixed — do NOT preserve them. Follow
+  `docs/designSystem.md` (patched) as the visual source of truth instead.
+- Composition ownership: one agent owns each full viewport's composition end to
+  end. Component builders must verify their component INSIDE the composed
+  viewport, never in isolation. A collection of individually polished components
+  is a failure mode, not a success.
+- Doc authority order for visual decisions: `docs/designSystem.md` >
+  `docs/PAGE-EXPERIENCE-SPECS-V1.md` §2.2 diagram > `docs/userFlow.md`.
+  When a diagram and prose conflict, the §2.2 diagram wins.
+- The shape-roles law (§13.1) and nested-radius law (§13.2) are binding. Any
+  `rounded-full` on an input, panel, or summary block is a defect.
+
 # BASE-TEMPLATE — Agent-Driven UI/UX Vibe Coding
 
 ## What This Is

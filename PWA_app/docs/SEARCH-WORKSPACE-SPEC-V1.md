@@ -458,15 +458,20 @@ When the system cannot reliably interpret something:
 
 ---
 
-# 8. Quick Precision
+# 8. Precision Entry
 
-Top-level controls:
+The workspace has ONE precision entry point: «شکار دقیق».
 
-~~~text
-[دسته‌بندی] [شهر] [فیلتر دقیق‌تر]
-~~~
+Category and City are refinements INSIDE the precision sheet (section
+«دسته و شهر») — they are NOT top-level controls. The old top-level row
+`[دسته‌بندی] [شهر] [فیلتر دقیق‌تر]` is retired: it consumed high-value
+real-estate above the results and duplicated state that belongs to precision.
 
-## 8.1 Category
+Mental model this enforces:
+
+> Natural-language search first. Precision second.
+
+## 8.1 Category (inside precision sheet)
 
 Category control must:
 
@@ -475,10 +480,11 @@ Category control must:
 - show current selection;
 - allow clearing;
 - not fabricate category levels.
+- look like a clean selector, not like a search input and not like a chip.
 
 If taxonomy is large, search/select behavior should be optimized for quick professional use.
 
-## 8.2 City
+## 8.2 City (inside precision sheet)
 
 City control must:
 
@@ -486,6 +492,7 @@ City control must:
 - use the real location model;
 - show the current selection;
 - allow clearing.
+- look like a clean selector, not like a search input and not like a chip.
 
 Do not imply neighborhood precision if neighborhood filtering is not actually supported.
 

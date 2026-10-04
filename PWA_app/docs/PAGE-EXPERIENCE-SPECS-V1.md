@@ -142,26 +142,37 @@ The user wants to:
 
 ## 2.2 Page anatomy
 
+The results viewport is composed as ONE compact sticky context bar followed by
+result cards. There are no separate stacked rows for quick filters, active
+constraints, and count/sort.
+
 ~~~text
 ┌──────────────────────────────────────┐
-│ Floating shell / search shortcut     │
+│ ← پیانو یاماها U3…  ۵ نتیجه  ⊙³  ⇅  │  ← single sticky context bar:
+│                                      │    back · truncated query · count ·
+│  (meaning row — collapsible, ONLY    │    precision/filter w/ badge · sort
+│   when something was actually         │
+│   inferred beyond the raw query)      │
 ├──────────────────────────────────────┤
-│                                      │
-│       SearchInput                    │
-│       «چی شکار می‌کنی؟»              │
-│                                      │
-│   [دسته‌بندی] [شهر] [فیلتر دقیق‌تر] │
-│                                      │
-│   Active constraints / summary       │
-│                                      │
-│   ۱۲۴ نتیجه          مرتب‌سازی       │
-│                                      │
 │   AdCard                             │
 │   AdCard                             │
 │   AdCard                             │
-│                                      │
 └──────────────────────────────────────┘
 ~~~
+
+Composition rules (binding):
+
+- Category and City are NOT top-level controls. They live inside «شکار دقیق»
+  under «دسته و شهر». Rationale: natural language first, precision second; the
+  top of the workspace is high-value real estate.
+- The «جستجوی فعال» card MUST NOT repeat the raw query — the query already
+  exists in Search. Active state lives in the compact filter context; show only
+  refinements that exist beyond the raw query.
+- «از حرفت فهمیدم» is a single collapsible row, never a permanent block. If
+  nothing was inferred beyond the raw query, do NOT render the row at all.
+- Header/filter chrome must not consume more than ~30% of the first viewport
+  before useful content (see designSystem.md viewport composition rule).
+- When this diagram and any prose description conflict, THIS DIAGRAM wins.
 
 Do not add:
 
@@ -176,11 +187,11 @@ Do not add:
 
 At approximately 390px wide, the user should immediately see:
 
-- search field
-- the most important quick filters
-- enough result context to understand that a search has happened
+- the compact sticky context bar (query + count + precision + sort)
+- the first result card, or meaningful progress toward it
 
 Do not push the first meaningful interaction below a large decorative header.
+Header/filter chrome must stay under ~30% of the first viewport.
 
 ## 2.4 Search state A — first visit
 
