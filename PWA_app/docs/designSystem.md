@@ -39,7 +39,9 @@ Personality:
 - Precise: very high
 - Energetic: controlled
 - Luxurious: subtle
-- Playful: low
+- Playful: low-medium — expressed as ONE signature moment per surface
+  (e.g. hero glow, frosted favorite button, spring sheet entrance); never as
+  decoration spread everywhere
 - Technical: medium
 - Trustworthy: very high
 
@@ -80,6 +82,16 @@ Core brand:
 Use brand for primary CTA, active navigation, focus, selected controls and important interactive links.
 
 Do not use brand for every heading, badge, card border or decorative background.
+
+Concrete brand-form rules (binding — distribution targets alone are not enforceable):
+
+- Active navigation = brand TINT background (surface-brand) + brand icon/text.
+  NEVER a solid brand fill for a nav/tab active state.
+- Solid brand fills: at most TWO per viewport (the primary CTA + one accent at
+  most). A third solid brand element in the same viewport is a defect.
+- Focus rings and selection rings may be brand; ordinary borders stay neutral.
+- When reviewing a screen, count solid brand fills. More than two → fail the
+  visual QA for that screen.
 
 ## 5. Signal palette
 
@@ -338,6 +350,14 @@ Desktop:
 
 Suggested maximum content width: 1200px.
 
+### Viewport composition rule
+
+No viewport may spend more than ~30% of its first screen on header/filter chrome
+before useful content. On the results page this is enforced by the single sticky
+context bar (PAGE-EXPERIENCE-SPECS-V1.md §2.2). Treat chrome-budget violations as
+layout defects, not style preferences. Use judgment rather than a ruler — the
+principle is: the hunter reaches the first meaningful result fast.
+
 ## 13. Radius
 
 | Token | Value | Use |
@@ -350,7 +370,31 @@ Suggested maximum content width: 1200px.
 | radius-2xl | 20px | major floating surfaces |
 | radius-pill | 9999px | chips/pills/floating nav |
 
-Inner elements should normally have a smaller radius than their container. Avoid deeply nested rounded boxes.
+## 13.1 Shape roles (LAW)
+
+Every visible element belongs to exactly one shape role. Roles must be visually
+distinct — when everything shares one geometry, hierarchy dies.
+
+1. **Field** — text inputs, search inputs, selects: rounded rectangle
+   (radius-md/lg). NEVER a full capsule/pill. A pill-shaped input reads as a
+   button, which is why screens built from pill-inputs feel like "a page of
+   buttons".
+2. **Button** — ONE consistent button geometry per size (pick pill OR rounded
+   rect and use it everywhere). A button must never be visually confusable with
+   a field or a panel.
+3. **Card / panel** — radius-lg and above, NEVER a full capsule. A collapsible
+   panel, summary block, or notice must not look like a button.
+
+Corollary: **no element may look like a button unless it is one.**
+
+## 13.2 Nested radius law (LAW)
+
+An inner element's radius = its container's radius − the padding between them.
+A full circle floating inside a capsule is banned. Button geometry must derive
+from its container's geometry.
+
+Example: search bar with 18px outer radius and 6px inner padding → submit button
+uses 12px radius, not a full circle.
 
 ## 14. Borders
 
