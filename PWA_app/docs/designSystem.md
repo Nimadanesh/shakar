@@ -165,8 +165,8 @@ Dark foundation:
 | text-on-brand | #0A0A0A | content on brand |
 | text-on-signal | #0A0A0A | content on signal |
 | border-subtle | #262626 | quiet dividers |
-| border-default | #2E2E2E | standard borders |
-| border-strong | #404040 | emphasized borders |
+| border-default | #343434 | standard borders |
+| border-strong | #4A4A4A | emphasized borders |
 | action-primary | #FAFAFA | primary actions |
 | action-primary-hover | #FFFFFF | primary hover |
 | action-primary-active | #E5E5E5 | primary active |
@@ -252,7 +252,7 @@ Type scale:
 | caption | 11px | 1.35 | 400 | low-priority metadata |
 | mono-md | 13px | 1.45 | 400 | technical/numeric |
 
-Allowed default weights: 400, 500, 600. Use 700 only when genuinely necessary.
+Allowed default weights: 400, 500, 600. Use 700 only when genuinely necessary (key prices, hero titles). 800 is not used.
 
 For prices, counts and comparison-heavy numeric UI, use tabular numerals when supported.
 
@@ -505,14 +505,19 @@ Difference must remain understandable without color alone.
 ### Card
 A card is a structural container, not the default pattern for every UI block.
 
-AdCard hierarchy:
-1. image
-2. title
-3. price
-4. evidence
-5. match signal
-6. location/time
-7. favorite/action
+AdCard content priority — the triage question is «ارزش باز کردن دارد؟»
+(is this worth opening?). Show data in decision order, never twice:
+1. image — visual anchor, full-bleed, 16:10
+2. title — identity (what exactly is it)
+3. price — decision datum #1
+4. match signal — trust (why this result)
+5. evidence — description-only excerpt centered on the first keyword hit.
+   Never repeats the title. No hit in description → description start.
+   Empty description → omit the line entirely, never backfill with title.
+6. location - freshness — tertiary meta, one line («تهران - ۲ ساعت پیش»)
+7. favorite/action — quiet
+
+Compact card keeps the same order, one evidence line, no decoration.
 
 ### Badge
 Use only for meaningful metadata. Do not badge everything.

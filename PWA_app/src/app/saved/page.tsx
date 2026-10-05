@@ -10,7 +10,7 @@ import { SEARCH_FIXTURES, type FixtureAd } from "@/data/search-fixtures";
 import { formatPriceToman } from "@/lib/prices";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-[15px] font-bold leading-6 text-foreground">{children}</h2>;
+  return <h2 className="text-[15px] font-semibold leading-6 text-foreground">{children}</h2>;
 }
 
 function FavoriteRow({ ad }: { ad: FixtureAd }) {
@@ -37,7 +37,7 @@ function FavoriteRow({ ad }: { ad: FixtureAd }) {
         <span className="truncate text-sm font-semibold leading-5 text-foreground">
           {ad.title}
         </span>
-        <span className="text-[13px] font-bold tabular-nums leading-5 text-foreground">
+        <span className="text-[13px] font-semibold tabular-nums leading-5 text-foreground">
           {formatPriceToman(ad.price)}
         </span>
         <span className="text-xs leading-4 text-muted-foreground">
@@ -61,7 +61,7 @@ export default function SavedPage() {
 
   return (
     <main className="flex flex-1 flex-col gap-6 py-6">
-      <h1 className="text-xl font-bold leading-8 text-foreground">شکار من</h1>
+      <h1 className="text-xl font-semibold leading-8 text-foreground">شکار من</h1>
 
       <section aria-label="کمین‌ها" className="flex flex-col gap-3">
         <SectionTitle>کمین‌ها</SectionTitle>

@@ -43,7 +43,7 @@ function FavoriteToggle({ adId, overlay }: { adId: string; overlay?: boolean }) 
 
 /** Triage card: image → title → price → evidence → signal → meta → actions. */
 export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 0 }: AdCardProps) {
-  const segments = excerptSegments(`${ad.title}. ${ad.description}`, includeTerms);
+  const segments = excerptSegments(ad.description, includeTerms);
   const unknowns = match.evidence.filter((e) => e.status === "unknown");
   const explanation = explainWhy(ad, includeTerms, excludeTerms);
   const [whyOpen, setWhyOpen] = useState(false);
@@ -53,10 +53,10 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
 
   return (
     <article
-      className="animate-rise flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
+      className="animate-rise flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-border-strong"
       style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
     >
-      <div className="relative overflow-hidden rounded-lg">
+      <div className="relative">
         {ad.thumbnail ? (
           <Image
             src={ad.thumbnail}
@@ -73,29 +73,18 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
         <FavoriteToggle adId={ad.id} overlay />
       </div>
 
+      <div className="flex flex-col gap-3 p-4">
       <div className="flex flex-col gap-1">
         <Link
           href={`/ads/${ad.id}`}
-          className="line-clamp-1 text-base font-bold leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          className="line-clamp-1 text-base font-semibold leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           {ad.title}
         </Link>
-        <p className="text-xl font-extrabold leading-8 tabular-nums text-foreground" dir="auto">
+        <p className="text-xl font-bold leading-8 tabular-nums text-foreground" dir="auto">
           {formatPriceToman(ad.price)}
         </p>
       </div>
-
-      <p className="line-clamp-2 text-[13.5px] leading-6 text-muted-foreground">
-        {segments.map((segment, segmentIndex) =>
-          segment.hit ? (
-            <span key={segmentIndex} className="font-medium text-signal">
-              {segment.text}
-            </span>
-          ) : (
-            <span key={segmentIndex}>{segment.text}</span>
-          )
-        )}
-      </p>
 
       {(primarySignal || unknowns.length > 0) && (
         <div className="flex flex-col items-start gap-1.5">
@@ -114,10 +103,24 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
         </div>
       )}
 
+      {ad.description.trim() !== "" && (
+        <p className="line-clamp-2 text-[13.5px] leading-6 text-muted-foreground">
+          {segments.map((segment, segmentIndex) =>
+            segment.hit ? (
+              <span key={segmentIndex} className="font-medium text-signal">
+                {segment.text}
+              </span>
+            ) : (
+              <span key={segmentIndex}>{segment.text}</span>
+            )
+          )}
+        </p>
+      )}
+
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs leading-5 text-muted-foreground">
           {ad.city}
-          {ad.neighborhood ? `، ${ad.neighborhood}` : ""} •{" "}
+          {ad.neighborhood ? `، ${ad.neighborhood}` : ""} -{" "}
           <span className="font-medium text-muted-foreground">{ad.createdAt}</span>
         </p>
         <button
@@ -149,6 +152,7 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
           )}
         </div>
       )}
+      </div>
     </article>
   );
 }

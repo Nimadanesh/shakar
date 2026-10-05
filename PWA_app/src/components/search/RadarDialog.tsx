@@ -39,7 +39,7 @@ export function RadarDialog({ open, radar, onClose }: RadarDialogProps) {
           کمین برای این شکار
         </span>
       }
-      subtitle={`«${radar.name}» • ${constraintCount.toLocaleString("fa-IR")} قید فعال`}
+      subtitle={`«${radar.name}» - ${constraintCount.toLocaleString("fa-IR")} قید فعال`}
       footer={
         <button
           type="button"

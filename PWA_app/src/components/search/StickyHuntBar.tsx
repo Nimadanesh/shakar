@@ -53,8 +53,8 @@ export function StickyHuntBar({
         </button>
         <p className="min-w-0 flex-1 truncate text-[13px] font-medium leading-5 text-foreground">
           {query}
-          <span className="ms-1.5 font-normal tabular-nums text-muted-foreground">
-            • {resultCount.toLocaleString("fa-IR")} نتیجه
+          <span aria-live="polite" className="ms-1.5 font-normal tabular-nums text-muted-foreground">
+            - {resultCount.toLocaleString("fa-IR")} نتیجه
           </span>
         </p>
         <button
@@ -67,7 +67,7 @@ export function StickyHuntBar({
           {refinementCount > 0 && (
             <span
               aria-hidden="true"
-              className="absolute end-0.5 top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-semibold leading-4 tabular-nums text-primary"
+              className="absolute end-0.5 top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-medium leading-4 tabular-nums text-primary"
             >
               {refinementCount.toLocaleString("fa-IR")}
             </span>

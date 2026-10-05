@@ -127,7 +127,7 @@ export function AuthFlow() {
           >
             {step === "mobile" ? <Phone size={24} strokeWidth={1.5} /> : <KeyRound size={24} strokeWidth={1.5} />}
           </span>
-          <h1 className="text-xl font-extrabold text-foreground">ورود به شکار</h1>
+          <h1 className="text-xl font-bold text-foreground">ورود به شکار</h1>
           <p className="text-sm leading-6 text-muted-foreground">{contextLine(pendingAction)}</p>
         </div>
 

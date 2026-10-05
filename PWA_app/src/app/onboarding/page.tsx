@@ -94,8 +94,8 @@ export default function OnboardingPage() {
           className={cn(
             "max-w-xs text-foreground",
             beat.tagline
-              ? "text-xl font-bold leading-9"
-              : "text-2xl font-extrabold leading-10"
+              ? "text-xl font-semibold leading-9"
+              : "text-2xl font-bold leading-10"
           )}
         >
           {beat.title}

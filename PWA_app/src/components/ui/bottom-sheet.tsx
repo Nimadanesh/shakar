@@ -61,7 +61,7 @@ export function BottomSheet({
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-0.5">
               {title && (
-                <h2 className="text-[17px] font-bold leading-7 text-foreground">{title}</h2>
+                <h2 className="text-[17px] font-semibold leading-7 text-foreground">{title}</h2>
               )}
               {subtitle && (
                 <p className="text-xs leading-5 text-muted-foreground">{subtitle}</p>

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Camera, History, Music } from "lucide-react";
 import { FOCUS_SEARCH_EVENT } from "@/components/layout/Header";
-import { ActiveSearchSummary } from "@/components/search/ActiveSearchSummary";
 import { QuickPrecision } from "@/components/search/QuickPrecision";
 import { PrecisionSheet, type PrecisionDraft } from "@/components/search/PrecisionSheet";
 import { RadarDialog } from "@/components/search/RadarDialog";
@@ -446,13 +445,6 @@ export function SearchWorkspace() {
     setBase({ ...base, include: [...base.include, pref.value] });
   }
 
-  function handleClearAll() {
-    const nextBase = EMPTY_CONTEXT_BASE;
-    setBase(nextBase);
-    setDismissed(new Set());
-    rerun(nextBase, new Set());
-  }
-
   const groups = useMemo(() => {
     if (!hasIntent || !activeInterp) return [];
     return buildDisplayGroups(base, activeInterp, dismissed);
@@ -602,7 +594,7 @@ export function SearchWorkspace() {
   const showResults = phase !== "idle" && effective !== null;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4">
       <SearchInput
         ref={inputRef}
         value={query}
@@ -682,7 +674,6 @@ export function SearchWorkspace() {
           ) : (
             <>
               <SearchMeaning
-                query={query.trim()}
                 groups={inferredGroups}
                 preferences={visiblePreferences.map((p) => ({ id: p.id, label: p.display }))}
                 onDismissRow={setupRemoveRefinement}
@@ -719,7 +710,6 @@ export function SearchWorkspace() {
 
       {hasSubmitted && phase !== "idle" && (
         <SearchMeaning
-          query={submittedQuery.current}
           groups={inferredGroups}
           preferences={visiblePreferences.map((p) => ({ id: p.id, label: p.display }))}
           onDismissRow={(rowId) => removeRefinement(rowId)}
@@ -731,24 +721,6 @@ export function SearchWorkspace() {
             setBase(nextBase);
             rerun(nextBase, dismissed);
           }}
-        />
-      )}
-
-      {hasSubmitted && (
-        <QuickPrecision
-          ref={advancedRef}
-          label="ویرایش شکار"
-          onOpenAdvanced={() => setSheetOpen(true)}
-          advancedActive={advancedActive}
-          refinementCount={summaryChips.length}
-        />
-      )}
-
-      {hasSubmitted && phase !== "idle" && summaryChips.length > 0 && (
-        <ActiveSearchSummary
-          chips={summaryChips}
-          onRemoveChip={(chipId) => removeRefinement(chipId)}
-          onClearAll={handleClearAll}
         />
       )}
 

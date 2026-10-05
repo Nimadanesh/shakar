@@ -24,7 +24,7 @@ export function CategoryArt({
       role="img"
       aria-label={`بدون تصویر برای ${title}`}
       className={cn(
-        "flex aspect-[16/10] w-full flex-col items-center justify-center gap-1.5 bg-secondary text-muted-foreground",
+        "flex aspect-[16/10] w-full flex-col items-center justify-center gap-1.5 bg-surface-overlay text-muted-foreground",
         className
       )}
     >

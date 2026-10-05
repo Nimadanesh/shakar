@@ -1,7 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Plus, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  LayoutGrid,
+  MapPin,
+  Minus,
+  Plus,
+  Tag,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface InferredRow {
   id: string;
@@ -15,13 +26,21 @@ export interface MeaningGroup {
 }
 
 interface SearchMeaningProps {
-  query: string;
   groups: MeaningGroup[];
   preferences: Array<{ id: string; label: string }>;
   onDismissRow: (rowId: string) => void;
   onPromoteRow: (rowId: string) => void;
   onPromotePreference: (id: string) => void;
 }
+
+/** Group icon per inferred facet — the row owns its meaning at a glance. */
+const GROUP_ICONS: Record<string, LucideIcon> = {
+  city: MapPin,
+  price: Tag,
+  category: LayoutGrid,
+  include: Plus,
+  exclude: Minus,
+};
 
 /**
  * Interpretation layer: what Shakar understood from the user's words.
@@ -30,7 +49,6 @@ interface SearchMeaningProps {
  * nothing was inferred beyond the raw query. Collapsible to a single row.
  */
 export function SearchMeaning({
-  query,
   groups,
   preferences,
   onDismissRow,
@@ -50,12 +68,18 @@ export function SearchMeaning({
     .join("، ");
 
   return (
-    <section aria-label="برداشت از جستجو" className="flex flex-col gap-3">
+    <section
+      aria-label="برداشت از جستجو"
+      className="overflow-hidden rounded-xl border border-border bg-card"
+    >
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex min-h-11 items-center gap-2 rounded-xl border border-border-subtle bg-secondary/40 px-3 text-start transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-ring"
+        className={cn(
+          "flex min-h-11 w-full items-center gap-2 px-3 text-start transition-colors hover:bg-secondary/40 focus-visible:outline-2 focus-visible:outline-ring",
+          expanded && "border-b border-border-subtle"
+        )}
       >
         <span className="text-[13px] font-medium leading-5 text-foreground">
           از حرفت فهمیدم
@@ -81,52 +105,54 @@ export function SearchMeaning({
       </button>
 
       {expanded && (
-        <div className="animate-rise flex flex-col gap-4 ps-1">
-          <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
-            <span>جستجو: </span>«{query}»
-          </p>
-
-          {visibleGroups.map((group) => (
-            <div key={group.id} className="flex flex-col gap-2">
-              <p className="text-[13px] leading-5 text-muted-foreground">{group.title}</p>
-              <ul className="flex flex-col gap-1.5">
-                {group.rows.map((row) => (
-                  <li
-                    key={row.id}
-                    className="flex items-center gap-2 text-[13px] leading-5"
-                  >
-                    <span className="font-medium text-foreground">{row.label}</span>
-                    <span className="rounded-full bg-secondary px-1.5 text-[11px] leading-4 text-muted-foreground">
-                      حدسی
-                    </span>
-                    <span className="flex-1" aria-hidden="true" />
-                    <button
-                      type="button"
-                      onClick={() => onPromoteRow(row.id)}
-                      aria-label={`تأیید ${row.label} به‌عنوان فیلتر قطعی`}
-                      className="flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-ring"
+        <div className="animate-rise flex flex-col gap-4 p-3">
+          {visibleGroups.map((group) => {
+            const Icon = GROUP_ICONS[group.id];
+            return (
+              <div key={group.id} className="flex flex-col gap-1">
+                <p className="flex items-center gap-1.5 text-[13px] leading-5 text-muted-foreground">
+                  {Icon && <Icon size={14} aria-hidden="true" className="shrink-0" />}
+                  {group.title}
+                </p>
+                <ul className="flex flex-col divide-y divide-border-subtle">
+                  {group.rows.map((row) => (
+                    <li
+                      key={row.id}
+                      className="flex items-center gap-2 py-2 text-[13px] leading-5"
                     >
-                      <Check size={13} aria-hidden="true" />
-                      تأیید
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDismissRow(row.id)}
-                      aria-label={`حذف ${row.label} از برداشت`}
-                      className="relative flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring after:absolute after:-inset-2 after:content-['']"
-                    >
-                      <X size={14} aria-hidden="true" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                      <span className="font-medium text-foreground">{row.label}</span>
+                      <span className="rounded-full bg-secondary px-1.5 text-[11px] leading-4 text-muted-foreground">
+                        حدسی
+                      </span>
+                      <span className="flex-1" aria-hidden="true" />
+                      <button
+                        type="button"
+                        onClick={() => onPromoteRow(row.id)}
+                        aria-label={`تأیید ${row.label} به‌عنوان فیلتر قطعی`}
+                        className="flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-ring"
+                      >
+                        <Check size={13} aria-hidden="true" />
+                        تأیید
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDismissRow(row.id)}
+                        aria-label={`حذف ${row.label} از برداشت`}
+                        className="relative flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring after:absolute after:-inset-2 after:content-['']"
+                      >
+                        <X size={14} aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
 
           {preferences.map((pref) => (
             <div
               key={pref.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-card px-3 py-2"
+              className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-secondary/40 px-3 py-2"
             >
               <p className="text-[13px] leading-5 text-muted-foreground">
                 ترجیح: «{pref.label}» — فیلتر نیست
