@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "shakar:favorites:v1";
 
@@ -32,7 +32,14 @@ export function toggleFavoriteStored(adId: string): void {
  * as synced account state.
  */
 export function useFavorites() {
-  const [ids, setIds] = useState<string[]>(readStored);
+  // Hydration-safe: the server can't see localStorage — first render
+  // (both sides) is empty; stored ids land after mount.
+  const [ids, setIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe init (see above)
+    setIds(readStored());
+  }, []);
 
   const toggle = useCallback((adId: string) => {
     setIds((prev) => {

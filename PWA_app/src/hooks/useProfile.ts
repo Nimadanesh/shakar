@@ -39,10 +39,15 @@ export function profileInitials(name: string): string {
  * as an account. Same-tab updates propagate via a window event.
  */
 export function useProfile() {
-  const [profile, setProfile] = useState<Profile>(readStored);
+  // Hydration-safe: the server can't see localStorage, so the first render
+  // (server and client) is the guest state; the stored name lands after
+  // mount. Reading storage in the initializer would hydrate-mismatch every
+  // consumer that renders the name or initials.
+  const [profile, setProfile] = useState<Profile>({ name: "" });
 
   useEffect(() => {
     const refresh = () => setProfile(readStored());
+    refresh();
     window.addEventListener(EVENT_NAME, refresh);
     window.addEventListener("storage", refresh);
     return () => {

@@ -30,7 +30,15 @@ function initialTheme(): ThemeName {
 
 /** Minimal dark/light toggle. Monochrome-safe: uses semantic tokens only. */
 export function ThemeSwitch() {
-  const [theme, setTheme] = useState<ThemeName>(initialTheme);
+  // Hydration-safe: the server always renders dark (matching <html>); the
+  // stored theme lands after mount. The theme-init.js script already set
+  // the correct class pre-paint, so there is no flash.
+  const [theme, setTheme] = useState<ThemeName>("dark");
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe init (see above)
+    setTheme(initialTheme());
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);

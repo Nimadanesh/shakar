@@ -29,7 +29,7 @@ interface ResultsViewProps {
   detailQuery?: string;
 }
 
-function SkeletonList() {
+export function SkeletonList() {
   return (
     <div className="flex flex-col gap-3 sm:gap-4" aria-busy="true" aria-label="در حال دریافت نتایج">
       {[0, 1, 2].map((i) => (

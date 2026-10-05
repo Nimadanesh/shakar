@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "shakar:hidden-ads:v1";
 
@@ -20,7 +20,14 @@ function readStored(): string[] {
  * result lists only; it never touches the source inventory.
  */
 export function useHiddenAds() {
-  const [ids, setIds] = useState<string[]>(readStored);
+  // Hydration-safe: the server can't see localStorage — first render
+  // (both sides) is empty; stored ids land after mount.
+  const [ids, setIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe init (see above)
+    setIds(readStored());
+  }, []);
 
   const hide = useCallback((adId: string) => {
     setIds((prev) => {

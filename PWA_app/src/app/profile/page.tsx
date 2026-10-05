@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Pencil, User, X } from "lucide-react";
 import { ThemeSwitch } from "@/components/settings/ThemeSwitch";
 import { PlanSheet } from "@/components/plan/PlanSheet";
@@ -127,13 +127,17 @@ function IdentitySection() {
 
 function PlanSection() {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { usedThisMonth } = useMemo(() => {
+  // Hydration-safe: hunt history lives in localStorage, invisible to the
+  // server. First render (both sides) is 0; the real count lands after mount.
+  const [usedThisMonth, setUsedThisMonth] = useState(0);
+  useEffect(() => {
     try {
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-      return { usedThisMonth: readHunts().filter((h) => h.ts >= monthStart).length };
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe init (see above)
+      setUsedThisMonth(readHunts().filter((h) => h.ts >= monthStart).length);
     } catch {
-      return { usedThisMonth: 0 };
+      // keep 0
     }
   }, []);
   const quota = HUNTS_PER_MONTH;

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { RadarDialog } from "@/components/search/RadarDialog";
-import { ResultsView, type ReadyResult } from "@/components/search/ResultsView";
+import { ResultsView, SkeletonList, type ReadyResult } from "@/components/search/ResultsView";
 import { SortSheet } from "@/components/search/SortSheet";
 import { StickyHuntBar, type ResultView } from "@/components/search/StickyHuntBar";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -60,14 +60,26 @@ export function HuntTriagePage() {
   const params = useParams();
   const id = typeof params.id === "string" ? params.id : "";
 
-  const [hunt] = useState(() => readHunt(id));
+  // Hydration-safe: hunt + view preference live in localStorage, invisible
+  // to the server. First render (both sides) is the loading state; stored
+  // values land after mount. Reading storage in the initializer would
+  // hydrate-mismatch on every full load / refresh of a hunt URL.
+  const [hunt, setHunt] = useState<HuntRecord | null>(null);
   const [sort, setSort] = useState<SortKey>("best");
-  const [view, setView] = useState<ResultView>(readStoredView);
+  const [view, setView] = useState<ResultView>("card");
+  const [ready, setReady] = useState(false);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const [radarOpen, setRadarOpen] = useState(false);
   const [, setKaminTick] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
   const { hiddenIds, hide, unhide } = useHiddenAds();
+
+  useEffect(() => {
+    // Hydration-safe init (see above): first render matches the server.
+    setHunt(readHunt(id));
+    setView(readStoredView());
+    setReady(true);
+  }, [id]);
 
   const computed: Computed | "error" | null = useMemo(() => {
     if (!hunt) return null;
@@ -132,6 +144,19 @@ export function HuntTriagePage() {
     if (computed.ctx.priceMax !== null) p.set("max", String(computed.ctx.priceMax));
     return p.toString();
   }, [computed, id]);
+
+  if (!ready) {
+    return (
+      <div
+        className="flex flex-col gap-4"
+        aria-busy="true"
+        aria-label="در حال بارگذاری"
+      >
+        <div aria-hidden="true" className="h-14 animate-pulse rounded-lg bg-secondary" />
+        <SkeletonList />
+      </div>
+    );
+  }
 
   if (!hunt) {
     return (
