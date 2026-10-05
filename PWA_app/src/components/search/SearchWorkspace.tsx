@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Building2, Camera, History, Music } from "lucide-react";
 import { FOCUS_SEARCH_EVENT } from "@/components/layout/Header";
 import { QuickPrecision } from "@/components/search/QuickPrecision";
@@ -22,7 +23,8 @@ import {
   takePendingAction,
 } from "@/lib/auth";
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
-import { readRecentHunts, recordRecentHunt, type RecentHunt } from "@/lib/recent-hunts";
+import { readHunts, recordHunt, type HuntRecord } from "@/lib/hunt-store";
+import { readParams, writeParams } from "@/lib/search-params";
 import { parsePriceInput } from "@/lib/prices";
 import { buildRadarConfig, type RadarConfig } from "@/lib/radar";
 import { runSearch, sortResults, type SortKey } from "@/lib/search";
@@ -48,35 +50,6 @@ const EXAMPLES = [
   { label: "دوربین سونی زیر ۱۰۰م", query: "دوربین سونی زیر ۱۰۰ میلیون", icon: Camera },
 ];
 const VIEW_STORAGE_KEY = "shakar:result-view:v1";
-
-function readParams(params: URLSearchParams): { query: string; base: ContextBase } {
-  return {
-    query: params.get("q") ?? "",
-    base: {
-      category: params.get("cat") ?? "all",
-      city: params.get("city") ?? "all",
-      priceMin: params.get("min") ?? "",
-      priceMax: params.get("max") ?? "",
-      include: params.getAll("inc"),
-      exclude: params.getAll("exc"),
-      hasImage: params.get("img") === "1",
-    },
-  };
-}
-
-function writeParams(query: string, base: ContextBase): string {
-  const params = new URLSearchParams();
-  if (query.trim() !== "") params.set("q", query.trim());
-  for (const term of base.include) params.append("inc", term);
-  for (const term of base.exclude) params.append("exc", term);
-  if (base.category !== "all") params.set("cat", base.category);
-  if (base.city !== "all") params.set("city", base.city);
-  if (base.priceMin.trim() !== "") params.set("min", base.priceMin.trim());
-  if (base.priceMax.trim() !== "") params.set("max", base.priceMax.trim());
-  if (base.hasImage) params.set("img", "1");
-  const serialized = params.toString();
-  return serialized === "" ? "/" : `/?${serialized}`;
-}
 
 function readStoredView(): ResultView {
   if (typeof window === "undefined") return "card";
@@ -255,7 +228,7 @@ export function SearchWorkspace() {
   const [radar, setRadar] = useState<RadarConfig | null>(null);
   const [radarOpen, setRadarOpen] = useState(false);
   const { hiddenIds, hide, unhide } = useHiddenAds();
-  const [recentHunts, setRecentHunts] = useState<RecentHunt[]>(() => readRecentHunts());
+  const [recentHunts, setRecentHunts] = useState<HuntRecord[]>(() => readHunts());
 
   const inputRef = useRef<HTMLInputElement>(null);
   const advancedRef = useRef<HTMLButtonElement>(null);
@@ -309,7 +282,8 @@ export function SearchWorkspace() {
       const ctx = buildEffectiveContext(trimmed, nextBase, interp, nextDismissed);
       setInterpretation(interp);
       setDismissed(nextDismissed);
-      setRecentHunts(recordRecentHunt(trimmed, nextBase));
+      recordHunt(trimmed, nextBase, nextDismissed);
+      setRecentHunts(readHunts());
       submittedQuery.current = trimmed;
       router.replace(writeParams(trimmed, nextBase), { scroll: false });
       execute(
@@ -374,6 +348,8 @@ export function SearchWorkspace() {
     if (q.trim() === "") return;
     setQuery(q);
     setBase(b);
+    // Refine-from-hunt: restore intent for editing, never auto-fire.
+    if (searchParams.get("setup") === "1") return;
     submit(q, b, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -534,13 +510,7 @@ export function SearchWorkspace() {
     setSheetOpen(true);
   }
 
-  /** Recent hunt: the user's own confirmed intent — deliberate re-run. */
-  function rerunRecentHunt(hunt: RecentHunt) {
-    setQuery(hunt.query);
-    setBase(hunt.base);
-    setDismissed(new Set<string>());
-    firePaidSearch(hunt.query, hunt.base, new Set<string>());
-  }
+  /** Recent hunt: the user's own confirmed intent, opened at its canonical URL. */
 
   /**
    * Search input submit. In setup, Enter reviews intent in the sheet —
@@ -612,10 +582,9 @@ export function SearchWorkspace() {
                   <p className="text-xs leading-5 text-muted-foreground">شکارهای اخیر</p>
                   <ul className="flex flex-col gap-1.5">
                     {recentHunts.map((hunt) => (
-                      <li key={`${hunt.ts}:${hunt.query}`}>
-                        <button
-                          type="button"
-                          onClick={() => rerunRecentHunt(hunt)}
+                      <li key={hunt.id}>
+                        <Link
+                          href={`/hunt/${hunt.id}`}
                           className="flex min-h-11 w-full items-center gap-2.5 rounded-xl border border-border bg-card px-3 text-start text-[13px] text-foreground transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
                         >
                           <History
@@ -624,7 +593,7 @@ export function SearchWorkspace() {
                             className="shrink-0 text-muted-foreground"
                           />
                           <span className="min-w-0 flex-1 truncate">{hunt.query}</span>
-                        </button>
+                        </Link>
                       </li>
                     ))}
                   </ul>
