@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BellRing } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
+import { SkeletonCard } from "@/components/ui/skeletons";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { categoryLabel, cityLabel } from "@/data/taxonomy";
 import { formatPriceCompact } from "@/lib/prices";
@@ -198,7 +199,16 @@ export default function SavedPage() {
         ]}
       />
 
-      {!ready ? null : tab === "fresh" ? (
+      {!ready ? (
+        <div
+          className="flex flex-col gap-3"
+          aria-busy="true"
+          aria-label="در حال بارگذاری"
+        >
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      ) : tab === "fresh" ? (
         freshKamins.length === 0 ? (
           <EmptyState
             icon={<BellRing size={28} aria-hidden="true" className="text-muted-foreground" />}

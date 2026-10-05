@@ -611,7 +611,27 @@ Rules:
 - URLs/codes use appropriate LTR isolation
 - mixed Persian/English content must not break layout
 
-## 25. Agent implementation rules
+## 25. Loading states
+
+Two patterns, never mixed:
+
+- **Skeleton** — for page/section loads (triage results, saved/archive
+  content, recent hunts). Content-shaped: rows for lists, cards for
+  card grids (`ui/skeletons.tsx`; triage keeps its own `SkeletonList`
+  in ResultsView). `aria-busy` + Persian `aria-label`.
+- **Waiting element** — for button-triggered work (`ui/LoadingState`).
+  One variant only: 3×3 pixel grid, chevron wavefront, Persian shimmer
+  label naming the work («در حال شکار»), Persian elapsed timer.
+  Monochrome; frozen by the global reduced-motion rule.
+
+Rules:
+- Every loader is tied to real pending work. No artificial delays,
+  no theater spinners.
+- The «شکار کن» button shows the waiting element only during the real
+  navigation transition; the triage skeleton covers the search wait
+  (alive today as dead code, live when the backend connects).
+
+## 26. Agent implementation rules
 
 Before modifying UI, read:
 1. this document
@@ -634,7 +654,7 @@ During implementation:
 - preserve product semantics
 - never invent unsupported backend behavior
 
-## 26. Visual QA matrix
+## 27. Visual QA matrix
 
 Check every meaningful UI slice at:
 360x800, 390x844, 430x932, 480x840, 768x1024, 1280x800, 1440x900.
@@ -653,7 +673,7 @@ Check:
 - dark/light parity
 - empty/loading/error states
 
-## 27. Design-system acceptance criteria
+## 28. Design-system acceptance criteria
 
 - Dark and Light semantic architecture exists.
 - Raw palette and semantic roles are separated.
@@ -671,7 +691,7 @@ Check:
 - Theme can be changed centrally.
 - Both themes are included in visual QA.
 
-## 28. Final principle
+## 29. Final principle
 
 > **Shakar should look calm when the data is noisy.**
 

@@ -293,6 +293,28 @@
   }
 }
 
+/* Pixel-grid waiting element: chevron wavefront. Base state is dim so the
+   global reduced-motion rule freezes it into a calm idle. */
+@keyframes pixel-on {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Shimmer sweep for the waiting element's label. */
+@keyframes shimmer-text {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 @layer utilities {
   /* Soft Dark entrance: 240ms rise; stagger via inline animation-delay (60ms steps). */
   .animate-rise {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, History } from "lucide-react";
 import { readHunts, type HuntRecord } from "@/lib/hunt-store";
+import { SkeletonRow } from "@/components/ui/skeletons";
 import { cityLabel, categoryLabel } from "@/data/taxonomy";
 import { formatPriceCompact } from "@/lib/prices";
 
@@ -66,7 +67,21 @@ export function RecentHunts() {
     setReady(true);
   }, []);
 
-  if (!ready || hunts.length === 0) return null;
+  if (!ready)
+    return (
+      <section
+        aria-label="شکارهای اخیر"
+        aria-busy="true"
+        className="flex flex-col gap-2"
+      >
+        <p className="text-xs leading-5 text-muted-foreground">شکارهای اخیر</p>
+        <div className="flex flex-col gap-1.5">
+          <SkeletonRow />
+          <SkeletonRow />
+        </div>
+      </section>
+    );
+  if (hunts.length === 0) return null;
 
   return (
     <section aria-label="شکارهای اخیر" className="flex flex-col gap-2">

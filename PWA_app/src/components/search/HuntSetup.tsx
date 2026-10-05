@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Camera, Music } from "lucide-react";
 import { WhatField } from "@/components/search/WhatField";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { RecentHunts } from "@/components/search/RecentHunts";
 import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
 import { SpecRow } from "@/components/search/SpecRow";
@@ -103,13 +104,17 @@ export function HuntSetup() {
 
   /**
    * THE single hunt event. The curated form becomes a persistent hunt
-   * asset; the user lands on its canonical triage URL.
+   * asset; the user lands on its canonical triage URL. `firing` covers
+   * the real navigation transition — no artificial delay.
    */
+  const [firing, setFiring] = useState(false);
   function fireHunt() {
     const trimmed = query.trim();
-    if (trimmed === "") return;
+    if (trimmed === "" || firing) return;
+    setFiring(true);
     const record = recordHunt(trimmed, base, dismissed);
     if (record) router.push(`/hunt/${record.id}`);
+    else setFiring(false);
   }
 
   /** Suggested hunt: fill the WHAT field for review. Never auto-fires. */
@@ -310,9 +315,14 @@ export function HuntSetup() {
           <button
             type="button"
             onClick={fireHunt}
-            className="mt-1 h-13 min-h-13 rounded-lg bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+            disabled={firing}
+            className="mt-1 flex h-13 min-h-13 items-center justify-center rounded-lg bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active disabled:cursor-wait"
           >
-            شکار کن
+            {firing ? (
+              <LoadingState label="در حال شکار" showElapsed={false} tone="on-primary" />
+            ) : (
+              "شکار کن"
+            )}
           </button>
         </div>
       )}

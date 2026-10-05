@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Bookmark, ChevronLeft, Heart, History } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
+import { SkeletonCard, SkeletonRow } from "@/components/ui/skeletons";
 import { FavoriteRow } from "@/components/ads/FavoriteRow";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SEARCH_FIXTURES } from "@/data/search-fixtures";
@@ -63,7 +64,28 @@ export default function ArchivePage() {
         ]}
       />
 
-      {!ready ? null : tab === "history" ? (
+      {!ready ? (
+        tab === "saved" ? (
+          <div
+            className="flex flex-col gap-3"
+            aria-busy="true"
+            aria-label="در حال بارگذاری"
+          >
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        ) : (
+          <div
+            className="flex flex-col gap-1.5"
+            aria-busy="true"
+            aria-label="در حال بارگذاری"
+          >
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </div>
+        )
+      ) : tab === "history" ? (
         hunts.length === 0 ? (
           <EmptyState
             icon={<History size={28} aria-hidden="true" className="text-muted-foreground" />}
