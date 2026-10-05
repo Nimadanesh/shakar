@@ -594,7 +594,7 @@ export function SearchWorkspace() {
   const showResults = phase !== "idle" && effective !== null;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4">
       <SearchInput
         ref={inputRef}
         value={query}
@@ -674,7 +674,6 @@ export function SearchWorkspace() {
           ) : (
             <>
               <SearchMeaning
-                query={query.trim()}
                 groups={inferredGroups}
                 preferences={visiblePreferences.map((p) => ({ id: p.id, label: p.display }))}
                 onDismissRow={setupRemoveRefinement}
@@ -711,7 +710,6 @@ export function SearchWorkspace() {
 
       {hasSubmitted && phase !== "idle" && (
         <SearchMeaning
-          query={submittedQuery.current}
           groups={inferredGroups}
           preferences={visiblePreferences.map((p) => ({ id: p.id, label: p.display }))}
           onDismissRow={(rowId) => removeRefinement(rowId)}

@@ -53,10 +53,10 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
 
   return (
     <article
-      className="animate-rise flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
+      className="animate-rise flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-border-strong"
       style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
     >
-      <div className="relative overflow-hidden rounded-lg">
+      <div className="relative">
         {ad.thumbnail ? (
           <Image
             src={ad.thumbnail}
@@ -73,6 +73,7 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
         <FavoriteToggle adId={ad.id} overlay />
       </div>
 
+      <div className="flex flex-col gap-3 p-4">
       <div className="flex flex-col gap-1">
         <Link
           href={`/ads/${ad.id}`}
@@ -149,6 +150,7 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
           )}
         </div>
       )}
+      </div>
     </article>
   );
 }
