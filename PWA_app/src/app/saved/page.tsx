@@ -1,16 +1,107 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { BellRing, Bookmark, Heart } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BellRing, Bookmark, ChevronLeft, Heart, History } from "lucide-react";
 import { CategoryArt } from "@/components/ads/CategoryArt";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SEARCH_FIXTURES, type FixtureAd } from "@/data/search-fixtures";
 import { formatPriceToman } from "@/lib/prices";
+import { huntCostLabel } from "@/lib/pricing";
+import {
+  disarmKamin,
+  kaminCtxToBase,
+  kaminNewIds,
+  listKamins,
+  markKaminSeen,
+  type KaminRecord,
+} from "@/lib/kamin-store";
+import { readHunts, recordHunt, type HuntRecord } from "@/lib/hunt-store";
+import { runSearch } from "@/lib/search";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="text-[15px] font-semibold leading-6 text-foreground">{children}</h2>;
+}
+
+function constraintCount(kamin: KaminRecord): number {
+  const ctx = kamin.ctx;
+  return (
+    ctx.includeKeywords.length +
+    ctx.excludeKeywords.length +
+    (ctx.city !== "all" ? 1 : 0) +
+    (ctx.category !== "all" ? 1 : 0) +
+    (ctx.priceMin !== null || ctx.priceMax !== null ? 1 : 0) +
+    (ctx.hasImage ? 1 : 0)
+  );
+}
+
+function KaminCard({
+  kamin,
+  newCount,
+  onViewResults,
+  onDisarm,
+}: {
+  kamin: KaminRecord;
+  newCount: number;
+  onViewResults: () => void;
+  onDisarm: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <p className="truncate text-sm font-semibold leading-5 text-foreground">
+            «{kamin.name}»
+          </p>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {constraintCount(kamin).toLocaleString("fa-IR")} قید فعال
+          </p>
+        </div>
+        {newCount > 0 && (
+          <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary">
+            {newCount.toLocaleString("fa-IR")} تازه
+          </span>
+        )}
+      </div>
+      {newCount > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onViewResults}
+              className="h-10 rounded-lg bg-action-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+            >
+              دیدن نتایج
+            </button>
+            <button
+              type="button"
+              onClick={onDisarm}
+              className="h-10 rounded-lg border border-border text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              غیرفعال کردن
+            </button>
+          </div>
+          <p className="text-center text-[11px] leading-4 text-muted-foreground">
+            {huntCostLabel()}
+          </p>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs leading-5 text-muted-foreground">زیر نظر — چیز تازه‌ای نیست</p>
+          <button
+            type="button"
+            onClick={onDisarm}
+            className="shrink-0 rounded-full px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            غیرفعال کردن
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function FavoriteRow({ ad }: { ad: FixtureAd }) {
@@ -50,27 +141,130 @@ function FavoriteRow({ ad }: { ad: FixtureAd }) {
 }
 
 /**
- * Mission control: saved hunts, کمین monitoring, favorites.
- * Favorites read the honest local store. Saved hunts and کمین need
- * identity + backend, so their sections are honest empty states —
- * never fabricated activity.
+ * Mission control: the morning inbox first. New matches are honest local
+ * diffs (current run minus the seen baseline) — background monitoring and
+ * push do not exist yet. Saved hunts still need identity + backend, so
+ * that section stays an honest empty state.
  */
 export default function SavedPage() {
+  const router = useRouter();
   const { isFavorite } = useFavorites();
   const favoriteAds = SEARCH_FIXTURES.filter((ad) => isFavorite(ad.id));
+
+  const [kamins, setKamins] = useState<KaminRecord[]>([]);
+  const [hunts, setHunts] = useState<HuntRecord[]>([]);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setKamins(listKamins());
+    setHunts(readHunts());
+    setReady(true);
+  }, []);
+
+  const newCounts = new Map<string, number>();
+  for (const kamin of kamins) {
+    newCounts.set(kamin.id, kaminNewIds(kamin, SEARCH_FIXTURES).length);
+  }
+  const freshKamins = kamins.filter((k) => (newCounts.get(k.id) ?? 0) > 0);
+
+  function refresh() {
+    setKamins(listKamins());
+  }
+
+  function handleDisarm(id: string) {
+    disarmKamin(id);
+    refresh();
+  }
+
+  /** Inbox CTA: re-running is a new paid hunt — the cost label says so. */
+  function handleViewResults(kamin: KaminRecord) {
+    const ids = runSearch(kamin.ctx, SEARCH_FIXTURES).results.map((r) => r.adId);
+    markKaminSeen(kamin.id, ids);
+    const record = recordHunt(kamin.name, kaminCtxToBase(kamin.ctx), []);
+    refresh();
+    if (record) router.push(`/hunt/${record.id}`);
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-6 py-6">
       <h1 className="text-xl font-semibold leading-8 text-foreground">شکار من</h1>
 
-      <section aria-label="کمین‌ها" className="flex flex-col gap-3">
-        <SectionTitle>کمین‌ها</SectionTitle>
-        <EmptyState
-          icon={<BellRing size={28} aria-hidden="true" className="text-muted-foreground" />}
-          title="کمین فعالی نداری"
-          description="برای شکاری که ذخیره کنی کمین می‌ذارم؛ آگهی اوکازیون که اومد خبرت می‌کنم."
-        />
+      <section aria-label="تازه‌ها" className="flex flex-col gap-3">
+        <SectionTitle>تازه‌ها</SectionTitle>
+        {!ready ? null : kamins.length === 0 ? (
+          <EmptyState
+            icon={<BellRing size={28} aria-hidden="true" className="text-muted-foreground" />}
+            title="کمین فعالی نداری"
+            description="برای شکاری که اجرا کردی کمین بذار؛ آگهی تازه که اومد اینجا می‌بینی."
+            primaryAction={{ label: "شروع شکار", onClick: () => router.push("/") }}
+          />
+        ) : freshKamins.length === 0 ? (
+          <EmptyState
+            icon={<BellRing size={28} aria-hidden="true" className="text-muted-foreground" />}
+            title="چیز تازه‌ای نیست"
+            description="کمین‌های فعالت زیر نظرن؛ آگهی جدید که بیاد اینجا می‌بینی."
+          />
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {freshKamins.map((kamin) => (
+              <li key={kamin.id}>
+                <KaminCard
+                  kamin={kamin}
+                  newCount={newCounts.get(kamin.id) ?? 0}
+                  onViewResults={() => handleViewResults(kamin)}
+                  onDisarm={() => handleDisarm(kamin.id)}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
+
+      {kamins.length > 0 && (
+        <section aria-label="کمین‌ها" className="flex flex-col gap-3">
+          <SectionTitle>کمین‌ها</SectionTitle>
+          <ul className="flex flex-col gap-2">
+            {kamins.map((kamin) => (
+              <li key={kamin.id}>
+                <KaminCard
+                  kamin={kamin}
+                  newCount={newCounts.get(kamin.id) ?? 0}
+                  onViewResults={() => handleViewResults(kamin)}
+                  onDisarm={() => handleDisarm(kamin.id)}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {hunts.length > 0 && (
+        <section aria-label="تاریخچه‌ی شکارها" className="flex flex-col gap-3">
+          <SectionTitle>تاریخچه‌ی شکارها</SectionTitle>
+          <ul className="flex flex-col gap-1.5">
+            {hunts.map((hunt) => (
+              <li key={hunt.id}>
+                <Link
+                  href={`/hunt/${hunt.id}`}
+                  className="flex min-h-11 w-full items-center gap-2.5 rounded-xl border border-border bg-card px-3 text-start transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
+                >
+                  <History size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+                    {hunt.query}
+                  </span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                    {new Date(hunt.ts).toLocaleDateString("fa-IR", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                  <ChevronLeft size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-label="شکارهای ذخیره‌شده" className="flex flex-col gap-3">
         <SectionTitle>شکارهای ذخیره‌شده</SectionTitle>
@@ -78,7 +272,7 @@ export default function SavedPage() {
           icon={<Bookmark size={28} aria-hidden="true" className="text-muted-foreground" />}
           title="هنوز شکاری ذخیره نکرده‌ای"
           description="شکار کامل که اجرا کردی، می‌تونی ذخیره‌ش کنی تا بعداً با یک لمس اجراش کنی."
-          primaryAction={{ label: "شروع شکار", onClick: () => (window.location.href = "/") }}
+          primaryAction={{ label: "شروع شکار", onClick: () => router.push("/") }}
         />
       </section>
 

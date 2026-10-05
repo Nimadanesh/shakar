@@ -1,30 +1,33 @@
 "use client";
 
-import { Radar } from "lucide-react";
+import { BellOff, Radar } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import type { RadarConfig } from "@/lib/radar";
 
 interface RadarDialogProps {
   open: boolean;
-  radar: RadarConfig | null;
+  /** True when a kamin is already armed for this hunt. */
+  armed: boolean;
+  huntName: string;
+  constraintCount: number;
+  onArm: () => void;
+  onDisarm: () => void;
   onClose: () => void;
 }
 
 /**
- * کمین direction preview. Monitoring has no backend in this phase, so this
- * dialog designs the interaction honestly: it names the hunt that WOULD be
- * watched and states plainly that watching is not connected yet. No fake
- * activation, no invented notification promises.
+ * کمین arm/disarm. Honest about what monitoring is: local diffing on every
+ * «شکار من» visit — no background watching, no push notifications yet.
  */
-export function RadarDialog({ open, radar, onClose }: RadarDialogProps) {
-  if (!open || !radar) return null;
-
-  const constraintCount =
-    radar.context.includeKeywords.length +
-    radar.context.excludeKeywords.length +
-    (radar.context.city !== "all" ? 1 : 0) +
-    (radar.context.category !== "all" ? 1 : 0) +
-    (radar.context.priceMin !== null || radar.context.priceMax !== null ? 1 : 0);
+export function RadarDialog({
+  open,
+  armed,
+  huntName,
+  constraintCount,
+  onArm,
+  onDisarm,
+  onClose,
+}: RadarDialogProps) {
+  if (!open) return null;
 
   return (
     <BottomSheet
@@ -34,27 +37,47 @@ export function RadarDialog({ open, radar, onClose }: RadarDialogProps) {
       title={
         <span className="flex items-center gap-2.5">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Radar size={18} aria-hidden="true" />
+            {armed ? (
+              <BellOff size={18} aria-hidden="true" />
+            ) : (
+              <Radar size={18} aria-hidden="true" />
+            )}
           </span>
-          کمین برای این شکار
+          {armed ? "کمین فعال است" : "کمین برای این شکار"}
         </span>
       }
-      subtitle={`«${radar.name}» - ${constraintCount.toLocaleString("fa-IR")} قید فعال`}
+      subtitle={`«${huntName}» - ${constraintCount.toLocaleString("fa-IR")} قید فعال`}
       footer={
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-11 rounded-lg border border-border text-sm font-medium text-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-        >
-          باشه، فهمیدم
-        </button>
+        armed ? (
+          <button
+            type="button"
+            onClick={onDisarm}
+            className="h-11 rounded-lg border border-border text-sm font-medium text-foreground transition-colors hover:text-destructive focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            غیرفعال کردن کمین
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onArm}
+            className="h-11 rounded-lg bg-action-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+          >
+            فعال کردن کمین
+          </button>
+        )
       }
     >
-      <p className="text-sm leading-7 text-muted-foreground">
-        قرار است لازم نباشد همین جستجو را فردا دوباره انجام بدهی: اگر آگهی
-        تازه‌ای مطابق همین شکار پیدا شود، خبرت می‌کنیم. این قابلیت هنوز به
-        سامانه پایش وصل نیست؛ معماری آن آماده است و به‌زودی فعال می‌شود.
-      </p>
+      {armed ? (
+        <p className="text-sm leading-7 text-muted-foreground">
+          آگهی‌های تازه‌ی مطابق این شکار را در «شکار من» ← «تازه‌ها» می‌بینی.
+        </p>
+      ) : (
+        <p className="text-sm leading-7 text-muted-foreground">
+          قرار است لازم نباشد همین شکار را فردا از اول بسازی: هر بار «شکار
+          من» را باز کنی، اگر آگهی تازه‌ای مطابق این شکار پیدا شود، در
+          «تازه‌ها» می‌بینی. پایش پس‌زمینه و نوتیفیکیشن هنوز وصل نیست.
+        </p>
+      )}
     </BottomSheet>
   );
 }

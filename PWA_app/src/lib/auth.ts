@@ -142,7 +142,7 @@ import type { ContextBase } from "@/lib/search-context";
 
 export type PendingAction =
   | { type: "favorite"; adId: string }
-  | { type: "radar"; query: string; base: ContextBase };
+  | { type: "radar"; query: string; base: ContextBase; huntId?: string };
 
 export function storePendingAction(action: PendingAction): void {
   try {

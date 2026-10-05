@@ -6,7 +6,6 @@ import { Building2, Camera, Music } from "lucide-react";
 import { FOCUS_SEARCH_EVENT } from "@/components/layout/Header";
 import { QuickPrecision } from "@/components/search/QuickPrecision";
 import { PrecisionSheet, type PrecisionDraft } from "@/components/search/PrecisionSheet";
-import { RadarDialog } from "@/components/search/RadarDialog";
 import { SearchInput } from "@/components/search/SearchInput";
 import { InterpretationChips } from "@/components/search/InterpretationChips";
 import { categoryLabel, cityLabel } from "@/data/taxonomy";
@@ -17,9 +16,7 @@ import { toggleFavoriteStored } from "@/hooks/useFavorites";
 import { recordHunt } from "@/lib/hunt-store";
 import { parsePriceInput, formatPriceToman } from "@/lib/prices";
 import { huntCostLabel } from "@/lib/pricing";
-import { buildRadarConfig, type RadarConfig } from "@/lib/radar";
 import {
-  buildEffectiveContext,
   EMPTY_CONTEXT_BASE,
   type ContextBase,
 } from "@/lib/search-context";
@@ -198,8 +195,6 @@ export function SearchWorkspace() {
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
   const [sheetOpen, setSheetOpen] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [radar, setRadar] = useState<RadarConfig | null>(null);
-  const [radarOpen, setRadarOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const advancedRef = useRef<HTMLButtonElement>(null);
@@ -279,16 +274,10 @@ export function SearchWorkspace() {
     const pending = takePendingAction();
     if (pending?.type === "favorite") {
       toggleFavoriteStored(pending.adId);
-    } else if (pending?.type === "radar") {
-      const rq = pending.query.trim();
-      if (rq !== "") {
-        const rbase = isContextBaseLike(pending.base) ? pending.base : EMPTY_CONTEXT_BASE;
-        const interp = interpretQuery(rq);
-        const ctx = buildEffectiveContext(rq, rbase, interp, new Set());
-        setRadar(buildRadarConfig(ctx, rq));
-        setRadarOpen(true);
-        return;
-      }
+    } else if (pending?.type === "radar" && pending.huntId) {
+      // Back to the exact hunt page — the user re-taps کمین, now authed.
+      router.push(`/hunt/${pending.huntId}`);
+      return;
     }
     // Deep link: restore intent for review. Never auto-fire.
     const { query: q, base: b } = readParams(searchParams);
@@ -480,7 +469,6 @@ export function SearchWorkspace() {
         onClose={handleSheetClose}
       />
 
-      <RadarDialog open={radarOpen} radar={radar} onClose={() => setRadarOpen(false)} />
     </div>
   );
 }

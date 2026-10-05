@@ -11,11 +11,17 @@ import { SEARCH_FIXTURES } from "@/data/search-fixtures";
 import { useHiddenAds } from "@/hooks/useHiddenAds";
 import { requireAuth } from "@/lib/auth";
 import { readHunt, type HuntRecord } from "@/lib/hunt-store";
+import {
+  armKamin,
+  disarmKamin,
+  findKamin,
+  type KaminRecord,
+} from "@/lib/kamin-store";
 import { interpretQuery } from "@/lib/interpret";
-import { buildRadarConfig, type RadarConfig } from "@/lib/radar";
 import { runSearch, sortResults, type SortKey } from "@/lib/search";
 import { buildEffectiveContext } from "@/lib/search-context";
 import { writeParams } from "@/lib/search-params";
+import type { SearchContext } from "@/types/search";
 
 const VIEW_STORAGE_KEY = "shakar:result-view:v1";
 
@@ -29,6 +35,7 @@ function readStoredView(): ResultView {
 }
 
 interface Computed {
+  ctx: SearchContext;
   includeTerms: string[];
   excludeTerms: string[];
   results: ReadyResult[];
@@ -50,8 +57,8 @@ export function HuntTriagePage() {
   const [sort, setSort] = useState<SortKey>("best");
   const [view, setView] = useState<ResultView>(readStoredView);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
-  const [radar, setRadar] = useState<RadarConfig | null>(null);
   const [radarOpen, setRadarOpen] = useState(false);
+  const [kaminTick, setKaminTick] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
   const { hiddenIds, hide, unhide } = useHiddenAds();
 
@@ -71,6 +78,7 @@ export function HuntTriagePage() {
         if (ad) joined.push({ ad, match });
       }
       return {
+        ctx,
         includeTerms: ctx.includeKeywords,
         excludeTerms: ctx.excludeKeywords,
         results: sortResults(joined, sort),
@@ -122,14 +130,51 @@ export function HuntTriagePage() {
   function handleOpenRadar() {
     const q = record.query.trim();
     if (q === "") return;
-    // کمین is a persistent action: guests are routed to auth with the
-    // exact hunt stored for resume.
-    if (!requireAuth({ type: "radar", query: q, base: record.base }, (url) => router.push(url)))
+    // کمین is a persistent action: guests are routed to auth, then resume
+    // on this exact hunt page.
+    if (
+      !requireAuth({ type: "radar", query: q, base: record.base, huntId: id }, (url) =>
+        router.push(url)
+      )
+    )
       return;
-    const interp = interpretQuery(q);
-    const ctx = buildEffectiveContext(q, record.base, interp, new Set(record.dismissed));
-    setRadar(buildRadarConfig(ctx, q));
     setRadarOpen(true);
+  }
+
+  const kamin: KaminRecord | null = useMemo(() => {
+    if (!computed || computed === "error") return null;
+    return findKamin(computed.ctx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [computed, kaminTick]);
+
+  const constraintCount = useMemo(() => {
+    if (!computed || computed === "error") return 0;
+    const ctx = computed.ctx;
+    return (
+      ctx.includeKeywords.length +
+      ctx.excludeKeywords.length +
+      (ctx.city !== "all" ? 1 : 0) +
+      (ctx.category !== "all" ? 1 : 0) +
+      (ctx.priceMin !== null || ctx.priceMax !== null ? 1 : 0) +
+      (ctx.hasImage ? 1 : 0)
+    );
+  }, [computed]);
+
+  function handleArmKamin() {
+    if (!computed || computed === "error") return;
+    armKamin(
+      computed.ctx,
+      record.query,
+      computed.results.map((r) => r.ad.id)
+    );
+    setKaminTick((n) => n + 1);
+    setRadarOpen(false);
+  }
+
+  function handleDisarmKamin() {
+    if (kamin) disarmKamin(kamin.id);
+    setKaminTick((n) => n + 1);
+    setRadarOpen(false);
   }
 
   const phase =
@@ -193,7 +238,15 @@ export function HuntTriagePage() {
         onClose={() => setSortSheetOpen(false)}
       />
 
-      <RadarDialog open={radarOpen} radar={radar} onClose={() => setRadarOpen(false)} />
+      <RadarDialog
+        open={radarOpen}
+        armed={kamin !== null}
+        huntName={record.query}
+        constraintCount={constraintCount}
+        onArm={handleArmKamin}
+        onDisarm={handleDisarmKamin}
+        onClose={() => setRadarOpen(false)}
+      />
     </div>
   );
 }
