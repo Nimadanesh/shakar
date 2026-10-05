@@ -43,7 +43,7 @@ export function InterpretationChips({
 
   return (
     <section
-      aria-label="برداشت از جستجو"
+      aria-label="برداشت از حرفت"
       className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3"
     >
       <p className="text-[13px] leading-5 text-foreground">

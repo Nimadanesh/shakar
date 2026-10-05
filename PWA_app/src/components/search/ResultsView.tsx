@@ -67,7 +67,7 @@ export function ResultsView({
     return (
       <EmptyState
         title="دریافت نتایج با مشکل مواجه شد."
-        description="جستجوی شما حفظ شده است."
+        description="شکار شما حفظ شده است."
         primaryAction={{ label: "تلاش دوباره", onClick: onRetry }}
       />
     );
@@ -77,7 +77,7 @@ export function ResultsView({
     return (
       <EmptyState
         title="با این شرایط نتیجه‌ای پیدا نشد."
-        description="شکار فردا هم ادامه دارد — همین جستجو را نگه دار یا دقیق‌ترش کن."
+        description="شکار فردا هم ادامه دارد — همین شکار را نگه دار یا دقیق‌ترش کن."
         primaryAction={{ label: "کمین بذار، خبرم کن", onClick: onOpenRadar }}
         secondaryAction={{ label: "شکار دقیق رو باز کن", onClick: onOpenPrecision }}
       />

@@ -1,13 +1,13 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Crosshair } from "lucide-react";
 
 export const FOCUS_SEARCH_EVENT = "shekar:focus-search";
 
 /**
- * Navigation header only. The single real search input lives in the Search
- * Workspace below; this control is an unmistakable action button (icon-only,
- * circular) that scrolls to and focuses it — never a second search field.
+ * Navigation header only. The single real hunt field lives in the Hunt
+ * Setup below; this control is an unmistakable action button (icon-only,
+ * circular) that scrolls to and focuses it — never a second hunt field.
  */
 export function Header() {
   function handleClick() {
@@ -21,10 +21,10 @@ export function Header() {
         <button
           type="button"
           onClick={handleClick}
-          aria-label="رفتن به جستجو"
+          aria-label="شکار جدید"
           className="flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.96]"
         >
-          <Search size={20} aria-hidden="true" />
+          <Crosshair size={20} aria-hidden="true" />
         </button>
       </div>
     </header>

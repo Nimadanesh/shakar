@@ -2,7 +2,7 @@
 
 > Product/UX source of truth for MVP. Persian-first, RTL, mobile-first, dark theme.
 >
-> Core principle: Shakar reduces the amount of listing inspection a professional user must perform. It is a Professional Search Workspace, not a marketplace clone.
+> Core principle: Shakar reduces the amount of listing inspection a professional user must perform. It is a Professional Hunt Workspace, not a marketplace clone.
 
 ---
 
@@ -19,7 +19,7 @@ NEED → HUNT SETUP → PAID SEARCH → TRIAGE → VERIFY → ACT → MONITOR
 **The golden rule: یک شکار = یک جستجوی پولی.** Every search costs real
 inference money (LLM/decision models). Hunt Setup — natural query,
 interpretation review, include/exclude terms, category, location, price —
-is FREE and happens BEFORE any paid search fires. The «شکار کن» action is
+is FREE and happens BEFORE any paid hunt fires. The «شکار کن» action is
 the single paid event. There is no cheap generic search followed by an
 obligatory refinement search; that pattern burns money and teaches the
 user nothing.
@@ -42,7 +42,7 @@ The central differentiation is content-aware search: include terms and exclude t
 
 AI must simplify search, not replace it with a chatbot. Preferred model: natural language → structured, editable search → results.
 
-Product principles: simple by default; powerful when needed; search-first; explain scores and matches; never silently relax user intent; preserve context; distinguish direct/detected/inferred/unknown information; progressive disclosure; one coherent workspace.
+Product principles: simple by default; powerful when needed; hunt-first; explain scores and matches; never silently relax user intent; preserve context; distinguish direct/detected/inferred/unknown information; progressive disclosure; one coherent workspace.
 
 Primary UX question for every feature: does it reduce unnecessary listing inspection or make inspection more useful?
 
@@ -174,7 +174,7 @@ Route naming is implementation detail; responsibilities are authoritative.
 
 Every future page spec must explicitly define Goal, Sections, Components and Interaction.
 
-## Search Workspace
+## Hunt Setup
 Goal: capture intent and fire ONE explicit paid hunt — a single gate.
 Sections: query; single interpretation surface (explicit + inferred-dashed
 chips); quick filters; primary hunt action + honest cost label; optional
@@ -220,7 +220,7 @@ Goal: account and settings only.
    never renders results.
 2. Typing: suggestions may appear, but never silently replace input.
 3. Interpreting: show editable interpretation of query and constraints.
-   Interpretation display is free; it never fires a paid search by itself.
+   Interpretation display is free; it never fires a paid hunt by itself.
 4. Pre-flight: NOT a screen — a confirm state of setup. A compact review
    row above «شکار کن» («با این مشخصات شکار کنم؟» + final chips + the
    honest cost label). No numbers, no scan-count estimates. The paid
@@ -230,7 +230,7 @@ Goal: account and settings only.
    search state; use structural skeletons; prevent duplicate submit.
 6. Triage: show actual count, active constraints, sort and cards.
 7. Refine: editing intent after results opens the setup again; the CTA is
-   explicitly «اجرای مجدد شکار» so the user knows it is a new paid search.
+   explicitly «اجرای مجدد شکار» so the user knows it is a new paid hunt.
 8. No results: «با این شرایط نتیجه‌ای پیدا نشد.» with explicit «ویرایش شکار»
    and «حذف آخرین فیلتر». Never silently relax constraints.
 9. Error: «دریافت نتایج با مشکل مواجه شد. شکار شما حفظ شده است.» with retry.
@@ -295,7 +295,7 @@ New-match notification should deep-link directly to the relevant results.
 
 # 12. Auth: guest-first, gate on persistence
 
-Guests can do the full hunt: setup, paid search, triage, detail inspection.
+Guests can do the full hunt: setup, paid hunt, triage, detail inspection.
 Authentication is required ONLY for persistent actions: Save Hunt, کمین
 (monitoring), Favorite, and Profile. This is deliberate: a professional
 tries the hunt first, commits identity when they want to keep something.

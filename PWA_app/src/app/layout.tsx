@@ -19,7 +19,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "شکار | Shekar",
   description:
-    "سرویس مستقل برای کاربران حرفه‌ای دیوار؛ کاهش زمان جستجوی جدی از روزها به ۱–۲ ساعت.",
+    "سرویس مستقل برای کاربران حرفه‌ای دیوار؛ کاهش زمان شکار از روزها به ۱–۲ ساعت.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

@@ -46,7 +46,7 @@ export function StickyHuntBar({
         <button
           type="button"
           onClick={onBackToSearch}
-          aria-label="بازگشت به جستجو"
+          aria-label="بازگشت"
           className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           <ArrowRight size={20} aria-hidden="true" />

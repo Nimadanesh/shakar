@@ -149,7 +149,7 @@ Key user flows
 
 
 
-Core Search — Enter query + category + location + price + include/exclude description keywords → see ranked list with Shekar Score & smart tags → open detail or refine.
+Core Hunt — Enter query + category + location + price + include/exclude description keywords → see ranked list with Shekar Score & smart tags → open detail or refine.
 
 
 

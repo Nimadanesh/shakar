@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Crosshair, X } from "lucide-react";
 
 const ROTATING_PLACEHOLDERS = [
   "پیانو آکوستیک واقعی، نه طرح…",
@@ -9,15 +9,20 @@ const ROTATING_PLACEHOLDERS = [
   "دوربین سونی، بدون تعمیر…",
 ];
 
-interface SearchInputProps {
+interface HuntInputProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
   isSearching?: boolean;
 }
 
-export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
-  function SearchInput({ value, onChange, onSubmit, isSearching = false }, ref) {
+/**
+ * The hunt declaration field. This is not a search box — the user is
+ * defining ONE hunt (with include/exclude filters downstream), and the
+ * only action here is «شکار کن».
+ */
+export const HuntInput = forwardRef<HTMLInputElement, HuntInputProps>(
+  function HuntInput({ value, onChange, onSubmit, isSearching = false }, ref) {
     const hasText = value.trim() !== "";
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
     const [focused, setFocused] = useState(false);
@@ -38,11 +43,10 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
 
     return (
       <form
-        role="search"
         onSubmit={handleSubmit}
         className="flex h-14 items-center gap-2 rounded-lg border border-border bg-card ps-4 pe-2 transition-shadow focus-within:border-ring focus-within:shadow-glow"
       >
-        <Search size={22} aria-hidden="true" className="shrink-0 text-muted-foreground" />
+        <Crosshair size={22} aria-hidden="true" className="shrink-0 text-primary" />
         <input
           ref={ref}
           type="search"
@@ -51,15 +55,15 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder={ROTATING_PLACEHOLDERS[placeholderIndex]}
-          aria-label="متن جستجو"
+          aria-label="شرح شکار"
           autoComplete="off"
-          enterKeyHint="search"
+          enterKeyHint="go"
           className="h-full min-w-0 flex-1 bg-transparent text-[16px] text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
         />
         {hasText && (
           <button
             type="button"
-            aria-label="پاک کردن جستجو"
+            aria-label="پاک کردن"
             onClick={() => onChange("")}
             className="flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
           >
@@ -70,10 +74,10 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
           <button
             type="submit"
             disabled={isSearching}
-            aria-label="جستجو"
+            aria-label="شکار کن"
             className="flex size-11 shrink-0 items-center justify-center rounded-md bg-action-primary text-primary-foreground transition-all hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97] active:bg-action-primary-active disabled:opacity-40"
           >
-            <Search size={20} aria-hidden="true" />
+            <Crosshair size={20} aria-hidden="true" />
           </button>
         )}
       </form>

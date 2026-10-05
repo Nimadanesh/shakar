@@ -6,7 +6,7 @@ import { Building2, Camera, Music } from "lucide-react";
 import { FOCUS_SEARCH_EVENT } from "@/components/layout/Header";
 import { QuickPrecision } from "@/components/search/QuickPrecision";
 import { PrecisionSheet, type PrecisionDraft } from "@/components/search/PrecisionSheet";
-import { SearchInput } from "@/components/search/SearchInput";
+import { HuntInput } from "@/components/search/HuntInput";
 import { InterpretationChips } from "@/components/search/InterpretationChips";
 import { categoryLabel, cityLabel } from "@/data/taxonomy";
 import { interpretQuery } from "@/lib/interpret";
@@ -186,7 +186,7 @@ function isContextBaseLike(value: unknown): value is ContextBase {
  * It never renders results and never fires implicitly — not even for
  * deep links. History lives in «شکار من», not here.
  */
-export function SearchWorkspace() {
+export function HuntSetup() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -349,7 +349,7 @@ export function SearchWorkspace() {
 
   return (
     <div className="flex flex-col gap-4">
-      <SearchInput
+      <HuntInput
         ref={inputRef}
         value={query}
         onChange={setQuery}

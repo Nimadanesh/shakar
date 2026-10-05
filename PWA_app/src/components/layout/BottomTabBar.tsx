@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Crosshair, LayoutGrid, User } from "lucide-react";
+import { Bookmark, Crosshair, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { href: "/", label: "آگهی‌ها", icon: LayoutGrid },
-  { href: "/saved", label: "شکار من", icon: Crosshair },
+  { href: "/", label: "شکار", icon: Crosshair },
+  { href: "/saved", label: "شکار من", icon: Bookmark },
   { href: "/profile", label: "پروفایل", icon: User },
 ] as const;
 
