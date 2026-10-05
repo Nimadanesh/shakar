@@ -8,13 +8,14 @@ import type { DivarAd } from "@/types/ads";
 // SVG placeholders (abstract, clearly non-photographic) standing in for real
 // listing photos; ads without one exercise the honest no-image state.
 
-function art(hue: number, glyph: string): string {
+/** Monochrome placeholder art for fixtures: neutral rings + glyph, no hue. */
+function art(glyph: string): string {
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400">` +
-    `<rect width="640" height="400" fill="#1E1E28"/>` +
-    `<circle cx="320" cy="185" r="70" fill="none" stroke="hsl(${hue},45%,45%)" stroke-width="3" opacity="0.7"/>` +
-    `<circle cx="320" cy="185" r="46" fill="none" stroke="hsl(${hue},45%,45%)" stroke-width="2" opacity="0.4"/>` +
-    `<text x="320" y="200" font-size="44" text-anchor="middle" fill="hsl(${hue},40%,60%)" opacity="0.9">${glyph}</text>` +
+    `<rect width="640" height="400" fill="#171717"/>` +
+    `<circle cx="320" cy="185" r="70" fill="none" stroke="#FAFAFA" stroke-width="3" opacity="0.28"/>` +
+    `<circle cx="320" cy="185" r="46" fill="none" stroke="#FAFAFA" stroke-width="2" opacity="0.16"/>` +
+    `<text x="320" y="200" font-size="44" text-anchor="middle" fill="#FAFAFA" opacity="0.55">${glyph}</text>` +
     `</svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
@@ -37,7 +38,7 @@ export const SEARCH_FIXTURES: FixtureAd[] = [
     category: "آلات موسیقی",
     categoryId: "music",
     images: [],
-    thumbnail: art(255, "♪"),
+    thumbnail: art("♪"),
     createdAt: "۲ ساعت پیش",
   },
   {
@@ -51,7 +52,7 @@ export const SEARCH_FIXTURES: FixtureAd[] = [
     category: "آلات موسیقی",
     categoryId: "music",
     images: [],
-    thumbnail: art(160, "♪"),
+    thumbnail: art("♪"),
     createdAt: "دیروز",
   },
   {
@@ -66,7 +67,7 @@ export const SEARCH_FIXTURES: FixtureAd[] = [
     category: "آلات موسیقی",
     categoryId: "music",
     images: [],
-    thumbnail: art(210, "♪"),
+    thumbnail: art("♪"),
     createdAt: "۳ ساعت پیش",
   },
   {
