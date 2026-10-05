@@ -23,6 +23,12 @@ export interface PrecisionDraft {
 
 interface PrecisionSheetProps {
   open: boolean;
+  /**
+   * "setup": the sheet is the intent-confirmation gate before the ONE paid
+   * search (CTA = «شکار کن»). "refine": the sheet edits an executed hunt
+   * (CTA = «اجرای مجدد شکار», explicitly a new paid search).
+   */
+  mode: "setup" | "refine";
   initial: PrecisionDraft;
   /** Live search context around the draft (query) for honest impact preview. */
   preview: Pick<SearchContext, "query" | "category" | "city">;
@@ -56,7 +62,7 @@ function PricePreview({ value }: { value: string }) {
   );
 }
 
-export function PrecisionSheet({ open, initial, preview, onApply, onClose, onOpenRadar }: PrecisionSheetProps) {
+export function PrecisionSheet({ open, mode, initial, preview, onApply, onClose, onOpenRadar }: PrecisionSheetProps) {
   // Draft restarts from live values on every open via the remount key set by
   // the parent (key changes with `open`), so no syncing effect is needed.
   const [draft, setDraft] = useState<PrecisionDraft>(initial);
@@ -153,7 +159,7 @@ export function PrecisionSheet({ open, initial, preview, onApply, onClose, onOpe
               onClick={handleApply}
               className="h-11 rounded-lg bg-action-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
             >
-              اعمال
+              {mode === "setup" ? "شکار کن" : "اجرای مجدد شکار"}
               {previewCount !== null && (
                 <span className="tabular-nums"> • {previewCount.toLocaleString("fa-IR")} آگهی</span>
               )}
@@ -177,6 +183,11 @@ export function PrecisionSheet({ open, initial, preview, onApply, onClose, onOpe
         </div>
       }
     >
+      {mode === "setup" && preview.query.trim() !== "" && (
+        <p className="text-[13px] leading-6 text-muted-foreground">
+          شکار: <span className="font-medium text-foreground">«{preview.query.trim()}»</span>
+        </p>
+      )}
       <div className="flex flex-col gap-1.5">
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-2 text-[13px] font-medium leading-5 text-foreground">

@@ -13,10 +13,22 @@ Shakar is a tool for professional hunting. The user arrives with a concrete need
 Core loop:
 
 ~~~text
-NEED → SEARCH → PRECISION → TRIAGE → VERIFY → ACT → MONITOR
+NEED → HUNT SETUP → PAID SEARCH → TRIAGE → VERIFY → ACT → MONITOR
 ~~~
 
-Search asks «چی می‌خوام؟». Precision asks «دقیقاً چی می‌خوام و چی نمی‌خوام؟». Triage asks «کدام نتیجه ارزش باز کردن دارد؟». Verify asks «واقعاً مناسب است؟». Act handles favorite/share/open-original. Monitor lets the user repeat the hunt without rebuilding it.
+**The golden rule: یک شکار = یک جستجوی پولی.** Every search costs real
+inference money (LLM/decision models). Hunt Setup — natural query,
+interpretation review, include/exclude terms, category, location, price —
+is FREE and happens BEFORE any paid search fires. The «شکار کن» action is
+the single paid event. There is no cheap generic search followed by an
+obligatory refinement search; that pattern burns money and teaches the
+user nothing.
+
+Hunt Setup asks «دقیقاً چی می‌خوام و چی نمی‌خوام؟» BEFORE asking the
+backend anything. Triage asks «کدام نتیجه ارزش باز کردن دارد؟». Verify
+asks «واقعاً مناسب است؟». Act handles favorite/share/open-original/contact.
+Monitor (کمین) lets the user repeat the hunt without rebuilding it and is
+the engine of اوکازیون discovery — the professional user's #1 priority.
 
 The central differentiation is content-aware search: include terms and exclude terms can operate on listing title/description. Example: query «پیانو اکوستیک یاماها U3», include [پیانو][اکوستیک][یاماها][U3], exclude [طرح اکوستیک][دیجیتال].
 
@@ -45,14 +57,23 @@ The product should not optimize MVP around casual browsing, entertainment or gen
 Primary flow:
 
 ~~~text
-Open → Search → Initial Results → Refine → Triage → Detail/Verify → Act → Save Search → Monitor
+(Onboarding →) Home/Hunt Setup → Paid Search → Results/Triage → Detail/Verify → Act → Save Hunt → کمین/Monitor → New matches → Triage…
 ~~~
+
+Onboarding runs once (first launch): value proposition («به‌جای ۵۰۰ آگهی،
+فقط همان چندتایی را ببین که واقعاً می‌خواهی.»), how it works in three
+beats (بگو چی می‌خوای → دقیقش کن → کمین بذار), then «شروع».
 
 Example intent: «پیانو اکوستیک یاماها U3 در تهران، زیر ۲۰۰ میلیون؛ دیجیتال و طرح اکوستیک نمی‌خوام.»
 
-The user can enter the natural query, review/edit interpreted constraints, receive results, inspect promising candidates, favorite one, and save the complete search for future monitoring.
+The user expresses the full intent on Home (natural query + editable
+interpretation + include/exclude + category/location/price), fires ONE paid
+search, receives results, inspects promising candidates, favorites one,
+saves the complete hunt, and arms کمین for new matches.
 
-The stages are one continuous workflow. Do not create unnecessary full-page navigation between Search, Precision and Results.
+Hunt Setup, Paid Search and Results are one continuous workflow. Do not
+create unnecessary full-page navigation between Setup and Results, and
+never run a paid search before the user has confirmed their intent.
 
 ---
 
@@ -60,22 +81,30 @@ The stages are one continuous workflow. Do not create unnecessary full-page navi
 
 ~~~text
 Shakar
-├── آگهی‌ها
-│   ├── Search Workspace
-│   ├── Search Results
-│   └── Search Refinement
+├── Onboarding (first launch only)
+├── Auth (OTP; guest-first, required only for persistent actions)
+├── آگهی‌ها (Home = Hunt Setup)
+│   ├── Hunt Setup (intent + precision, free)
+│   ├── Search Results (triage)
+│   └── Refine (edit intent → explicit re-run)
 ├── آگهی Detail
 ├── شکار من
-│   ├── Saved Searches
-│   ├── Favorites
-│   └── New Matches / Activity
+│   ├── Saved Hunts
+│   ├── کمین / New Matches
+│   └── Favorites
 └── پروفایل
     ├── Account
     ├── Subscription status
     └── Settings
 ~~~
 
-Search Workspace owns query, interpretation, include/exclude terms, category, location, price, supported structured filters, sorting and result context. Detail owns listing evidence and actions. My Shakar owns persistent hunts and saved candidates. Profile owns account/settings.
+Home owns the full hunt setup: query, interpretation, include/exclude
+terms, category, location, price, supported structured filters, and the
+single «شکار کن» paid-search trigger. Detail owns listing evidence and
+actions. My Shakar owns persistent hunts, کمین monitoring and saved
+candidates. Profile owns account/settings. Onboarding owns first-run
+value communication. Auth owns identity, interrupting only for
+persistent actions.
 
 Saved Search means «چیزی که دنبال می‌کنم». Favorite means «آگهی‌ای که پیدا کرده‌ام و می‌خواهم نگه دارم».
 
@@ -89,11 +118,15 @@ MVP primary navigation:
 آگهی‌ها | شکار من | پروفایل
 ~~~
 
-آگهی‌ها is the default search workspace. شکار من contains saved searches, favorites and new matches when available. پروفایل contains account/settings.
+«کشف بازار» is removed from the tab bar (deferred per roadmap — it has no
+defined job in the hunting loop and only adds noise).
 
-The existing «کشف بازار» concept is deferred/future unless explicitly reintroduced.
+آگهی‌ها is the hunt setup (home). شکار من contains saved hunts, کمین/new
+matches and favorites. پروفایل contains account/settings.
 
-Opening Shakar should lead directly toward search; do not prioritize marketing heroes, promotional banners or editorial content.
+Opening Shakar should lead directly toward hunt setup; do not prioritize
+marketing heroes, promotional banners or editorial content. The
+«به‌جای ۵۰۰ آگهی…» value line lives in Onboarding, not on Home.
 
 Back navigation must preserve query, include/exclude terms, filters, sort and useful result position. Notifications and saved-search actions must deep-link into their relevant context.
 
@@ -104,9 +137,11 @@ Back navigation must preserve query, include/exclude terms, filters, sort and us
 Current route responsibilities:
 
 ~~~text
-/          → Main Search / Results
+/onboarding → First-run value (tagline + 3 beats + شروع)
+/auth       → OTP auth (mobile → code → verify → resume)
+/          → Hunt Setup + Results (one continuous workflow)
 /ads/[id]  → Ad Detail
-/saved     → My Shakar / Saved Searches / Favorites
+/saved     → My Shakar / Saved Hunts / کمین / Favorites
 /profile   → Profile
 ~~~
 
@@ -114,9 +149,11 @@ Route naming is implementation detail; responsibilities are authoritative.
 
 | Page | Primary job | Must not become |
 |---|---|---|
-| / | Search + results workflow | Marketing home |
+| /onboarding | Communicate value in ~10 seconds | Feature tour / marketing site |
+| /auth | Identify the user, then resume | A dead-end login wall |
+| / | Capture full intent, then ONE paid search + triage | Cheap-search-then-refine |
 | /ads/[id] | Verify one candidate | Search dashboard |
-| /saved | Resume hunts and candidates | Generic activity feed |
+| /saved | Resume hunts and catch new matches | Generic activity feed |
 | /profile | Account/settings | Search workspace |
 
 ---
@@ -153,14 +190,23 @@ Goal: account and settings only.
 
 # 8. Search States
 
-1. Initial: prominent query field; optional recent searches; advanced filters hidden.
+1. Hunt Setup (initial): the query field is the start of intent capture, not
+   a cheap search. Typing reveals live interpretation (editable must/must-not
+   chips), category/location/price controls and the «شکار دقیق» precision
+   surface — all BEFORE any paid search. The primary CTA is «شکار کن»:
+   one explicit paid search with the full confirmed intent.
 2. Typing: suggestions may appear, but never silently replace input.
 3. Interpreting: show editable interpretation of query and constraints.
-4. Refined: user can add/remove include/exclude terms and structured filters without leaving the workspace.
-5. Loading: preserve all search state; use structural skeletons; prevent duplicate submit.
-6. Results: show actual count, active constraints, sort and cards.
-7. No results: «با این شرایط نتیجه‌ای پیدا نشد.» with explicit «ویرایش جستجو» and «حذف آخرین فیلتر». Never silently relax constraints.
-8. Error: «دریافت نتایج با مشکل مواجه شد. جستجوی شما حفظ شده است.» with retry.
+   Interpretation display is free; it never fires a paid search by itself.
+4. Paid search: exactly one backend search per confirmed intent. Loading
+   preserves all search state; use structural skeletons; prevent duplicate
+   submit.
+5. Results: show actual count, active constraints, sort and cards.
+6. Refine: editing intent after results opens the setup again; the CTA is
+   explicitly «اجرای مجدد شکار» so the user knows it is a new paid search.
+7. No results: «با این شرایط نتیجه‌ای پیدا نشد.» with explicit «ویرایش شکار»
+   and «حذف آخرین فیلتر». Never silently relax constraints.
+8. Error: «دریافت نتایج با مشکل مواجه شد. شکار شما حفظ شده است.» with retry.
 
 If interpretation is inferred, it must not appear as user-confirmed without an appropriate indication. Never invent result counts.
 
@@ -220,21 +266,33 @@ New-match notification should deep-link directly to the relevant results.
 
 ---
 
-# 12. Auth Interruption / Resume
+# 12. Auth: guest-first, gate on persistence
 
-Guests can experience core search and inspect listings. Authentication is required for persistent actions such as Save Search, Favorite and Profile where applicable.
+Guests can do the full hunt: setup, paid search, triage, detail inspection.
+Authentication is required ONLY for persistent actions: Save Hunt, کمین
+(monitoring), Favorite, and Profile. This is deliberate: a professional
+tries the hunt first, commits identity when they want to keep something.
 
 Required pattern:
 
 ~~~text
-Search → Refine → Results → Protected action → Auth → Resume interrupted action
+Hunt Setup → Paid Search → Results → Protected action → /auth → Resume interrupted action
 ~~~
 
-Preserve query, include/exclude terms, category, location, price, structured filters and useful result context across auth.
+Onboarding's «شروع» leads to Home as a guest — never to a forced login wall.
 
-OTP flow: mobile number → request OTP → enter OTP → authenticated session → resume. Provide validation, retry, resend when supported, failure state and resume behavior.
+OTP flow (`/auth`): mobile number → request OTP → enter OTP → authenticated
+session → resume the exact interrupted action with all hunt context intact.
+Provide validation, retry, resend when supported, failure state and resume
+behavior.
 
-Never make the user rebuild a complex search because authentication was requested.
+The auth UI must be fully built with a clean backend seam (`lib/auth.ts`):
+screens, validation, resend timer, error states. Never fake a successful
+login — the verify step calls the seam and its pending state is explicit.
+
+Preserve query, include/exclude terms, category, location, price, structured
+filters and useful result context across auth. Never make the user rebuild
+a hunt because authentication was requested.
 
 ---
 

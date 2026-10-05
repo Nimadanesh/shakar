@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Vazirmatn } from "next/font/google";
-import { BottomTabBar } from "@/components/layout/BottomTabBar";
-import { Header } from "@/components/layout/Header";
+import { AppChrome } from "@/components/layout/AppChrome";
 import "./globals.css";
 
 const vazirmatn = Vazirmatn({
@@ -61,14 +60,7 @@ export default function RootLayout({
         className="flex min-h-full flex-col bg-background font-sans text-foreground"
         suppressHydrationWarning
       >
-        <Header />
-        <div
-          className="mx-auto flex w-full max-w-screen-sm flex-1 flex-col px-4"
-          style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
-        >
-          {children}
-        </div>
-        <BottomTabBar />
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   );
