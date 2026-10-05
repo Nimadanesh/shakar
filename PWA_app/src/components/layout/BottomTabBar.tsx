@@ -21,7 +21,7 @@ export function BottomTabBar() {
       className="fixed inset-x-0 bottom-0 z-40 px-4"
       style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
     >
-      <div className="mx-auto grid w-full max-w-screen-sm grid-cols-4 gap-1 rounded-2xl border border-border bg-secondary/70 p-1.5 shadow-[0_8px_32px_rgb(0_0_0/0.45)] backdrop-blur-xl">
+      <div className="mx-auto grid w-full max-w-screen-sm grid-cols-4 gap-1 rounded-[28px] border border-border bg-secondary/70 p-1.5 shadow-[0_8px_32px_rgb(0_0_0/0.45)] backdrop-blur-xl">
         {tabs.map(({ href, label, icon: Icon }) => {
           // A hunt page (/hunt/[id]) belongs to the شکار flow.
           const isActive =
@@ -34,7 +34,7 @@ export function BottomTabBar() {
               href={href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[11px] leading-4 transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-ring active:scale-95",
+                "flex flex-col items-center gap-0.5 rounded-[20px] py-1.5 text-[11px] leading-4 transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-ring active:scale-95",
                 isActive
                   ? "bg-primary/15 text-primary"
                   : "text-muted-foreground hover:text-foreground"

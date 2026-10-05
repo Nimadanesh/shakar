@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, MessageCircle, Sparkles } from "lucide-react";
+import { Bell, Crosshair, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { markOnboarded } from "@/lib/first-run";
 
@@ -12,20 +12,52 @@ const BEATS = [
     title: "به‌جای ۵۰۰ آگهی، فقط همان چندتایی را ببین که واقعاً می‌خواهی.",
     sub: "شکار، برای حرفه‌ای‌های دیوار",
     tagline: true,
+    mock: false,
   },
   {
-    icon: MessageCircle,
+    icon: Crosshair,
     title: "تعریف کن، شکار کن",
     sub: "به زبان خودت بنویس چی می‌خوای، مشخصات شکار رو بده، یه دکمه بزن — تمام.",
     tagline: false,
+    mock: true,
   },
   {
     icon: Bell,
     title: "کمین بذار",
     sub: "آگهی اوکازیون که اومد، خبرت می‌کنم؛ از دستش نمی‌دی.",
     tagline: false,
+    mock: false,
   },
 ] as const;
+
+/**
+ * A miniature, non-interactive echo of the real hunt form — the beat's
+ * promise made visible, in the product's own visual language.
+ */
+function HuntMock() {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex w-full max-w-[280px] flex-col gap-2 rounded-lg border border-border bg-card p-3 text-start"
+    >
+      <p className="text-[13px] leading-5 text-foreground">پیانو یاماها U3</p>
+      <div className="flex flex-wrap gap-1.5">
+        <span className="rounded-md border border-border bg-secondary px-2 py-0.5 text-[11px] leading-4 text-foreground">
+          یاماها
+        </span>
+        <span className="rounded-md border border-border bg-secondary px-2 py-0.5 text-[11px] leading-4 text-foreground">
+          U3
+        </span>
+        <span className="rounded-md border border-border px-2 py-0.5 text-[11px] leading-4 text-muted-foreground">
+          <span className="line-through">دیجیتال</span>
+        </span>
+      </div>
+      <div className="flex h-9 items-center justify-center rounded-lg bg-action-primary text-[13px] font-medium text-primary-foreground">
+        شکار کن
+      </div>
+    </div>
+  );
+}
 
 /**
  * First-launch value communication. Three quiet beats, no feature tour.
@@ -97,6 +129,7 @@ export default function OnboardingPage() {
         <p className="max-w-xs text-[15px] leading-7 text-muted-foreground">
           {beat.sub}
         </p>
+        {beat.mock && <HuntMock />}
       </div>
 
       <div className="flex flex-col gap-4">

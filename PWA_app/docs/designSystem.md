@@ -382,6 +382,11 @@ principle is: the hunter reaches the first meaningful result fast.
 | radius-2xl | 20px | major floating surfaces |
 | radius-pill | 9999px | chips/pills/floating nav |
 
+Floating chrome exception (Navid, 2026-10-05): the floating header capsule
+and bottom tab bar use 28px (header is h-14, so a true capsule) with inner
+tab buttons at 20px — a Telegram-like roundness. This is the only place
+28px is used; everything else follows the table above.
+
 ## 13.1 Shape roles (LAW)
 
 Every visible element belongs to exactly one shape role. Roles must be visually

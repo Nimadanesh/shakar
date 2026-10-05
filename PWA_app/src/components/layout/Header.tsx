@@ -75,7 +75,7 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 px-4 pt-3">
-        <div className="mx-auto flex h-14 w-full max-w-screen-sm items-center justify-between rounded-2xl border border-border bg-secondary/70 px-2 shadow-[0_8px_32px_rgb(0_0_0/0.35)] backdrop-blur-xl">
+        <div className="mx-auto flex h-14 w-full max-w-screen-sm items-center justify-between rounded-[28px] border border-border bg-secondary/70 px-2 shadow-[0_8px_32px_rgb(0_0_0/0.35)] backdrop-blur-xl">
           <AvatarButton onClick={() => router.push("/profile")} />
           <div className="flex items-center gap-0.5">
             <button
