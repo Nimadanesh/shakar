@@ -52,10 +52,10 @@ export function AdCardCompact({ ad, strongMatch, includeTerms, onHide, index = 0
           <CategoryArt categoryId={ad.categoryId} title={ad.title} className="aspect-square" />
         )}
       </Link>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         <Link
           href={`/ads/${ad.id}`}
-          className="truncate text-sm font-semibold leading-5 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          className="truncate text-sm font-medium leading-5 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           {ad.title}
         </Link>

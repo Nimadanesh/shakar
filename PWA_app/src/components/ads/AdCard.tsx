@@ -77,11 +77,11 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
       <div className="flex flex-col gap-1">
         <Link
           href={`/ads/${ad.id}`}
-          className="line-clamp-1 text-base font-bold leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          className="line-clamp-1 text-base font-semibold leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           {ad.title}
         </Link>
-        <p className="text-xl font-extrabold leading-8 tabular-nums text-foreground" dir="auto">
+        <p className="text-xl font-bold leading-8 tabular-nums text-foreground" dir="auto">
           {formatPriceToman(ad.price)}
         </p>
       </div>

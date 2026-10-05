@@ -252,7 +252,7 @@ Type scale:
 | caption | 11px | 1.35 | 400 | low-priority metadata |
 | mono-md | 13px | 1.45 | 400 | technical/numeric |
 
-Allowed default weights: 400, 500, 600. Use 700 only when genuinely necessary.
+Allowed default weights: 400, 500, 600. Use 700 only when genuinely necessary (key prices, hero titles). 800 is not used.
 
 For prices, counts and comparison-heavy numeric UI, use tabular numerals when supported.
 
