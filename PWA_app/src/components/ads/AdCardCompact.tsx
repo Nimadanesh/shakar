@@ -21,7 +21,7 @@ interface AdCardCompactProps {
 export function AdCardCompact({ ad, strongMatch, includeTerms, onHide, index = 0 }: AdCardCompactProps) {
   const { isFavorite, toggle } = useGatedFavorites();
   const favorite = isFavorite(ad.id);
-  const segments = excerptSegments(`${ad.title}. ${ad.description}`, includeTerms);
+  const segments = excerptSegments(ad.description, includeTerms);
   const evidence = segments
     .map((s) => s.text)
     .join("")

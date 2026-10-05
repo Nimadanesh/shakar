@@ -43,7 +43,7 @@ function FavoriteToggle({ adId, overlay }: { adId: string; overlay?: boolean }) 
 
 /** Triage card: image → title → price → evidence → signal → meta → actions. */
 export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 0 }: AdCardProps) {
-  const segments = excerptSegments(`${ad.title}. ${ad.description}`, includeTerms);
+  const segments = excerptSegments(ad.description, includeTerms);
   const unknowns = match.evidence.filter((e) => e.status === "unknown");
   const explanation = explainWhy(ad, includeTerms, excludeTerms);
   const [whyOpen, setWhyOpen] = useState(false);
@@ -103,17 +103,19 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
         </div>
       )}
 
-      <p className="line-clamp-2 text-[13.5px] leading-6 text-muted-foreground">
-        {segments.map((segment, segmentIndex) =>
-          segment.hit ? (
-            <span key={segmentIndex} className="font-medium text-signal">
-              {segment.text}
-            </span>
-          ) : (
-            <span key={segmentIndex}>{segment.text}</span>
-          )
-        )}
-      </p>
+      {ad.description.trim() !== "" && (
+        <p className="line-clamp-2 text-[13.5px] leading-6 text-muted-foreground">
+          {segments.map((segment, segmentIndex) =>
+            segment.hit ? (
+              <span key={segmentIndex} className="font-medium text-signal">
+                {segment.text}
+              </span>
+            ) : (
+              <span key={segmentIndex}>{segment.text}</span>
+            )
+          )}
+        </p>
+      )}
 
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs leading-5 text-muted-foreground">

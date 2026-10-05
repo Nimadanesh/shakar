@@ -505,14 +505,19 @@ Difference must remain understandable without color alone.
 ### Card
 A card is a structural container, not the default pattern for every UI block.
 
-AdCard hierarchy:
-1. image
-2. title
-3. price
-4. evidence
-5. match signal
-6. location/time
-7. favorite/action
+AdCard content priority — the triage question is «ارزش باز کردن دارد؟»
+(is this worth opening?). Show data in decision order, never twice:
+1. image — visual anchor, full-bleed, 16:10
+2. title — identity (what exactly is it)
+3. price — decision datum #1
+4. match signal — trust (why this result)
+5. evidence — description-only excerpt centered on the first keyword hit.
+   Never repeats the title. No hit in description → description start.
+   Empty description → omit the line entirely, never backfill with title.
+6. location - freshness — tertiary meta, one line («تهران - ۲ ساعت پیش»)
+7. favorite/action — quiet
+
+Compact card keeps the same order, one evidence line, no decoration.
 
 ### Badge
 Use only for meaningful metadata. Do not badge everything.
