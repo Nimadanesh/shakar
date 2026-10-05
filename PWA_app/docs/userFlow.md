@@ -214,9 +214,12 @@ Goal: everything the user needs but doesn't follow: hunt history
 - تاریخچه rows: query + one-line spec summary (city • category • price •
   age, same as home's RecentHunts) + two-step delete. Tap → triage.
 - علاقه‌مندی‌ها rows: trailing heart toggles the favorite off in place.
-- ذخیره‌شده‌ها: local hunt definitions. Save from the triage sticky bar
-  (bookmark toggle); tap a row to re-run it with one tap (records a fresh
-  hunt); two-step delete. Empty state points at the triage bookmark.
+- ذخیره‌شده‌ها: local hunt definitions. Save from the labeled
+  «ذخیره‌ی این شکار» action under the kamin button on the triage page
+  (deliberately NOT a bookmark icon — bookmark reads as per-ad, which is
+  what the heart/favorites already does); tap a row to re-run it with one
+  tap (records a fresh hunt); two-step delete. Empty state points at the
+  triage action.
 
 ## Profile
 Goal: account and settings only.

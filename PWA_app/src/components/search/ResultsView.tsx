@@ -1,4 +1,4 @@
-import { Radar, RotateCcw } from "lucide-react";
+import { Check, Plus, Radar, RotateCcw } from "lucide-react";
 import { AdCard } from "@/components/ads/AdCard";
 import { AdCardCompact } from "@/components/ads/AdCardCompact";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -27,6 +27,39 @@ interface ResultsViewProps {
   onRetry: () => void;
   /** Prebuilt query string carrying the hunt's evidence context to /ads/[id]. */
   detailQuery?: string;
+  /** Hunt-level save (ذخیره‌ی شکار) — distinct from per-ad favorites. */
+  huntSaved: boolean;
+  onToggleHuntSave: () => void;
+}
+
+/**
+ * Quiet hunt-level save action. Labeled in words on purpose: an icon-only
+ * bookmark here reads as "bookmark one of these ads", which is what the
+ * per-ad heart already does. This saves the whole hunt definition.
+ */
+function SaveHuntButton({
+  saved,
+  onToggle,
+}: {
+  saved: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={saved}
+      aria-label={saved ? "حذف از شکارهای ذخیره‌شده" : "ذخیره‌ی این شکار"}
+      className="flex h-10 w-full items-center justify-center gap-1.5 rounded-lg text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-ring text-muted-foreground hover:text-foreground"
+    >
+      {saved ? (
+        <Check size={14} aria-hidden="true" className="text-primary" />
+      ) : (
+        <Plus size={14} aria-hidden="true" />
+      )}
+      {saved ? "ذخیره شد" : "ذخیره‌ی این شکار"}
+    </button>
+  );
 }
 
 export function SkeletonList() {
@@ -63,6 +96,8 @@ export function ResultsView({
   onOpenPrecision,
   onRetry,
   detailQuery = "",
+  huntSaved,
+  onToggleHuntSave,
 }: ResultsViewProps) {
   if (phase === "loading") return <SkeletonList />;
 
@@ -97,6 +132,7 @@ export function ResultsView({
         <Radar size={16} aria-hidden="true" />
         کمین بذار، خبرم کن
       </button>
+      <SaveHuntButton saved={huntSaved} onToggle={onToggleHuntSave} />
       {suppressedCount > 0 && (
         <NoticeBar>
           {suppressedCount.toLocaleString("fa-IR")} مورد مخفی‌شده کنار گذاشته شد

@@ -190,7 +190,7 @@ export default function ArchivePage() {
         <EmptyState
           icon={<Bookmark size={28} aria-hidden="true" className="text-muted-foreground" />}
           title="هنوز شکاری ذخیره نکرده‌ای"
-          description="توی صفحه‌ی نتایج هر شکار، نشان را بزن تا قالبت اینجا بمونه و بعداً با یک لمس اجراش کنی."
+          description="توی صفحه‌ی نتایج هر شکار، «ذخیره‌ی این شکار» را بزن تا قالبت اینجا بمونه و بعداً با یک لمس اجراش کنی."
           primaryAction={{ label: "شروع شکار", onClick: () => router.push("/") }}
         />
       ) : (

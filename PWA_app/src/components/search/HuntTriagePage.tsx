@@ -274,8 +274,6 @@ export function HuntTriagePage() {
         onViewChange={handleViewChange}
         onOpenPrecision={openRefine}
         onBackToSearch={() => router.push("/")}
-        saved={isSaved}
-        onToggleSave={handleToggleSave}
       />
 
       {computed !== null && computed !== "error" && (
@@ -293,6 +291,8 @@ export function HuntTriagePage() {
           onOpenPrecision={openRefine}
           onRetry={() => setRetryNonce((n) => n + 1)}
           detailQuery={detailQuery}
+          huntSaved={isSaved}
+          onToggleHuntSave={handleToggleSave}
         />
       )}
       {(computed === null || computed === "error") && (
@@ -310,6 +310,8 @@ export function HuntTriagePage() {
           onOpenPrecision={openRefine}
           onRetry={() => setRetryNonce((n) => n + 1)}
           detailQuery={detailQuery}
+          huntSaved={false}
+          onToggleHuntSave={() => {}}
         />
       )}
 
