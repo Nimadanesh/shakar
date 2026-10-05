@@ -383,9 +383,11 @@ principle is: the hunter reaches the first meaningful result fast.
 | radius-pill | 9999px | chips/pills/floating nav |
 
 Floating chrome exception (Navid, 2026-10-05): the floating header capsule
-and bottom tab bar use 28px (header is h-14, so a true capsule) with inner
-tab buttons at 20px — a Telegram-like roundness. This is the only place
-28px is used; everything else follows the table above.
+and bottom tab bar use 28px (header is h-14, so a true capsule) — a
+Telegram-like roundness. The tab bar's active indicator is an icon-only
+pill (h-8 w-16, bg-secondary) with the label beneath it, per the Material3
+reference Navid sent. This is the only place 28px is used; everything else
+follows the table above.
 
 ## 13.1 Shape roles (LAW)
 
