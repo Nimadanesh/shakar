@@ -29,16 +29,16 @@ interface ResultsViewProps {
 
 function SkeletonList() {
   return (
-    <div className="flex flex-col gap-3" aria-busy="true" aria-label="در حال دریافت نتایج">
+    <div className="flex flex-col gap-3 sm:gap-4" aria-busy="true" aria-label="در حال دریافت نتایج">
       {[0, 1, 2].map((i) => (
         <div
           key={i}
           className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
         >
           <div className="aspect-[16/10] w-full animate-pulse rounded-lg bg-secondary" />
-          <div className="h-4 w-3/4 animate-pulse rounded-full bg-secondary" />
-          <div className="h-4 w-1/2 animate-pulse rounded-full bg-secondary" />
-          <div className="h-4 w-2/3 animate-pulse rounded-full bg-secondary" />
+          <div className="h-4 w-3/4 animate-pulse rounded-md bg-secondary" />
+          <div className="h-4 w-1/2 animate-pulse rounded-md bg-secondary" />
+          <div className="h-4 w-2/3 animate-pulse rounded-md bg-secondary" />
         </div>
       ))}
     </div>
@@ -83,7 +83,7 @@ export function ResultsView({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 sm:gap-4">
       <div className="flex items-center justify-between gap-2">
         <h2 aria-live="polite" className="text-[17px] font-bold leading-7 text-foreground">
           {results.length.toLocaleString("fa-IR")} نتیجه برای شکار فعلی

@@ -67,7 +67,7 @@ export function StickyHuntBar({
           {refinementCount > 0 && (
             <span
               aria-hidden="true"
-              className="absolute end-0.5 top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 tabular-nums text-primary-foreground"
+              className="absolute end-0.5 top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-semibold leading-4 tabular-nums text-primary"
             >
               {refinementCount.toLocaleString("fa-IR")}
             </span>

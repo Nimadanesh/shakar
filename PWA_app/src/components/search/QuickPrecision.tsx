@@ -31,7 +31,7 @@ export const QuickPrecision = forwardRef<HTMLButtonElement, QuickPrecisionProps>
         <Crosshair size={16} aria-hidden="true" />
         شکار دقیق
         {refinementCount > 0 && (
-          <span className="flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold leading-5 tabular-nums text-primary-foreground">
+          <span className="flex min-w-5 items-center justify-center rounded-full bg-primary/15 px-1.5 text-[11px] font-semibold leading-5 tabular-nums text-primary">
             {refinementCount.toLocaleString("fa-IR")}
           </span>
         )}

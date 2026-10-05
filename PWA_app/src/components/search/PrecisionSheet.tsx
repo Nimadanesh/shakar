@@ -151,7 +151,7 @@ export function PrecisionSheet({ open, initial, preview, onApply, onClose, onOpe
             <button
               type="button"
               onClick={handleApply}
-              className="glow-accent h-11 rounded-lg bg-action-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+              className="h-11 rounded-lg bg-action-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
             >
               اعمال
               {previewCount !== null && (
