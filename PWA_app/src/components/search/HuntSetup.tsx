@@ -4,24 +4,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Camera, Music } from "lucide-react";
 import { FOCUS_SEARCH_EVENT } from "@/components/layout/Header";
-import { QuickPrecision } from "@/components/search/QuickPrecision";
-import { PrecisionSheet, type PrecisionDraft } from "@/components/search/PrecisionSheet";
-import { HuntInput } from "@/components/search/HuntInput";
-import { InterpretationChips } from "@/components/search/InterpretationChips";
-import { categoryLabel, cityLabel } from "@/data/taxonomy";
+import { WhatField } from "@/components/search/WhatField";
+import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
+import { SpecRow } from "@/components/search/SpecRow";
+import { OptionSheet } from "@/components/search/OptionSheet";
+import { PriceSheet } from "@/components/search/PriceSheet";
+import {
+  CATEGORIES,
+  CITIES,
+  categoryLabel,
+  cityLabel,
+} from "@/data/taxonomy";
 import { interpretQuery } from "@/lib/interpret";
 import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
 import { recordHunt } from "@/lib/hunt-store";
 import { parsePriceInput, formatPriceToman } from "@/lib/prices";
-import { huntCostLabel } from "@/lib/pricing";
-import {
-  EMPTY_CONTEXT_BASE,
-  type ContextBase,
-} from "@/lib/search-context";
+import { EMPTY_CONTEXT_BASE, type ContextBase } from "@/lib/search-context";
 import { readParams } from "@/lib/search-params";
-import type { Interpretation } from "@/types/search";
 
 const EXAMPLES = [
   { label: "پیانو U3 تهران", query: "پیانو U3 تهران", icon: Music },
@@ -29,162 +30,23 @@ const EXAMPLES = [
   { label: "دوربین سونی زیر ۱۰۰م", query: "دوربین سونی زیر ۱۰۰ میلیون", icon: Camera },
 ];
 
-/**
- * Display groups for intent: explicit refinements + inferred readings.
- * Pure: the caller decides which interpretation feeds it (live query in
- * setup, submitted interpretation in results).
- */
-function buildDisplayGroups(
-  base: ContextBase,
-  interpretation: Interpretation,
-  dismissed: ReadonlySet<string>
-): Array<{
-  id: string;
-  title: string;
-  chips: Array<{ id: string; label: string; inferred?: boolean }>;
-}> {
-    const result: Array<{
-      id: string;
-      title: string;
-      chips: Array<{ id: string; label: string; inferred?: boolean }>;
-    }> = [];
-    if (base.include.length > 0) {
-      result.push({
-        id: "include",
-        title: "این کلمات در توضیحات باشد",
-        chips: base.include.map((t) => ({ id: `include:${t}`, label: t })),
-      });
-    }
-    const inferredExcludes = interpretation.applied.filter(
-      (c) => c.kind === "exclude" && !dismissed.has(c.id)
-    );
-    if (base.exclude.length > 0 || inferredExcludes.length > 0) {
-      result.push({
-        id: "exclude",
-        title: "این کلمات در توضیحات نباشد",
-        chips: [
-          ...base.exclude.map((t) => ({ id: `exclude:${t}`, label: t })),
-          ...inferredExcludes
-            .filter((c) => !base.exclude.includes(c.value))
-            .map((c) => ({ id: c.id, label: `حذف: ${c.display}`, inferred: true })),
-        ],
-      });
-    }
-    const inferredCity = interpretation.applied.find(
-      (c) => c.kind === "city" && !dismissed.has(c.id)
-    );
-    if (base.city !== "all" || inferredCity) {
-      const explicit = base.city !== "all";
-      result.push({
-        id: "city",
-        title: "مکان",
-        chips: [
-          {
-            id: explicit ? `city:${base.city}` : (inferredCity?.id ?? ""),
-            label: explicit ? cityLabel(base.city) : (inferredCity?.display ?? ""),
-            inferred: !explicit,
-          },
-        ],
-      });
-    }
-    const priceChips: Array<{ id: string; label: string; inferred?: boolean }> = [];
-    const explicitMin = parsePriceInput(base.priceMin);
-    const explicitMax = parsePriceInput(base.priceMax);
-    if (explicitMin !== null)
-      priceChips.push({ id: "priceMin:explicit", label: `از ${formatPriceToman(explicitMin)}` });
-    if (explicitMax !== null)
-      priceChips.push({ id: "priceMax:explicit", label: `تا ${formatPriceToman(explicitMax)}` });
-    for (const c of interpretation.applied) {
-      if (dismissed.has(c.id)) continue;
-      if (c.kind === "priceMin" && explicitMin === null)
-        priceChips.push({ id: c.id, label: c.display, inferred: true });
-      if (c.kind === "priceMax" && explicitMax === null)
-        priceChips.push({ id: c.id, label: c.display, inferred: true });
-    }
-    if (priceChips.length > 0) {
-      result.push({ id: "price", title: "قیمت", chips: priceChips });
-    }
-    if (base.category !== "all") {
-      result.push({
-        id: "category",
-        title: "دسته‌بندی",
-        chips: [{ id: `category:${base.category}`, label: categoryLabel(base.category) }],
-      });
-    }
-    return result;
+interface InferredReadings {
+  excludes: InferredChip[];
+  city: { id: string; value: string; display: string } | null;
+  priceMin: { id: string; value: string; display: string } | null;
+  priceMax: { id: string; value: string; display: string } | null;
 }
 
 /**
- * Pure state transition for removing a refinement chip.
- * Setup never fires: curating intent is free.
- */
-function applyRefinementRemoval(
-  id: string,
-  base: ContextBase,
-  dismissed: ReadonlySet<string>
-): { nextBase: ContextBase; nextDismissed: ReadonlySet<string> } {
-  const [kind, ...rest] = id.split(":");
-  const value = rest.join(":");
-  let nextBase = base;
-  let nextDismissed = dismissed;
-
-  if (kind === "include") {
-    nextBase = { ...base, include: base.include.filter((t) => t !== value) };
-  } else if (kind === "exclude") {
-    if (base.exclude.includes(value)) {
-      nextBase = { ...base, exclude: base.exclude.filter((t) => t !== value) };
-    } else {
-      nextDismissed = new Set(dismissed).add(id);
-    }
-  } else if (kind === "city") {
-    if (base.city !== "all") nextBase = { ...base, city: "all" };
-    else nextDismissed = new Set(dismissed).add(id);
-  } else if (kind === "priceMin") {
-    if (base.priceMin.trim() !== "") nextBase = { ...base, priceMin: "" };
-    else nextDismissed = new Set(dismissed).add(id);
-  } else if (kind === "priceMax") {
-    if (base.priceMax.trim() !== "") nextBase = { ...base, priceMax: "" };
-    else nextDismissed = new Set(dismissed).add(id);
-  } else if (kind === "category") {
-    nextBase = { ...base, category: "all" };
-  }
-
-  return { nextBase, nextDismissed };
-}
-
-/**
- * Pure state transition for confirming an inferred reading.
- * Returns null when there is nothing to promote.
- */
-function applyInferredPromotion(id: string, base: ContextBase): ContextBase | null {
-  const [kind, ...rest] = id.split(":");
-  const value = rest.join(":");
-  if (kind === "city" && base.city === "all") return { ...base, city: value };
-  if (kind === "priceMin" && base.priceMin.trim() === "") return { ...base, priceMin: value };
-  if (kind === "priceMax" && base.priceMax.trim() === "") return { ...base, priceMax: value };
-  if (kind === "exclude" && !base.exclude.includes(value))
-    return { ...base, exclude: [...base.exclude, value] };
-  return null;
-}
-
-/**
- * Light structural check for a hunt base restored from storage.
- * The data comes from our own storage; this just guards corruption.
- */
-function isContextBaseLike(value: unknown): value is ContextBase {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    Array.isArray((value as ContextBase).include) &&
-    Array.isArray((value as ContextBase).exclude)
-  );
-}
-
-/**
- * Home = Hunt Setup, and ONLY setup. It captures intent for free and fires
- * the ONE explicit paid hunt, landing on the hunt's canonical triage URL.
- * It never renders results and never fires implicitly — not even for
- * deep links. History lives in «شکار من», not here.
+ * Home = the hunt-definition form, and ONLY the form. Three parts:
+ * (1) «چی؟» — what is being hunted (a plain field, not a search box);
+ * (2) «مشخصات شکار» — include/exclude chips + category/city/price rows;
+ * (3) the single «شکار کن» button.
+ *
+ * Defining the hunt is free. The button consumes one hunt from the
+ * subscription quota and lands on the hunt's canonical triage URL.
+ * The form never auto-fires, Enter never fires, and home never renders
+ * results. History lives in «شکار من», not here.
  */
 export function HuntSetup() {
   const router = useRouter();
@@ -193,11 +55,12 @@ export function HuntSetup() {
   const [query, setQuery] = useState("");
   const [base, setBase] = useState<ContextBase>(EMPTY_CONTEXT_BASE);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
+  const [priceOpen, setPriceOpen] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const advancedRef = useRef<HTMLButtonElement>(null);
 
   /** Live, free interpretation of the typed query — setup only, never paid. */
   const liveInterp = useMemo(() => {
@@ -207,59 +70,88 @@ export function HuntSetup() {
 
   const hasIntent = query.trim() !== "";
 
+  /** Inferred readings feed the form's chips/rows, dashed until confirmed. */
+  const inferred: InferredReadings = useMemo(() => {
+    const empty: InferredReadings = {
+      excludes: [],
+      city: null,
+      priceMin: null,
+      priceMax: null,
+    };
+    if (!liveInterp) return empty;
+    const live = (id: string) => !dismissed.has(id);
+    const excludes = liveInterp.applied
+      .filter((c) => c.kind === "exclude" && live(c.id) && !base.exclude.includes(c.value))
+      .map((c) => ({ id: c.id, value: c.value, label: c.display }));
+    const cityC = liveInterp.applied.find((c) => c.kind === "city" && live(c.id));
+    const city =
+      cityC && base.city === "all"
+        ? { id: cityC.id, value: cityC.value, display: cityC.display }
+        : null;
+    const minC = liveInterp.applied.find((c) => c.kind === "priceMin" && live(c.id));
+    const priceMin =
+      minC && base.priceMin.trim() === ""
+        ? { id: minC.id, value: minC.value, display: minC.display }
+        : null;
+    const maxC = liveInterp.applied.find((c) => c.kind === "priceMax" && live(c.id));
+    const priceMax =
+      maxC && base.priceMax.trim() === ""
+        ? { id: maxC.id, value: maxC.value, display: maxC.display }
+        : null;
+    return { excludes, city, priceMin, priceMax };
+  }, [liveInterp, dismissed, base]);
+
   /**
-   * THE single paid-hunt event. The curated intent becomes a persistent
-   * hunt asset; the user lands on its canonical triage URL.
+   * THE single hunt event. The curated form becomes a persistent hunt
+   * asset; the user lands on its canonical triage URL.
    */
-  function fireHunt(draftBase: ContextBase) {
+  function fireHunt() {
     const trimmed = query.trim();
     if (trimmed === "") return;
-    const record = recordHunt(trimmed, draftBase, dismissed);
-    setBase(draftBase);
+    const record = recordHunt(trimmed, base, dismissed);
     if (record) router.push(`/hunt/${record.id}`);
   }
 
-  function draftToBase(draft: PrecisionDraft): ContextBase {
-    return {
-      ...base,
-      priceMin: draft.priceMin.trim(),
-      priceMax: draft.priceMax.trim(),
-      include: draft.include,
-      exclude: draft.exclude,
-      hasImage: draft.hasImage,
-      category: draft.category,
-      city: draft.city,
-    };
-  }
-
-  /**
-   * Setup mode: the draft becomes the hunt, then the ONE paid hunt fires.
-   * The sheet CTA reads «شکار کن».
-   */
-  function handleSetupApply(draft: PrecisionDraft) {
-    const nextBase = draftToBase(draft);
-    setSheetOpen(false);
-    fireHunt(nextBase);
-  }
-
-  /** Suggested hunt: fill the intent for review. Never auto-fires. */
+  /** Suggested hunt: fill the WHAT field for review. Never auto-fires. */
   function applySuggestedHunt(exampleQuery: string) {
     setQuery(exampleQuery);
     inputRef.current?.focus({ preventScroll: true });
   }
 
-  /**
-   * Enter fires the hunt — it is the primary action. The sheet never opens
-   * automatically; «شکار دقیق» is opt-in advanced.
-   */
-  function handleInputSubmit() {
-    if (query.trim() === "") return;
-    fireHunt(base);
+  function addExplicit(kind: "include" | "exclude", term: string) {
+    setBase((b) =>
+      kind === "include" && !b.include.includes(term)
+        ? { ...b, include: [...b.include, term] }
+        : kind === "exclude" && !b.exclude.includes(term)
+          ? { ...b, exclude: [...b.exclude, term] }
+          : b
+    );
   }
 
-  function handleSheetClose() {
-    setSheetOpen(false);
-    advancedRef.current?.focus();
+  function removeExplicit(kind: "include" | "exclude", term: string) {
+    setBase((b) =>
+      kind === "include"
+        ? { ...b, include: b.include.filter((t) => t !== term) }
+        : { ...b, exclude: b.exclude.filter((t) => t !== term) }
+    );
+  }
+
+  /** Confirm an inferred reading: it becomes explicit. Free — no firing. */
+  function confirmInferred(chip: InferredChip | { id: string; value: string }) {
+    if (inferred.excludes.some((c) => c.id === chip.id)) {
+      addExplicit("exclude", chip.value);
+      return;
+    }
+    if (inferred.city?.id === chip.id) setBase((b) => ({ ...b, city: chip.value }));
+    if (inferred.priceMin?.id === chip.id)
+      setBase((b) => ({ ...b, priceMin: chip.value }));
+    if (inferred.priceMax?.id === chip.id)
+      setBase((b) => ({ ...b, priceMax: chip.value }));
+  }
+
+  /** Dismiss an inferred reading: it stays out of this hunt. */
+  function dismissInferred(id: string) {
+    setDismissed((d) => new Set(d).add(id));
   }
 
   // First-launch gate, auth-resume, and deep-link intent restore.
@@ -296,66 +188,26 @@ export function HuntSetup() {
     return () => window.removeEventListener(FOCUS_SEARCH_EVENT, focusQuery);
   }, []);
 
-  /** Setup-mode removal: curates intent without firing anything. */
-  function setupRemoveRefinement(id: string) {
-    const { nextBase, nextDismissed } = applyRefinementRemoval(id, base, dismissed);
-    setBase(nextBase);
-    setDismissed(nextDismissed);
-  }
+  const explicitMin = parsePriceInput(base.priceMin);
+  const explicitMax = parsePriceInput(base.priceMax);
 
-  /** Setup-mode promotion: confirms intent without firing anything. */
-  function setupPromoteInferred(id: string) {
-    const nextBase = applyInferredPromotion(id, base);
-    if (!nextBase) return;
-    setBase(nextBase);
-  }
-
-  /** Setup-mode preference promotion: no paid hunt. */
-  function setupPromotePreference(id: string) {
-    const pref = liveInterp?.preferences.find((p) => p.id === id);
-    if (!pref || base.include.includes(pref.value)) return;
-    setBase({ ...base, include: [...base.include, pref.value] });
-  }
-
-  const groups = useMemo(() => {
-    if (!hasIntent || !liveInterp) return [];
-    return buildDisplayGroups(base, liveInterp, dismissed);
-  }, [base, liveInterp, dismissed, hasIntent]);
-
-  // Synchronous mirror of the curated intent, for the precision affordance.
-  const summaryChips = useMemo(() => groups.flatMap((g) => g.chips), [groups]);
-
-  const visiblePreferences = (liveInterp?.preferences ?? []).filter(
-    (p) => hasIntent && !base.include.includes(p.value)
-  );
-
-  /** Compact price summary for the setup affordance row. */
-  const priceAffordanceLabel = useMemo(() => {
-    const min = parsePriceInput(base.priceMin);
-    const max = parsePriceInput(base.priceMax);
-    if (min !== null && max !== null)
-      return `قیمت: ${formatPriceToman(min)} تا ${formatPriceToman(max)}`;
-    if (max !== null) return `قیمت: تا ${formatPriceToman(max)}`;
-    if (min !== null) return `قیمت: از ${formatPriceToman(min)}`;
-    return "قیمت: همه";
-  }, [base.priceMin, base.priceMax]);
-
-  const advancedActive =
-    base.priceMin.trim() !== "" ||
-    base.priceMax.trim() !== "" ||
-    base.include.length > 0 ||
-    base.exclude.length > 0 ||
-    base.hasImage;
+  const priceRowValue = (() => {
+    if (explicitMin !== null && explicitMax !== null)
+      return `${formatPriceToman(explicitMin)} تا ${formatPriceToman(explicitMax)}`;
+    if (explicitMax !== null) return `تا ${formatPriceToman(explicitMax)}`;
+    if (explicitMin !== null) return `از ${formatPriceToman(explicitMin)}`;
+    if (inferred.priceMin && inferred.priceMax)
+      return `${inferred.priceMin.display} تا ${inferred.priceMax.display}`;
+    if (inferred.priceMax) return inferred.priceMax.display;
+    if (inferred.priceMin) return inferred.priceMin.display;
+    return "همه قیمت‌ها";
+  })();
+  const priceInferred =
+    explicitMin === null && explicitMax === null && (inferred.priceMin !== null || inferred.priceMax !== null);
 
   return (
     <div className="flex flex-col gap-4">
-      <HuntInput
-        ref={inputRef}
-        value={query}
-        onChange={setQuery}
-        onSubmit={handleInputSubmit}
-        isSearching={false}
-      />
+      <WhatField ref={inputRef} value={query} onChange={setQuery} />
 
       {query.trim() === "" ? (
         <div className="flex flex-col gap-5">
@@ -402,73 +254,88 @@ export function HuntSetup() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <InterpretationChips
-            groups={groups}
-            preferences={visiblePreferences.map((p) => ({ id: p.id, label: p.display }))}
-            onRemoveChip={setupRemoveRefinement}
-            onPromoteChip={setupPromoteInferred}
-            onPromotePreference={setupPromotePreference}
+          <SpecChips
+            title="حتماً این‌ها باشد"
+            hint="اگر این کلمات در توضیحات نباشند، آگهی حذف می‌شود."
+            explicit={base.include}
+            inferred={[]}
+            tone="positive"
+            onAdd={(t) => addExplicit("include", t)}
+            onRemove={(t) => removeExplicit("include", t)}
+            onConfirm={() => {}}
+            onDismiss={() => {}}
           />
-          <div className="flex flex-wrap gap-2" aria-label="دسته‌بندی، شهر و محدوده قیمت">
-            {[
-              `دسته: ${categoryLabel(base.category)}`,
-              `شهر: ${cityLabel(base.city)}`,
-              priceAffordanceLabel,
-            ].map((label) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => setSheetOpen(true)}
-                className="flex min-h-9 items-center rounded-lg border border-border bg-card px-3 text-xs text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <QuickPrecision
-            ref={advancedRef}
-            label="شکار دقیق"
-            onOpenAdvanced={() => setSheetOpen(true)}
-            advancedActive={advancedActive}
-            refinementCount={summaryChips.length}
+          <SpecChips
+            title="اصلاً این‌ها نباشد"
+            hint="اگر این کلمات در توضیحات باشند، آگهی حذف می‌شود."
+            explicit={base.exclude}
+            inferred={inferred.excludes}
+            tone="negative"
+            onAdd={(t) => addExplicit("exclude", t)}
+            onRemove={(t) => removeExplicit("exclude", t)}
+            onConfirm={(id) => {
+              const chip = inferred.excludes.find((c) => c.id === id);
+              if (chip) confirmInferred(chip);
+            }}
+            onDismiss={dismissInferred}
           />
-          {/* Pre-flight confirm state + the ONE paid trigger. No numbers. */}
-          <div className="flex flex-col gap-2.5 rounded-xl border border-border bg-card p-4">
-            <p className="text-[13px] leading-6 text-muted-foreground">
-              با این مشخصات شکار کنم؟
+
+          <div className="flex flex-col gap-2">
+            <p className="text-[13px] font-medium leading-5 text-foreground">
+              مشخصات شکار
             </p>
-            <button
-              type="button"
-              onClick={() => fireHunt(base)}
-              className="h-12 rounded-xl bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
-            >
-              شکار کن
-            </button>
-            <p className="text-center text-xs leading-5 text-muted-foreground">
-              {huntCostLabel()}
-            </p>
+            <SpecRow
+              label="دسته"
+              value={categoryLabel(base.category)}
+              onOpen={() => setCategoryOpen(true)}
+            />
+            <SpecRow
+              label="شهر"
+              value={inferred.city ? inferred.city.display : cityLabel(base.city)}
+              inferred={inferred.city !== null}
+              onOpen={() => setCityOpen(true)}
+            />
+            <SpecRow
+              label="قیمت"
+              value={priceRowValue}
+              inferred={priceInferred}
+              onOpen={() => setPriceOpen(true)}
+            />
           </div>
+
+          <button
+            type="button"
+            onClick={fireHunt}
+            className="mt-1 h-13 min-h-13 rounded-xl bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+          >
+            شکار کن
+          </button>
         </div>
       )}
 
-      <PrecisionSheet
-        key={sheetOpen ? "open" : "closed"}
-        open={sheetOpen}
-        mode="setup"
-        initial={{
-          priceMin: base.priceMin,
-          priceMax: base.priceMax,
-          include: base.include,
-          exclude: base.exclude,
-          hasImage: base.hasImage,
-          category: base.category,
-          city: base.city,
-        }}
-        preview={{ query, category: base.category, city: base.city }}
-        onApply={handleSetupApply}
-        onClose={handleSheetClose}
+      <OptionSheet
+        open={categoryOpen}
+        title="دسته‌بندی"
+        options={CATEGORIES}
+        selected={base.category}
+        onSelect={(value) => setBase((b) => ({ ...b, category: value }))}
+        onClose={() => setCategoryOpen(false)}
       />
-
+      <OptionSheet
+        open={cityOpen}
+        title="شهر"
+        options={CITIES}
+        selected={base.city}
+        onSelect={(value) => setBase((b) => ({ ...b, city: value }))}
+        onClose={() => setCityOpen(false)}
+      />
+      <PriceSheet
+        open={priceOpen}
+        priceMin={base.priceMin}
+        priceMax={base.priceMax}
+        onApply={(min, max) => setBase((b) => ({ ...b, priceMin: min, priceMax: max }))}
+        onClose={() => setPriceOpen(false)}
+      />
     </div>
   );
 }

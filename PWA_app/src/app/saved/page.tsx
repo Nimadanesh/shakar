@@ -10,7 +10,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SEARCH_FIXTURES, type FixtureAd } from "@/data/search-fixtures";
 import { formatPriceToman } from "@/lib/prices";
-import { huntCostLabel } from "@/lib/pricing";
 import {
   disarmKamin,
   kaminCtxToBase,
@@ -84,9 +83,6 @@ function KaminCard({
               غیرفعال کردن
             </button>
           </div>
-          <p className="text-center text-[11px] leading-4 text-muted-foreground">
-            {huntCostLabel()}
-          </p>
         </div>
       ) : (
         <div className="flex items-center justify-between gap-2">

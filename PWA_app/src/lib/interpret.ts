@@ -138,7 +138,19 @@ export function interpretQuery(raw: string): Interpretation {
     });
   }
 
-  for (const segment of splitSegments(normalized)) {
+  for (const rawSegment of splitSegments(normalized)) {
+    // Inline «نه»: «زیر ۲۰۰ میلیون نه دیجیتال» → content + exclude term.
+    // The remainder keeps flowing through the other checks (price, city…).
+    let segment = rawSegment;
+    const innerNeg = segment.indexOf(" نه ");
+    if (innerNeg >= 0) {
+      addExcludeTerm(applied, segment.slice(innerNeg + 4));
+      segment = segment.slice(0, innerNeg);
+    } else if (segment.startsWith("نه ")) {
+      // Leading «نه» — «نه دیجیتال» reads as naturally as «دیجیتال نه».
+      addExcludeTerm(applied, segment.slice(3));
+      continue;
+    }
     const negation = segment.match(
       new RegExp(`^(.+?)\\s+(${NEGATION_VERBS.join("|")})$`)
     );
@@ -153,6 +165,11 @@ export function interpretQuery(raw: string): Interpretation {
         addExcludeTerm(applied, segment.slice(at + marker.length));
         break;
       }
+    }
+    // Leading «نه» — «نه دیجیتال» reads as naturally as «دیجیتال نه».
+    if (segment.startsWith("نه ")) {
+      addExcludeTerm(applied, segment.slice(3));
+      continue;
     }
     for (const cue of PREFERENCE_CUES) {
       const idx = segment.indexOf(cue);

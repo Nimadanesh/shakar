@@ -67,10 +67,8 @@ export function HuntTriagePage() {
     try {
       const interp = interpretQuery(hunt.query);
       const ctx = buildEffectiveContext(hunt.query, hunt.base, interp, new Set(hunt.dismissed));
-      const prefs = interp.preferences
-        .map((p) => p.value)
-        .filter((v) => !ctx.includeKeywords.includes(v));
-      const outcome = runSearch(ctx, SEARCH_FIXTURES, prefs);
+      // The form has no preferences channel — only explicit + inferred readings.
+      const outcome = runSearch(ctx, SEARCH_FIXTURES, []);
       const adsById = new Map(SEARCH_FIXTURES.map((ad) => [ad.id, ad]));
       const joined: ReadyResult[] = [];
       for (const match of outcome.results) {

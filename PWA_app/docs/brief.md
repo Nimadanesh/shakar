@@ -9,7 +9,7 @@ Overview
 | Field            | Value                                                          |
 | ---------------- | -------------------------------------------------------------- |
 | **Project name** | shekar / شکار                                                  |
-| **One-liner**    | Independent service for professional Divar users that reduces serious search time from days to 1–2 hours by filtering on ad description text, smart scoring, and a clean professional experience. |
+| **One-liner**    | Independent service for professional Divar users that reduces serious hunt time from days to 1–2 hours by filtering on ad description text, smart scoring, and a clean professional experience. |
 | **Status**       | build (MVP documentation complete, ready for agent implementation) |
 
 Goals
@@ -18,7 +18,7 @@ Goals
 
 
 
-Primary goal: Make professional / high-frequency Divar users feel that their search time has been meaningfully reduced so they are willing to pay a monthly subscription.
+Primary goal: Make professional / high-frequency Divar users feel that their hunt time has been meaningfully reduced — the monthly subscription they pay for.
 
 
 

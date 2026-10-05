@@ -16,13 +16,15 @@ Core loop:
 NEED → HUNT SETUP → PAID SEARCH → TRIAGE → VERIFY → ACT → MONITOR
 ~~~
 
-**The golden rule: یک شکار = یک جستجوی پولی.** Every search costs real
-inference money (LLM/decision models). Hunt Setup — natural query,
-interpretation review, include/exclude terms, category, location, price —
-is FREE and happens BEFORE any paid hunt fires. The «شکار کن» action is
-the single paid event. There is no cheap generic search followed by an
-obligatory refinement search; that pattern burns money and teaches the
-user nothing.
+**The golden rule: یک شکار = یک واحد اشتراک.** The product sells a monthly
+subscription for a fixed number of hunts — there is deliberately NO per-hunt
+price and the UI never shows one. Each hunt still costs real inference money;
+the subscription quota is what bounds it. Defining the hunt is FREE and
+happens BEFORE any quota is consumed: the hunt-definition form (what,
+include/exclude, category, city, price) collects everything up front, on ONE
+page. The «شکار کن» button is the single event that consumes one hunt.
+There is no search-then-refine — because there is no search at all. The
+product has ONE concept: شکار.
 
 A paid hunt is a persistent asset, not an ephemeral query. The result set
 gets its own canonical URL (`/hunt/[id]`) so it survives back-navigation,
@@ -65,7 +67,7 @@ The product should not optimize MVP around casual browsing, entertainment or gen
 Primary flow:
 
 ~~~text
-(Onboarding →) Home/Hunt Setup (single gate: inline «شکار کن») → Paid Hunt → Triage (/hunt/[id]) → Detail/Verify → Act → Save Hunt → کمین/Monitor → Inbox diff (/saved) → Triage…
+(Onboarding →) Hunt Form: چی؟ → مشخصات شکار → «شکار کن» → Triage (/hunt/[id]) → Detail/Verify → Act → کمین/Monitor → Inbox diff (/saved) → Triage…
 ~~~
 
 Onboarding runs once (first launch): value proposition («به‌جای ۵۰۰ آگهی،
@@ -108,13 +110,14 @@ Shakar
     └── Settings
 ~~~
 
-Home owns the full hunt setup: query, live editable interpretation (ONE
-surface — inferred readings render as dashed chips inline, never a second
-panel), include/exclude terms, category/location/price, and the single
-inline «شکار کن» paid trigger with an honest per-hunt cost label. The
-PrecisionSheet («شکار دقیق») is optional advanced — it NEVER opens
-automatically. Home never renders results and never fires implicitly:
-firing is always an explicit user action (button or Enter).
+Home IS the hunt-definition form — one page, three parts: (1) «چی؟» —
+what is being hunted, a plain field (NOT a search box; Enter never fires);
+(2) «مشخصات شکار» — include/exclude chips (inferred readings render dashed
+until confirmed) plus category/city/price rows opening bottom-sheet
+pickers; (3) the single «شکار کن» button. Monetization is a monthly
+subscription for a fixed number of hunts — no per-hunt price is shown
+anywhere, deliberately. Home never renders results and never fires
+implicitly: firing is always the explicit «شکار کن» button.
 
 Saved Search means «چیزی که دنبال می‌کنم». Favorite means «آگهی‌ای که پیدا کرده‌ام و می‌خواهم نگه دارم».
 
@@ -162,7 +165,7 @@ Route naming is implementation detail; responsibilities are authoritative.
 |---|---|---|
 | /onboarding | Communicate value in ~10 seconds | Feature tour / marketing site |
 | /auth (sheet) | Identify the user, then resume | A dead-end login wall |
-| / | Capture full intent, then ONE explicit paid hunt | Auto-firing, results-on-home, sheet-on-submit |
+| / | The hunt-definition form: چی؟ → مشخصات → «شکار کن» | Search-box mimicry |
 | /hunt/[id] | Triage one paid result set, returnable forever | Ephemeral result list |
 | /ads/[id] | Verify one candidate | Search dashboard |
 | /saved | Resume hunts and catch new matches | Generic activity feed |
@@ -175,16 +178,16 @@ Route naming is implementation detail; responsibilities are authoritative.
 Every future page spec must explicitly define Goal, Sections, Components and Interaction.
 
 ## Hunt Setup
-Goal: capture intent and fire ONE explicit paid hunt — a single gate.
-Sections: query; single interpretation surface (explicit + inferred-dashed
-chips); quick filters; primary hunt action + honest cost label; optional
-advanced precision; hunt history lives in «شکار من», not here.
-Components: SearchInput, InterpretationChips, KeywordChips, IncludeKeywords,
-ExcludeKeywords, CategorySelect, CitySelect, PriceRange, HuntButton,
-CostLabel, AdvancedFilters, SaveSearchButton.
-Interaction: type → see understanding inline → curate chips → «شکار کن»
-(or Enter) → land on /hunt/[id]. The precision sheet opens ONLY via
-«شکار دقیق», never automatically.
+Goal: define ONE complete hunt on ONE page, then fire it.
+Sections: what (چی؟); specs — include chips, exclude chips, category row,
+city row, price row; the single hunt action. No separate interpretation
+panel, no precision sheet, no pre-flight confirm: the form IS the setup.
+Components: WhatField, SpecChips, SpecRow, OptionSheet, PriceSheet,
+HuntButton.
+Interaction: fill what → curate chips (tap dashed to confirm inferred
+readings) → pick specs from rows → «شکار کن» → land on /hunt/[id].
+The form never auto-fires; Enter in the what-field never fires (a
+subscription quota unit is at stake).
 
 ## Hunt Result (/hunt/[id])
 Goal: rapid triage of one paid, persistent result set.
@@ -210,30 +213,29 @@ Goal: account and settings only.
 
 # 8. Search States
 
-1. Hunt Setup (initial): the query field is the start of intent capture, not
-   a cheap search. Typing reveals the single live interpretation surface
-   (explicit chips + inferred dashed chips), category/location/price
-   controls and the inline «شکار کن» primary CTA with its honest cost
-   label — all BEFORE any paid hunt. The «شکار دقیق» sheet is optional
-   advanced and never opens on submit. Firing is always explicit: the
-   button or Enter. Home never auto-fires (not even for deep links) and
-   never renders results.
+1. Hunt Form (initial): the «چی؟» field is a plain field, NOT a search
+   box — it is one field of the hunt definition. Filling it reveals the
+   specs on the same page: include/exclude chip sections (explicit solid,
+   inferred dashed until confirmed) and category/city/price rows with
+   bottom-sheet pickers. Defining the hunt is free; firing consumes one
+   subscription hunt. The form never auto-fires (not even for deep links),
+   Enter never fires, and home never renders results.
 2. Typing: suggestions may appear, but never silently replace input.
-3. Interpreting: show editable interpretation of query and constraints.
-   Interpretation display is free; it never fires a paid hunt by itself.
-4. Pre-flight: NOT a screen — a confirm state of setup. A compact review
-   row above «شکار کن» («با این مشخصات شکار کنم؟» + final chips + the
-   honest cost label). No numbers, no scan-count estimates. The paid
-   trigger lives here.
-5. Paid hunt: exactly one backend search per confirmed intent. The result
-   set is persisted as a canonical `/hunt/[id]`. Loading preserves all
-   search state; use structural skeletons; prevent duplicate submit.
-6. Triage: show actual count, active constraints, sort and cards.
-7. Refine: editing intent after results opens the setup again; the CTA is
-   explicitly «اجرای مجدد شکار» so the user knows it is a new paid hunt.
-8. No results: «با این شرایط نتیجه‌ای پیدا نشد.» with explicit «ویرایش شکار»
+3. Interpreting: inferred readings render directly inside the form's
+   chips and rows (dashed, marked «حدسی»); tapping confirms them, ×
+   dismisses them. Interpretation display is free; it never fires by
+   itself.
+4. Paid hunt: exactly one backend search per «شکار کن». The result set is
+   persisted as a canonical `/hunt/[id]`. Loading preserves all state; use
+   structural skeletons; prevent duplicate submit. No per-hunt price is
+   shown anywhere — monetization is the monthly subscription quota.
+5. Triage: show actual count, active constraints, sort and cards.
+6. Refine: editing intent after results opens the form again; the CTA is
+   explicitly «اجرای مجدد شکار» so the user knows it consumes another
+   hunt from the quota.
+7. No results: «با این شرایط نتیجه‌ای پیدا نشد.» with explicit «ویرایش شکار»
    and «حذف آخرین فیلتر». Never silently relax constraints.
-9. Error: «دریافت نتایج با مشکل مواجه شد. شکار شما حفظ شده است.» with retry.
+8. Error: «دریافت نتایج با مشکل مواجه شد. شکار شما حفظ شده است.» with retry.
 
 If interpretation is inferred, it must not appear as user-confirmed without an appropriate indication. Never invent result counts.
 
@@ -413,6 +415,20 @@ DECIDED (Navid, 2026-10-05):
   CTA (`lib/pricing.ts`, null until pricing is decided — no invented
   numbers); hunt history moves Home → «شکار من»; «شکار من» opens with the
   کمین new-matches inbox (honest local diffing).
+
+DECIDED (Navid, 2026-10-05) — One-hunt form, subscription model:
+- The product has NO search, only HUNT. Home is a hunt-DEFINITION form
+  (چی؟ → مشخصات شکار → «شکار کن»), not a search box with results.
+  Killed: the crosshair-icon submit, the «شکار دقیق» capsule, the
+  pre-flight confirm box («با این مشخصات شکار کنم؟»), the separate
+  interpretation panel, and Enter-to-fire. Inferred readings live inside
+  the form's chips/rows (dashed until confirmed). ONE page, ONE button.
+- Monetization is a monthly subscription for a fixed number of hunts.
+  NO per-hunt price is shown anywhere — not even «هر شکار پولی است».
+  `lib/pricing.ts` now models the subscription quota (null until tiers
+  are decided; the UI must never invent a number).
+- Design directive: سادگی, not Divar mimicry. The form must read as a
+  calm hunt-definition form, not a search page.
 
 ---
 
