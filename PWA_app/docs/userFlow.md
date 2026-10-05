@@ -24,6 +24,14 @@ the single paid event. There is no cheap generic search followed by an
 obligatory refinement search; that pattern burns money and teaches the
 user nothing.
 
+A paid hunt is a persistent asset, not an ephemeral query. The result set
+gets its own canonical URL (`/hunt/[id]`) so it survives back-navigation,
+app kills and tab switches, and stays reachable from hunt history. Money
+was spent on it — the product must treat it accordingly.
+
+The pro habit loop is notification → diff → triage → act. A day-10 session
+should start from a Kamin notification, never from the setup screen.
+
 Hunt Setup asks «دقیقاً چی می‌خوام و چی نمی‌خوام؟» BEFORE asking the
 backend anything. Triage asks «کدام نتیجه ارزش باز کردن دارد؟». Verify
 asks «واقعاً مناسب است؟». Act handles favorite/share/open-original/contact.
@@ -57,7 +65,7 @@ The product should not optimize MVP around casual browsing, entertainment or gen
 Primary flow:
 
 ~~~text
-(Onboarding →) Home/Hunt Setup → Paid Search → Results/Triage → Detail/Verify → Act → Save Hunt → کمین/Monitor → New matches → Triage…
+(Onboarding →) Home/Hunt Setup → Pre-flight (free confirm) → Paid Hunt → Triage (/hunt/[id]) → Detail/Verify → Act → Save Hunt → کمین/Monitor → New matches → Triage…
 ~~~
 
 Onboarding runs once (first launch): value proposition («به‌جای ۵۰۰ آگهی،
@@ -71,9 +79,10 @@ interpretation + include/exclude + category/location/price), fires ONE paid
 search, receives results, inspects promising candidates, favorites one,
 saves the complete hunt, and arms کمین for new matches.
 
-Hunt Setup, Paid Search and Results are one continuous workflow. Do not
-create unnecessary full-page navigation between Setup and Results, and
-never run a paid search before the user has confirmed their intent.
+Hunt Setup, Pre-flight and the paid trigger are one continuous workflow. Do not
+create unnecessary full-page navigation between Setup and Pre-flight, and
+never run a paid hunt before the user has confirmed their intent at Pre-flight.
+The paid result itself lives at its own canonical URL (/hunt/[id]).
 
 ---
 
@@ -82,10 +91,11 @@ never run a paid search before the user has confirmed their intent.
 ~~~text
 Shakar
 ├── Onboarding (first launch only)
-├── Auth (OTP; guest-first, required only for persistent actions)
+├── Auth (OTP sheet; guest-first, required only for persistent actions)
 ├── آگهی‌ها (Home = Hunt Setup)
 │   ├── Hunt Setup (intent + precision, free)
-│   ├── Search Results (triage)
+│   ├── Pre-flight (free confirmation before the paid hunt)
+│   ├── Hunt Result /hunt/[id] (triage of one paid, persistent result set)
 │   └── Refine (edit intent → explicit re-run)
 ├── آگهی Detail
 ├── شکار من
@@ -138,11 +148,12 @@ Current route responsibilities:
 
 ~~~text
 /onboarding → First-run value (tagline + 3 beats + شروع)
-/auth       → OTP auth (mobile → code → verify → resume)
-/          → Hunt Setup + Results (one continuous workflow)
+/          → Hunt Setup + Pre-flight (one continuous workflow; the ONLY paid trigger)
+/hunt/[id] → Triage of one paid, persistent hunt (canonical, returnable URL)
 /ads/[id]  → Ad Detail
 /saved     → My Shakar / Saved Hunts / کمین / Favorites
 /profile   → Profile
+(auth → bottom sheet over the interrupted action, not a route)
 ~~~
 
 Route naming is implementation detail; responsibilities are authoritative.
@@ -150,8 +161,9 @@ Route naming is implementation detail; responsibilities are authoritative.
 | Page | Primary job | Must not become |
 |---|---|---|
 | /onboarding | Communicate value in ~10 seconds | Feature tour / marketing site |
-| /auth | Identify the user, then resume | A dead-end login wall |
-| / | Capture full intent, then ONE paid search + triage | Cheap-search-then-refine |
+| /auth (sheet) | Identify the user, then resume | A dead-end login wall |
+| / | Capture full intent, then ONE paid hunt | Cheap-search-then-refine |
+| /hunt/[id] | Triage one paid result set, returnable forever | Ephemeral result list |
 | /ads/[id] | Verify one candidate | Search dashboard |
 | /saved | Resume hunts and catch new matches | Generic activity feed |
 | /profile | Account/settings | Search workspace |
@@ -168,8 +180,8 @@ Sections: query; recognized/active constraints; quick filters; advanced precisio
 Components: SearchInput, SearchSuggestions, KeywordChips, IncludeKeywords, ExcludeKeywords, CategorySelect, CitySelect, PriceRange, AdvancedFilters, SearchSummary, SaveSearchButton.
 Interaction: type → submit → results → adjust constraints → updated results.
 
-## Results
-Goal: rapid triage.
+## Hunt Result (/hunt/[id])
+Goal: rapid triage of one paid, persistent result set.
 Sections: search summary, active constraints, count, sort, result list, states.
 Components: SearchSummary, ActiveFilterChips, ResultCount, SortControl, AdList, AdCard, ShekarScoreBadge, MatchReasons, FavoriteButton.
 Card must answer «این آگهی ارزش باز کردن دارد؟» whenever available evidence supports it.
@@ -198,15 +210,18 @@ Goal: account and settings only.
 2. Typing: suggestions may appear, but never silently replace input.
 3. Interpreting: show editable interpretation of query and constraints.
    Interpretation display is free; it never fires a paid search by itself.
-4. Paid search: exactly one backend search per confirmed intent. Loading
-   preserves all search state; use structural skeletons; prevent duplicate
-   submit.
-5. Results: show actual count, active constraints, sort and cards.
-6. Refine: editing intent after results opens the setup again; the CTA is
+4. Pre-flight: free confirmation screen before the paid hunt — final chip
+   review plus explicit cost acknowledgment. The «شکار کن» paid trigger
+   lives here. Pre-flight itself fires no backend search.
+5. Paid hunt: exactly one backend search per confirmed intent. The result
+   set is persisted as a canonical `/hunt/[id]`. Loading preserves all
+   search state; use structural skeletons; prevent duplicate submit.
+6. Triage: show actual count, active constraints, sort and cards.
+7. Refine: editing intent after results opens the setup again; the CTA is
    explicitly «اجرای مجدد شکار» so the user knows it is a new paid search.
-7. No results: «با این شرایط نتیجه‌ای پیدا نشد.» with explicit «ویرایش شکار»
+8. No results: «با این شرایط نتیجه‌ای پیدا نشد.» with explicit «ویرایش شکار»
    and «حذف آخرین فیلتر». Never silently relax constraints.
-8. Error: «دریافت نتایج با مشکل مواجه شد. شکار شما حفظ شده است.» with retry.
+9. Error: «دریافت نتایج با مشکل مواجه شد. شکار شما حفظ شده است.» with retry.
 
 If interpretation is inferred, it must not appear as user-confirmed without an appropriate indication. Never invent result counts.
 
@@ -276,13 +291,16 @@ tries the hunt first, commits identity when they want to keep something.
 Required pattern:
 
 ~~~text
-Hunt Setup → Paid Search → Results → Protected action → /auth → Resume interrupted action
+Hunt Setup → Pre-flight → Paid Hunt → Triage → Protected action → auth sheet → Resume interrupted action
 ~~~
 
 Onboarding's «شروع» leads to Home as a guest — never to a forced login wall.
 
-OTP flow (`/auth`): mobile number → request OTP → enter OTP → authenticated
-session → resume the exact interrupted action with all hunt context intact.
+OTP flow (bottom sheet over the interrupted action): mobile number →
+request OTP → enter OTP → authenticated session → resume the exact
+interrupted action with all hunt context intact. Dismissing the sheet
+loses nothing — the interrupted action and its context stay intact
+underneath.
 Provide validation, retry, resend when supported, failure state and resume
 behavior.
 
@@ -345,6 +363,38 @@ Follow the existing 4/8pt spacing scale in docs/designSystem.md: 4, 8, 12, 16, 2
 Motion communicates state, not decoration. Respect prefers-reduced-motion and avoid large entrance animations, bouncing UI and decorative effects.
 
 Mobile interaction budget is a principle, not a fixed tap-count: every additional interaction must have a clear purpose, and raw query → meaningfully precise search should not require a chain of unnecessary screens.
+
+---
+
+# 15. External Proposal Review — hunt as a persistent asset (spec status)
+
+Source: independent product-designer proposal, 2026-10-05 (response was
+truncated at §3.1; §§4–5 never arrived). Items below are musi's adjudication:
+adopted, rejected, or open pending Navid's decision.
+
+ADOPTED into this spec:
+- Persistent hunt result (`/hunt/[id]`): a paid hunt is an asset with a
+  canonical, returnable URL — survives back-navigation, app kills, tab
+  switches; reachable from hunt history.
+- Pre-flight: free confirmation step (final chip review + explicit cost
+  acknowledgment) before the paid hunt. The «شکار کن» trigger lives here.
+- Auth as bottom sheet, not a route: dismissing loses nothing.
+- Habit-loop framing: notification → diff → triage → act. Day-10 sessions
+  start from Kamin, not setup.
+
+REJECTED (with reason):
+- Renaming `/saved` → `/kamin`: saved hunts («چیزی که دنبال می‌کنم»),
+  Kamin monitoring, and favorites («آگهی‌ای که پیدا کردم») are distinct
+  objects. The page keeps the «شکار من» container with Kamin as its
+  primary section.
+
+OPEN — needs Navid's decision before implementation:
+- Pre-flight scan-count estimate («~۴۲۰ آگهی اسکن می‌شود»): value unproven
+  for pros; needs a cheap count source or it is theater. Do not implement
+  until validated.
+- Onboarding shape: proposal says no onboarding route, live example on
+  setup instead. Compromise on the table: one onboarding screen with the
+  live example embedded (value contract for a paid tool, zero slide deck).
 
 ---
 
