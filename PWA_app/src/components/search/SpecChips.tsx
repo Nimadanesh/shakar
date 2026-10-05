@@ -55,7 +55,7 @@ export function SpecChips({
   return (
     <section
       aria-label={title}
-      className="overflow-hidden rounded-xl border border-border"
+      className="overflow-hidden rounded-lg border border-border"
     >
       <div className={`flex flex-col gap-0.5 border-b border-border/60 ${headerBg} px-3.5 pb-2.5 pt-3`}>
         <p className={`text-[13px] font-medium leading-5 ${titleColor}`}>{title}</p>
@@ -68,7 +68,7 @@ export function SpecChips({
           {explicit.map((term) => (
             <span
               key={`explicit:${term}`}
-              className="flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-secondary px-2.5 text-[13px] text-foreground"
+              className="flex min-h-8 items-center gap-1.5 rounded-md border border-border bg-secondary px-2.5 text-[13px] text-foreground"
             >
               {term}
               <button
@@ -84,7 +84,7 @@ export function SpecChips({
           {inferred.map((chip) => (
             <span
               key={chip.id}
-              className="flex min-h-8 items-center gap-1.5 rounded-lg border border-dashed border-muted-foreground/60 bg-transparent px-2.5 text-[13px] text-muted-foreground"
+              className="flex min-h-8 items-center gap-1.5 rounded-md border border-dashed border-muted-foreground/60 bg-transparent px-2.5 text-[13px] text-muted-foreground"
             >
               <button
                 type="button"

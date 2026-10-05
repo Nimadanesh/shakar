@@ -64,13 +64,13 @@ export default async function AdDetailPage({
         بازگشت به نتایج
       </Link>
 
-      <div className="flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-xl bg-secondary text-muted-foreground">
+      <div className="flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-lg bg-secondary text-muted-foreground">
         <ImageOff size={32} aria-hidden="true" />
       </div>
 
       <div className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold leading-8 text-foreground">{ad.title}</h1>
-        <p className="text-lg font-semibold leading-8 text-foreground" dir="auto">
+        <p className="text-[22px] font-bold leading-8 tabular-nums tracking-tight text-foreground" dir="auto">
           {formatPriceToman(ad.price)}
         </p>
         <p className="text-[13px] leading-6 text-muted-foreground">
@@ -80,7 +80,7 @@ export default async function AdDetailPage({
       </div>
 
       {explanation && (
-        <section aria-label="چرا این آگهی نمایش داده شده" className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
+        <section aria-label="چرا این آگهی نمایش داده شده" className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
           <h2 className="text-[15px] font-semibold leading-6">چرا این آگهی نمایش داده شده؟</h2>
           <p className="text-sm leading-6 text-muted-foreground">{explanation.sentence}</p>
         </section>

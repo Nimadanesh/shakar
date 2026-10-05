@@ -17,7 +17,7 @@ export function EmptyState({
   secondaryAction,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card px-4 py-10 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-4 py-10 text-center">
       {icon ?? <SearchX size={28} aria-hidden="true" className="text-muted-foreground" />}
       <div className="flex flex-col gap-1">
         <p className="text-[15px] font-semibold leading-6 text-foreground">{title}</p>

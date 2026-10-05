@@ -98,8 +98,11 @@
 
   --glow-color: 0 0 28px rgba(255, 255, 255, 0.1);
 
-  --surface-page: #0A0A0A;
-  --surface-base: #111111;
+  /* Top-of-page light falloff: depth without hue. */
+  --page-glow: rgba(255, 255, 255, 0.028);
+
+  --surface-page: #0B0B0C;
+  --surface-base: #111113;
   --surface-raised: #171717;
   --surface-overlay: #1F1F1F;
   --surface-brand: #1C1C1C;
@@ -167,6 +170,9 @@
   color-scheme: light;
 
   --glow-color: 0 0 28px rgba(0, 0, 0, 0.1);
+
+  /* Top-of-page light falloff: depth without hue. */
+  --page-glow: rgba(0, 0, 0, 0.022);
 
   --surface-page: #F4F4F5;
   --surface-base: #FFFFFF;
@@ -240,6 +246,13 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Whisper of top light for depth — monochrome, no hue. The page is a
+       precision instrument, not a lounge: depth, not decoration. */
+    background-image: linear-gradient(
+      180deg,
+      var(--page-glow) 0%,
+      transparent 480px
+    );
   }
   html {
     @apply font-sans;

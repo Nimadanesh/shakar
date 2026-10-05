@@ -117,7 +117,7 @@ export function PriceSheet({ open, priceMin, priceMax, onApply, onClose }: Price
         <button
           type="button"
           onClick={apply}
-          className="h-12 w-full rounded-xl bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+          className="h-12 w-full rounded-lg bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
         >
           تأیید
         </button>

@@ -49,7 +49,7 @@ function KaminCard({
   onDisarm: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="truncate text-sm font-semibold leading-5 text-foreground">
@@ -104,7 +104,7 @@ function FavoriteRow({ ad }: { ad: FixtureAd }) {
   return (
     <Link
       href={`/ads/${ad.id}`}
-      className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
+      className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
     >
       <span className="relative block size-16 shrink-0 overflow-hidden rounded-lg bg-secondary">
         {ad.thumbnail ? (
@@ -242,7 +242,7 @@ export default function SavedPage() {
               <li key={hunt.id}>
                 <Link
                   href={`/hunt/${hunt.id}`}
-                  className="flex min-h-11 w-full items-center gap-2.5 rounded-xl border border-border bg-card px-3 text-start transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
+                  className="flex min-h-11 w-full items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-start transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <History size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">

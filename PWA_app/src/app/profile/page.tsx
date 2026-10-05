@@ -10,7 +10,7 @@ export default function ProfilePage() {
 
       <section
         aria-label="تنظیمات نمایش"
-        className="mt-4 rounded-xl border border-border bg-card p-4"
+        className="mt-4 rounded-lg border border-border bg-card p-4"
       >
         <h2 className="mb-2 text-sm font-semibold text-foreground">
           تنظیمات نمایش

@@ -36,7 +36,7 @@ export function OptionSheet({
                 onSelect(opt.value);
                 onClose();
               }}
-              className={`flex min-h-12 w-full items-center justify-between rounded-xl px-4 text-[14px] transition-colors focus-visible:outline-2 focus-visible:outline-ring ${
+              className={`flex min-h-12 w-full items-center justify-between rounded-lg px-4 text-[14px] transition-colors focus-visible:outline-2 focus-visible:outline-ring ${
                 active
                   ? "bg-secondary font-medium text-foreground"
                   : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"

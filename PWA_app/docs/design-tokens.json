@@ -26,8 +26,9 @@
       "500-light": "#C24040"
     },
     "semantic-dark": {
-      "surface-page": "#0A0A0A",
-      "surface-base": "#111111",
+      "surface-page": "#0B0B0C",
+      "surface-base": "#111113",
+      "page-glow": "rgba(255,255,255,0.028)",
       "surface-raised": "#171717",
       "surface-overlay": "#1F1F1F",
       "text-primary": "#FAFAFA",
@@ -51,6 +52,7 @@
     },
     "semantic-light": {
       "surface-page": "#F4F4F5",
+      "page-glow": "rgba(0,0,0,0.022)",
       "surface-base": "#FFFFFF",
       "surface-raised": "#FFFFFF",
       "surface-overlay": "#FFFFFF",

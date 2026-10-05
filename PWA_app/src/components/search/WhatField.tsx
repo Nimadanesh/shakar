@@ -55,7 +55,7 @@ export const WhatField = forwardRef<HTMLInputElement, WhatFieldProps>(
           autoComplete="off"
           enterKeyHint="done"
           aria-label="چی رو می‌خوای شکار کنی؟"
-          className="h-13 min-h-13 w-full rounded-xl border border-border bg-card px-4 text-[15px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+          className="h-13 min-h-13 w-full rounded-lg border border-border bg-card px-4 text-[15px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
         />
       </div>
     );

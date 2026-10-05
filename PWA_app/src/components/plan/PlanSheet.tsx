@@ -34,7 +34,7 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <BottomSheet open={open} onClose={onClose} label="پلن و هزینه‌ها" title="پلن و هزینه‌ها">
       <div className="flex flex-col gap-4 pb-2">
-        <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
           <div className="flex items-center justify-between">
             <span className="text-[13px] text-muted-foreground">اشتراک فعلی</span>
             <span className="text-[13px] font-medium text-foreground">
@@ -63,7 +63,7 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
           </p>
           {stats && stats.total > 0 ? (
             <div
-              className="flex h-20 items-end gap-1.5 rounded-xl border border-border bg-card p-3"
+              className="flex h-20 items-end gap-1.5 rounded-lg border border-border bg-card p-3"
               role="img"
               aria-label={`نمودار شکارهای ۱۴ روز اخیر — مجموع ${fa(stats.total)} شکار`}
             >
@@ -80,7 +80,7 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-border bg-card p-4 text-center text-xs leading-5 text-muted-foreground">
+            <p className="rounded-lg border border-border bg-card p-4 text-center text-xs leading-5 text-muted-foreground">
               هنوز شکاری ثبت نشده — اولین شکار که بزنی، نمودار مصرفت اینجا می‌آید.
             </p>
           )}
@@ -90,7 +90,7 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
           <p className="text-[13px] font-medium leading-5 text-foreground">
             سوابق پرداخت
           </p>
-          <p className="rounded-xl border border-border bg-card p-4 text-center text-xs leading-5 text-muted-foreground">
+          <p className="rounded-lg border border-border bg-card p-4 text-center text-xs leading-5 text-muted-foreground">
             سابقه پرداختی ثبت نشده است.
           </p>
         </div>

@@ -19,7 +19,7 @@ export function SpecRow({ label, value, inferred, onOpen }: SpecRowProps) {
     <button
       type="button"
       onClick={onOpen}
-      className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 text-start transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
+      className="flex min-h-12 w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 text-start transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
     >
       <span className="text-[13px] text-muted-foreground">{label}</span>
       <span className="flex items-center gap-1.5">

@@ -31,7 +31,7 @@ export function AdCardCompact({ ad, strongMatch, includeTerms, onHide, index = 0
 
   return (
     <article
-      className="animate-rise flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+      className="animate-rise flex items-center gap-3 rounded-lg border border-border bg-card p-3"
       style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
     >
       <Link

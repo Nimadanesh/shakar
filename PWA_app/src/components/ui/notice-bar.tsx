@@ -20,7 +20,7 @@ export function NoticeBar({ tone = "neutral", icon, children }: NoticeBarProps) 
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs leading-5",
+        "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs leading-5",
         TONE_STYLES[tone]
       )}
     >

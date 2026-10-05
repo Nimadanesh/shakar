@@ -33,7 +33,7 @@ function SkeletonList() {
       {[0, 1, 2].map((i) => (
         <div
           key={i}
-          className="overflow-hidden rounded-xl border border-border bg-card"
+          className="overflow-hidden rounded-lg border border-border bg-card"
         >
           <div className="aspect-[16/10] w-full animate-pulse bg-secondary" />
           <div className="flex flex-col gap-3 p-4">

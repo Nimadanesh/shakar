@@ -53,7 +53,7 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
 
   return (
     <article
-      className="animate-rise flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-border-strong"
+      className="animate-rise flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-border-strong"
       style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
     >
       <div className="relative">
@@ -81,7 +81,7 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
         >
           {ad.title}
         </Link>
-        <p className="text-xl font-bold leading-8 tabular-nums text-foreground" dir="auto">
+        <p className="text-[22px] font-bold leading-8 tabular-nums tracking-tight text-foreground" dir="auto">
           {formatPriceToman(ad.price)}
         </p>
       </div>

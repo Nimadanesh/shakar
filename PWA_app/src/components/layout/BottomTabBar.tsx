@@ -30,7 +30,7 @@ export function BottomTabBar() {
               href={href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] leading-4 transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-ring active:scale-95",
+                "flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[11px] leading-4 transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-ring active:scale-95",
                 isActive
                   ? "bg-primary/15 text-primary"
                   : "text-muted-foreground hover:text-foreground"

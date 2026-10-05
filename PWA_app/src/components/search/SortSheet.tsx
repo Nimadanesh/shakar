@@ -44,7 +44,7 @@ export function SortSheet({ open, sort, onSelect, onClose }: SortSheetProps) {
                 onClose();
               }}
               className={cn(
-                "flex items-center gap-3 rounded-xl border px-3 py-3 text-start transition-colors focus-visible:outline-2 focus-visible:outline-ring",
+                "flex items-center gap-3 rounded-lg border px-3 py-3 text-start transition-colors focus-visible:outline-2 focus-visible:outline-ring",
                 selected
                   ? "border-primary/60 bg-primary/10"
                   : "border-transparent hover:bg-secondary"

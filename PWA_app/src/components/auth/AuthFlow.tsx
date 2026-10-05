@@ -220,7 +220,7 @@ export function AuthFlow() {
         {error && (
           <div
             role="alert"
-            className="flex flex-col gap-2 rounded-xl border border-danger/30 bg-danger-soft p-3"
+            className="flex flex-col gap-2 rounded-lg border border-danger/30 bg-danger-soft p-3"
           >
             <p className="text-[13px] leading-6 text-foreground">{error}</p>
             <button

@@ -219,7 +219,7 @@ export function HuntSetup() {
                     key={example.label}
                     type="button"
                     onClick={() => applySuggestedHunt(example.query)}
-                    className="flex min-h-11 shrink-0 snap-start items-center gap-2 rounded-xl border border-border bg-card px-4 text-[13px] text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                    className="flex min-h-11 shrink-0 snap-start items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                   >
                     <Icon size={15} aria-hidden="true" className="shrink-0" />
                     {example.label}
@@ -296,7 +296,7 @@ export function HuntSetup() {
           <button
             type="button"
             onClick={fireHunt}
-            className="mt-1 h-13 min-h-13 rounded-xl bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+            className="mt-1 h-13 min-h-13 rounded-lg bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
           >
             شکار کن
           </button>
