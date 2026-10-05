@@ -70,8 +70,7 @@ Primary flow:
 (Onboarding →) Hunt Form: چی؟ → مشخصات شکار → «شکار کن» → Triage (/hunt/[id]) → Detail/Verify → Act → کمین/Monitor → Inbox diff (/saved) → Triage…
 ~~~
 
-Onboarding runs once (first launch): value proposition («به‌جای ۵۰۰ آگهی،
-فقط همان چندتایی را ببین که واقعاً می‌خواهی.»), in three beats
+Onboarding runs once (first launch): value proposition («فقط همان چندتایی را ببین که واقعاً می‌خواهی.»), in three beats
 (value line → «تعریف کن، شکار کن» → «کمین بذار»), then «شروع».
 
 Example intent: «پیانو اکوستیک یاماها U3 در تهران، زیر ۲۰۰ میلیون؛ دیجیتال و طرح اکوستیک نمی‌خوام.»
@@ -139,7 +138,7 @@ account/settings.
 
 Opening Shakar should lead directly toward hunt setup; do not prioritize
 marketing heroes, promotional banners or editorial content. The
-«به‌جای ۵۰۰ آگهی…» value line lives in Onboarding, not on Home.
+«فقط همان چندتایی را ببین که واقعاً می‌خواهی.» value line lives in Onboarding, not on Home.
 
 Back navigation must preserve query, include/exclude terms, filters, sort and useful result position. Notifications and saved-search actions must deep-link into their relevant context.
 

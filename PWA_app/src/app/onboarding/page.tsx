@@ -9,7 +9,7 @@ import { markOnboarded } from "@/lib/first-run";
 const BEATS = [
   {
     icon: Sparkles,
-    title: "به‌جای ۵۰۰ آگهی، فقط همان چندتایی را ببین که واقعاً می‌خواهی.",
+    title: "فقط همان چندتایی را ببین که واقعاً می‌خواهی.",
     sub: "شکار، برای حرفه‌ای‌های دیوار",
     tagline: true,
     mock: false,
