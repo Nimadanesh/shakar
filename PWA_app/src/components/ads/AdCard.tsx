@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { EyeOff, Heart, Sparkles } from "lucide-react";
 import { CategoryArt } from "@/components/ads/CategoryArt";
-import { useFavorites } from "@/hooks/useFavorites";
+import { useGatedFavorites } from "@/hooks/useGatedFavorites";
 import { excerptSegments, explainWhy } from "@/lib/search";
 import { formatPriceToman } from "@/lib/prices";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ interface AdCardProps {
 }
 
 function FavoriteToggle({ adId, overlay }: { adId: string; overlay?: boolean }) {
-  const { isFavorite, toggle } = useFavorites();
+  const { isFavorite, toggle } = useGatedFavorites();
   const favorite = isFavorite(adId);
   return (
     <button

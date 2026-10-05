@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { EyeOff, Heart } from "lucide-react";
 import { CategoryArt } from "@/components/ads/CategoryArt";
-import { useFavorites } from "@/hooks/useFavorites";
+import { useGatedFavorites } from "@/hooks/useGatedFavorites";
 import { excerptSegments } from "@/lib/search";
 import { formatPriceToman } from "@/lib/prices";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ interface AdCardCompactProps {
 
 /** Dense triage row: same hierarchy as AdCard, one evidence line, no decoration. */
 export function AdCardCompact({ ad, strongMatch, includeTerms, onHide, index = 0 }: AdCardCompactProps) {
-  const { isFavorite, toggle } = useFavorites();
+  const { isFavorite, toggle } = useGatedFavorites();
   const favorite = isFavorite(ad.id);
   const segments = excerptSegments(`${ad.title}. ${ad.description}`, includeTerms);
   const evidence = segments

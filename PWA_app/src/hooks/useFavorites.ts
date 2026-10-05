@@ -15,6 +15,17 @@ function readStored(): string[] {
   }
 }
 
+/** Module-level toggle for resuming a gated favorite after auth (no hook needed). */
+export function toggleFavoriteStored(adId: string): void {
+  const ids = readStored();
+  const next = ids.includes(adId) ? ids.filter((id) => id !== adId) : [...ids, adId];
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Local-only favorites. Real persistence/auth arrives with the backend;
  * until then favorites live in this browser only and are never presented

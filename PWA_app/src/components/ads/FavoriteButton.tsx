@@ -1,11 +1,11 @@
 "use client";
 
 import { Heart } from "lucide-react";
-import { useFavorites } from "@/hooks/useFavorites";
+import { useGatedFavorites } from "@/hooks/useGatedFavorites";
 import { cn } from "@/lib/utils";
 
 export function FavoriteButton({ adId, label }: { adId: string; label?: string }) {
-  const { isFavorite, toggle } = useFavorites();
+  const { isFavorite, toggle } = useGatedFavorites();
   const favorite = isFavorite(adId);
 
   return (

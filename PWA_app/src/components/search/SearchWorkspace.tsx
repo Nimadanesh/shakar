@@ -18,6 +18,11 @@ import { categoryLabel, cityLabel } from "@/data/taxonomy";
 import { useHiddenAds } from "@/hooks/useHiddenAds";
 import { interpretQuery } from "@/lib/interpret";
 import { isOnboarded } from "@/lib/first-run";
+import {
+  requireAuth,
+  takePendingAction,
+} from "@/lib/auth";
+import { toggleFavoriteStored } from "@/hooks/useFavorites";
 import { readRecentHunts, recordRecentHunt, type RecentHunt } from "@/lib/recent-hunts";
 import { parsePriceInput } from "@/lib/prices";
 import { buildRadarConfig, type RadarConfig } from "@/lib/radar";
@@ -220,6 +225,19 @@ function applyInferredPromotion(id: string, base: ContextBase): ContextBase | nu
   return null;
 }
 
+/**
+ * Light structural check for a hunt base restored from storage.
+ * The data comes from our own sessionStorage; this just guards corruption.
+ */
+function isContextBaseLike(value: unknown): value is ContextBase {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as ContextBase).include) &&
+    Array.isArray((value as ContextBase).exclude)
+  );
+}
+
 export function SearchWorkspace() {
   const router = useRouter();  const searchParams = useSearchParams();
 
@@ -334,6 +352,24 @@ export function SearchWorkspace() {
     if (!isOnboarded()) {
       router.replace("/onboarding");
       return;
+    }
+    // Resume an auth-gated action interrupted before login.
+    const pending = takePendingAction();
+    if (pending?.type === "favorite") {
+      toggleFavoriteStored(pending.adId);
+    } else if (pending?.type === "radar") {
+      const rq = pending.query.trim();
+      if (rq !== "") {
+        const rbase = isContextBaseLike(pending.base) ? pending.base : EMPTY_CONTEXT_BASE;
+        setQuery(rq);
+        setBase(rbase);
+        // The radar is the hunt definition — no paid search needed to arm it.
+        const interp = interpretQuery(rq);
+        const ctx = buildEffectiveContext(rq, rbase, interp, new Set());
+        setRadar(buildRadarConfig(ctx, rq));
+        setRadarOpen(true);
+        return;
+      }
     }
     const { query: q, base: b } = readParams(searchParams);
     if (q.trim() === "") return;
@@ -543,8 +579,15 @@ export function SearchWorkspace() {
   }
 
   function handleOpenRadar() {
-    if (!effective) return;
-    setRadar(buildRadarConfig(effective, effective.query));
+    const q = (effective?.query ?? query).trim();
+    if (q === "") return;
+    // کمین is a persistent action: guests are routed to auth with the
+    // exact hunt stored for resume.
+    if (!requireAuth({ type: "radar", query: q, base }, (url) => router.push(url)))
+      return;
+    const ctx =
+      effective ?? buildEffectiveContext(q, base, liveInterp ?? interpretQuery(q), dismissed);
+    setRadar(buildRadarConfig(ctx, q));
     setRadarOpen(true);
   }
 
