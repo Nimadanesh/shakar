@@ -8,7 +8,7 @@ import { QuickPrecision } from "@/components/search/QuickPrecision";
 import { PrecisionSheet, type PrecisionDraft } from "@/components/search/PrecisionSheet";
 import { RadarDialog } from "@/components/search/RadarDialog";
 import { SearchInput } from "@/components/search/SearchInput";
-import { SearchMeaning } from "@/components/search/SearchMeaning";
+import { InterpretationChips } from "@/components/search/InterpretationChips";
 import { categoryLabel, cityLabel } from "@/data/taxonomy";
 import { interpretQuery } from "@/lib/interpret";
 import { isOnboarded } from "@/lib/first-run";
@@ -332,20 +332,6 @@ export function SearchWorkspace() {
     return buildDisplayGroups(base, liveInterp, dismissed);
   }, [base, liveInterp, dismissed, hasIntent]);
 
-  /** Meaning shows only inferred readings — explicit refinements live in the summary. */
-  const inferredGroups = useMemo(
-    () =>
-      groups
-        .map((group) => ({
-          ...group,
-          rows: group.chips
-            .filter((chip) => chip.inferred)
-            .map((chip) => ({ id: chip.id, label: chip.label.replace(/^حذف:\s*/, "") })),
-        }))
-        .filter((group) => group.rows.length > 0),
-    [groups]
-  );
-
   // Synchronous mirror of the curated intent, for the precision affordance.
   const summaryChips = useMemo(() => groups.flatMap((g) => g.chips), [groups]);
 
@@ -426,11 +412,11 @@ export function SearchWorkspace() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <SearchMeaning
-            groups={inferredGroups}
+          <InterpretationChips
+            groups={groups}
             preferences={visiblePreferences.map((p) => ({ id: p.id, label: p.display }))}
-            onDismissRow={setupRemoveRefinement}
-            onPromoteRow={setupPromoteInferred}
+            onRemoveChip={setupRemoveRefinement}
+            onPromoteChip={setupPromoteInferred}
             onPromotePreference={setupPromotePreference}
           />
           <div className="flex flex-wrap gap-2" aria-label="دسته‌بندی، شهر و محدوده قیمت">
