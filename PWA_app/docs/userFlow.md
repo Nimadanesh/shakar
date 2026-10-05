@@ -429,6 +429,14 @@ DECIDED (Navid, 2026-10-05) — One-hunt form, subscription model:
   are decided; the UI must never invent a number).
 - Design directive: سادگی, not Divar mimicry. The form must read as a
   calm hunt-definition form, not a search page.
+- Header (Navid, 2026-10-05): three elements only — Telegram-style user
+  avatar (→ profile), plan icon (→ «پلن و هزینه‌ها» sheet: current plan,
+  this month's hunts, remaining quota, 14-day usage chart, payment
+  history — real numbers from hunt history, honest empty states for
+  anything undecided), notification bell (→ «شکار من» inbox, badged with
+  the real unseen kamin-match count). No wordmark, no hunt CTA — the hunt
+  form owns all of that. FOCUS_SEARCH_EVENT removed. This supersedes the
+  step-7 header proposal (branch `fix/step7-header-meaning` is obsolete).
 
 ---
 

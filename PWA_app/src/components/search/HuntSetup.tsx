@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Camera, Music } from "lucide-react";
-import { FOCUS_SEARCH_EVENT } from "@/components/layout/Header";
 import { WhatField } from "@/components/search/WhatField";
 import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
 import { SpecRow } from "@/components/search/SpecRow";
@@ -177,15 +176,6 @@ export function HuntSetup() {
     setQuery(q);
     setBase(b);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    function focusQuery() {
-      inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      inputRef.current?.focus({ preventScroll: true });
-    }
-    window.addEventListener(FOCUS_SEARCH_EVENT, focusQuery);
-    return () => window.removeEventListener(FOCUS_SEARCH_EVENT, focusQuery);
   }, []);
 
   const explicitMin = parsePriceInput(base.priceMin);
