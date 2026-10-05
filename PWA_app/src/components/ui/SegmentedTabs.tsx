@@ -26,7 +26,7 @@ export function SegmentedTabs({ tabs, active, onChange, ariaLabel }: SegmentedTa
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="flex rounded-lg border border-border bg-secondary/60 p-1"
+      className="flex rounded-lg bg-secondary/60 p-1"
     >
       {tabs.map((tab) => {
         const selected = tab.id === active;
@@ -40,8 +40,8 @@ export function SegmentedTabs({ tabs, active, onChange, ariaLabel }: SegmentedTa
             className={cn(
               "flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring",
               selected
-                ? "border border-border bg-card text-foreground shadow-sm"
-                : "border border-transparent text-muted-foreground hover:text-foreground"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             <span className="truncate">{tab.label}</span>

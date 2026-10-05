@@ -49,8 +49,6 @@ export default function ArchivePage() {
 
   return (
     <main className="flex flex-1 flex-col gap-4 py-6">
-      <h1 className="text-xl font-semibold leading-8 text-foreground">آرشیو</h1>
-
       <SegmentedTabs
         ariaLabel="بخش‌های آرشیو"
         active={tab}
