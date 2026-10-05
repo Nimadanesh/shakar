@@ -85,18 +85,6 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
         </p>
       </div>
 
-      <p className="line-clamp-2 text-[13.5px] leading-6 text-muted-foreground">
-        {segments.map((segment, segmentIndex) =>
-          segment.hit ? (
-            <span key={segmentIndex} className="font-medium text-signal">
-              {segment.text}
-            </span>
-          ) : (
-            <span key={segmentIndex}>{segment.text}</span>
-          )
-        )}
-      </p>
-
       {(primarySignal || unknowns.length > 0) && (
         <div className="flex flex-col items-start gap-1.5">
           {primarySignal && (
@@ -113,6 +101,18 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
           ))}
         </div>
       )}
+
+      <p className="line-clamp-2 text-[13.5px] leading-6 text-muted-foreground">
+        {segments.map((segment, segmentIndex) =>
+          segment.hit ? (
+            <span key={segmentIndex} className="font-medium text-signal">
+              {segment.text}
+            </span>
+          ) : (
+            <span key={segmentIndex}>{segment.text}</span>
+          )
+        )}
+      </p>
 
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs leading-5 text-muted-foreground">

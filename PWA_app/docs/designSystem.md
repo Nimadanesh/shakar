@@ -165,8 +165,8 @@ Dark foundation:
 | text-on-brand | #0A0A0A | content on brand |
 | text-on-signal | #0A0A0A | content on signal |
 | border-subtle | #262626 | quiet dividers |
-| border-default | #2E2E2E | standard borders |
-| border-strong | #404040 | emphasized borders |
+| border-default | #343434 | standard borders |
+| border-strong | #4A4A4A | emphasized borders |
 | action-primary | #FAFAFA | primary actions |
 | action-primary-hover | #FFFFFF | primary hover |
 | action-primary-active | #E5E5E5 | primary active |

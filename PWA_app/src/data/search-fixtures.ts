@@ -12,7 +12,7 @@ import type { DivarAd } from "@/types/ads";
 function art(glyph: string): string {
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400">` +
-    `<rect width="640" height="400" fill="#171717"/>` +
+    `<rect width="640" height="400" fill="#1F1F1F"/>` +
     `<circle cx="320" cy="185" r="70" fill="none" stroke="#FAFAFA" stroke-width="3" opacity="0.28"/>` +
     `<circle cx="320" cy="185" r="46" fill="none" stroke="#FAFAFA" stroke-width="2" opacity="0.16"/>` +
     `<text x="320" y="200" font-size="44" text-anchor="middle" fill="#FAFAFA" opacity="0.55">${glyph}</text>` +
