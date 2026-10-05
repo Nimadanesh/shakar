@@ -89,16 +89,14 @@ export function ResultsView({
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
-      <div className="flex items-center justify-end">
-        <button
-          type="button"
-          onClick={onOpenRadar}
-          className="flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-primary/40 px-3 text-[13px] font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-ring"
-        >
-          <Radar size={14} aria-hidden="true" />
-          کمین
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onOpenRadar}
+        className="animate-kamin-border flex h-11 w-full items-center justify-center gap-2 rounded-lg border text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-ring"
+      >
+        <Radar size={16} aria-hidden="true" />
+        کمین بذار، خبرم کن
+      </button>
       {suppressedCount > 0 && (
         <NoticeBar>
           {suppressedCount.toLocaleString("fa-IR")} مورد به دلیل فیلتر حذف کنار گذاشته شد

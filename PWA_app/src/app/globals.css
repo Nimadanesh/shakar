@@ -279,10 +279,27 @@
   }
 }
 
+/* Gentle attention pulse for the کمین CTA border: slow monochrome
+   breathe, never a flash. Killed by the global reduced-motion rule. */
+@keyframes kamin-glow {
+  0%,
+  100% {
+    border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    border-color: color-mix(in srgb, var(--primary) 85%, transparent);
+    box-shadow: 0 0 14px 0 color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+}
+
 @layer utilities {
   /* Soft Dark entrance: 240ms rise; stagger via inline animation-delay (60ms steps). */
   .animate-rise {
     animation: rise 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+  .animate-kamin-border {
+    animation: kamin-glow 2.8s ease-in-out infinite;
   }
 }
 
