@@ -273,6 +273,13 @@ Actions: Favorite/Unfavorite, Share, Open Original, and Contact only where legit
 
 Back must restore the previous result/search context.
 
+Triage cards link to the detail page carrying the hunt's exact evidence
+context (`hunt` id + `q`/`inc`/`exc`/`cat`/`city`/`min`/`max` params), so
+«چرا این آگهی نمایش داده شده؟» reflects the paid hunt's real terms —
+including the query words the setup form auto-includes — and back returns
+to `/hunt/[id]`. Entries without context (favorites: `from=saved`, direct
+links) hide the why-section rather than inventing evidence.
+
 ---
 
 # 11. Saved Search Flow

@@ -18,7 +18,14 @@ import {
   type KaminRecord,
 } from "@/lib/kamin-store";
 import { interpretQuery } from "@/lib/interpret";
-import { runSearch, sortResults, type SortKey } from "@/lib/search";
+import { normalizePersian } from "@/lib/normalizePersian";
+import {
+  displayTerms,
+  queryContentTerms,
+  runSearch,
+  sortResults,
+  type SortKey,
+} from "@/lib/search";
 import { buildEffectiveContext } from "@/lib/search-context";
 import { writeParams } from "@/lib/search-params";
 import type { SearchContext } from "@/types/search";
@@ -88,6 +95,43 @@ export function HuntTriagePage() {
       return "error";
     }
   }, [hunt, sort, retryNonce]);
+
+  /**
+   * Evidence context for the ad detail page, carried statelessly in the card
+   * links: the hunt's exact terms + its id for back-navigation. The detail
+   * page renders «چرا این آگهی؟» from this — never re-interpreted.
+   */
+  const detailQuery = useMemo(() => {
+    if (computed === null || computed === "error") return "";
+    const p = new URLSearchParams();
+    p.set("hunt", id);
+    if (computed.query !== "") p.set("q", computed.query);
+    // Effective include terms = explicit chips + the query words the form
+    // auto-includes (HuntSetup says so). This is exactly what runSearch
+    // matched on, so the detail page's «چرا این آگهی؟» stays honest.
+    // Query words consumed by an exclude phrase («دیجیتال» inside the
+    // interpreted «پیانو دیجیتال» exclude) are dropped: they are exclusion
+    // intent, not positive evidence.
+    const effectiveInclude = [...computed.includeTerms];
+    const queryTerms = queryContentTerms(computed.query, computed.excludeTerms);
+    const displayQueryTerms = displayTerms(computed.query, queryTerms);
+    const excludeWords = new Set(
+      computed.excludeTerms.flatMap((t) => normalizePersian(t).split(/\s+/))
+    );
+    queryTerms.forEach((normalized, i) => {
+      const display = displayQueryTerms[i];
+      if (!excludeWords.has(normalized) && !effectiveInclude.includes(display)) {
+        effectiveInclude.push(display);
+      }
+    });
+    for (const term of effectiveInclude) p.append("inc", term);
+    for (const term of computed.excludeTerms) p.append("exc", term);
+    if (computed.ctx.category !== "all") p.set("cat", computed.ctx.category);
+    if (computed.ctx.city !== "all") p.set("city", computed.ctx.city);
+    if (computed.ctx.priceMin !== null) p.set("min", String(computed.ctx.priceMin));
+    if (computed.ctx.priceMax !== null) p.set("max", String(computed.ctx.priceMax));
+    return p.toString();
+  }, [computed, id]);
 
   if (!hunt) {
     return (
@@ -210,6 +254,7 @@ export function HuntTriagePage() {
           onOpenRadar={handleOpenRadar}
           onOpenPrecision={openRefine}
           onRetry={() => setRetryNonce((n) => n + 1)}
+          detailQuery={detailQuery}
         />
       )}
       {(computed === null || computed === "error") && (
@@ -226,6 +271,7 @@ export function HuntTriagePage() {
           onOpenRadar={() => {}}
           onOpenPrecision={openRefine}
           onRetry={() => setRetryNonce((n) => n + 1)}
+          detailQuery={detailQuery}
         />
       )}
 

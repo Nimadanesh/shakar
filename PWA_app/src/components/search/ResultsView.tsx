@@ -25,6 +25,8 @@ interface ResultsViewProps {
   onOpenRadar: () => void;
   onOpenPrecision: () => void;
   onRetry: () => void;
+  /** Prebuilt query string carrying the hunt's evidence context to /ads/[id]. */
+  detailQuery?: string;
 }
 
 function SkeletonList() {
@@ -60,6 +62,7 @@ export function ResultsView({
   onOpenRadar,
   onOpenPrecision,
   onRetry,
+  detailQuery = "",
 }: ResultsViewProps) {
   if (phase === "loading") return <SkeletonList />;
 
@@ -126,6 +129,7 @@ export function ResultsView({
             includeTerms={includeTerms}
             onHide={onHide}
             index={index}
+            detailQuery={detailQuery}
           />
         ) : (
           <AdCard
@@ -136,6 +140,7 @@ export function ResultsView({
             excludeTerms={excludeTerms}
             onHide={onHide}
             index={index}
+            detailQuery={detailQuery}
           />
         )
       )}

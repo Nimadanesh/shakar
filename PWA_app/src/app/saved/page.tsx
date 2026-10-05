@@ -103,7 +103,7 @@ function KaminCard({
 function FavoriteRow({ ad }: { ad: FixtureAd }) {
   return (
     <Link
-      href={`/ads/${ad.id}`}
+      href={`/ads/${ad.id}?from=saved`}
       className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
     >
       <span className="relative block size-16 shrink-0 overflow-hidden rounded-lg bg-secondary">

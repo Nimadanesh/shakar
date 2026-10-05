@@ -15,12 +15,15 @@ interface AdCardCompactProps {
   onHide: (adId: string) => void;
   /** Card entrance stagger index (60ms steps). */
   index?: number;
+  /** Prebuilt query string carrying the hunt's evidence context to /ads/[id]. */
+  detailQuery?: string;
 }
 
 /** Dense triage row: same hierarchy as AdCard, one evidence line, no decoration. */
-export function AdCardCompact({ ad, strongMatch, includeTerms, onHide, index = 0 }: AdCardCompactProps) {
+export function AdCardCompact({ ad, strongMatch, includeTerms, onHide, index = 0, detailQuery = "" }: AdCardCompactProps) {
   const { isFavorite, toggle } = useGatedFavorites();
   const favorite = isFavorite(ad.id);
+  const detailHref = detailQuery === "" ? `/ads/${ad.id}` : `/ads/${ad.id}?${detailQuery}`;
   const segments = excerptSegments(ad.description, includeTerms);
   const evidence = segments
     .map((s) => s.text)
@@ -35,7 +38,7 @@ export function AdCardCompact({ ad, strongMatch, includeTerms, onHide, index = 0
       style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
     >
       <Link
-        href={`/ads/${ad.id}`}
+        href={detailHref}
         aria-label={ad.title}
         className="relative block size-16 shrink-0 overflow-hidden rounded-lg focus-visible:outline-2 focus-visible:outline-ring"
       >
@@ -54,7 +57,7 @@ export function AdCardCompact({ ad, strongMatch, includeTerms, onHide, index = 0
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <Link
-          href={`/ads/${ad.id}`}
+          href={detailHref}
           className="truncate text-sm font-medium leading-5 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           {ad.title}

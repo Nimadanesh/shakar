@@ -18,6 +18,8 @@ interface AdCardProps {
   onHide: (adId: string) => void;
   /** Card entrance stagger index (60ms steps). */
   index?: number;
+  /** Prebuilt query string carrying the hunt's evidence context to /ads/[id]. */
+  detailQuery?: string;
 }
 
 function FavoriteToggle({ adId, overlay }: { adId: string; overlay?: boolean }) {
@@ -42,7 +44,7 @@ function FavoriteToggle({ adId, overlay }: { adId: string; overlay?: boolean }) 
 }
 
 /** Triage card: image → title → price → evidence → signal → meta → actions. */
-export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 0 }: AdCardProps) {
+export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 0, detailQuery = "" }: AdCardProps) {
   const segments = excerptSegments(ad.description, includeTerms);
   const unknowns = match.evidence.filter((e) => e.status === "unknown");
   const explanation = explainWhy(ad, includeTerms, excludeTerms);
@@ -76,7 +78,7 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
       <div className="flex flex-col gap-3 p-4">
       <div className="flex flex-col gap-1">
         <Link
-          href={`/ads/${ad.id}`}
+          href={detailQuery === "" ? `/ads/${ad.id}` : `/ads/${ad.id}?${detailQuery}`}
           className="line-clamp-1 text-base font-semibold leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           {ad.title}
