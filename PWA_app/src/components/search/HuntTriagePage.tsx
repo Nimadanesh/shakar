@@ -65,7 +65,7 @@ export function HuntTriagePage() {
   const [view, setView] = useState<ResultView>(readStoredView);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const [radarOpen, setRadarOpen] = useState(false);
-  const [kaminTick, setKaminTick] = useState(0);
+  const [, setKaminTick] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
   const { hiddenIds, hide, unhide } = useHiddenAds();
 

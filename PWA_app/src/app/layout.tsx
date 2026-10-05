@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Inter, Vazirmatn } from "next/font/google";
 import { AppChrome } from "@/components/layout/AppChrome";
 import "./globals.css";
@@ -39,8 +40,6 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('shakar-theme');if(t==='light'){var d=document.documentElement;d.classList.remove('dark');d.classList.add('light');}}catch(e){}})();`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -54,7 +53,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <Script id="theme-init" src="/theme-init.js" strategy="beforeInteractive" />
       </head>
       <body
         className="flex min-h-full flex-col bg-background font-sans text-foreground"

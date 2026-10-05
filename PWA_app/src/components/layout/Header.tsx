@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, User, Wallet } from "lucide-react";
 import { PlanSheet } from "@/components/plan/PlanSheet";
@@ -10,7 +10,13 @@ import { SEARCH_FIXTURES } from "@/data/search-fixtures";
 
 function AvatarButton({ onClick }: { onClick: () => void }) {
   const { name } = useProfile();
-  const initials = profileInitials(name);
+  // Hydration-safe: the server can't see localStorage, so the first render
+  // (server and client) shows the guest icon; initials land after mount.
+  // Computing initials during render would mismatch (span vs svg).
+  const [initials, setInitials] = useState("");
+  useEffect(() => {
+    setInitials(profileInitials(name));
+  }, [name]);
   return (
     <button
       type="button"
