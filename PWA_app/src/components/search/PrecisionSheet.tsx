@@ -34,7 +34,8 @@ interface PrecisionSheetProps {
   preview: Pick<SearchContext, "query" | "category" | "city">;
   onApply: (draft: PrecisionDraft) => void;
   onClose: () => void;
-  onOpenRadar: () => void;
+  /** Optional: when omitted, the کمین entry is not rendered. */
+  onOpenRadar?: () => void;
 }
 
 const QUICK_PRICES: Array<{ label: string; value: string }> = [
@@ -172,14 +173,16 @@ export function PrecisionSheet({ open, mode, initial, preview, onApply, onClose,
           >
             پاک کردن همه
           </button>
-          <button
-            type="button"
-            onClick={onOpenRadar}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-lg text-[13px] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            <Radar size={15} aria-hidden="true" />
-            ذخیره‌ی این شکار و خبرم کن
-          </button>
+          {onOpenRadar && (
+            <button
+              type="button"
+              onClick={onOpenRadar}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-lg text-[13px] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <Radar size={15} aria-hidden="true" />
+              ذخیره‌ی این شکار و خبرم کن
+            </button>
+          )}
         </div>
       }
     >

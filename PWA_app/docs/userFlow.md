@@ -65,7 +65,7 @@ The product should not optimize MVP around casual browsing, entertainment or gen
 Primary flow:
 
 ~~~text
-(Onboarding →) Home/Hunt Setup → Pre-flight (free confirm) → Paid Hunt → Triage (/hunt/[id]) → Detail/Verify → Act → Save Hunt → کمین/Monitor → New matches → Triage…
+(Onboarding →) Home/Hunt Setup (single gate: inline «شکار کن») → Paid Hunt → Triage (/hunt/[id]) → Detail/Verify → Act → Save Hunt → کمین/Monitor → Inbox diff (/saved) → Triage…
 ~~~
 
 Onboarding runs once (first launch): value proposition («به‌جای ۵۰۰ آگهی،
@@ -108,13 +108,13 @@ Shakar
     └── Settings
 ~~~
 
-Home owns the full hunt setup: query, interpretation, include/exclude
-terms, category, location, price, supported structured filters, and the
-single «شکار کن» paid-search trigger. Detail owns listing evidence and
-actions. My Shakar owns persistent hunts, کمین monitoring and saved
-candidates. Profile owns account/settings. Onboarding owns first-run
-value communication. Auth owns identity, interrupting only for
-persistent actions.
+Home owns the full hunt setup: query, live editable interpretation (ONE
+surface — inferred readings render as dashed chips inline, never a second
+panel), include/exclude terms, category/location/price, and the single
+inline «شکار کن» paid trigger with an honest per-hunt cost label. The
+PrecisionSheet («شکار دقیق») is optional advanced — it NEVER opens
+automatically. Home never renders results and never fires implicitly:
+firing is always an explicit user action (button or Enter).
 
 Saved Search means «چیزی که دنبال می‌کنم». Favorite means «آگهی‌ای که پیدا کرده‌ام و می‌خواهم نگه دارم».
 
@@ -162,7 +162,7 @@ Route naming is implementation detail; responsibilities are authoritative.
 |---|---|---|
 | /onboarding | Communicate value in ~10 seconds | Feature tour / marketing site |
 | /auth (sheet) | Identify the user, then resume | A dead-end login wall |
-| / | Capture full intent, then ONE paid hunt | Cheap-search-then-refine |
+| / | Capture full intent, then ONE explicit paid hunt | Auto-firing, results-on-home, sheet-on-submit |
 | /hunt/[id] | Triage one paid result set, returnable forever | Ephemeral result list |
 | /ads/[id] | Verify one candidate | Search dashboard |
 | /saved | Resume hunts and catch new matches | Generic activity feed |
@@ -175,10 +175,16 @@ Route naming is implementation detail; responsibilities are authoritative.
 Every future page spec must explicitly define Goal, Sections, Components and Interaction.
 
 ## Search Workspace
-Goal: capture and refine intent without unnecessary navigation.
-Sections: query; recognized/active constraints; quick filters; advanced precision; search action; result context.
-Components: SearchInput, SearchSuggestions, KeywordChips, IncludeKeywords, ExcludeKeywords, CategorySelect, CitySelect, PriceRange, AdvancedFilters, SearchSummary, SaveSearchButton.
-Interaction: type → submit → results → adjust constraints → updated results.
+Goal: capture intent and fire ONE explicit paid hunt — a single gate.
+Sections: query; single interpretation surface (explicit + inferred-dashed
+chips); quick filters; primary hunt action + honest cost label; optional
+advanced precision; hunt history lives in «شکار من», not here.
+Components: SearchInput, InterpretationChips, KeywordChips, IncludeKeywords,
+ExcludeKeywords, CategorySelect, CitySelect, PriceRange, HuntButton,
+CostLabel, AdvancedFilters, SaveSearchButton.
+Interaction: type → see understanding inline → curate chips → «شکار کن»
+(or Enter) → land on /hunt/[id]. The precision sheet opens ONLY via
+«شکار دقیق», never automatically.
 
 ## Hunt Result (/hunt/[id])
 Goal: rapid triage of one paid, persistent result set.
@@ -192,8 +198,10 @@ Sections: gallery, core information, match explanation, relevant description evi
 Components: ImageGallery, AdHeader, Price, LocationMeta, ListingAge, ShekarScoreBadge, MatchReasons, DescriptionEvidence, FavoriteButton, ShareButton, OpenOriginalButton.
 
 ## My Shakar
-Goal: resume hunts and revisit candidates.
-Sections: Saved Searches, Favorites, New Matches/activity when available.
+Goal: the pro's home base — morning inbox first, then resume and revisit.
+Sections (in order): New Matches inbox (per armed کمین: diff since last
+seen, honest local diffing until backend monitoring lands), کمین list,
+Hunt History (returnable /hunt/[id] links), Saved Hunts, Favorites.
 
 ## Profile
 Goal: account and settings only.
@@ -203,16 +211,20 @@ Goal: account and settings only.
 # 8. Search States
 
 1. Hunt Setup (initial): the query field is the start of intent capture, not
-   a cheap search. Typing reveals live interpretation (editable must/must-not
-   chips), category/location/price controls and the «شکار دقیق» precision
-   surface — all BEFORE any paid search. The primary CTA is «شکار کن»:
-   one explicit paid search with the full confirmed intent.
+   a cheap search. Typing reveals the single live interpretation surface
+   (explicit chips + inferred dashed chips), category/location/price
+   controls and the inline «شکار کن» primary CTA with its honest cost
+   label — all BEFORE any paid hunt. The «شکار دقیق» sheet is optional
+   advanced and never opens on submit. Firing is always explicit: the
+   button or Enter. Home never auto-fires (not even for deep links) and
+   never renders results.
 2. Typing: suggestions may appear, but never silently replace input.
 3. Interpreting: show editable interpretation of query and constraints.
    Interpretation display is free; it never fires a paid search by itself.
-4. Pre-flight: free confirmation screen before the paid hunt — final chip
-   review plus explicit cost acknowledgment. The «شکار کن» paid trigger
-   lives here. Pre-flight itself fires no backend search.
+4. Pre-flight: NOT a screen — a confirm state of setup. A compact review
+   row above «شکار کن» («با این مشخصات شکار کنم؟» + final chips + the
+   honest cost label). No numbers, no scan-count estimates. The paid
+   trigger lives here.
 5. Paid hunt: exactly one backend search per confirmed intent. The result
    set is persisted as a canonical `/hunt/[id]`. Loading preserves all
    search state; use structural skeletons; prevent duplicate submit.
@@ -390,9 +402,17 @@ REJECTED (with reason):
 
 DECIDED (Navid, 2026-10-05):
 - Pre-flight carries NO scan-count estimate and no numbers at all —
-  final chip review + explicit cost acknowledgment only.
+  final chip review + explicit cost acknowledgment only. Implemented as a
+  confirm STATE of setup, never a separate screen.
 - Onboarding: one screen with the live example embedded (value contract
   for a paid tool, zero slide deck). Visual detail TBD at implementation.
+- UX fix round (Navid-approved, 2026-10-05): single-gate setup — inline
+  «شکار کن» under the live interpretation, PrecisionSheet («شکار دقیق»)
+  optional and never auto-opened; ONE interpretation surface (inferred
+  readings as dashed chips inline); honest per-hunt cost label next to the
+  CTA (`lib/pricing.ts`, null until pricing is decided — no invented
+  numbers); hunt history moves Home → «شکار من»; «شکار من» opens with the
+  کمین new-matches inbox (honest local diffing).
 
 ---
 
