@@ -81,44 +81,50 @@
   --radius-2xl: 24px;
   --radius-3xl: 28px;
   --radius-4xl: 32px;
-  --shadow-glow: 0 0 24px rgba(139, 124, 255, 0.25);
+  --shadow-glow: var(--glow-color);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* Shakar Soft Dark semantic theme tokens. Components should consume semantic
-   roles, never raw brand HEX values. */
+/* Shakar Timeless Monochrome semantic theme tokens. Sampled from the
+   reference (dark) and mirrored for light. Components consume semantic
+   roles only — never raw HEX values. There is no brand hue: Shakar's
+   brand IS monochrome. White/black is the primary action color;
+   desaturated green/red exist only for functional semantics
+   (match/exclude/error), never decoration. */
 :root {
   color-scheme: dark;
 
-  --surface-page: #0B0B10;
-  --surface-base: #15151D;
-  --surface-raised: #1E1E28;
-  --surface-overlay: #222C38;
-  --surface-brand: #211D50;
-  --surface-signal: #123A36;
+  --glow-color: 0 0 28px rgba(255, 255, 255, 0.1);
 
-  --text-primary: #F4F4F6;
-  --text-secondary: #A8A8B4;
-  --text-muted: #6E6E7A;
-  --text-disabled: #5C6877;
-  --text-on-brand: #FFFFFF;
-  --text-on-signal: #061512;
+  --surface-page: #0A0A0A;
+  --surface-base: #111111;
+  --surface-raised: #171717;
+  --surface-overlay: #1F1F1F;
+  --surface-brand: #1C1C1C;
+  --surface-signal: rgba(70, 185, 120, 0.08);
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-default: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.2);
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1A1;
+  --text-muted: #737373;
+  --text-disabled: #525252;
+  --text-on-brand: #0A0A0A;
+  --text-on-signal: #0A0A0A;
 
-  --action-primary: #8B7CFF;
-  --action-primary-hover: #9D90FF;
-  --action-primary-active: #7A6BF5;
-  --signal: #4ADE80;
-  --signal-soft: rgba(74, 222, 128, 0.1);
-  --warning: #F2B84B;
-  --danger: #F87171;
-  --danger-soft: rgba(248, 113, 113, 0.1);
-  --focus-ring: #8B7CFF;
+  --border-subtle: #262626;
+  --border-default: #2E2E2E;
+  --border-strong: #404040;
+
+  --action-primary: #FAFAFA;
+  --action-primary-hover: #FFFFFF;
+  --action-primary-active: #E5E5E5;
+  --signal: #46B978;
+  --signal-soft: rgba(70, 185, 120, 0.1);
+  --warning: #D9A13B;
+  --danger: #DE6B6B;
+  --danger-soft: rgba(222, 107, 107, 0.1);
+  --focus-ring: #E5E5E5;
 
   --background: var(--surface-page);
   --foreground: var(--text-primary);
@@ -160,31 +166,33 @@
 .light {
   color-scheme: light;
 
-  --surface-page: #F7F9FC;
+  --glow-color: 0 0 28px rgba(0, 0, 0, 0.1);
+
+  --surface-page: #F4F4F5;
   --surface-base: #FFFFFF;
   --surface-raised: #FFFFFF;
   --surface-overlay: #FFFFFF;
-  --surface-brand: #EEECFF;
-  --surface-signal: #DDF7F2;
+  --surface-brand: #ECECEE;
+  --surface-signal: rgba(31, 138, 76, 0.08);
 
-  --text-primary: #111821;
-  --text-secondary: #3E4855;
-  --text-muted: #5C6877;
-  --text-disabled: #AAB5C3;
-  --text-on-brand: #FFFFFF;
-  --text-on-signal: #061512;
+  --text-primary: #0A0A0A;
+  --text-secondary: #52525B;
+  --text-muted: #71717A;
+  --text-disabled: #A1A1AA;
+  --text-on-brand: #FAFAFA;
+  --text-on-signal: #FFFFFF;
 
-  --border-subtle: #E8ECF2;
-  --border-default: #CBD3DE;
-  --border-strong: #AAB5C3;
+  --border-subtle: #E7E7E9;
+  --border-default: #D4D4D8;
+  --border-strong: #A1A1AA;
 
-  --action-primary: #5B4DE8;
-  --action-primary-hover: #6D5EF5;
-  --action-primary-active: #4D40C7;
-  --signal: #159F8D;
+  --action-primary: #0A0A0A;
+  --action-primary-hover: #26262A;
+  --action-primary-active: #000000;
+  --signal: #1F8A4C;
   --warning: #B97900;
-  --danger: #C9364D;
-  --focus-ring: #5B4DE8;
+  --danger: #C24040;
+  --focus-ring: #0A0A0A;
 
   --background: var(--surface-page);
   --foreground: var(--text-primary);

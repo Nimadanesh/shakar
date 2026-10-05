@@ -1,0 +1,47 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Switch } from "@/components/ui/switch";
+
+export const THEME_STORAGE_KEY = "shakar-theme";
+export type ThemeName = "dark" | "light";
+
+export function applyTheme(theme: ThemeName) {
+  const root = document.documentElement;
+  root.classList.remove("dark", "light");
+  root.classList.add(theme);
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    /* storage unavailable — theme still applies for this session */
+  }
+}
+
+function initialTheme(): ThemeName {
+  if (typeof window === "undefined") return "dark";
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) === "light"
+      ? "light"
+      : "dark";
+  } catch {
+    return "dark";
+  }
+}
+
+/** Minimal dark/light toggle. Monochrome-safe: uses semantic tokens only. */
+export function ThemeSwitch() {
+  const [theme, setTheme] = useState<ThemeName>(initialTheme);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  return (
+    <Switch
+      checked={theme === "light"}
+      onChange={(checked) => setTheme(checked ? "light" : "dark")}
+      label="تم روشن"
+      hint="نسخه‌ی روشن و تیره‌ی رابط کاربری"
+    />
+  );
+}

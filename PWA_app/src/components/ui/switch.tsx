@@ -31,7 +31,12 @@ export function Switch({ checked, onChange, label, hint }: SwitchProps) {
           checked ? "justify-end border-transparent bg-action-primary pe-1" : "justify-start border-border bg-secondary ps-1"
         )}
       >
-        <span className="size-5 rounded-full bg-white shadow" />
+        <span
+          className={cn(
+            "size-5 rounded-full shadow",
+            checked ? "bg-primary-foreground" : "bg-secondary-foreground"
+          )}
+        />
       </span>
     </button>
   );

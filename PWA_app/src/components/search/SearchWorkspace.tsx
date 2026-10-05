@@ -409,7 +409,7 @@ export function SearchWorkspace() {
               className="pointer-events-none absolute inset-0"
               style={{
                 background:
-                  "radial-gradient(70% 90% at 50% 0%, rgba(139,124,255,0.14), transparent 70%)",
+                  "radial-gradient(70% 90% at 50% 0%, rgba(255,255,255,0.07), transparent 70%)",
               }}
             />
             <div
@@ -417,7 +417,7 @@ export function SearchWorkspace() {
               className="pointer-events-none absolute inset-0 opacity-100"
               style={{
                 backgroundImage:
-                  "radial-gradient(rgba(139,124,255,0.06) 1px, transparent 1px)",
+                  "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
                 backgroundSize: "22px 22px",
               }}
             />
@@ -462,7 +462,7 @@ export function SearchWorkspace() {
             className="pointer-events-none h-24 opacity-100"
             style={{
               backgroundImage:
-                "radial-gradient(rgba(139,124,255,0.05) 1px, transparent 1px)",
+                "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
               backgroundSize: "26px 26px",
               maskImage:
                 "linear-gradient(to bottom, transparent, black 40%, transparent)",

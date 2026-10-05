@@ -70,18 +70,24 @@ raw palette -> semantic tokens -> component tokens -> components
 
 ## 4. Brand palette
 
-Shakar uses a cool indigo-violet brand anchor. It is intentionally not Stripe Purple and is not used as a decorative wash.
+Shakar's brand IS monochrome. There is no brand hue — the "timeless minimalism"
+direction (few colors, but clear) means black/white/gray carry the entire brand.
+Sampled from the reference: page `#0A0A0A`, card `#171717`, primary text
+`#FAFAFA`, muted `#A1A1A1`, selection ring `#E5E5E5`.
 
-Core brand:
-- brand-500: #6D5EF5
-- brand-400: #8174FF
-- brand-600: #5B4CE0
-- brand-100: #E9E7FF
-- brand-900: #211D50
+Mono brand scale (used for primary actions, selection rings, focus):
+- brand-500: #FAFAFA (primary action on dark)
+- brand-400: #D4D4D4
+- brand-600: #A1A1A1
+- brand-100: #E5E5E5 (selection ring)
+- brand-900: #0A0A0A (primary action on light)
 
-Use brand for primary CTA, active navigation, focus, selected controls and important interactive links.
+Use mono brand for primary CTA, active navigation tint, focus, selected
+controls and important interactive links. On light theme the scale inverts
+(primary action becomes #0A0A0A).
 
-Do not use brand for every heading, badge, card border or decorative background.
+Do not introduce any chromatic brand color. Do not use brand for decorative
+backgrounds.
 
 Concrete brand-form rules (binding — distribution targets alone are not enforceable):
 
@@ -95,27 +101,27 @@ Concrete brand-form rules (binding — distribution targets alone are not enforc
 
 ## 5. Signal palette
 
-Signal is Shakar's distinctive decision-support color. It represents useful evidence, a confirmed match, or a meaningful discovery.
+Signal is Shakar's distinctive decision-support color. It represents useful evidence, a confirmed match, or a meaningful discovery. It is deliberately desaturated so it sits calmly on the monochrome base — functional, never decorative.
 
-- signal-500: #27C7B0
-- signal-400: #4AD8C5
-- signal-600: #159F8D
-- signal-100 dark: #123A36
-- signal-100 light: #DDF7F2
+- signal-500: #46B978
+- signal-400: #6FCF97
+- signal-600: #1F8A4C
+- signal-100 dark: rgba(70, 185, 120, 0.08)
+- signal-100 light: rgba(31, 138, 76, 0.08)
 
 Signal must remain sparse. If everything is Signal-colored, nothing is a signal.
 
 ## 6. Status palette
 
 Warning:
-- warning-500 dark: #F2B84B
+- warning-500 dark: #D9A13B
 - warning-500 light: #B97900
 - warning surface dark: #3A2E18
 - warning surface light: #FFF3D6
 
-Danger:
-- danger-500 dark: #F06A7A
-- danger-500 light: #C9364D
+Danger (desaturated to sit calmly on monochrome):
+- danger-500 dark: #DE6B6B
+- danger-500 light: #C24040
 - danger surface dark: #3C1D25
 - danger surface light: #FDE7EA
 
@@ -127,17 +133,17 @@ Neither is branding.
 
 Dark foundation:
 - neutral-0 #FFFFFF
-- neutral-50 #F5F7FA
+- neutral-50 #FAFAFA
 - neutral-100 #E8ECF2
-- neutral-200 #CBD3DE
-- neutral-300 #AAB5C3
+- neutral-200 #A1A1A1
+- neutral-300 #737373
 - neutral-400 #7F8B9A
-- neutral-500 #5C6877
-- neutral-600 #3E4855
-- neutral-700 #2A333E
-- neutral-800 #1B232D
-- neutral-900 #111821
-- neutral-950 #0A0F15
+- neutral-500 #525252
+- neutral-600 #404040
+- neutral-700 #2E2E2E
+- neutral-800 #171717
+- neutral-900 #111111
+- neutral-950 #0A0A0A
 - neutral-1000 #070B10
 
 ## 8. Semantic colors
@@ -146,67 +152,73 @@ Dark foundation:
 
 | Semantic | Value | Meaning |
 |---|---|---|
-| surface-page | #0A0F15 | page canvas |
-| surface-base | #111821 | main content |
-| surface-raised | #1B232D | cards, sheets, popovers |
-| surface-overlay | #222C38 | highest temporary surface |
-| surface-brand | #211D50 | subtle brand tint |
-| surface-signal | #123A36 | signal tint |
-| text-primary | #F5F7FA | primary content |
-| text-secondary | #CBD3DE | supporting content |
-| text-muted | #AAB5C3 | metadata/placeholders |
-| text-disabled | #5C6877 | disabled content |
-| text-on-brand | #FFFFFF | content on brand |
-| text-on-signal | #061512 | content on signal |
-| border-subtle | #1E2731 | quiet dividers |
-| border-default | #2A333E | standard borders |
-| border-strong | #3E4855 | emphasized borders |
-| action-primary | #6D5EF5 | primary actions |
-| action-primary-hover | #8174FF | primary hover |
-| action-primary-active | #5B4CE0 | primary active |
-| signal | #27C7B0 | useful match/evidence |
-| warning | #F2B84B | attention |
-| danger | #F06A7A | error/destructive |
-| focus-ring | #8174FF | keyboard focus |
+| surface-page | #0A0A0A | page canvas |
+| surface-base | #111111 | main content |
+| surface-raised | #171717 | cards, sheets, popovers |
+| surface-overlay | #1F1F1F | highest temporary surface |
+| surface-brand | #1C1C1C | subtle brand tint |
+| surface-signal | rgba(70, 185, 120, 0.08) | signal tint |
+| text-primary | #FAFAFA | primary content |
+| text-secondary | #A1A1A1 | supporting content |
+| text-muted | #737373 | metadata/placeholders |
+| text-disabled | #525252 | disabled content |
+| text-on-brand | #0A0A0A | content on brand |
+| text-on-signal | #0A0A0A | content on signal |
+| border-subtle | #262626 | quiet dividers |
+| border-default | #2E2E2E | standard borders |
+| border-strong | #404040 | emphasized borders |
+| action-primary | #FAFAFA | primary actions |
+| action-primary-hover | #FFFFFF | primary hover |
+| action-primary-active | #E5E5E5 | primary active |
+| signal | #46B978 | useful match/evidence |
+| warning | #D9A13B | attention |
+| danger | #DE6B6B | error/destructive |
+| focus-ring | #FFFFFF | keyboard focus |
 
 ### Light
 
 | Semantic | Value | Meaning |
 |---|---|---|
-| surface-page | #F7F9FC | page canvas |
+| surface-page | #F4F4F5 | page canvas |
 | surface-base | #FFFFFF | main content |
 | surface-raised | #FFFFFF | cards, sheets, popovers |
 | surface-overlay | #FFFFFF | highest temporary surface |
-| surface-brand | #EEECFF | subtle brand tint |
-| surface-signal | #DDF7F2 | signal tint |
-| text-primary | #111821 | primary content |
-| text-secondary | #3E4855 | supporting content |
-| text-muted | #5C6877 | metadata/placeholders |
-| text-disabled | #AAB5C3 | disabled content |
-| text-on-brand | #FFFFFF | content on brand |
-| text-on-signal | #061512 | content on signal |
-| border-subtle | #E8ECF2 | quiet dividers |
-| border-default | #CBD3DE | standard borders |
-| border-strong | #AAB5C3 | emphasized borders |
-| action-primary | #5B4DE8 | primary actions |
-| action-primary-hover | #6D5EF5 | primary hover |
-| action-primary-active | #4D40C7 | primary active |
-| signal | #159F8D | useful match/evidence |
+| surface-brand | #ECECEE | subtle brand tint |
+| surface-signal | rgba(31, 138, 76, 0.08) | signal tint |
+| text-primary | #0A0A0A | primary content |
+| text-secondary | #52525B | supporting content |
+| text-muted | #71717A | metadata/placeholders |
+| text-disabled | #A1A1AA | disabled content |
+| text-on-brand | #FAFAFA | content on brand |
+| text-on-signal | #FFFFFF | content on signal |
+| border-subtle | #E7E7E9 | quiet dividers |
+| border-default | #D4D4D8 | standard borders |
+| border-strong | #A1A1AA | emphasized borders |
+| action-primary | #0A0A0A | primary actions |
+| action-primary-hover | #26262A | primary hover |
+| action-primary-active | #000000 | primary active |
+| signal | #1F8A4C | useful match/evidence |
 | warning | #B97900 | attention |
-| danger | #C9364D | error/destructive |
-| focus-ring | #5B4DE8 | keyboard focus |
+| danger | #C24040 | error/destructive |
+| focus-ring | #0A0A0A | keyboard focus |
 
 ## 9. Color usage rules
 
-Target visual distribution is approximately 80–90% neutral, 5–15% brand, and very small Signal/Warning/Danger usage. These are design targets, not hard implementation percentages.
+Target visual distribution is approximately 80–90% neutral, 5–15% mono brand
+(white/black), and very small Signal/Warning/Danger usage. These are design
+targets, not hard implementation percentages. Because the brand is monochrome,
+"brand usage" reads as light-on-dark emphasis (primary CTA, selection ring,
+focus) — never as a hue.
 
-Primary brand: interaction and navigation.
+Primary brand (mono): interaction and navigation.
 Signal: actual evidence or useful match.
 Warning: uncertainty or attention.
 Danger: failure or destructive action.
 Neutral: most of the interface.
 
 Never use a strong match treatment when a major requirement is unresolved.
+Never introduce a chromatic color for decoration — the palette is
+intentionally timeless: few colors, but clear.
 
 ## 10. Typography
 

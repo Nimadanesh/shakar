@@ -34,11 +34,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0B10",
+  themeColor: "#0A0A0A",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
 };
+
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('shakar-theme');if(t==='light'){var d=document.documentElement;d.classList.remove('dark');d.classList.add('light');}}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -52,6 +54,9 @@ export default function RootLayout({
       className={`${vazirmatn.variable} ${inter.variable} dark h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body
         className="flex min-h-full flex-col bg-background font-sans text-foreground"
         suppressHydrationWarning
