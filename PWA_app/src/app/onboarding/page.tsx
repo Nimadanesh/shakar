@@ -2,8 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Bell, Crosshair, Sparkles } from "lucide-react";
+import { LogoMark } from "@/components/brand/LogoMark";
 import { cn } from "@/lib/utils";
 import { markOnboarded } from "@/lib/first-run";
 
@@ -97,15 +97,7 @@ export default function OnboardingPage() {
       onTouchEnd={handleTouchEnd}
     >
       <div className="flex items-center justify-between">
-        <span className="flex size-9 items-center justify-center overflow-hidden rounded-lg">
-          <Image
-            src="/icons/icon-192.png"
-            alt="لوگوی شکار"
-            width={36}
-            height={36}
-            priority
-          />
-        </span>
+        <LogoMark className="size-9 text-foreground" />
         <button
           type="button"
           onClick={complete}
