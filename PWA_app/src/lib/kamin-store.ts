@@ -22,6 +22,50 @@ export interface KaminRecord {
 
 const STORAGE_KEY = "shakar:kamins:v1";
 
+function strArray(v: unknown): string[] {
+  return Array.isArray(v)
+    ? v.filter((t): t is string => typeof t === "string")
+    : [];
+}
+
+function numOrNull(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/**
+ * Validates a stored kamin ctx. Every field is coerced with a safe
+ * default; the legacy ContextBase shape (include/exclude arrays, string
+ * prices, no query) is migrated. Returns null when the value isn't an
+ * object at all — a malformed ctx drops the record instead of crashing
+ * /saved (or the header badge) with a TypeError.
+ */
+function normalizeCtx(
+  raw: unknown,
+  fallbackQuery: string
+): SearchContext | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const v = raw as Record<string, unknown>;
+  const includeKeywords = strArray(v.includeKeywords);
+  const excludeKeywords = strArray(v.excludeKeywords);
+  return {
+    query: typeof v.query === "string" ? v.query : fallbackQuery,
+    includeKeywords:
+      includeKeywords.length > 0 ? includeKeywords : strArray(v.include),
+    excludeKeywords:
+      excludeKeywords.length > 0 ? excludeKeywords : strArray(v.exclude),
+    category: typeof v.category === "string" ? v.category : "all",
+    city: typeof v.city === "string" ? v.city : "all",
+    priceMin: numOrNull(v.priceMin),
+    priceMax: numOrNull(v.priceMax),
+    hasImage: v.hasImage === true,
+  };
+}
+
 function normalize(raw: unknown): KaminRecord | null {
   if (typeof raw !== "object" || raw === null) return null;
   const v = raw as {
@@ -33,11 +77,12 @@ function normalize(raw: unknown): KaminRecord | null {
   };
   if (typeof v.id !== "string" || v.id === "") return null;
   if (typeof v.name !== "string" || v.name.trim() === "") return null;
-  if (typeof v.ctx !== "object" || v.ctx === null) return null;
+  const ctx = normalizeCtx(v.ctx, v.name);
+  if (ctx === null) return null;
   return {
     id: v.id,
     name: v.name,
-    ctx: v.ctx as SearchContext,
+    ctx,
     seenIds: Array.isArray(v.seenIds)
       ? v.seenIds.filter((d): d is string => typeof d === "string")
       : [],

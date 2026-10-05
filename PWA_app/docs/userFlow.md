@@ -192,13 +192,13 @@ subscription quota unit is at stake).
 ## Hunt Result (/hunt/[id])
 Goal: rapid triage of one paid, persistent result set.
 Sections: search summary, active constraints, count, sort, result list, states.
-Components: SearchSummary, ActiveFilterChips, ResultCount, SortControl, AdList, AdCard, ShekarScoreBadge, MatchReasons, FavoriteButton.
+Components: SearchSummary, ActiveFilterChips, ResultCount, SortControl, AdList, AdCard, ShekarScoreBadge, WhyMatched, FavoriteButton.
 Card must answer «این آگهی ارزش باز کردن دارد؟» whenever available evidence supports it.
 
 ## Ad Detail
 Goal: verification.
 Sections: gallery, core information, match explanation, relevant description evidence, remaining listing information, actions.
-Components: ImageGallery, AdHeader, Price, LocationMeta, ListingAge, ShekarScoreBadge, MatchReasons, DescriptionEvidence, FavoriteButton, ShareButton, OpenOriginalButton.
+Components: ImageGallery, AdHeader, Price, LocationMeta, ListingAge, ShekarScoreBadge, WhyMatched, DescriptionEvidence, FavoriteButton, ShareButton, OpenOriginalButton.
 
 ## My Shakar (/saved) — the live page
 Goal: the pro's morning inbox — what they are waiting for, in 1–2 taps.

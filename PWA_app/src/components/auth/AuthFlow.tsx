@@ -237,7 +237,7 @@ export function AuthFlow() {
           با ورود، شکارها و علاقه‌مندی‌هایتان حفظ می‌شود.
         </p>
         {isDevBypass() && (
-          <p className="text-center text-[11px] leading-5 text-warning">
+          <p className="text-center text-[11px] leading-5 text-muted-foreground">
             حالت توسعه: هر کد ۵ رقمی قبول می‌شود (فقط در محیط توسعه).
           </p>
         )}

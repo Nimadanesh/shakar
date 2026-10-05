@@ -53,6 +53,23 @@ Visual principles:
 5. No visual shouting.
 6. Brand is cumulative: typography + spacing + surfaces + signal color + geometry + evidence-first UI.
 
+### Logo
+The mark is an S-shaped monochrome ribbon (Navid's vector, 2026-10-05).
+Two expressions, one brand:
+- **In-app mark** — `src/components/brand/LogoMark.tsx`: the flat vector,
+  inline SVG with `currentColor` (white on dark, black on light — adapts
+  to the theme automatically). The two outer tips carry a whisper of a
+  spearhead (soft point, not a bulb) for the hunt feeling — subtle enough
+  that only sharp eyes notice at 36px. viewBox is cropped to the artwork
+  bounds; the paths themselves are the source of truth. Currently used in
+  the onboarding header (36px).
+- **App icon** — the 3D monochrome render (`public/icons/`): icon-192.png,
+  icon-512.png, maskable-512.png (mark sits inside the safe zone),
+  apple-touch-icon.png (180px), and multi-size favicon.ico (RGBA —
+  Next 16 rejects RGB ICOs).
+Rules: never recolor outside the monochrome theme, never add effects,
+never redraw the tips blunter/sharper without Navid.
+
 ## 3. Theme architecture
 
 Shakar supports Dark and Light from the same semantic token system.
