@@ -4,10 +4,13 @@ import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, User, Wallet } from "lucide-react";
 import { PlanSheet } from "@/components/plan/PlanSheet";
+import { profileInitials, useProfile } from "@/hooks/useProfile";
 import { listKamins, kaminNewIds } from "@/lib/kamin-store";
 import { SEARCH_FIXTURES } from "@/data/search-fixtures";
 
 function AvatarButton({ onClick }: { onClick: () => void }) {
+  const { name } = useProfile();
+  const initials = profileInitials(name);
   return (
     <button
       type="button"
@@ -15,7 +18,11 @@ function AvatarButton({ onClick }: { onClick: () => void }) {
       aria-label="پروفایل"
       className="flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-transform focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.96]"
     >
-      <User size={18} aria-hidden="true" />
+      {initials !== "" ? (
+        <span className="text-[15px] font-semibold leading-5">{initials}</span>
+      ) : (
+        <User size={18} aria-hidden="true" />
+      )}
     </button>
   );
 }
