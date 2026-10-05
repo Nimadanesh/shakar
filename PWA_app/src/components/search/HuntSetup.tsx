@@ -20,7 +20,7 @@ import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
 import { recordHunt } from "@/lib/hunt-store";
-import { parsePriceInput, formatPriceToman } from "@/lib/prices";
+import { parsePriceInput, formatPriceCompact } from "@/lib/prices";
 import { EMPTY_CONTEXT_BASE, type ContextBase } from "@/lib/search-context";
 import { readParams } from "@/lib/search-params";
 
@@ -193,9 +193,9 @@ export function HuntSetup() {
 
   const priceRowValue = (() => {
     if (explicitMin !== null && explicitMax !== null)
-      return `${formatPriceToman(explicitMin)} تا ${formatPriceToman(explicitMax)}`;
-    if (explicitMax !== null) return `تا ${formatPriceToman(explicitMax)}`;
-    if (explicitMin !== null) return `از ${formatPriceToman(explicitMin)}`;
+      return `از ${formatPriceCompact(explicitMin)} تا ${formatPriceCompact(explicitMax)}`;
+    if (explicitMax !== null) return `تا ${formatPriceCompact(explicitMax)}`;
+    if (explicitMin !== null) return `از ${formatPriceCompact(explicitMin)}`;
     if (inferred.priceMin && inferred.priceMax)
       return `${inferred.priceMin.display} تا ${inferred.priceMax.display}`;
     if (inferred.priceMax) return inferred.priceMax.display;

@@ -38,7 +38,9 @@ export function SpecChips({
   onDismiss,
 }: SpecChipsProps) {
   const [draft, setDraft] = useState("");
-  const accent = tone === "positive" ? "border-signal/30" : "border-danger/30";
+  const positive = tone === "positive";
+  const headerBg = positive ? "bg-signal-soft" : "bg-danger-soft";
+  const titleColor = positive ? "text-signal" : "text-danger";
 
   function commit() {
     const t = draft.trim();
@@ -51,12 +53,16 @@ export function SpecChips({
   }
 
   return (
-    <section aria-label={title} className={`flex flex-col gap-2.5 rounded-xl border ${accent} p-3.5`}>
-      <div className="flex flex-col gap-0.5">
-        <p className="text-[13px] font-medium leading-5 text-foreground">{title}</p>
+    <section
+      aria-label={title}
+      className="overflow-hidden rounded-xl border border-border"
+    >
+      <div className={`flex flex-col gap-0.5 border-b border-border/60 ${headerBg} px-3.5 pb-2.5 pt-3`}>
+        <p className={`text-[13px] font-medium leading-5 ${titleColor}`}>{title}</p>
         <p className="text-xs leading-5 text-muted-foreground">{hint}</p>
       </div>
 
+      <div className="flex flex-col gap-2.5 p-3.5">
       {(explicit.length > 0 || inferred.length > 0) && (
         <div className="flex flex-wrap gap-1.5">
           {explicit.map((term) => (
@@ -127,6 +133,7 @@ export function SpecChips({
         >
           <Plus size={16} aria-hidden="true" />
         </button>
+      </div>
       </div>
     </section>
   );
