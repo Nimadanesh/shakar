@@ -71,8 +71,8 @@ Primary flow:
 ~~~
 
 Onboarding runs once (first launch): value proposition («به‌جای ۵۰۰ آگهی،
-فقط همان چندتایی را ببین که واقعاً می‌خواهی.»), how it works in three
-beats (بگو چی می‌خوای → دقیقش کن → کمین بذار), then «شروع».
+فقط همان چندتایی را ببین که واقعاً می‌خواهی.»), in three beats
+(value line → «تعریف کن، شکار کن» → «کمین بذار»), then «شروع».
 
 Example intent: «پیانو اکوستیک یاماها U3 در تهران، زیر ۲۰۰ میلیون؛ دیجیتال و طرح اکوستیک نمی‌خوام.»
 
@@ -406,8 +406,9 @@ DECIDED (Navid, 2026-10-05):
 - Pre-flight carries NO scan-count estimate and no numbers at all —
   final chip review + explicit cost acknowledgment only. Implemented as a
   confirm STATE of setup, never a separate screen.
-- Onboarding: one screen with the live example embedded (value contract
-  for a paid tool, zero slide deck). Visual detail TBD at implementation.
+- Onboarding: three quiet beats (value line → «تعریف کن، شکار کن» →
+  «کمین بذار»), swipeable, skippable — the earlier one-screen idea is
+  dropped (Navid, 2026-10-05).
 - UX fix round (Navid-approved, 2026-10-05): single-gate setup — inline
   «شکار کن» under the live interpretation, PrecisionSheet («شکار دقیق»)
   optional and never auto-opened; ONE interpretation surface (inferred

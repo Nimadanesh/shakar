@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Bell, User, Wallet } from "lucide-react";
 import { PlanSheet } from "@/components/plan/PlanSheet";
 import { listKamins, kaminNewIds } from "@/lib/kamin-store";
@@ -21,6 +21,8 @@ function AvatarButton({ onClick }: { onClick: () => void }) {
 }
 
 function NotificationButton({ onClick }: { onClick: () => void }) {
+  const pathname = usePathname();
+  // Recompute on navigation: matches may arrive while the app is open.
   const unread = useMemo(() => {
     try {
       return listKamins().reduce(
@@ -30,7 +32,8 @@ function NotificationButton({ onClick }: { onClick: () => void }) {
     } catch {
       return 0;
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   return (
     <button

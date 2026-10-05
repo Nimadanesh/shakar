@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Crosshair, MessageCircle, Sparkles } from "lucide-react";
+import { Bell, MessageCircle, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { markOnboarded } from "@/lib/first-run";
 
@@ -15,14 +15,8 @@ const BEATS = [
   },
   {
     icon: MessageCircle,
-    title: "بگو چی می‌خوای",
-    sub: "به زبان خودت بنویس؛ لازم نیست بلد باشی فیلتر بزنی.",
-    tagline: false,
-  },
-  {
-    icon: Crosshair,
-    title: "دقیقش کن",
-    sub: "بگو چی حتماً باشد و چی اصلاً نباشد — روی متن آگهی‌ها.",
+    title: "تعریف کن، شکار کن",
+    sub: "به زبان خودت بنویس چی می‌خوای، مشخصات شکار رو بده، یه دکمه بزن — تمام.",
     tagline: false,
   },
   {
@@ -34,7 +28,7 @@ const BEATS = [
 ] as const;
 
 /**
- * First-launch value communication. Four quiet beats, no feature tour.
+ * First-launch value communication. Three quiet beats, no feature tour.
  * Sets the onboarded flag on completion OR skip — never traps the user.
  */
 export default function OnboardingPage() {

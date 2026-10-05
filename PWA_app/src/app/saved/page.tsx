@@ -56,7 +56,7 @@ function KaminCard({
             «{kamin.name}»
           </p>
           <p className="text-xs leading-5 text-muted-foreground">
-            {constraintCount(kamin).toLocaleString("fa-IR")} قید فعال
+            {constraintCount(kamin).toLocaleString("fa-IR")} فیلتر فعال
           </p>
         </div>
         {newCount > 0 && (
@@ -162,6 +162,8 @@ export default function SavedPage() {
     newCounts.set(kamin.id, kaminNewIds(kamin, SEARCH_FIXTURES).length);
   }
   const freshKamins = kamins.filter((k) => (newCounts.get(k.id) ?? 0) > 0);
+  /** Quiet watchers — kamins already surfaced in تازه‌ها don't repeat here. */
+  const quietKamins = kamins.filter((k) => (newCounts.get(k.id) ?? 0) === 0);
 
   function refresh() {
     setKamins(listKamins());
@@ -216,11 +218,11 @@ export default function SavedPage() {
         )}
       </section>
 
-      {kamins.length > 0 && (
+      {quietKamins.length > 0 && (
         <section aria-label="کمین‌ها" className="flex flex-col gap-3">
           <SectionTitle>کمین‌ها</SectionTitle>
           <ul className="flex flex-col gap-2">
-            {kamins.map((kamin) => (
+            {quietKamins.map((kamin) => (
               <li key={kamin.id}>
                 <KaminCard
                   kamin={kamin}

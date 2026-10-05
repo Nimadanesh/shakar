@@ -195,6 +195,13 @@ export function HuntSetup() {
   const priceInferred =
     explicitMin === null && explicitMax === null && (inferred.priceMin !== null || inferred.priceMax !== null);
 
+  /** Inferred readings apply unless dismissed — say so, exactly when one exists. */
+  const hasInferred =
+    inferred.excludes.length > 0 ||
+    inferred.city !== null ||
+    inferred.priceMin !== null ||
+    inferred.priceMax !== null;
+
   return (
     <div className="flex flex-col gap-4">
       <WhatField ref={inputRef} value={query} onChange={setQuery} />
@@ -246,7 +253,7 @@ export function HuntSetup() {
         <div className="flex flex-col gap-4">
           <SpecChips
             title="حتماً این‌ها باشد"
-            hint="اگر این کلمات در توضیحات نباشند، آگهی حذف می‌شود."
+            hint="کلماتی که در «چی؟» نوشتی خودکار لحاظ می‌شن؛ اینجا فقط فیلترِ اضافه بذار."
             explicit={base.include}
             inferred={[]}
             tone="positive"
@@ -293,6 +300,12 @@ export function HuntSetup() {
             />
           </div>
 
+          {hasInferred && (
+            <p className="-mt-2 text-xs leading-5 text-muted-foreground">
+              موارد «حدسی» هم در شکار اعمال می‌شوند؛ × بزن تا نادیده گرفته شوند.
+            </p>
+          )}
+
           <button
             type="button"
             onClick={fireHunt}
@@ -321,8 +334,16 @@ export function HuntSetup() {
       />
       <PriceSheet
         open={priceOpen}
-        priceMin={base.priceMin}
-        priceMax={base.priceMax}
+        priceMin={
+          base.priceMin.trim() !== ""
+            ? base.priceMin
+            : (inferred.priceMin?.value ?? "")
+        }
+        priceMax={
+          base.priceMax.trim() !== ""
+            ? base.priceMax
+            : (inferred.priceMax?.value ?? "")
+        }
         onApply={(min, max) => setBase((b) => ({ ...b, priceMin: min, priceMax: max }))}
         onClose={() => setPriceOpen(false)}
       />

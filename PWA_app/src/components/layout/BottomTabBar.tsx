@@ -22,8 +22,11 @@ export function BottomTabBar() {
     >
       <div className="mx-auto grid w-full max-w-screen-sm grid-cols-3 gap-1 rounded-2xl border border-border bg-secondary/70 p-1.5 shadow-[0_8px_32px_rgb(0_0_0/0.45)] backdrop-blur-xl">
         {tabs.map(({ href, label, icon: Icon }) => {
+          // A hunt page (/hunt/[id]) belongs to the شکار flow.
           const isActive =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
+            href === "/"
+              ? pathname === "/" || pathname.startsWith("/hunt")
+              : pathname.startsWith(href);
           return (
             <Link
               key={href}
