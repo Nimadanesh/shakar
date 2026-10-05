@@ -66,7 +66,7 @@ export function AdCardCompact({ ad, strongMatch, includeTerms, onHide, index = 0
           <p className="truncate text-xs leading-4 text-muted-foreground">{evidence}</p>
         )}
         <p className="truncate text-xs leading-4 text-muted-foreground">
-          {ad.city} • {ad.createdAt}
+          {ad.city} - {ad.createdAt}
           {strongMatch && <span className="ms-1.5 text-signal">تطابق بالا</span>}
         </p>
       </div>

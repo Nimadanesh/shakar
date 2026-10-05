@@ -117,7 +117,7 @@ export function AdCard({ ad, match, includeTerms, excludeTerms, onHide, index = 
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs leading-5 text-muted-foreground">
           {ad.city}
-          {ad.neighborhood ? `، ${ad.neighborhood}` : ""} •{" "}
+          {ad.neighborhood ? `، ${ad.neighborhood}` : ""} -{" "}
           <span className="font-medium text-muted-foreground">{ad.createdAt}</span>
         </p>
         <button

@@ -161,7 +161,7 @@ export function PrecisionSheet({ open, mode, initial, preview, onApply, onClose,
             >
               {mode === "setup" ? "شکار کن" : "اجرای مجدد شکار"}
               {previewCount !== null && (
-                <span className="tabular-nums"> • {previewCount.toLocaleString("fa-IR")} آگهی</span>
+                <span className="tabular-nums"> - {previewCount.toLocaleString("fa-IR")} آگهی</span>
               )}
             </button>
           </div>
@@ -222,7 +222,7 @@ export function PrecisionSheet({ open, mode, initial, preview, onApply, onClose,
           <div className="flex items-center gap-2">
             <PricePreview value={draft.priceMin} />
             {draft.priceMin.trim() !== "" && draft.priceMax.trim() !== "" && (
-              <span aria-hidden="true" className="text-muted-foreground">•</span>
+              <span aria-hidden="true" className="text-muted-foreground">-</span>
             )}
             <PricePreview value={draft.priceMax} />
           </div>

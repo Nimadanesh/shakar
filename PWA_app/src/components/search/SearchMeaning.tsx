@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, ChevronDown, Plus, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface InferredRow {
   id: string;
@@ -50,12 +51,18 @@ export function SearchMeaning({
     .join("، ");
 
   return (
-    <section aria-label="برداشت از جستجو" className="flex flex-col gap-3">
+    <section
+      aria-label="برداشت از جستجو"
+      className="overflow-hidden rounded-xl border border-border bg-card"
+    >
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex min-h-11 items-center gap-2 rounded-xl border border-border-subtle bg-secondary/40 px-3 text-start transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-ring"
+        className={cn(
+          "flex min-h-11 w-full items-center gap-2 px-3 text-start transition-colors hover:bg-secondary/40 focus-visible:outline-2 focus-visible:outline-ring",
+          expanded && "border-b border-border-subtle"
+        )}
       >
         <span className="text-[13px] font-medium leading-5 text-foreground">
           از حرفت فهمیدم
@@ -81,7 +88,7 @@ export function SearchMeaning({
       </button>
 
       {expanded && (
-        <div className="animate-rise flex flex-col gap-4 ps-1">
+        <div className="animate-rise flex flex-col gap-4 p-3">
           <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
             <span>جستجو: </span>«{query}»
           </p>
@@ -126,7 +133,7 @@ export function SearchMeaning({
           {preferences.map((pref) => (
             <div
               key={pref.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-card px-3 py-2"
+              className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-secondary/40 px-3 py-2"
             >
               <p className="text-[13px] leading-5 text-muted-foreground">
                 ترجیح: «{pref.label}» — فیلتر نیست
