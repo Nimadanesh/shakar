@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, Camera, Crosshair, Music } from "lucide-react";
+import { Building2, Camera, Crosshair, History, Music } from "lucide-react";
 import { FOCUS_SEARCH_EVENT } from "@/components/layout/Header";
 import { ActiveSearchSummary } from "@/components/search/ActiveSearchSummary";
 import { QuickPrecision } from "@/components/search/QuickPrecision";
@@ -17,6 +17,8 @@ import { SEARCH_FIXTURES } from "@/data/search-fixtures";
 import { categoryLabel, cityLabel } from "@/data/taxonomy";
 import { useHiddenAds } from "@/hooks/useHiddenAds";
 import { interpretQuery } from "@/lib/interpret";
+import { isOnboarded } from "@/lib/first-run";
+import { readRecentHunts, recordRecentHunt, type RecentHunt } from "@/lib/recent-hunts";
 import { parsePriceInput } from "@/lib/prices";
 import { buildRadarConfig, type RadarConfig } from "@/lib/radar";
 import { runSearch, sortResults, type SortKey } from "@/lib/search";
@@ -81,166 +83,20 @@ function readStoredView(): ResultView {
   }
 }
 
-export function SearchWorkspace() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const [query, setQuery] = useState("");
-  const [base, setBase] = useState<ContextBase>(EMPTY_CONTEXT_BASE);
-  const [interpretation, setInterpretation] = useState<Interpretation>({ applied: [], preferences: [] });
-  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [outcome, setOutcome] = useState<SearchOutcome | null>(null);
-  const [effective, setEffective] = useState<SearchContext | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [sortSheetOpen, setSortSheetOpen] = useState(false);
-  const [initialized, setInitialized] = useState(false);
-  const [sort, setSort] = useState<SortKey>("best");
-  const [view, setView] = useState<ResultView>(readStoredView);
-  const [radar, setRadar] = useState<RadarConfig | null>(null);
-  const [radarOpen, setRadarOpen] = useState(false);
-  const { hiddenIds, hide, unhide } = useHiddenAds();
-
-  const inputRef = useRef<HTMLInputElement>(null);
-  const advancedRef = useRef<HTMLButtonElement>(null);
-  const timerRef = useRef<number | null>(null);
-  const submittedQuery = useRef("");
-
-  const execute = useCallback(
-    (ctx: SearchContext, prefs: string[]) => {
-      setPhase("loading");
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-      timerRef.current = window.setTimeout(() => {
-        try {
-          const result = runSearch(ctx, SEARCH_FIXTURES, prefs);
-          setOutcome(result);
-          setEffective(ctx);
-          setPhase(result.results.length === 0 ? "empty" : "ready");
-        } catch {
-          setPhase("error");
-        }
-      }, 600);
-    },
-    []
-  );
-
-  const submit = useCallback(
-    (rawQuery: string, nextBase: ContextBase, keepDismissed: boolean) => {
-      const trimmed = rawQuery.trim();
-      if (trimmed === "") return;
-      const interp = interpretQuery(trimmed);
-      const nextDismissed = keepDismissed && submittedQuery.current === trimmed ? dismissed : new Set<string>();
-      const ctx = buildEffectiveContext(trimmed, nextBase, interp, nextDismissed);
-      setInterpretation(interp);
-      setDismissed(nextDismissed);
-      submittedQuery.current = trimmed;
-      router.replace(writeParams(trimmed, nextBase), { scroll: false });
-      execute(
-        ctx,
-        interp.preferences.map((p) => p.value).filter((v) => !ctx.includeKeywords.includes(v))
-      );
-    },
-    [dismissed, execute, router]
-  );
-
-  // Deep-link / back-navigation: restore context from the URL once.
-  useEffect(() => {
-    if (initialized) return;
-    setInitialized(true);
-    const { query: q, base: b } = readParams(searchParams);
-    if (q.trim() === "") return;
-    setQuery(q);
-    setBase(b);
-    submit(q, b, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    function focusQuery() {
-      inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      inputRef.current?.focus({ preventScroll: true });
-    }
-    window.addEventListener(FOCUS_SEARCH_EVENT, focusQuery);
-    return () => window.removeEventListener(FOCUS_SEARCH_EVENT, focusQuery);
-  }, []);
-
-  const rerun = useCallback(
-    (nextBase: ContextBase, nextDismissed: ReadonlySet<string>) => {
-      if (submittedQuery.current === "") return;
-      const ctx = buildEffectiveContext(submittedQuery.current, nextBase, interpretation, nextDismissed);
-      router.replace(writeParams(submittedQuery.current, nextBase), { scroll: false });
-      execute(
-        ctx,
-        interpretation.preferences.map((p) => p.value).filter((v) => !ctx.includeKeywords.includes(v))
-      );
-    },
-    [execute, interpretation, router]
-  );
-
-  function removeRefinement(id: string) {
-    const [kind, ...rest] = id.split(":");
-    const value = rest.join(":");
-    let nextBase = base;
-    let nextDismissed = dismissed;
-
-    if (kind === "include") {
-      nextBase = { ...base, include: base.include.filter((t) => t !== value) };
-    } else if (kind === "exclude") {
-      if (base.exclude.includes(value)) {
-        nextBase = { ...base, exclude: base.exclude.filter((t) => t !== value) };
-      } else {
-        nextDismissed = new Set(dismissed).add(id);
-      }
-    } else if (kind === "city") {
-      if (base.city !== "all") nextBase = { ...base, city: "all" };
-      else nextDismissed = new Set(dismissed).add(id);
-    } else if (kind === "priceMin") {
-      if (base.priceMin.trim() !== "") nextBase = { ...base, priceMin: "" };
-      else nextDismissed = new Set(dismissed).add(id);
-    } else if (kind === "priceMax") {
-      if (base.priceMax.trim() !== "") nextBase = { ...base, priceMax: "" };
-      else nextDismissed = new Set(dismissed).add(id);
-    } else if (kind === "category") {
-      nextBase = { ...base, category: "all" };
-    }
-
-    setBase(nextBase);
-    setDismissed(nextDismissed);
-    rerun(nextBase, nextDismissed);
-  }
-
-  /** Confirm an inferred reading as an explicit refinement. */
-  function promoteInferred(id: string) {
-    const [kind, ...rest] = id.split(":");
-    const value = rest.join(":");
-    let nextBase = base;
-    if (kind === "city" && base.city === "all") nextBase = { ...base, city: value };
-    else if (kind === "priceMin" && base.priceMin.trim() === "")
-      nextBase = { ...base, priceMin: value };
-    else if (kind === "priceMax" && base.priceMax.trim() === "")
-      nextBase = { ...base, priceMax: value };
-    else if (kind === "exclude" && !base.exclude.includes(value))
-      nextBase = { ...base, exclude: [...base.exclude, value] };
-    else return;
-    setBase(nextBase);
-    rerun(nextBase, dismissed);
-  }
-
-  function handleClearAll() {
-    const nextBase = EMPTY_CONTEXT_BASE;
-    setBase(nextBase);
-    setDismissed(new Set());
-    rerun(nextBase, new Set());
-  }
-
-  const groups = useMemo(() => {
-    if (submittedQuery.current === "") return [];
+/**
+ * Display groups for intent: explicit refinements + inferred readings.
+ * Pure: the caller decides which interpretation feeds it (live query in
+ * setup, submitted interpretation in results).
+ */
+function buildDisplayGroups(
+  base: ContextBase,
+  interpretation: Interpretation,
+  dismissed: ReadonlySet<string>
+): Array<{
+  id: string;
+  title: string;
+  chips: Array<{ id: string; label: string; inferred?: boolean }>;
+}> {
     const result: Array<{
       id: string;
       title: string;
@@ -310,7 +166,261 @@ export function SearchWorkspace() {
       });
     }
     return result;
-  }, [base, interpretation, dismissed]);
+}
+/**
+ * Pure state transition for removing a refinement chip.
+ * Shared by results-mode (which reruns) and setup-mode (which does not).
+ */
+function applyRefinementRemoval(
+  id: string,
+  base: ContextBase,
+  dismissed: ReadonlySet<string>
+): { nextBase: ContextBase; nextDismissed: ReadonlySet<string> } {
+  const [kind, ...rest] = id.split(":");
+  const value = rest.join(":");
+  let nextBase = base;
+  let nextDismissed = dismissed;
+
+  if (kind === "include") {
+    nextBase = { ...base, include: base.include.filter((t) => t !== value) };
+  } else if (kind === "exclude") {
+    if (base.exclude.includes(value)) {
+      nextBase = { ...base, exclude: base.exclude.filter((t) => t !== value) };
+    } else {
+      nextDismissed = new Set(dismissed).add(id);
+    }
+  } else if (kind === "city") {
+    if (base.city !== "all") nextBase = { ...base, city: "all" };
+    else nextDismissed = new Set(dismissed).add(id);
+  } else if (kind === "priceMin") {
+    if (base.priceMin.trim() !== "") nextBase = { ...base, priceMin: "" };
+    else nextDismissed = new Set(dismissed).add(id);
+  } else if (kind === "priceMax") {
+    if (base.priceMax.trim() !== "") nextBase = { ...base, priceMax: "" };
+    else nextDismissed = new Set(dismissed).add(id);
+  } else if (kind === "category") {
+    nextBase = { ...base, category: "all" };
+  }
+
+  return { nextBase, nextDismissed };
+}
+
+/**
+ * Pure state transition for confirming an inferred reading.
+ * Returns null when there is nothing to promote.
+ */
+function applyInferredPromotion(id: string, base: ContextBase): ContextBase | null {
+  const [kind, ...rest] = id.split(":");
+  const value = rest.join(":");
+  if (kind === "city" && base.city === "all") return { ...base, city: value };
+  if (kind === "priceMin" && base.priceMin.trim() === "") return { ...base, priceMin: value };
+  if (kind === "priceMax" && base.priceMax.trim() === "") return { ...base, priceMax: value };
+  if (kind === "exclude" && !base.exclude.includes(value))
+    return { ...base, exclude: [...base.exclude, value] };
+  return null;
+}
+
+export function SearchWorkspace() {
+  const router = useRouter();  const searchParams = useSearchParams();
+
+  const [query, setQuery] = useState("");
+  const [base, setBase] = useState<ContextBase>(EMPTY_CONTEXT_BASE);
+  const [interpretation, setInterpretation] = useState<Interpretation>({ applied: [], preferences: [] });
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [outcome, setOutcome] = useState<SearchOutcome | null>(null);
+  const [effective, setEffective] = useState<SearchContext | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sortSheetOpen, setSortSheetOpen] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const [sort, setSort] = useState<SortKey>("best");
+  const [view, setView] = useState<ResultView>(readStoredView);
+  const [radar, setRadar] = useState<RadarConfig | null>(null);
+  const [radarOpen, setRadarOpen] = useState(false);
+  const { hiddenIds, hide, unhide } = useHiddenAds();
+  const [recentHunts, setRecentHunts] = useState<RecentHunt[]>(() => readRecentHunts());
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const advancedRef = useRef<HTMLButtonElement>(null);
+  const timerRef = useRef<number | null>(null);
+  const submittedQuery = useRef("");
+
+  /** Setup mode: no paid search has fired yet in this session. */
+  const isSetup = phase === "idle";
+
+  /** Live, free interpretation of the typed query — setup only, never paid. */
+  const liveInterp = useMemo(() => {
+    const t = query.trim();
+    return t === "" ? null : interpretQuery(t);
+  }, [query]);
+
+  /**
+   * One intent display for both modes. Setup shows the live query's
+   * interpretation; results show the submitted one. Same logic, same chips —
+   * so what the user curates in setup is exactly what gets searched.
+   */
+  const activeInterp = isSetup ? liveInterp : interpretation;
+  const hasIntent = isSetup ? query.trim() !== "" : submittedQuery.current !== "";
+
+  const execute = useCallback(
+    (ctx: SearchContext, prefs: string[]) => {
+      setPhase("loading");
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => {
+        try {
+          const result = runSearch(ctx, SEARCH_FIXTURES, prefs);
+          setOutcome(result);
+          setEffective(ctx);
+          setPhase(result.results.length === 0 ? "empty" : "ready");
+        } catch {
+          setPhase("error");
+        }
+      }, 600);
+    },
+    []
+  );
+
+
+  /**
+   * The single paid-search event. Every hunt — setup fire, deep link,
+   * recent-hunt rerun — funnels through here, and every firing is recorded
+   * in the honest local history.
+   */
+  const firePaidSearch = useCallback(
+    (trimmed: string, nextBase: ContextBase, nextDismissed: ReadonlySet<string>) => {
+      const interp = interpretQuery(trimmed);
+      const ctx = buildEffectiveContext(trimmed, nextBase, interp, nextDismissed);
+      setInterpretation(interp);
+      setDismissed(nextDismissed);
+      setRecentHunts(recordRecentHunt(trimmed, nextBase));
+      submittedQuery.current = trimmed;
+      router.replace(writeParams(trimmed, nextBase), { scroll: false });
+      execute(
+        ctx,
+        interp.preferences.map((p) => p.value).filter((v) => !ctx.includeKeywords.includes(v))
+      );
+    },
+    [execute, router]
+  );
+
+  const submit = useCallback(
+    (rawQuery: string, nextBase: ContextBase, keepDismissed: boolean) => {
+      const trimmed = rawQuery.trim();
+      if (trimmed === "") return;
+      const nextDismissed =
+        keepDismissed && submittedQuery.current === trimmed ? dismissed : new Set<string>();
+      firePaidSearch(trimmed, nextBase, nextDismissed);
+    },
+    [dismissed, firePaidSearch]
+  );
+
+  /**
+   * Hunt Setup → the ONE paid search. The user curated intent (query,
+   * dismissals, base) in setup; all of it is preserved, never reset.
+   * This is the only paid-search trigger reachable from setup.
+   */
+  function fireHunt(draftBase: ContextBase) {
+    const trimmed = query.trim();
+    if (trimmed === "") return;
+    setBase(draftBase);
+    firePaidSearch(trimmed, draftBase, dismissed);
+  }
+
+  // Deep-link / back-navigation: restore context from the URL once.
+  // First-launch gate runs before anything else.
+  useEffect(() => {
+    if (initialized) return;
+    setInitialized(true);
+    if (!isOnboarded()) {
+      router.replace("/onboarding");
+      return;
+    }
+    const { query: q, base: b } = readParams(searchParams);
+    if (q.trim() === "") return;
+    setQuery(q);
+    setBase(b);
+    submit(q, b, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    function focusQuery() {
+      inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      inputRef.current?.focus({ preventScroll: true });
+    }
+    window.addEventListener(FOCUS_SEARCH_EVENT, focusQuery);
+    return () => window.removeEventListener(FOCUS_SEARCH_EVENT, focusQuery);
+  }, []);
+
+  const rerun = useCallback(
+    (nextBase: ContextBase, nextDismissed: ReadonlySet<string>) => {
+      if (submittedQuery.current === "") return;
+      const ctx = buildEffectiveContext(submittedQuery.current, nextBase, interpretation, nextDismissed);
+      router.replace(writeParams(submittedQuery.current, nextBase), { scroll: false });
+      execute(
+        ctx,
+        interpretation.preferences.map((p) => p.value).filter((v) => !ctx.includeKeywords.includes(v))
+      );
+    },
+    [execute, interpretation, router]
+  );
+
+  function removeRefinement(id: string) {
+    const { nextBase, nextDismissed } = applyRefinementRemoval(id, base, dismissed);
+    setBase(nextBase);
+    setDismissed(nextDismissed);
+    rerun(nextBase, nextDismissed);
+  }
+
+  /**
+   * Setup-mode removal: curates intent without firing anything.
+   * No paid search happens in setup.
+   */
+  function setupRemoveRefinement(id: string) {
+    const { nextBase, nextDismissed } = applyRefinementRemoval(id, base, dismissed);
+    setBase(nextBase);
+    setDismissed(nextDismissed);
+  }
+
+  /** Confirm an inferred reading as an explicit refinement. */
+  function promoteInferred(id: string) {
+    const nextBase = applyInferredPromotion(id, base);
+    if (!nextBase) return;
+    setBase(nextBase);
+    rerun(nextBase, dismissed);
+  }
+
+  /** Setup-mode promotion: confirms intent without firing anything. */
+  function setupPromoteInferred(id: string) {
+    const nextBase = applyInferredPromotion(id, base);
+    if (!nextBase) return;
+    setBase(nextBase);
+  }
+
+  /** Setup-mode preference promotion: no paid search. */
+  function setupPromotePreference(id: string) {
+    const pref = liveInterp?.preferences.find((p) => p.id === id);
+    if (!pref || base.include.includes(pref.value)) return;
+    setBase({ ...base, include: [...base.include, pref.value] });
+  }
+
+  function handleClearAll() {
+    const nextBase = EMPTY_CONTEXT_BASE;
+    setBase(nextBase);
+    setDismissed(new Set());
+    rerun(nextBase, new Set());
+  }
+
+  const groups = useMemo(() => {
+    if (!hasIntent || !activeInterp) return [];
+    return buildDisplayGroups(base, activeInterp, dismissed);
+  }, [base, activeInterp, dismissed, hasIntent]);
 
   /** Meaning shows only inferred readings — explicit refinements live in the summary. */
   const inferredGroups = useMemo(
@@ -329,9 +439,20 @@ export function SearchWorkspace() {
   // Synchronous mirror of the executed context, for the active-search summary.
   const summaryChips = useMemo(() => groups.flatMap((g) => g.chips), [groups]);
 
-  const visiblePreferences = interpretation.preferences.filter(
-    (p) => submittedQuery.current !== "" && !base.include.includes(p.value)
+  const visiblePreferences = (activeInterp?.preferences ?? []).filter(
+    (p) => hasIntent && !base.include.includes(p.value)
   );
+
+  /** Compact price summary for the setup affordance row. */
+  const priceAffordanceLabel = useMemo(() => {
+    const min = parsePriceInput(base.priceMin);
+    const max = parsePriceInput(base.priceMax);
+    if (min !== null && max !== null)
+      return `قیمت: ${formatPriceToman(min)} تا ${formatPriceToman(max)}`;
+    if (max !== null) return `قیمت: تا ${formatPriceToman(max)}`;
+    if (min !== null) return `قیمت: از ${formatPriceToman(min)}`;
+    return "قیمت: همه";
+  }, [base.priceMin, base.priceMax]);
 
   const adsById = useMemo(() => new Map(SEARCH_FIXTURES.map((ad) => [ad.id, ad])), []);
   const readyResults = useMemo(() => {
@@ -344,8 +465,8 @@ export function SearchWorkspace() {
     return sortResults(out, sort);
   }, [outcome, adsById, sort]);
 
-  function handleSheetApply(draft: PrecisionDraft) {
-    const nextBase: ContextBase = {
+  function draftToBase(draft: PrecisionDraft): ContextBase {
+    return {
       ...base,
       priceMin: draft.priceMin.trim(),
       priceMax: draft.priceMax.trim(),
@@ -355,10 +476,56 @@ export function SearchWorkspace() {
       category: draft.category,
       city: draft.city,
     };
+  }
+
+  /**
+   * Refine mode: the user knows this is a NEW paid search —
+   * the sheet CTA reads «اجرای مجدد شکار».
+   */
+  function handleSheetApply(draft: PrecisionDraft) {
+    const nextBase = draftToBase(draft);
     setBase(nextBase);
     setSheetOpen(false);
     advancedRef.current?.focus();
     rerun(nextBase, dismissed);
+  }
+
+  /**
+   * Setup mode: the draft becomes the hunt, then the ONE paid search fires.
+   * The sheet CTA reads «شکار کن».
+   */
+  function handleSetupApply(draft: PrecisionDraft) {
+    const nextBase = draftToBase(draft);
+    setSheetOpen(false);
+    fireHunt(nextBase);
+  }
+
+  /** Suggested hunt: fill the intent, open setup for user confirmation. Never auto-fires. */
+  function applySuggestedHunt(exampleQuery: string) {
+    setQuery(exampleQuery);
+    setSheetOpen(true);
+  }
+
+  /** Recent hunt: the user's own confirmed intent — deliberate re-run. */
+  function rerunRecentHunt(hunt: RecentHunt) {
+    setQuery(hunt.query);
+    setBase(hunt.base);
+    setDismissed(new Set<string>());
+    firePaidSearch(hunt.query, hunt.base, new Set<string>());
+  }
+
+  /**
+   * Search input submit. In setup, Enter reviews intent in the sheet —
+   * it never fires a paid search directly. In results, Enter starts an
+   * explicit new hunt.
+   */
+  function handleInputSubmit() {
+    if (query.trim() === "") return;
+    if (isSetup) {
+      setSheetOpen(true);
+    } else {
+      submit(query, base, true);
+    }
   }
 
   function handleSheetClose() {
@@ -397,79 +564,113 @@ export function SearchWorkspace() {
         ref={inputRef}
         value={query}
         onChange={setQuery}
-        onSubmit={() => submit(query, base, true)}
+        onSubmit={handleInputSubmit}
         isSearching={phase === "loading"}
       />
 
-      {phase === "idle" && (
+      {isSetup && (
         <div className="flex flex-col gap-5">
-          <div className="relative overflow-hidden rounded-xl">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(70% 90% at 50% 0%, rgba(255,255,255,0.07), transparent 70%)",
-              }}
-            />
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-100"
-              style={{
-                backgroundImage:
-                  "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
-                backgroundSize: "22px 22px",
-              }}
-            />
-            <div className="relative flex items-center gap-2.5 px-1 py-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/30 ring-inset">
-                <Crosshair size={19} aria-hidden="true" />
-              </span>
-              <p className="text-[15px] font-semibold leading-6 text-foreground">
-                به‌جای ۵۰۰ آگهی، فقط همان چندتایی را ببین که واقعاً می‌خواهی.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <p className="text-xs leading-5 text-muted-foreground">شکارهای پیشنهادی</p>
-            <div
-              className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1"
-              style={{
-                maskImage:
-                  "linear-gradient(to left, black calc(100% - 2rem), transparent)",
-                WebkitMaskImage:
-                  "linear-gradient(to left, black calc(100% - 2rem), transparent)",
-              }}
-            >
-              {EXAMPLES.map((example) => {
-                const Icon = example.icon;
-                return (
+          {query.trim() === "" ? (
+            <>
+              {recentHunts.length > 0 && (
+                <section aria-label="شکارهای اخیر" className="flex flex-col gap-2">
+                  <p className="text-xs leading-5 text-muted-foreground">شکارهای اخیر</p>
+                  <ul className="flex flex-col gap-1.5">
+                    {recentHunts.map((hunt) => (
+                      <li key={`${hunt.ts}:${hunt.query}`}>
+                        <button
+                          type="button"
+                          onClick={() => rerunRecentHunt(hunt)}
+                          className="flex min-h-11 w-full items-center gap-2.5 rounded-xl border border-border bg-card px-3 text-start text-[13px] text-foreground transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
+                        >
+                          <History
+                            size={15}
+                            aria-hidden="true"
+                            className="shrink-0 text-muted-foreground"
+                          />
+                          <span className="min-w-0 flex-1 truncate">{hunt.query}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              <div className="flex flex-col gap-2">
+                <p className="text-xs leading-5 text-muted-foreground">شکارهای پیشنهادی</p>
+                <div
+                  className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1"
+                  style={{
+                    maskImage:
+                      "linear-gradient(to left, black calc(100% - 2rem), transparent)",
+                    WebkitMaskImage:
+                      "linear-gradient(to left, black calc(100% - 2rem), transparent)",
+                  }}
+                >
+                  {EXAMPLES.map((example) => {
+                    const Icon = example.icon;
+                    return (
+                      <button
+                        key={example.label}
+                        type="button"
+                        onClick={() => applySuggestedHunt(example.query)}
+                        className="flex min-h-11 shrink-0 snap-start items-center gap-2 rounded-xl border border-border bg-card px-4 text-[13px] text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                      >
+                        <Icon size={15} aria-hidden="true" className="shrink-0" />
+                        {example.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div
+                aria-hidden="true"
+                className="pointer-events-none h-24 opacity-100"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
+                  backgroundSize: "26px 26px",
+                  maskImage:
+                    "linear-gradient(to bottom, transparent, black 40%, transparent)",
+                  WebkitMaskImage:
+                    "linear-gradient(to bottom, transparent, black 40%, transparent)",
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <SearchMeaning
+                query={query.trim()}
+                groups={inferredGroups}
+                preferences={visiblePreferences.map((p) => ({ id: p.id, label: p.display }))}
+                onDismissRow={setupRemoveRefinement}
+                onPromoteRow={setupPromoteInferred}
+                onPromotePreference={setupPromotePreference}
+              />
+              <div className="flex flex-wrap gap-2" aria-label="دسته‌بندی، شهر و محدوده قیمت">
+                {[
+                  `دسته: ${categoryLabel(base.category)}`,
+                  `شهر: ${cityLabel(base.city)}`,
+                  priceAffordanceLabel,
+                ].map((label) => (
                   <button
-                    key={example.label}
+                    key={label}
                     type="button"
-                    onClick={() => submit(example.query, base, false)}
-                    className="flex min-h-11 shrink-0 snap-start items-center gap-2 rounded-xl border border-border bg-card px-4 text-[13px] text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                    onClick={() => setSheetOpen(true)}
+                    className="flex min-h-9 items-center rounded-lg border border-border bg-card px-3 text-xs text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                   >
-                    <Icon size={15} aria-hidden="true" className="shrink-0" />
-                    {example.label}
+                    {label}
                   </button>
-                );
-              })}
-            </div>
-          </div>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none h-24 opacity-100"
-            style={{
-              backgroundImage:
-                "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
-              backgroundSize: "26px 26px",
-              maskImage:
-                "linear-gradient(to bottom, transparent, black 40%, transparent)",
-              WebkitMaskImage:
-                "linear-gradient(to bottom, transparent, black 40%, transparent)",
-            }}
-          />
+                ))}
+              </div>
+              <QuickPrecision
+                ref={advancedRef}
+                label="شکار دقیق"
+                onOpenAdvanced={() => setSheetOpen(true)}
+                advancedActive={advancedActive}
+                refinementCount={summaryChips.length}
+              />
+            </>
+          )}
         </div>
       )}
 
@@ -493,6 +694,7 @@ export function SearchWorkspace() {
       {hasSubmitted && (
         <QuickPrecision
           ref={advancedRef}
+          label="ویرایش شکار"
           onOpenAdvanced={() => setSheetOpen(true)}
           advancedActive={advancedActive}
           refinementCount={summaryChips.length}
@@ -551,6 +753,7 @@ export function SearchWorkspace() {
       <PrecisionSheet
         key={sheetOpen ? "open" : "closed"}
         open={sheetOpen}
+        mode={isSetup ? "setup" : "refine"}
         initial={{
           priceMin: base.priceMin,
           priceMax: base.priceMax,
@@ -561,7 +764,7 @@ export function SearchWorkspace() {
           city: base.city,
         }}
         preview={{ query, category: base.category, city: base.city }}
-        onApply={handleSheetApply}
+        onApply={isSetup ? handleSetupApply : handleSheetApply}
         onClose={handleSheetClose}
         onOpenRadar={handleOpenRadar}
       />

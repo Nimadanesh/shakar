@@ -1,0 +1,139 @@
+"use client";
+
+import { useCallback, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Bell, Crosshair, MessageCircle, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { markOnboarded } from "@/lib/first-run";
+
+const BEATS = [
+  {
+    icon: Sparkles,
+    title: "به‌جای ۵۰۰ آگهی، فقط همان چندتایی را ببین که واقعاً می‌خواهی.",
+    sub: "شکار، برای حرفه‌ای‌های دیوار",
+    tagline: true,
+  },
+  {
+    icon: MessageCircle,
+    title: "بگو چی می‌خوای",
+    sub: "به زبان خودت بنویس؛ لازم نیست بلد باشی فیلتر بزنی.",
+    tagline: false,
+  },
+  {
+    icon: Crosshair,
+    title: "دقیقش کن",
+    sub: "بگو چی حتماً باشد و چی اصلاً نباشد — روی متن آگهی‌ها.",
+    tagline: false,
+  },
+  {
+    icon: Bell,
+    title: "کمین بذار",
+    sub: "آگهی اوکازیون که اومد، خبرت می‌کنم؛ از دستش نمی‌دی.",
+    tagline: false,
+  },
+] as const;
+
+/**
+ * First-launch value communication. Four quiet beats, no feature tour.
+ * Sets the onboarded flag on completion OR skip — never traps the user.
+ */
+export default function OnboardingPage() {
+  const router = useRouter();
+  const [step, setStep] = useState(0);
+  const touchX = useRef<number | null>(null);
+
+  const complete = useCallback(() => {
+    markOnboarded();
+    router.replace("/");
+  }, [router]);
+
+  const beat = BEATS[step];
+  const Icon = beat.icon;
+  const isLast = step === BEATS.length - 1;
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchX.current = e.touches[0].clientX;
+  }
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    touchX.current = null;
+    // RTL: swipe left = next, swipe right = previous.
+    if (dx < -48 && step < BEATS.length - 1) setStep(step + 1);
+    else if (dx > 48 && step > 0) setStep(step - 1);
+  }
+
+  return (
+    <main
+      className="flex flex-1 flex-col py-6"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[15px] font-semibold text-foreground">شکار</span>
+        <button
+          type="button"
+          onClick={complete}
+          className="min-h-11 rounded-lg px-3 text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+        >
+          رد شدن
+        </button>
+      </div>
+
+      <div
+        key={step}
+        className="animate-rise flex flex-1 flex-col items-center justify-center gap-5 px-2 text-center"
+      >
+        <span
+          aria-hidden="true"
+          className="flex size-16 items-center justify-center rounded-full border border-border bg-card text-foreground"
+        >
+          <Icon size={28} strokeWidth={1.5} />
+        </span>
+        <h1
+          className={cn(
+            "max-w-xs text-foreground",
+            beat.tagline
+              ? "text-xl font-bold leading-9"
+              : "text-2xl font-extrabold leading-10"
+          )}
+        >
+          {beat.title}
+        </h1>
+        <p className="max-w-xs text-[15px] leading-7 text-muted-foreground">
+          {beat.sub}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div
+          className="flex items-center justify-center gap-2"
+          role="tablist"
+          aria-label="مراحل آشنایی"
+        >
+          {BEATS.map((b, i) => (
+            <button
+              key={b.title}
+              type="button"
+              role="tab"
+              aria-selected={i === step}
+              aria-label={`مرحله ${i + 1}`}
+              onClick={() => setStep(i)}
+              className={cn(
+                "h-2 rounded-full transition-all",
+                i === step ? "w-6 bg-foreground" : "w-2 bg-border-strong hover:bg-muted-foreground"
+              )}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => (isLast ? complete() : setStep(step + 1))}
+          className="min-h-[52px] w-full rounded-lg bg-action-primary py-3.5 text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+        >
+          {isLast ? "شروع شکار" : "بعدی"}
+        </button>
+      </div>
+    </main>
+  );
+}

@@ -4,6 +4,8 @@ import { forwardRef } from "react";
 import { Crosshair } from "lucide-react";
 
 interface QuickPrecisionProps {
+  /** Setup: «شکار دقیق». Results: «ویرایش شکار» (explicit re-run). */
+  label: string;
   onOpenAdvanced: () => void;
   advancedActive: boolean;
   refinementCount: number;
@@ -11,11 +13,11 @@ interface QuickPrecisionProps {
 
 /**
  * The single lightweight precision entry point. Category/city live inside
- * «شکار دقیق» (sheet) so natural-language search stays first; this button
+ * the sheet so natural-language search stays first; this button
  * is the single visible door to refinement, with a quiet active count.
  */
 export const QuickPrecision = forwardRef<HTMLButtonElement, QuickPrecisionProps>(
-  function QuickPrecision({ onOpenAdvanced, advancedActive, refinementCount }, advancedRef) {
+  function QuickPrecision({ label, onOpenAdvanced, advancedActive, refinementCount }, advancedRef) {
     return (
       <button
         ref={advancedRef}
@@ -29,7 +31,7 @@ export const QuickPrecision = forwardRef<HTMLButtonElement, QuickPrecisionProps>
         }`}
       >
         <Crosshair size={16} aria-hidden="true" />
-        شکار دقیق
+        {label}
         {refinementCount > 0 && (
           <span className="flex min-w-5 items-center justify-center rounded-full bg-primary/15 px-1.5 text-[11px] font-semibold leading-5 tabular-nums text-primary">
             {refinementCount.toLocaleString("fa-IR")}
