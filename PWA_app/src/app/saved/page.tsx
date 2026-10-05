@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SEARCH_FIXTURES, type FixtureAd } from "@/data/search-fixtures";
 import { formatPriceToman } from "@/lib/prices";
+import { cn } from "@/lib/utils";
 import {
   disarmKamin,
   kaminCtxToBase,
@@ -21,8 +22,17 @@ import {
 import { readHunts, recordHunt, type HuntRecord } from "@/lib/hunt-store";
 import { runSearch } from "@/lib/search";
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-[15px] font-semibold leading-6 text-foreground">{children}</h2>;
+function SectionTitle({ children, count }: { children: React.ReactNode; count?: number }) {
+  return (
+    <h2 className="flex items-baseline gap-1.5 text-[15px] font-semibold leading-6 text-foreground">
+      {children}
+      {count !== undefined && (
+        <span className="text-[12px] font-medium tabular-nums text-muted-foreground">
+          ({count.toLocaleString("fa-IR")})
+        </span>
+      )}
+    </h2>
+  );
 }
 
 function constraintCount(kamin: KaminRecord): number {
@@ -37,6 +47,12 @@ function constraintCount(kamin: KaminRecord): number {
   );
 }
 
+/**
+ * One unified layout for fresh and quiet kamins. The primary job is always
+ * one tap away («دیدن نتایج» — solid when there are new matches, outline
+ * otherwise); disarming is demoted to a quiet text action. Re-running is a
+ * new paid hunt, so it stays an explicit button — never a card tap.
+ */
 function KaminCard({
   kamin,
   newCount,
@@ -48,8 +64,9 @@ function KaminCard({
   onViewResults: () => void;
   onDisarm: () => void;
 }) {
+  const fresh = newCount > 0;
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="truncate text-sm font-semibold leading-5 text-foreground">
@@ -57,45 +74,34 @@ function KaminCard({
           </p>
           <p className="text-xs leading-5 text-muted-foreground">
             {constraintCount(kamin).toLocaleString("fa-IR")} فیلتر فعال
+            {!fresh && " • زیر نظر"}
           </p>
         </div>
-        {newCount > 0 && (
+        {fresh && (
           <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary">
             {newCount.toLocaleString("fa-IR")} تازه
           </span>
         )}
       </div>
-      {newCount > 0 ? (
-        <div className="flex flex-col gap-1.5">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={onViewResults}
-              className="h-10 rounded-lg bg-action-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
-            >
-              دیدن نتایج
-            </button>
-            <button
-              type="button"
-              onClick={onDisarm}
-              className="h-10 rounded-lg border border-border text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-            >
-              غیرفعال کردن
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs leading-5 text-muted-foreground">زیر نظر — چیز تازه‌ای نیست</p>
-          <button
-            type="button"
-            onClick={onDisarm}
-            className="shrink-0 rounded-full px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            غیرفعال کردن
-          </button>
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={onViewResults}
+        className={cn(
+          "h-11 w-full rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring",
+          fresh
+            ? "bg-action-primary text-primary-foreground hover:bg-action-primary-hover active:bg-action-primary-active"
+            : "border border-border text-foreground hover:border-border-strong"
+        )}
+      >
+        دیدن نتایج
+      </button>
+      <button
+        type="button"
+        onClick={onDisarm}
+        className="self-start rounded px-1 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-2 focus-visible:outline-ring"
+      >
+        غیرفعال کردن
+      </button>
     </div>
   );
 }
@@ -184,7 +190,7 @@ export default function SavedPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col gap-6 py-6">
+    <main className="flex flex-1 flex-col gap-8 py-6">
       <h1 className="text-xl font-semibold leading-8 text-foreground">شکار من</h1>
 
       <section aria-label="تازه‌ها" className="flex flex-col gap-3">
@@ -220,7 +226,7 @@ export default function SavedPage() {
 
       {quietKamins.length > 0 && (
         <section aria-label="کمین‌ها" className="flex flex-col gap-3">
-          <SectionTitle>کمین‌ها</SectionTitle>
+          <SectionTitle count={quietKamins.length}>کمین‌ها</SectionTitle>
           <ul className="flex flex-col gap-2">
             {quietKamins.map((kamin) => (
               <li key={kamin.id}>
@@ -238,7 +244,7 @@ export default function SavedPage() {
 
       {hunts.length > 0 && (
         <section aria-label="تاریخچه‌ی شکارها" className="flex flex-col gap-3">
-          <SectionTitle>تاریخچه‌ی شکارها</SectionTitle>
+          <SectionTitle count={hunts.length}>تاریخچه‌ی شکارها</SectionTitle>
           <ul className="flex flex-col gap-1.5">
             {hunts.map((hunt) => (
               <li key={hunt.id}>
@@ -275,7 +281,7 @@ export default function SavedPage() {
       </section>
 
       <section aria-label="علاقه‌مندی‌ها" className="flex flex-col gap-3">
-        <SectionTitle>علاقه‌مندی‌ها</SectionTitle>
+        <SectionTitle count={favoriteAds.length}>علاقه‌مندی‌ها</SectionTitle>
         {favoriteAds.length > 0 ? (
           <ul className="flex flex-col gap-2">
             {favoriteAds.map((ad) => (
