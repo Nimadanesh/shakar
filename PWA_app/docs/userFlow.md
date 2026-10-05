@@ -100,10 +100,8 @@ Shakar
 │   ├── Hunt Result /hunt/[id] (triage of one paid, persistent result set)
 │   └── Refine (edit intent → explicit re-run)
 ├── آگهی Detail
-├── شکار من
-│   ├── Saved Hunts
-│   ├── کمین / New Matches
-│   └── Favorites
+├── شکار من (LIVE — تب‌های تازه‌ها / کمین‌ها)
+├── آرشیو (تب‌های تاریخچه / علاقه‌مندی‌ها / ذخیره‌شده‌ها)
 └── پروفایل
     ├── Account
     ├── Subscription status
@@ -128,14 +126,16 @@ Saved Search means «چیزی که دنبال می‌کنم». Favorite means «
 MVP primary navigation:
 
 ~~~text
-آگهی‌ها | شکار من | پروفایل
+آگهی‌ها | شکار من | آرشیو | پروفایل
 ~~~
 
 «کشف بازار» is removed from the tab bar (deferred per roadmap — it has no
 defined job in the hunting loop and only adds noise).
 
-آگهی‌ها is the hunt setup (home). شکار من contains saved hunts, کمین/new
-matches and favorites. پروفایل contains account/settings.
+آگهی‌ها is the hunt setup (home). شکار من holds the LIVE tabs the user is
+waiting on (تازه‌ها / کمین‌ها — the bell points here). آرشیو holds the
+on-demand tabs (تاریخچه / علاقه‌مندی‌ها / ذخیره‌شده‌ها). پروفایل contains
+account/settings.
 
 Opening Shakar should lead directly toward hunt setup; do not prioritize
 marketing heroes, promotional banners or editorial content. The
@@ -154,7 +154,8 @@ Current route responsibilities:
 /          → Hunt Setup + Pre-flight (one continuous workflow; the ONLY paid trigger)
 /hunt/[id] → Triage of one paid, persistent hunt (canonical, returnable URL)
 /ads/[id]  → Ad Detail
-/saved     → My Shakar / Saved Hunts / کمین / Favorites
+/saved     → My Shakar (live: تازه‌ها / کمین‌ها tabs)
+/archive   → Archive (تاریخچه / علاقه‌مندی‌ها / ذخیره‌شده‌ها tabs)
 /profile   → Profile
 (auth → bottom sheet over the interrupted action, not a route)
 ~~~
@@ -200,11 +201,18 @@ Goal: verification.
 Sections: gallery, core information, match explanation, relevant description evidence, remaining listing information, actions.
 Components: ImageGallery, AdHeader, Price, LocationMeta, ListingAge, ShekarScoreBadge, MatchReasons, DescriptionEvidence, FavoriteButton, ShareButton, OpenOriginalButton.
 
-## My Shakar
-Goal: the pro's home base — morning inbox first, then resume and revisit.
-Sections (in order): New Matches inbox (per armed کمین: diff since last
-seen, honest local diffing until backend monitoring lands), کمین list,
-Hunt History (returnable /hunt/[id] links), Saved Hunts, Favorites.
+## My Shakar (/saved) — the live page
+Goal: the pro's morning inbox — what they are waiting for, in 1–2 taps.
+Top segmented tabs: تازه‌ها (fresh kamin matches) | کمین‌ها (quiet watchers).
+Kamin cards show the full hunt definition (query, include/exclude chips,
+filters) so a hunt is recognizable days later; «دیدن نتایج» re-fires as a
+new paid hunt; «غیرفعال کردن» is a two-step confirm secondary button.
+
+## Archive (/archive) — the on-demand page
+Goal: everything the user needs but doesn't follow: hunt history
+(returnable /hunt/[id] rows), favorites, and saved hunts (honest empty
+until backend identity lands). Top segmented tabs:
+تاریخچه | علاقه‌مندی‌ها | ذخیره‌شده‌ها.
 
 ## Profile
 Goal: account and settings only.

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bookmark, Crosshair, User } from "lucide-react";
+import { Archive, Bookmark, Crosshair, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { href: "/", label: "شکار", icon: Crosshair },
   { href: "/saved", label: "شکار من", icon: Bookmark },
+  { href: "/archive", label: "آرشیو", icon: Archive },
   { href: "/profile", label: "پروفایل", icon: User },
 ] as const;
 
@@ -20,7 +21,7 @@ export function BottomTabBar() {
       className="fixed inset-x-0 bottom-0 z-40 px-4"
       style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
     >
-      <div className="mx-auto grid w-full max-w-screen-sm grid-cols-3 gap-1 rounded-2xl border border-border bg-secondary/70 p-1.5 shadow-[0_8px_32px_rgb(0_0_0/0.45)] backdrop-blur-xl">
+      <div className="mx-auto grid w-full max-w-screen-sm grid-cols-4 gap-1 rounded-2xl border border-border bg-secondary/70 p-1.5 shadow-[0_8px_32px_rgb(0_0_0/0.45)] backdrop-blur-xl">
         {tabs.map(({ href, label, icon: Icon }) => {
           // A hunt page (/hunt/[id]) belongs to the شکار flow.
           const isActive =

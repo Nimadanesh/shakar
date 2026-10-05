@@ -1,4 +1,5 @@
 import { SearchX } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
   icon?: React.ReactNode;
@@ -26,8 +27,8 @@ export function EmptyState({
         )}
       </div>
       {(primaryAction || secondaryAction) && (
-        <div className="mt-1 grid w-full grid-cols-2 gap-3">
-          {secondaryAction ? (
+        <div className={cn("mt-1 grid w-full gap-3", secondaryAction ? "grid-cols-2" : "grid-cols-1")}>
+          {secondaryAction && (
             <button
               type="button"
               onClick={secondaryAction.onClick}
@@ -36,8 +37,6 @@ export function EmptyState({
             >
               {secondaryAction.label}
             </button>
-          ) : (
-            <span aria-hidden="true" />
           )}
           {primaryAction && (
             <button

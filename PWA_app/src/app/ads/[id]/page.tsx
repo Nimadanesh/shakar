@@ -57,10 +57,16 @@ export default async function AdDetailPage({
   };
 
   // Back restores the context the hunter came from: the hunt's triage,
-  // the saved list, or home as a last resort.
+  // the live inbox, the archive, or home as a last resort.
   const huntId = first(query.hunt);
   const backHref =
-    huntId !== null ? `/hunt/${huntId}` : query.from === "saved" ? "/saved" : "/";
+    huntId !== null
+      ? `/hunt/${huntId}`
+      : query.from === "saved"
+        ? "/saved"
+        : query.from === "archive"
+          ? "/archive?tab=favorites"
+          : "/";
 
   const infoRows: Array<[string, string | null]> = [
     ["دسته‌بندی", ad.category],
