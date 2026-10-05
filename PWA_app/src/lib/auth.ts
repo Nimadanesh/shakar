@@ -3,12 +3,25 @@
  * ONLY persistent actions (favorite, save hunt, کمین).
  *
  * HONESTY CONTRACT: these functions are the boundary to the real auth
- * backend (OTP via Iranian mobile). No backend is connected yet, so
- * requestOtp/verifyOtp return an explicit NOT_CONFIGURED error — they
- * NEVER fake a successful login. The UI surfaces pending/error states
- * honestly. When the backend lands, implement the network calls here;
- * the UI needs no changes.
+ * backend (OTP via Iranian mobile). No backend is connected yet, so in
+ * PRODUCTION requestOtp/verifyOtp return an explicit NOT_CONFIGURED
+ * error — they NEVER fake a successful login. The UI surfaces
+ * pending/error states honestly. When the backend lands, implement the
+ * network calls here; the UI needs no changes.
+ *
+ * DEV EXCEPTION: in development builds only (NODE_ENV=development),
+ * any well-formed 5-digit code verifies a local dev session so the
+ * full gate→resume loop can be exercised end-to-end. The auth UI labels
+ * this clearly. Production builds never take this path.
  */
+
+/**
+ * True only in local development. Gates the clearly-labeled dev bypass
+ * below; production builds always return false.
+ */
+export function isDevBypass(): boolean {
+  return process.env.NODE_ENV === "development";
+}
 
 export interface Session {
   userId: string;
@@ -54,6 +67,8 @@ export function normalizeCode(input: string): string | null {
 export async function requestOtp(
   _mobile: string
 ): Promise<AuthResult<{ retryAfterSec: number }>> {
+  // Dev bypass: lets the full auth loop be exercised locally.
+  if (isDevBypass()) return { ok: true, data: { retryAfterSec: 60 } };
   // No SMS provider is connected. Explicit failure — never a fake "sent".
   return {
     ok: false,
@@ -68,6 +83,10 @@ export async function verifyOtp(
   _mobile: string,
   _code: string
 ): Promise<AuthResult<Session>> {
+  // Dev bypass: any well-formed code verifies a LOCAL dev session only.
+  if (isDevBypass()) {
+    return { ok: true, data: { userId: "dev-user", mobile: _mobile } };
+  }
   // No auth backend is connected. Explicit failure — never a fake session.
   return {
     ok: false,

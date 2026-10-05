@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { KeyRound, Phone } from "lucide-react";
 import {
+  isDevBypass,
   normalizeCode,
   normalizeMobile,
   requestOtp,
@@ -35,9 +36,10 @@ function contextLine(action: PendingAction | null): string {
 
 /**
  * OTP auth flow: mobile → code → verifying → success → resume.
- * Fully built UI on the honest lib/auth.ts seam — when no backend is
- * connected, request/verify fail explicitly and the error is shown
- * as-is. Nothing here can fake a login.
+ * Fully built UI on the honest lib/auth.ts seam — in production, when no
+ * backend is connected, request/verify fail explicitly and the error is
+ * shown as-is. In development only, a clearly-labeled bypass accepts any
+ * 5-digit code so the full loop can be exercised (see lib/auth.ts).
  */
 export function AuthFlow() {
   const router = useRouter();
@@ -234,6 +236,11 @@ export function AuthFlow() {
         <p className="text-center text-xs leading-5 text-muted-foreground">
           با ورود، شکارها و علاقه‌مندی‌هایتان حفظ می‌شود.
         </p>
+        {isDevBypass() && (
+          <p className="text-center text-[11px] leading-5 text-warning">
+            حالت توسعه: هر کد ۵ رقمی قبول می‌شود (فقط در محیط توسعه).
+          </p>
+        )}
       </div>
     </main>
   );
