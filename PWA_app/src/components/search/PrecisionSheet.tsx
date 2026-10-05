@@ -7,8 +7,8 @@ import { KeywordChips } from "@/components/search/KeywordChips";
 import { Switch } from "@/components/ui/switch";
 import { CATEGORIES, CITIES } from "@/data/taxonomy";
 import { formatPriceToman, parsePriceInput } from "@/lib/prices";
-import { queryContentTerms, displayTerms, runSearch } from "@/lib/search";
-import { SEARCH_FIXTURES } from "@/data/search-fixtures";
+import { huntCostLabel } from "@/lib/pricing";
+import { queryContentTerms, displayTerms } from "@/lib/search";
 import type { SearchContext } from "@/types/search";
 
 export interface PrecisionDraft {
@@ -70,28 +70,6 @@ export function PrecisionSheet({ open, mode, initial, preview, onApply, onClose,
   const [error, setError] = useState<string | null>(null);
   const [priceTarget, setPriceTarget] = useState<"priceMin" | "priceMax">("priceMax");
   const firstFieldRef = useRef<HTMLInputElement>(null);
-
-  const previewCount = (() => {
-    if (!open) return null;
-    const min = parsePriceInput(draft.priceMin);
-    const max = parsePriceInput(draft.priceMax);
-    if (min !== null && max !== null && min > max) return null;
-    try {
-      const ctx: SearchContext = {
-        query: preview.query,
-        includeKeywords: draft.include,
-        excludeKeywords: draft.exclude,
-        category: draft.category,
-        city: draft.city,
-        priceMin: min,
-        priceMax: max,
-        hasImage: draft.hasImage,
-      };
-      return runSearch(ctx, SEARCH_FIXTURES).results.length;
-    } catch {
-      return null;
-    }
-  })();
 
   if (!open) return null;
 
@@ -161,11 +139,11 @@ export function PrecisionSheet({ open, mode, initial, preview, onApply, onClose,
               className="h-11 rounded-lg bg-action-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
             >
               {mode === "setup" ? "شکار کن" : "اجرای مجدد شکار"}
-              {previewCount !== null && (
-                <span className="tabular-nums"> - {previewCount.toLocaleString("fa-IR")} آگهی</span>
-              )}
             </button>
           </div>
+          <p className="text-center text-xs leading-5 text-muted-foreground">
+            {huntCostLabel()}
+          </p>
           <button
             type="button"
             onClick={handleClearAll}

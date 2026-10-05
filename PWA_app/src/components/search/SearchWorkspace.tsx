@@ -16,6 +16,7 @@ import { takePendingAction } from "@/lib/auth";
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
 import { recordHunt } from "@/lib/hunt-store";
 import { parsePriceInput, formatPriceToman } from "@/lib/prices";
+import { huntCostLabel } from "@/lib/pricing";
 import { buildRadarConfig, type RadarConfig } from "@/lib/radar";
 import {
   buildEffectiveContext,
@@ -454,6 +455,9 @@ export function SearchWorkspace() {
             >
               شکار کن
             </button>
+            <p className="text-center text-xs leading-5 text-muted-foreground">
+              {huntCostLabel()}
+            </p>
           </div>
         </div>
       )}
