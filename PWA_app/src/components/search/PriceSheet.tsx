@@ -41,6 +41,8 @@ export function PriceSheet({ open, priceMin, priceMax, onApply, onClose }: Price
   // Reset the draft every time the sheet opens.
   useEffect(() => {
     if (open) {
+      // Deliberate prop-to-draft sync on open, not a render cascade.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMin(digitsOnly(priceMin));
       setMax(digitsOnly(priceMax));
       setError(null);

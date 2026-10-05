@@ -34,6 +34,9 @@ export default function ArchivePage() {
   const [tab, setTab] = useState<ArchiveTab>("history");
 
   useEffect(() => {
+    // Hydration-safe init: first render must match SSR (empty), then hydrate
+    // from localStorage. Deliberate, not a cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHunts(readHunts());
     setTab(readTabParam());
     setReady(true);

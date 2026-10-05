@@ -189,6 +189,9 @@ function DataSection() {
   const [wiped, setWiped] = useState(false);
 
   useEffect(() => {
+    // Hydration-safe init: first render must match SSR (empty), then hydrate
+    // from localStorage. Deliberate, not a cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCounts(readDataCounts());
   }, []);
 

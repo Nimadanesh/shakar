@@ -183,13 +183,13 @@ export function HuntTriagePage() {
     setRadarOpen(true);
   }
 
-  const kamin: KaminRecord | null = useMemo(() => {
-    if (!computed || computed === "error") return null;
-    return findKamin(computed.ctx);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [computed, kaminTick]);
+  // Plain consts (not memos): these hooks sat after an early return, which
+  // violates rules-of-hooks. Both are trivial pure computations, so
+  // memoization bought nothing — behavior is identical.
+  const kamin: KaminRecord | null =
+    !computed || computed === "error" ? null : findKamin(computed.ctx);
 
-  const constraintCount = useMemo(() => {
+  const constraintCount: number = (() => {
     if (!computed || computed === "error") return 0;
     const ctx = computed.ctx;
     return (
@@ -200,7 +200,7 @@ export function HuntTriagePage() {
       (ctx.priceMin !== null || ctx.priceMax !== null ? 1 : 0) +
       (ctx.hasImage ? 1 : 0)
     );
-  }, [computed]);
+  })();
 
   function handleArmKamin() {
     if (!computed || computed === "error") return;
