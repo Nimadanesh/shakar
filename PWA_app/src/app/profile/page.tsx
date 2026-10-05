@@ -10,7 +10,7 @@ import { HUNTS_PER_MONTH } from "@/lib/pricing";
 import { listKamins } from "@/lib/kamin-store";
 import { readHunts } from "@/lib/hunt-store";
 
-const DATA_KEYS = ["shakar:hunts:v1", "shakar:kamins:v1", "shakar:favorites:v1"];
+const DATA_KEYS = ["shakar:hunts:v1", "shakar:kamins:v1", "shakar:favorites:v1", "shakar:saved-hunts:v1"];
 
 function SectionCard({
   title,
@@ -178,18 +178,21 @@ function readDataCounts() {
   try {
     const favRaw = window.localStorage.getItem("shakar:favorites:v1");
     const favParsed: unknown = favRaw ? JSON.parse(favRaw) : [];
+    const savedRaw = window.localStorage.getItem("shakar:saved-hunts:v1");
+    const savedParsed: unknown = savedRaw ? JSON.parse(savedRaw) : [];
     return {
       kamins: listKamins().length,
       hunts: readHunts().length,
       favs: Array.isArray(favParsed) ? favParsed.length : 0,
+      saved: Array.isArray(savedParsed) ? savedParsed.length : 0,
     };
   } catch {
-    return { kamins: 0, hunts: 0, favs: 0 };
+    return { kamins: 0, hunts: 0, favs: 0, saved: 0 };
   }
 }
 
 function DataSection() {
-  const [counts, setCounts] = useState({ kamins: 0, hunts: 0, favs: 0 });
+  const [counts, setCounts] = useState({ kamins: 0, hunts: 0, favs: 0, saved: 0 });
   const [wiped, setWiped] = useState(false);
 
   useEffect(() => {
@@ -215,7 +218,7 @@ function DataSection() {
   return (
     <SectionCard title="داده‌های من">
       <p className="text-[13px] leading-6 text-muted-foreground">
-        {fa(counts.kamins)} کمین فعال • {fa(counts.favs)} علاقه‌مندی • {fa(counts.hunts)} شکار
+        {fa(counts.kamins)} کمین فعال • {fa(counts.favs)} علاقه‌مندی • {fa(counts.hunts)} شکار • {fa(counts.saved)} ذخیره‌شده
       </p>
       <div aria-live="polite">
         {wiped ? (

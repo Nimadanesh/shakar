@@ -209,9 +209,14 @@ new paid hunt; «غیرفعال کردن» is a two-step confirm secondary butto
 
 ## Archive (/archive) — the on-demand page
 Goal: everything the user needs but doesn't follow: hunt history
-(returnable /hunt/[id] rows), favorites, and saved hunts (honest empty
-until backend identity lands). Top segmented tabs:
-تاریخچه | علاقه‌مندی‌ها | ذخیره‌شده‌ها.
+(returnable /hunt/[id] rows), favorites, and saved hunts. Top segmented tabs:
+تاریخچه | علاقه‌مندی‌ها | ذخیره‌شده‌ها (each with a live count).
+- تاریخچه rows: query + one-line spec summary (city • category • price •
+  age, same as home's RecentHunts) + two-step delete. Tap → triage.
+- علاقه‌مندی‌ها rows: trailing heart toggles the favorite off in place.
+- ذخیره‌شده‌ها: local hunt definitions. Save from the triage sticky bar
+  (bookmark toggle); tap a row to re-run it with one tap (records a fresh
+  hunt); two-step delete. Empty state points at the triage bookmark.
 
 ## Profile
 Goal: account and settings only.

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownUp, ArrowRight, Crosshair, LayoutGrid, Rows3 } from "lucide-react";
+import { ArrowDownUp, ArrowRight, Bookmark, Crosshair, LayoutGrid, Rows3 } from "lucide-react";
 import type { SortKey } from "@/lib/search";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,8 @@ interface StickyHuntBarProps {
   onViewChange: (view: ResultView) => void;
   onOpenPrecision: () => void;
   onBackToSearch: () => void;
+  saved: boolean;
+  onToggleSave: () => void;
 }
 
 /**
@@ -39,6 +41,8 @@ export function StickyHuntBar({
   onViewChange,
   onOpenPrecision,
   onBackToSearch,
+  saved,
+  onToggleSave,
 }: StickyHuntBarProps) {
   return (
     <div className="sticky top-14 z-30 -mx-4 border-b border-border-subtle bg-background/90 px-4 py-2 backdrop-blur-xl">
@@ -99,6 +103,24 @@ export function StickyHuntBar({
           ) : (
             <LayoutGrid size={20} aria-hidden="true" />
           )}
+        </button>
+        <button
+          type="button"
+          onClick={onToggleSave}
+          aria-label={saved ? "حذف از شکارهای ذخیره‌شده" : "ذخیره‌ی این شکار"}
+          aria-pressed={saved}
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-ring",
+            saved
+              ? "bg-primary/15 text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Bookmark
+            size={20}
+            aria-hidden="true"
+            fill={saved ? "currentColor" : "none"}
+          />
         </button>
       </div>
     </div>

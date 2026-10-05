@@ -99,7 +99,7 @@ export function ResultsView({
       </button>
       {suppressedCount > 0 && (
         <NoticeBar>
-          {suppressedCount.toLocaleString("fa-IR")} مورد به دلیل فیلتر حذف کنار گذاشته شد
+          {suppressedCount.toLocaleString("fa-IR")} مورد مخفی‌شده کنار گذاشته شد
         </NoticeBar>
       )}
       {results.map(({ ad, match }, index) =>

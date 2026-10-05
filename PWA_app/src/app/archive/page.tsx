@@ -7,10 +7,17 @@ import { Bookmark, ChevronLeft, Heart, History } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/skeletons";
+import { IconConfirmButton } from "@/components/ui/IconConfirmButton";
 import { FavoriteRow } from "@/components/ads/FavoriteRow";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SEARCH_FIXTURES } from "@/data/search-fixtures";
-import { readHunts, type HuntRecord } from "@/lib/hunt-store";
+import { readHunts, deleteHunt, recordHunt, type HuntRecord } from "@/lib/hunt-store";
+import {
+  readSavedHunts,
+  deleteSavedHunt,
+  type SavedHunt,
+} from "@/lib/saved-hunts";
+import { huntSpecSummary } from "@/lib/hunt-summary";
 
 type ArchiveTab = "history" | "favorites" | "saved";
 
@@ -20,17 +27,37 @@ function readTabParam(): ArchiveTab {
   return tab === "favorites" || tab === "saved" ? tab : "history";
 }
 
+/** Single-tap toggle off — re-adding is one tap in detail, so no confirm. */
+function UnfavoriteButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }}
+      aria-label="حذف از علاقه‌مندی‌ها"
+      className="me-1 flex size-9 shrink-0 items-center justify-center rounded-full text-danger transition-colors hover:bg-danger/10 focus-visible:outline-2 focus-visible:outline-ring"
+    >
+      <Heart size={16} fill="currentColor" aria-hidden="true" />
+    </button>
+  );
+}
+
 /**
- * آرشیو — the DEAD tabs. Needed on demand, never followed: past hunts,
- * favorites, saved hunts (honest empty until backend identity lands).
- * The live monitoring life stays in /saved.
+ * آرشیو — the on-demand page: past hunts (returnable /hunt/[id] rows with
+ * spec summary + delete), favorites (with row-level unfavorite), and saved
+ * hunt definitions (one-tap re-run + delete). The live monitoring life
+ * stays in /saved.
  */
 export default function ArchivePage() {
   const router = useRouter();
-  const { isFavorite } = useFavorites();
+  const { isFavorite, toggle } = useFavorites();
   const favoriteAds = SEARCH_FIXTURES.filter((ad) => isFavorite(ad.id));
 
   const [hunts, setHunts] = useState<HuntRecord[]>([]);
+  const [saved, setSaved] = useState<SavedHunt[]>([]);
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<ArchiveTab>("history");
 
@@ -39,6 +66,7 @@ export default function ArchivePage() {
     // from localStorage. Deliberate, not a cascade.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHunts(readHunts());
+    setSaved(readSavedHunts());
     setTab(readTabParam());
     setReady(true);
   }, []);
@@ -51,6 +79,21 @@ export default function ArchivePage() {
     window.history.replaceState(null, "", url);
   }
 
+  function handleDeleteHunt(id: string) {
+    deleteHunt(id);
+    setHunts(readHunts());
+  }
+
+  function handleDeleteSaved(id: string) {
+    deleteSavedHunt(id);
+    setSaved(readSavedHunts());
+  }
+
+  function handleRerun(s: SavedHunt) {
+    const rec = recordHunt(s.query, s.base);
+    if (rec) router.push(`/hunt/${rec.id}`);
+  }
+
   return (
     <main className="flex flex-1 flex-col gap-4 py-6">
       <SegmentedTabs
@@ -60,7 +103,7 @@ export default function ArchivePage() {
         tabs={[
           { id: "history", label: "تاریخچه", count: hunts.length },
           { id: "favorites", label: "علاقه‌مندی‌ها", count: favoriteAds.length },
-          { id: "saved", label: "ذخیره‌شده‌ها" },
+          { id: "saved", label: "ذخیره‌شده‌ها", count: saved.length },
         ]}
       />
 
@@ -96,23 +139,29 @@ export default function ArchivePage() {
         ) : (
           <ul className="flex flex-col gap-1.5">
             {hunts.map((hunt) => (
-              <li key={hunt.id}>
+              <li
+                key={hunt.id}
+                className="flex items-center gap-1 rounded-lg border border-border bg-card transition-colors hover:border-ring focus-within:border-ring"
+              >
                 <Link
                   href={`/hunt/${hunt.id}`}
-                  className="flex min-h-11 w-full items-center gap-2.5 rounded-lg border border-border bg-card px-3 text-start transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
+                  className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-start focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <History size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
-                    {hunt.query}
-                  </span>
-                  <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                    {new Date(hunt.ts).toLocaleDateString("fa-IR", {
-                      day: "numeric",
-                      month: "short",
-                    })}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-medium text-foreground">
+                      {hunt.query}
+                    </span>
+                    <span className="block truncate text-[11px] leading-5 text-muted-foreground">
+                      {huntSpecSummary(hunt)}
+                    </span>
                   </span>
                   <ChevronLeft size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />
                 </Link>
+                <IconConfirmButton
+                  label="حذف شکار از تاریخچه"
+                  onConfirm={() => handleDeleteHunt(hunt.id)}
+                />
               </li>
             ))}
           </ul>
@@ -128,18 +177,52 @@ export default function ArchivePage() {
           <ul className="flex flex-col gap-2">
             {favoriteAds.map((ad) => (
               <li key={ad.id}>
-                <FavoriteRow ad={ad} from="archive" />
+                <FavoriteRow
+                  ad={ad}
+                  from="archive"
+                  action={<UnfavoriteButton onClick={() => toggle(ad.id)} />}
+                />
               </li>
             ))}
           </ul>
         )
-      ) : (
+      ) : saved.length === 0 ? (
         <EmptyState
           icon={<Bookmark size={28} aria-hidden="true" className="text-muted-foreground" />}
           title="هنوز شکاری ذخیره نکرده‌ای"
-          description="شکار کامل که اجرا کردی، می‌تونی ذخیره‌ش کنی تا بعداً با یک لمس اجراش کنی."
+          description="توی صفحه‌ی نتایج هر شکار، نشان را بزن تا قالبت اینجا بمونه و بعداً با یک لمس اجراش کنی."
           primaryAction={{ label: "شروع شکار", onClick: () => router.push("/") }}
         />
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {saved.map((s) => (
+            <li
+              key={s.id}
+              className="flex items-center gap-1 rounded-lg border border-border bg-card transition-colors hover:border-ring focus-within:border-ring"
+            >
+              <button
+                type="button"
+                onClick={() => handleRerun(s)}
+                className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-start focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                <Bookmark size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium text-foreground">
+                    {s.query}
+                  </span>
+                  <span className="block truncate text-[11px] leading-5 text-muted-foreground">
+                    {huntSpecSummary(s)}
+                  </span>
+                </span>
+                <ChevronLeft size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />
+              </button>
+              <IconConfirmButton
+                label="حذف شکار ذخیره‌شده"
+                onConfirm={() => handleDeleteSaved(s.id)}
+              />
+            </li>
+          ))}
+        </ul>
       )}
     </main>
   );

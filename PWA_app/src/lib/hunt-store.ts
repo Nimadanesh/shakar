@@ -118,3 +118,9 @@ export function readHunt(id: string): HuntRecord | null {
 export function readHunts(): HuntRecord[] {
   return readAll();
 }
+
+/** Removes one hunt from history. Two-step confirmed in the UI. */
+export function deleteHunt(id: string): void {
+  if (id === "") return;
+  persist(readAll().filter((h) => h.id !== id));
+}

@@ -11,6 +11,7 @@ import { SEARCH_FIXTURES } from "@/data/search-fixtures";
 import { useHiddenAds } from "@/hooks/useHiddenAds";
 import { requireAuth } from "@/lib/auth";
 import { readHunt, type HuntRecord } from "@/lib/hunt-store";
+import { isHuntSaved, saveHunt, unsaveHunt } from "@/lib/saved-hunts";
 import {
   armKamin,
   disarmKamin,
@@ -72,14 +73,24 @@ export function HuntTriagePage() {
   const [radarOpen, setRadarOpen] = useState(false);
   const [, setKaminTick] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
   const { hiddenIds, hide, unhide } = useHiddenAds();
 
   useEffect(() => {
     // Hydration-safe init (see above): first render matches the server.
-    setHunt(readHunt(id));
+    const h = readHunt(id);
+    setHunt(h);
+    setIsSaved(h !== null && isHuntSaved(h.query));
     setView(readStoredView());
     setReady(true);
   }, [id]);
+
+  function handleToggleSave() {
+    if (!hunt) return;
+    if (isSaved) unsaveHunt(hunt.query);
+    else saveHunt(hunt.query, hunt.base);
+    setIsSaved(!isSaved);
+  }
 
   const computed: Computed | "error" | null = useMemo(() => {
     if (!hunt) return null;
@@ -263,6 +274,8 @@ export function HuntTriagePage() {
         onViewChange={handleViewChange}
         onOpenPrecision={openRefine}
         onBackToSearch={() => router.push("/")}
+        saved={isSaved}
+        onToggleSave={handleToggleSave}
       />
 
       {computed !== null && computed !== "error" && (

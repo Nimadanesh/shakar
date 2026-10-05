@@ -5,50 +5,9 @@ import Link from "next/link";
 import { ChevronLeft, History } from "lucide-react";
 import { readHunts, type HuntRecord } from "@/lib/hunt-store";
 import { SkeletonRow } from "@/components/ui/skeletons";
-import { cityLabel, categoryLabel } from "@/data/taxonomy";
-import { formatPriceCompact } from "@/lib/prices";
+import { huntSpecSummary } from "@/lib/hunt-summary";
 
 const MAX_ROWS = 4;
-
-function faNum(n: number): string {
-  return n.toLocaleString("fa-IR");
-}
-
-function relativeTime(ts: number): string {
-  const minutes = Math.floor((Date.now() - ts) / 60000);
-  if (minutes < 1) return "لحظاتی پیش";
-  if (minutes < 60) return `${faNum(minutes)} دقیقه پیش`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${faNum(hours)} ساعت پیش`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${faNum(days)} روز پیش`;
-  return new Date(ts).toLocaleDateString("fa-IR", {
-    day: "numeric",
-    month: "short",
-  });
-}
-
-/** One-line scan summary: city • category • price • age. Skips unset specs. */
-function specSummary(hunt: HuntRecord): string {
-  const parts: string[] = [];
-  if (hunt.base.city !== "all") parts.push(cityLabel(hunt.base.city));
-  if (hunt.base.category !== "all")
-    parts.push(categoryLabel(hunt.base.category));
-  const min = hunt.base.priceMin.trim();
-  const max = hunt.base.priceMax.trim();
-  if (min !== "" || max !== "") {
-    const fmt = (v: string) => formatPriceCompact(Number(v));
-    parts.push(
-      min !== "" && max !== ""
-        ? `از ${fmt(min)} تا ${fmt(max)}`
-        : min !== ""
-          ? `از ${fmt(min)}`
-          : `تا ${fmt(max)}`
-    );
-  }
-  parts.push(relativeTime(hunt.ts));
-  return parts.join(" • ");
-}
 
 /**
  * The pro's shortcut: one tap back into a previous hunt's triage (free —
@@ -103,7 +62,7 @@ export function RecentHunts() {
                   {hunt.query}
                 </span>
                 <span className="block truncate text-[11px] leading-5 text-muted-foreground">
-                  {specSummary(hunt)}
+                  {huntSpecSummary(hunt)}
                 </span>
               </span>
               <ChevronLeft
