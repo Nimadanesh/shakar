@@ -34,28 +34,14 @@ export function BottomTabBar() {
               href={href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center gap-1 py-1.5 transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-ring active:scale-95",
+                "flex flex-col items-center gap-0.5 rounded-[20px] py-1.5 text-[11px] leading-4 transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-ring active:scale-95",
                 isActive
-                  ? "text-foreground"
+                  ? "bg-primary/15 text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <span
-                className={cn(
-                  "flex h-8 w-16 items-center justify-center rounded-full transition-colors duration-150 ease-out",
-                  isActive && "bg-secondary"
-                )}
-              >
-                <Icon size={22} aria-hidden="true" />
-              </span>
-              <span
-                className={cn(
-                  "text-[11px] leading-4",
-                  isActive && "font-semibold"
-                )}
-              >
-                {label}
-              </span>
+              <Icon size={22} aria-hidden="true" />
+              <span>{label}</span>
             </Link>
           );
         })}
