@@ -388,13 +388,11 @@ REJECTED (with reason):
   objects. The page keeps the «شکار من» container with Kamin as its
   primary section.
 
-OPEN — needs Navid's decision before implementation:
-- Pre-flight scan-count estimate («~۴۲۰ آگهی اسکن می‌شود»): value unproven
-  for pros; needs a cheap count source or it is theater. Do not implement
-  until validated.
-- Onboarding shape: proposal says no onboarding route, live example on
-  setup instead. Compromise on the table: one onboarding screen with the
-  live example embedded (value contract for a paid tool, zero slide deck).
+DECIDED (Navid, 2026-10-05):
+- Pre-flight carries NO scan-count estimate and no numbers at all —
+  final chip review + explicit cost acknowledgment only.
+- Onboarding: one screen with the live example embedded (value contract
+  for a paid tool, zero slide deck). Visual detail TBD at implementation.
 
 ---
 
