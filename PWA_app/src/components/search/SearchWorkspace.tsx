@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, Camera, Crosshair, History, Music } from "lucide-react";
+import { Building2, Camera, History, Music } from "lucide-react";
 import { FOCUS_SEARCH_EVENT } from "@/components/layout/Header";
 import { ActiveSearchSummary } from "@/components/search/ActiveSearchSummary";
 import { QuickPrecision } from "@/components/search/QuickPrecision";
