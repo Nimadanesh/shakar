@@ -7,7 +7,7 @@ import "./globals.css";
 const vazirmatn = Vazirmatn({
   variable: "--font-vazirmatn",
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "700", "800"],
   display: "swap",
 });
 
@@ -34,11 +34,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0B0D",
+  themeColor: "#0A0A0A",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
 };
+
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('shakar-theme');if(t==='light'){var d=document.documentElement;d.classList.remove('dark');d.classList.add('light');}}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -52,18 +54,13 @@ export default function RootLayout({
       className={`${vazirmatn.variable} ${inter.variable} dark h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body
         className="flex min-h-full flex-col bg-background font-sans text-foreground"
         suppressHydrationWarning
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-0 -z-0"
-          style={{
-            background:
-              "radial-gradient(60% 40% at 85% 0%, rgb(255 77 58 / 0.08), transparent 70%), radial-gradient(50% 35% at 10% 20%, rgb(245 166 35 / 0.05), transparent 70%)",
-          }}
-        />
         <Header />
         <div
           className="mx-auto flex w-full max-w-screen-sm flex-1 flex-col px-4"
