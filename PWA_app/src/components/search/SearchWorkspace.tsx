@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Camera, History, Music } from "lucide-react";
 import { FOCUS_SEARCH_EVENT } from "@/components/layout/Header";
-import { ActiveSearchSummary } from "@/components/search/ActiveSearchSummary";
 import { QuickPrecision } from "@/components/search/QuickPrecision";
 import { PrecisionSheet, type PrecisionDraft } from "@/components/search/PrecisionSheet";
 import { RadarDialog } from "@/components/search/RadarDialog";
@@ -446,13 +445,6 @@ export function SearchWorkspace() {
     setBase({ ...base, include: [...base.include, pref.value] });
   }
 
-  function handleClearAll() {
-    const nextBase = EMPTY_CONTEXT_BASE;
-    setBase(nextBase);
-    setDismissed(new Set());
-    rerun(nextBase, new Set());
-  }
-
   const groups = useMemo(() => {
     if (!hasIntent || !activeInterp) return [];
     return buildDisplayGroups(base, activeInterp, dismissed);
@@ -731,24 +723,6 @@ export function SearchWorkspace() {
             setBase(nextBase);
             rerun(nextBase, dismissed);
           }}
-        />
-      )}
-
-      {hasSubmitted && (
-        <QuickPrecision
-          ref={advancedRef}
-          label="ویرایش شکار"
-          onOpenAdvanced={() => setSheetOpen(true)}
-          advancedActive={advancedActive}
-          refinementCount={summaryChips.length}
-        />
-      )}
-
-      {hasSubmitted && phase !== "idle" && summaryChips.length > 0 && (
-        <ActiveSearchSummary
-          chips={summaryChips}
-          onRemoveChip={(chipId) => removeRefinement(chipId)}
-          onClearAll={handleClearAll}
         />
       )}
 

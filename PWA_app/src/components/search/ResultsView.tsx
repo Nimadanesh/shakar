@@ -84,10 +84,7 @@ export function ResultsView({
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 aria-live="polite" className="text-[17px] font-bold leading-7 text-foreground">
-          {results.length.toLocaleString("fa-IR")} نتیجه برای شکار فعلی
-        </h2>
+      <div className="flex items-center justify-end">
         <button
           type="button"
           onClick={onOpenRadar}

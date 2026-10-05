@@ -53,7 +53,7 @@ export function StickyHuntBar({
         </button>
         <p className="min-w-0 flex-1 truncate text-[13px] font-medium leading-5 text-foreground">
           {query}
-          <span className="ms-1.5 font-normal tabular-nums text-muted-foreground">
+          <span aria-live="polite" className="ms-1.5 font-normal tabular-nums text-muted-foreground">
             • {resultCount.toLocaleString("fa-IR")} نتیجه
           </span>
         </p>
