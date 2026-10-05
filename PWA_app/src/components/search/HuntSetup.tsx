@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Camera, Music } from "lucide-react";
 import { WhatField } from "@/components/search/WhatField";
+import { RecentHunts } from "@/components/search/RecentHunts";
 import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
 import { SpecRow } from "@/components/search/SpecRow";
 import { OptionSheet } from "@/components/search/OptionSheet";
@@ -315,6 +316,8 @@ export function HuntSetup() {
           </button>
         </div>
       )}
+
+      <RecentHunts />
 
       <OptionSheet
         open={categoryOpen}
