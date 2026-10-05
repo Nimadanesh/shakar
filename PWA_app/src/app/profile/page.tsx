@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Check, Pencil, User, X } from "lucide-react";
 import { ThemeSwitch } from "@/components/settings/ThemeSwitch";
 import { PlanSheet } from "@/components/plan/PlanSheet";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { profileInitials, useProfile } from "@/hooks/useProfile";
+import { useHydratedStore } from "@/hooks/useHydratedStore";
+import { readFavoriteIds } from "@/hooks/useFavorites";
+import { readSavedHunts } from "@/lib/saved-hunts";
 import { HUNTS_PER_MONTH } from "@/lib/pricing";
 import { listKamins } from "@/lib/kamin-store";
 import { readHunts } from "@/lib/hunt-store";
@@ -127,19 +130,11 @@ function IdentitySection() {
 
 function PlanSection() {
   const [sheetOpen, setSheetOpen] = useState(false);
-  // Hydration-safe: hunt history lives in localStorage, invisible to the
-  // server. First render (both sides) is 0; the real count lands after mount.
-  const [usedThisMonth, setUsedThisMonth] = useState(0);
-  useEffect(() => {
-    try {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe init (see above)
-      setUsedThisMonth(readHunts().filter((h) => h.ts >= monthStart).length);
-    } catch {
-      // keep 0
-    }
-  }, []);
+  // Session-cached: revisits render the known count immediately.
+  const { value: hunts } = useHydratedStore("hunts", readHunts);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const usedThisMonth = (hunts ?? []).filter((h) => h.ts >= monthStart).length;
   const quota = HUNTS_PER_MONTH;
   const fa = (n: number) => n.toLocaleString("fa-IR");
 
@@ -174,33 +169,20 @@ function PlanSection() {
   );
 }
 
-function readDataCounts() {
-  try {
-    const favRaw = window.localStorage.getItem("shakar:favorites:v1");
-    const favParsed: unknown = favRaw ? JSON.parse(favRaw) : [];
-    const savedRaw = window.localStorage.getItem("shakar:saved-hunts:v1");
-    const savedParsed: unknown = savedRaw ? JSON.parse(savedRaw) : [];
-    return {
-      kamins: listKamins().length,
-      hunts: readHunts().length,
-      favs: Array.isArray(favParsed) ? favParsed.length : 0,
-      saved: Array.isArray(savedParsed) ? savedParsed.length : 0,
-    };
-  } catch {
-    return { kamins: 0, hunts: 0, favs: 0, saved: 0 };
-  }
-}
-
 function DataSection() {
-  const [counts, setCounts] = useState({ kamins: 0, hunts: 0, favs: 0, saved: 0 });
+  // Session-cached: revisits render the known counts immediately instead of
+  // flashing ۰ → real on every navigation.
+  const { value: hunts } = useHydratedStore("hunts", readHunts);
+  const { value: kamins } = useHydratedStore("kamins", listKamins);
+  const { value: favIds } = useHydratedStore("favorites", readFavoriteIds);
+  const { value: saved } = useHydratedStore("saved-hunts", readSavedHunts);
+  const counts = {
+    kamins: (kamins ?? []).length,
+    hunts: (hunts ?? []).length,
+    favs: (favIds ?? []).length,
+    saved: (saved ?? []).length,
+  };
   const [wiped, setWiped] = useState(false);
-
-  useEffect(() => {
-    // Hydration-safe init: first render must match SSR (empty), then hydrate
-    // from localStorage. Deliberate, not a cascade.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCounts(readDataCounts());
-  }, []);
 
   function handleWipe() {
     try {

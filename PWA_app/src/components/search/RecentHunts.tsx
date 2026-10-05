@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, History } from "lucide-react";
 import { readHunts, type HuntRecord } from "@/lib/hunt-store";
+import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { SkeletonRow } from "@/components/ui/skeletons";
 import { huntSpecSummary } from "@/lib/hunt-summary";
 
@@ -15,16 +15,11 @@ const MAX_ROWS = 4;
  * exists, so first-time users see the plain form.
  */
 export function RecentHunts() {
-  const [hunts, setHunts] = useState<HuntRecord[]>([]);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    // Hydration-safe init: first render must match SSR (empty), then hydrate
-    // from localStorage. Deliberate, not a cascade.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHunts(readHunts().slice(0, MAX_ROWS));
-    setReady(true);
-  }, []);
+  // Session-cached: the first visit per session shows skeletons (SSR-safe),
+  // every later visit renders the known history immediately — no
+  // skeleton → content → vanish jump when navigating.
+  const { value: hunts, ready } = useHydratedStore<HuntRecord[]>("hunts", readHunts);
+  const rows = (hunts ?? []).slice(0, MAX_ROWS);
 
   if (!ready)
     return (
@@ -40,13 +35,13 @@ export function RecentHunts() {
         </div>
       </section>
     );
-  if (hunts.length === 0) return null;
+  if (rows.length === 0) return null;
 
   return (
     <section aria-label="شکارهای اخیر" className="flex flex-col gap-2">
       <p className="text-xs leading-5 text-muted-foreground">شکارهای اخیر</p>
       <ul className="flex flex-col gap-1.5">
-        {hunts.map((hunt) => (
+        {rows.map((hunt) => (
           <li key={hunt.id}>
             <Link
               href={`/hunt/${hunt.id}`}

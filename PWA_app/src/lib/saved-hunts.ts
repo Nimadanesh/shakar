@@ -1,4 +1,5 @@
 import type { ContextBase } from "@/lib/search-context";
+import { invalidateCached } from "@/lib/session-cache";
 
 export interface SavedHunt {
   id: string;
@@ -94,6 +95,7 @@ export function saveHunt(query: string, base: ContextBase): SavedHunt | null {
     MAX_SAVED
   );
   persist(next);
+  invalidateCached("saved-hunts");
   return record;
 }
 
@@ -113,6 +115,7 @@ export function isHuntSaved(query: string): boolean {
 export function deleteSavedHunt(id: string): void {
   if (id === "") return;
   persist(readAll().filter((s) => s.id !== id));
+  invalidateCached("saved-hunts");
 }
 
 /** Removes the saved hunt matching this query, if any. */
@@ -120,4 +123,5 @@ export function unsaveHunt(query: string): void {
   const trimmed = query.trim();
   if (trimmed === "") return;
   persist(readAll().filter((s) => s.query !== trimmed));
+  invalidateCached("saved-hunts");
 }

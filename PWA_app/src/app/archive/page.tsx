@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Bookmark, ChevronLeft, Heart, History } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
+import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/skeletons";
 import { IconConfirmButton } from "@/components/ui/IconConfirmButton";
 import { FavoriteRow } from "@/components/ads/FavoriteRow";
@@ -56,19 +57,27 @@ export default function ArchivePage() {
   const { isFavorite, toggle } = useFavorites();
   const favoriteAds = SEARCH_FIXTURES.filter((ad) => isFavorite(ad.id));
 
-  const [hunts, setHunts] = useState<HuntRecord[]>([]);
-  const [saved, setSaved] = useState<SavedHunt[]>([]);
-  const [ready, setReady] = useState(false);
+  // Session-cached: revisits render the known lists immediately instead of
+  // flashing skeletons → content on every navigation.
+  const {
+    value: hunts,
+    ready: huntsReady,
+    refresh: refreshHunts,
+  } = useHydratedStore<HuntRecord[]>("hunts", readHunts);
+  const {
+    value: saved,
+    ready: savedReady,
+    refresh: refreshSaved,
+  } = useHydratedStore<SavedHunt[]>("saved-hunts", readSavedHunts);
+  const huntList = hunts ?? [];
+  const savedList = saved ?? [];
+  const ready = huntsReady && savedReady;
   const [tab, setTab] = useState<ArchiveTab>("history");
 
   useEffect(() => {
-    // Hydration-safe init: first render must match SSR (empty), then hydrate
-    // from localStorage. Deliberate, not a cascade.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHunts(readHunts());
-    setSaved(readSavedHunts());
+    // Tab param is cheap and URL-driven; keep it outside the cache.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe init
     setTab(readTabParam());
-    setReady(true);
   }, []);
 
   function handleTabChange(next: string) {
@@ -81,12 +90,12 @@ export default function ArchivePage() {
 
   function handleDeleteHunt(id: string) {
     deleteHunt(id);
-    setHunts(readHunts());
+    refreshHunts();
   }
 
   function handleDeleteSaved(id: string) {
     deleteSavedHunt(id);
-    setSaved(readSavedHunts());
+    refreshSaved();
   }
 
   function handleRerun(s: SavedHunt) {
@@ -101,9 +110,9 @@ export default function ArchivePage() {
         active={tab}
         onChange={handleTabChange}
         tabs={[
-          { id: "history", label: "تاریخچه", count: hunts.length },
+          { id: "history", label: "تاریخچه", count: huntList.length },
           { id: "favorites", label: "علاقه‌مندی‌ها", count: favoriteAds.length },
-          { id: "saved", label: "ذخیره‌شده‌ها", count: saved.length },
+          { id: "saved", label: "ذخیره‌شده‌ها", count: savedList.length },
         ]}
       />
 
@@ -129,7 +138,7 @@ export default function ArchivePage() {
           </div>
         )
       ) : tab === "history" ? (
-        hunts.length === 0 ? (
+        huntList.length === 0 ? (
           <EmptyState
             icon={<History size={28} aria-hidden="true" className="text-muted-foreground" />}
             title="هنوز شکاری اجرا نکرده‌ای"
@@ -138,7 +147,7 @@ export default function ArchivePage() {
           />
         ) : (
           <ul className="flex flex-col gap-1.5">
-            {hunts.map((hunt) => (
+            {huntList.map((hunt) => (
               <li
                 key={hunt.id}
                 className="flex items-center gap-1 rounded-lg border border-border bg-card transition-colors hover:border-ring focus-within:border-ring"
@@ -186,7 +195,7 @@ export default function ArchivePage() {
             ))}
           </ul>
         )
-      ) : saved.length === 0 ? (
+      ) : savedList.length === 0 ? (
         <EmptyState
           icon={<Bookmark size={28} aria-hidden="true" className="text-muted-foreground" />}
           title="هنوز شکاری ذخیره نکرده‌ای"
@@ -195,7 +204,7 @@ export default function ArchivePage() {
         />
       ) : (
         <ul className="flex flex-col gap-1.5">
-          {saved.map((s) => (
+          {savedList.map((s) => (
             <li
               key={s.id}
               className="flex items-center gap-1 rounded-lg border border-border bg-card transition-colors hover:border-ring focus-within:border-ring"

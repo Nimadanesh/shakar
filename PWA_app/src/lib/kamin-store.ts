@@ -3,6 +3,7 @@ import { buildRadarConfig } from "@/lib/radar";
 import { runSearch } from "@/lib/search";
 import type { ContextBase } from "@/lib/search-context";
 import type { SearchContext } from "@/types/search";
+import { invalidateCached } from "@/lib/session-cache";
 
 /**
  * An armed کمین: a hunt the user wants watched. Local-only in this phase —
@@ -132,11 +133,13 @@ export function armKamin(
     armedAt: Date.now(),
   };
   persist([record, ...readAll().filter((k) => k.id !== record.id)]);
+  invalidateCached("kamins");
   return record;
 }
 
 export function disarmKamin(id: string): void {
   persist(readAll().filter((k) => k.id !== id));
+  invalidateCached("kamins");
 }
 
 export function findKamin(ctx: SearchContext): KaminRecord | null {
@@ -150,6 +153,7 @@ export function listKamins(): KaminRecord[] {
 
 export function markKaminSeen(id: string, ids: string[]): void {
   persist(readAll().map((k) => (k.id === id ? { ...k, seenIds: [...ids] } : k)));
+  invalidateCached("kamins");
 }
 
 /** Honest local diff: current matches minus the seen baseline. */

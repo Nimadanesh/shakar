@@ -32,7 +32,10 @@ function initialTheme(): ThemeName {
 export function ThemeSwitch() {
   // Hydration-safe: the server always renders dark (matching <html>); the
   // stored theme lands after mount. The theme-init.js script already set
-  // the correct class pre-paint, so there is no flash.
+  // the correct class pre-paint, so there is no flash — and this component
+  // must NOT write the theme on mount: the initial "dark" state is stale
+  // until the stored value is read, and persisting it would clobber the
+  // user's real choice (profile-page light→dark bug).
   const [theme, setTheme] = useState<ThemeName>("dark");
 
   useEffect(() => {
@@ -40,14 +43,16 @@ export function ThemeSwitch() {
     setTheme(initialTheme());
   }, []);
 
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+  function handleChange(checked: boolean) {
+    const next: ThemeName = checked ? "light" : "dark";
+    setTheme(next);
+    applyTheme(next);
+  }
 
   return (
     <Switch
       checked={theme === "light"}
-      onChange={(checked) => setTheme(checked ? "light" : "dark")}
+      onChange={handleChange}
       label="تم روشن"
       hint="نسخه‌ی روشن و تیره‌ی رابط کاربری"
     />

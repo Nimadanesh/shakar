@@ -6,6 +6,7 @@ import { BellRing } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { SkeletonCard } from "@/components/ui/skeletons";
+import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { categoryLabel, cityLabel } from "@/data/taxonomy";
 import { formatPriceCompact } from "@/lib/prices";
@@ -140,26 +141,29 @@ function readTabParam(): SavedTab {
  */
 export default function SavedPage() {
   const router = useRouter();
-  const [kamins, setKamins] = useState<KaminRecord[]>([]);
-  const [ready, setReady] = useState(false);
+  // Session-cached: revisits render the known kamins immediately instead of
+  // flashing skeletons → list on every navigation.
+  const {
+    value: kamins,
+    ready,
+    refresh,
+  } = useHydratedStore<KaminRecord[]>("kamins", listKamins);
+  const kaminList = kamins ?? [];
   const [tab, setTab] = useState<SavedTab>("fresh");
 
   useEffect(() => {
-    // Hydration-safe init: first render must match SSR (empty), then hydrate
-    // from localStorage. Deliberate, not a cascade.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setKamins(listKamins());
+    // Tab param is cheap and URL-driven; keep it outside the cache.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe init
     setTab(readTabParam());
-    setReady(true);
   }, []);
 
   const newCounts = new Map<string, number>();
-  for (const kamin of kamins) {
+  for (const kamin of kaminList) {
     newCounts.set(kamin.id, kaminNewIds(kamin, SEARCH_FIXTURES).length);
   }
-  const freshKamins = kamins.filter((k) => (newCounts.get(k.id) ?? 0) > 0);
+  const freshKamins = kaminList.filter((k) => (newCounts.get(k.id) ?? 0) > 0);
   /** Quiet watchers — kamins already surfaced in تازه‌ها don't repeat here. */
-  const quietKamins = kamins.filter((k) => (newCounts.get(k.id) ?? 0) === 0);
+  const quietKamins = kaminList.filter((k) => (newCounts.get(k.id) ?? 0) === 0);
   const totalFresh = freshKamins.reduce((sum, k) => sum + (newCounts.get(k.id) ?? 0), 0);
 
   function handleTabChange(next: string) {
@@ -167,10 +171,6 @@ export default function SavedPage() {
     setTab(nextTab);
     const url = nextTab === "fresh" ? "/saved" : "/saved?tab=kamins";
     window.history.replaceState(null, "", url);
-  }
-
-  function refresh() {
-    setKamins(listKamins());
   }
 
   function handleDisarm(id: string) {
@@ -212,14 +212,14 @@ export default function SavedPage() {
         freshKamins.length === 0 ? (
           <EmptyState
             icon={<BellRing size={28} aria-hidden="true" className="text-muted-foreground" />}
-            title={kamins.length === 0 ? "کمین فعالی نداری" : "چیز تازه‌ای نیست"}
+            title={kaminList.length === 0 ? "کمین فعالی نداری" : "چیز تازه‌ای نیست"}
             description={
-              kamins.length === 0
+              kaminList.length === 0
                 ? "برای شکاری که اجرا کردی کمین بذار؛ آگهی تازه که اومد اینجا می‌بینی."
                 : "کمین‌های فعالت زیر نظرن؛ آگهی جدید که بیاد اینجا می‌بینی."
             }
             primaryAction={
-              kamins.length === 0
+              kaminList.length === 0
                 ? { label: "شروع شکار", onClick: () => router.push("/") }
                 : undefined
             }
@@ -241,14 +241,14 @@ export default function SavedPage() {
       ) : quietKamins.length === 0 ? (
         <EmptyState
           icon={<BellRing size={28} aria-hidden="true" className="text-muted-foreground" />}
-          title={kamins.length === 0 ? "کمین فعالی نداری" : "همه‌ی کمین‌ها تازه دارن"}
+          title={kaminList.length === 0 ? "کمین فعالی نداری" : "همه‌ی کمین‌ها تازه دارن"}
           description={
-            kamins.length === 0
+            kaminList.length === 0
               ? "برای شکاری که اجرا کردی کمین بذار؛ آگهی تازه که اومد تو تب تازه‌ها می‌بینی."
               : "فعلاً کمین ساکتی نداری؛ نتیجه‌های تازه رو تو تب تازه‌ها ببین."
           }
           primaryAction={
-            kamins.length === 0
+            kaminList.length === 0
               ? { label: "شروع شکار", onClick: () => router.push("/") }
               : undefined
           }

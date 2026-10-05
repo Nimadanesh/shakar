@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, User, Wallet } from "lucide-react";
 import { PlanSheet } from "@/components/plan/PlanSheet";
 import { profileInitials, useProfile } from "@/hooks/useProfile";
+import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { listKamins, kaminNewIds } from "@/lib/kamin-store";
 import { SEARCH_FIXTURES } from "@/data/search-fixtures";
 
@@ -30,24 +31,20 @@ function AvatarButton({ onClick }: { onClick: () => void }) {
 }
 
 function NotificationButton({ onClick }: { onClick: () => void }) {
-  const pathname = usePathname();
-  // Hydration-safe: kamin matches live in localStorage, invisible to the
-  // server. First render (both sides) is 0; the real count lands after
-  // mount and recomputes on navigation.
-  const [unread, setUnread] = useState(0);
-  useEffect(() => {
-    try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe init (see above)
-      setUnread(
-        listKamins().reduce(
-          (sum, k) => sum + kaminNewIds(k, SEARCH_FIXTURES).length,
-          0
-        )
-      );
-    } catch {
-      setUnread(0);
-    }
-  }, [pathname]);
+  // Session-cached: the known kamins render on the first paint of every
+  // navigation — no badge pop-in. Freshness comes from the cache
+  // invalidation events (markKaminSeen / armKamin / disarmKamin), so the
+  // old pathname-triggered recompute is unnecessary.
+  const { value: kamins } = useHydratedStore("kamins", listKamins);
+  let unread = 0;
+  try {
+    unread = (kamins ?? []).reduce(
+      (sum, k) => sum + kaminNewIds(k, SEARCH_FIXTURES).length,
+      0
+    );
+  } catch {
+    unread = 0;
+  }
 
   return (
     <button

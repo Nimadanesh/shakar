@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getCached, setCached } from "@/lib/session-cache";
 
 const STORAGE_KEY = "shakar:profile:v1";
 const EVENT_NAME = "shakar:profile";
@@ -43,10 +44,18 @@ export function useProfile() {
   // (server and client) is the guest state; the stored name lands after
   // mount. Reading storage in the initializer would hydrate-mismatch every
   // consumer that renders the name or initials.
-  const [profile, setProfile] = useState<Profile>({ name: "" });
+  // Session-cache seed: revisits within a session render the known name
+  // immediately instead of flickering guest → name on every navigation.
+  const [profile, setProfile] = useState<Profile>(
+    () => getCached<Profile>("profile") ?? { name: "" }
+  );
 
   useEffect(() => {
-    const refresh = () => setProfile(readStored());
+    const refresh = () => {
+      const next = readStored();
+      setCached("profile", next);
+      setProfile(next);
+    };
     refresh();
     window.addEventListener(EVENT_NAME, refresh);
     window.addEventListener("storage", refresh);

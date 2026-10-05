@@ -1,4 +1,5 @@
 import type { ContextBase } from "@/lib/search-context";
+import { invalidateCached } from "@/lib/session-cache";
 
 /**
  * A fired hunt: one paid search event, persisted as an asset.
@@ -105,6 +106,7 @@ export function recordHunt(
   };
   const next = [record, ...readAll().filter((h) => h.query !== trimmed)].slice(0, MAX_HUNTS);
   persist(next);
+  invalidateCached("hunts");
   return record;
 }
 
@@ -123,4 +125,5 @@ export function readHunts(): HuntRecord[] {
 export function deleteHunt(id: string): void {
   if (id === "") return;
   persist(readAll().filter((h) => h.id !== id));
+  invalidateCached("hunts");
 }
