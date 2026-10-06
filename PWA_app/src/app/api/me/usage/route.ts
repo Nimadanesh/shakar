@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/server/auth";
-import { activeTierHunts } from "@/lib/server/quota";
+import { activeTierHunts, activeTierKey } from "@/lib/server/quota";
 import { supabaseConfigured, supabaseServer } from "@/lib/supabase-server";
+import { tierByKey } from "@/lib/tiers";
 import type { UsageData } from "@/lib/usage";
 
 const DAYS = 14;
@@ -59,12 +60,25 @@ async function userUsage(
     `quota_counters?user_id=eq.${q}&select=hunts_used&limit=1`
   );
   const used = Number(rows[0]?.hunts_used ?? 0);
+  const tier = tierByKey(await activeTierKey(sb, userId));
+  let kaminActive: number | null = null;
+  try {
+    const kamins = await sb.rest<Array<{ id: string }>>(
+      "GET",
+      `kamins?user_id=eq.${q}&status=eq.active&select=id`
+    );
+    kaminActive = kamins.length;
+  } catch (e) {
+    console.warn("[usage] kamins read failed:", (e as Error).message);
+  }
   return {
     kind: "user",
     usedThisMonth: used,
     quotaTotal: tierHunts,
     remaining: Math.max(0, tierHunts - used),
     daily: await dailyCounts(sb, `user_id=eq.${q}`),
+    kaminSlots: tier?.kaminSlots ?? null,
+    kaminActive,
   };
 }
 
@@ -84,6 +98,8 @@ async function guestUsage(
     quotaTotal: granted,
     remaining: Math.max(0, granted - used),
     daily: await dailyCounts(sb, `device_id=eq.${q}`),
+    kaminSlots: null,
+    kaminActive: null,
   };
 }
 

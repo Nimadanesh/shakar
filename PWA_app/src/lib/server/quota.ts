@@ -101,6 +101,13 @@ async function tablesExist(sb: Sb): Promise<boolean> {
 
 /** Active subscription's monthly hunt quota, or null when unsubscribed. */
 export async function activeTierHunts(sb: Sb, userId: string): Promise<number | null> {
+  const tier = await activeTierKey(sb, userId);
+  if (!tier) return null;
+  return TIER_HUNTS[tier] ?? null;
+}
+
+/** Active subscription's tier key (paye/herfei/…), or null when unsubscribed. */
+export async function activeTierKey(sb: Sb, userId: string): Promise<string | null> {
   try {
     const rows = await sb.rest<Array<{ tier: string; status: string }>>(
       "GET",
@@ -108,7 +115,7 @@ export async function activeTierHunts(sb: Sb, userId: string): Promise<number | 
     );
     const sub = rows[0];
     if (!sub || sub.status !== "active") return null;
-    return TIER_HUNTS[sub.tier] ?? null;
+    return sub.tier;
   } catch {
     return null;
   }

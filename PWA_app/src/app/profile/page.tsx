@@ -154,6 +154,13 @@ function PlanSection() {
     serverUsage?.kind === "user" && quota !== null
       ? `ماهانه — ${fa(quota)} شکار`
       : "ماهانه — پلن‌ها هنوز نهایی نشده";
+  // Kamin quota: "X فعال از Y" for subscribers; guests have no kamin slot.
+  const kaminSlots = serverUsage?.kaminSlots ?? null;
+  const kaminActive = serverUsage?.kaminActive ?? null;
+  const kaminLabel =
+    kaminSlots !== null && kaminActive !== null
+      ? `${fa(kaminActive)} فعال از ${fa(kaminSlots)}`
+      : "—";
 
   return (
     <SectionCard title="اشتراک">
@@ -162,6 +169,7 @@ function PlanSection() {
           ["اشتراک فعلی", planLabel],
           ["شکارهای این ماه", fa(usedThisMonth)],
           ["سهمیه باقی‌مانده", remaining === null ? "—" : fa(remaining)],
+          ["کمین‌ها", kaminLabel],
         ].map(([label, value]) => (
           <div
             key={label}

@@ -11,6 +11,10 @@ export interface UsageData {
   remaining: number | null;
   /** Hunt counts per day, oldest → newest, 14 entries. */
   daily: number[];
+  /** Max ACTIVE kamins for the tier (hard slot limit). Null when N/A. */
+  kaminSlots: number | null;
+  /** Currently active kamins. Null when N/A. */
+  kaminActive: number | null;
 }
 
 /**

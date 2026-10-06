@@ -5,6 +5,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { HUNTS_PER_MONTH } from "@/lib/pricing";
 import { readHunts } from "@/lib/hunt-store";
 import { useServerUsage } from "@/lib/usage";
+import { TIERS } from "@/lib/tiers";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -111,6 +112,41 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
               هنوز شکاری ثبت نشده — اولین شکار که بزنی، نمودار مصرفت اینجا می‌آید.
             </p>
           )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <p className="text-[13px] font-medium leading-5 text-foreground">
+            پلن‌ها — سهمیه کمین
+          </p>
+          <div className="flex flex-col rounded-lg border border-border bg-card p-4">
+            {TIERS.map((t, i) => {
+              const isCurrent =
+                serverUsage?.kaminSlots !== null &&
+                serverUsage?.kaminSlots !== undefined &&
+                serverUsage.kaminSlots === t.kaminSlots;
+              return (
+                <div key={t.key}>
+                  {i > 0 && <div className="h-px bg-border/60" aria-hidden="true" />}
+                  <div className="flex items-center justify-between gap-4 py-2.5">
+                    <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                      {t.name}
+                      {isCurrent && (
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] leading-4 text-foreground">
+                          پلن فعلی
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[13px] font-medium tabular-nums text-foreground">
+                      {fa(t.kaminSlots)} کمین • {t.cadenceFa}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[12px] leading-5 text-muted-foreground">
+            هر کاربر به تعداد سهمیه کمینش کمین فعال دارد — بیشتر می‌خواهی؟ پلن بالاتر.
+          </p>
         </div>
 
         <div className="flex flex-col gap-2">

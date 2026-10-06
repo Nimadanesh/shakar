@@ -7,6 +7,7 @@ import {
   kaminCanonicalKey,
   pageBudgetForElapsed,
   tickDueKamins,
+  wakeKaminsForUser,
   KaminError,
   type EngineDeps,
   type KaminRow,
@@ -488,6 +489,77 @@ describe("armKamin — slot race (finding #7)", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe("wakeKaminsForUser — hard slot limit (navid 2026-10-06)", () => {
+  function sleeping(id: string, createdAt: string): Record<string, unknown> {
+    return {
+      id,
+      user_id: "u1",
+      name: id,
+      definition: DEF,
+      canonical_key: `key-${id}`,
+      status: "sleeping",
+      cadence: "daily",
+      created_at: createdAt,
+    };
+  }
+
+  it("wakes only up to the tier's free slots, newest first", async () => {
+    const sb = fakeSb({
+      kamins: [
+        // Seeded newest-first: the fake ignores ORDER BY, so insertion
+        // order models the real `order=created_at.desc`.
+        sleeping("s-new", "2026-10-06T10:00:00Z"),
+        sleeping("s-mid", "2026-10-05T10:00:00Z"),
+        sleeping("s-old", "2026-10-04T10:00:00Z"),
+      ],
+    });
+    const woken = await wakeKaminsForUser({ rest: sb.rest } as Sb, "u1", 1);
+    expect(woken).toBe(1);
+    const byId = Object.fromEntries(
+      (sb.tables.kamins as Array<Record<string, unknown>>).map((r) => [r.id, r.status])
+    );
+    // Newest wakes; the rest stay sleeping.
+    expect(byId).toEqual({ "s-new": "active", "s-mid": "sleeping", "s-old": "sleeping" });
+    // The query asks for newest-first with a limit.
+    const get = sb.calls.find((c) => c.path.includes("status=eq.sleeping"));
+    expect(get?.path).toContain("order=created_at.desc");
+    expect(get?.path).toContain("limit=1");
+  });
+
+  it("wakes nothing when slots are already full", async () => {
+    const sb = fakeSb({
+      kamins: [
+        { ...sleeping("s1", "2026-10-06T10:00:00Z") },
+        {
+          id: "a1",
+          user_id: "u1",
+          name: "a1",
+          definition: DEF,
+          canonical_key: "key-a1",
+          status: "active",
+          cadence: "daily",
+          created_at: "2026-10-01T10:00:00Z",
+        },
+      ],
+    });
+    const woken = await wakeKaminsForUser({ rest: sb.rest } as Sb, "u1", 1);
+    expect(woken).toBe(0);
+    const s1 = (sb.tables.kamins as Array<Record<string, unknown>>).find((r) => r.id === "s1");
+    expect(s1?.status).toBe("sleeping");
+  });
+
+  it("wakes all sleeping when slots allow", async () => {
+    const sb = fakeSb({
+      kamins: [
+        sleeping("s-new", "2026-10-06T10:00:00Z"),
+        sleeping("s-old", "2026-10-05T10:00:00Z"),
+      ],
+    });
+    const woken = await wakeKaminsForUser({ rest: sb.rest } as Sb, "u1", 3);
+    expect(woken).toBe(2);
   });
 });
 

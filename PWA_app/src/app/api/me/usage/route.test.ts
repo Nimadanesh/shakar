@@ -16,17 +16,19 @@ vi.mock("@/lib/server/auth", () => ({
 
 vi.mock("@/lib/server/quota", () => ({
   activeTierHunts: vi.fn(),
+  activeTierKey: vi.fn(),
 }));
 
 import { supabaseConfigured, supabaseServer } from "@/lib/supabase-server";
 import { getSessionUserId } from "@/lib/server/auth";
-import { activeTierHunts } from "@/lib/server/quota";
+import { activeTierHunts, activeTierKey } from "@/lib/server/quota";
 import { GET } from "@/app/api/me/usage/route";
 
 const mockConfigured = vi.mocked(supabaseConfigured);
 const mockServer = vi.mocked(supabaseServer);
 const mockSession = vi.mocked(getSessionUserId);
 const mockTier = vi.mocked(activeTierHunts);
+const mockTierKey = vi.mocked(activeTierKey);
 
 const UID = "11111111-1111-4111-8111-111111111111";
 const DID = "22222222-2222-4222-8222-222222222222";
@@ -50,6 +52,7 @@ function fakeSb(tables: Record<string, unknown[]>, failEvents = false) {
         return tables.hunt_events ?? [];
       }
       if (path.startsWith("subscriptions")) return tables.subscriptions ?? [];
+      if (path.startsWith("kamins")) return tables.kamins ?? [];
       throw new Error(`unexpected path ${path}`);
     }),
   };
@@ -64,16 +67,19 @@ beforeEach(() => {
   mockConfigured.mockReturnValue(true);
   mockSession.mockResolvedValue(null);
   mockTier.mockResolvedValue(null);
+  mockTierKey.mockResolvedValue(null);
 });
 
 describe("subscribed user", () => {
   it("returns tier quota truth with 14-day buckets", async () => {
     mockSession.mockResolvedValue(UID);
     mockTier.mockResolvedValue(130);
+    mockTierKey.mockResolvedValue("herfei");
     mockServer.mockReturnValue(fakeSb({
       quota_counters: [{ hunts_used: 5 }],
       // 3 hunts today, 1 yesterday, 1 thirteen days ago (edge of window).
       hunt_events: [event(1), event(2), event(3), event(26), event(13 * 24 - 1)],
+      kamins: [{ id: "k1" }, { id: "k2" }],
     }) as never);
 
     const res = await get();
@@ -90,19 +96,52 @@ describe("subscribed user", () => {
     expect(d.daily[12]).toBe(1);
     expect(d.daily[0]).toBe(1);
     expect(d.daily.reduce((a: number, b: number) => a + b, 0)).toBe(5);
+    // Kamin quota: herfei → 3 slots, 2 active.
+    expect(d.kaminSlots).toBe(3);
+    expect(d.kaminActive).toBe(2);
   });
 
   it("clamps remaining at zero when over quota", async () => {
     mockSession.mockResolvedValue(UID);
     mockTier.mockResolvedValue(20);
+    mockTierKey.mockResolvedValue("paye");
     mockServer.mockReturnValue(fakeSb({
       quota_counters: [{ hunts_used: 25 }],
       hunt_events: [],
+      kamins: [{ id: "k1" }],
     }) as never);
 
     const json = await (await get()).json();
     expect(json.data.usedThisMonth).toBe(25);
     expect(json.data.remaining).toBe(0);
+    expect(json.data.kaminSlots).toBe(1);
+    expect(json.data.kaminActive).toBe(1);
+  });
+
+  it("reports null kamin fields when the kamins table is missing", async () => {
+    mockSession.mockResolvedValue(UID);
+    mockTier.mockResolvedValue(130);
+    mockTierKey.mockResolvedValue("herfei");
+    const sb = fakeSb({
+      quota_counters: [{ hunts_used: 5 }],
+      hunt_events: [],
+    });
+    sb.rest = vi.fn(async (method: string, path: string) => {
+      if (path.startsWith("kamins")) {
+        const e = new Error("table missing");
+        (e as { status?: number }).status = 404;
+        throw e;
+      }
+      if (path.startsWith("quota_counters")) return [{ hunts_used: 5 }];
+      if (path.startsWith("hunt_events")) return [];
+      throw new Error(`unexpected path ${path}`);
+    });
+    mockServer.mockReturnValue(sb as never);
+
+    const json = await (await get()).json();
+    expect(json.data.usedThisMonth).toBe(5);
+    expect(json.data.kaminSlots).toBe(3);
+    expect(json.data.kaminActive).toBeNull();
   });
 });
 
@@ -121,6 +160,8 @@ describe("guest", () => {
     expect(d.remaining).toBe(1);
     expect(d.daily[13]).toBe(1);
     expect(d.daily[11]).toBe(1);
+    expect(d.kaminSlots).toBeNull();
+    expect(d.kaminActive).toBeNull();
   });
 
   it("registered-but-unsubscribed falls back to the guest pool", async () => {

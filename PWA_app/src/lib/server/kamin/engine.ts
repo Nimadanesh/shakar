@@ -1,6 +1,7 @@
 import "server-only";
 
 import { normalizePersian } from "@/lib/normalizePersian";
+import { TIERS } from "@/lib/tiers";
 import {
   collectCandidates,
   confirmCandidates,
@@ -72,23 +73,16 @@ export interface KaminPublic {
   definition: HuntDefinition;
 }
 
-/** Tier cadence at arm time (blueprint §1.3). */
-export const TIER_CADENCE: Record<string, string> = {
-  paye: "daily",
-  herfei: "hourly",
-  vizhe: "30min",
-  namayandegi: "15min",
-  almas: "5min",
-};
+/** Tier cadence at arm time (blueprint §1.3). Canonical data lives in
+ *  @/lib/tiers so the plans UI can never drift from enforcement. */
+export const TIER_CADENCE: Record<string, string> = Object.fromEntries(
+  TIERS.map((t) => [t.key, t.cadence])
+);
 
-/** Kamin slots per tier (blueprint §1.3). */
-export const TIER_KAMIN_SLOTS: Record<string, number> = {
-  paye: 1,
-  herfei: 3,
-  vizhe: 5,
-  namayandegi: 8,
-  almas: 15,
-};
+/** Kamin slots per tier (blueprint §1.3). Hard limit — navid 2026-10-06. */
+export const TIER_KAMIN_SLOTS: Record<string, number> = Object.fromEntries(
+  TIERS.map((t) => [t.key, t.kaminSlots])
+);
 
 const CADENCE_MS: Record<string, number> = {
   "5min": 5 * 60 * 1000,
@@ -219,7 +213,7 @@ export async function armKamin(
     }
     throw new KaminError(
       "slots-full",
-      "به سقف کمین‌هات رسیدی — برای کمین جدید، یکی رو حذف کن."
+      "به سقف کمین‌هات رسیدی — کمین بیشتر می‌خوای؟ پلن بالاتر"
     );
   }
 
@@ -330,7 +324,7 @@ async function legacyArmKamin(
     if (active.length >= opts.slots) {
       throw new KaminError(
         "slots-full",
-        "به سقف کمین‌هات رسیدی — برای کمین جدید، یکی رو حذف کن."
+        "به سقف کمین‌هات رسیدی — کمین بیشتر می‌خوای؟ پلن بالاتر"
       );
     }
   }
@@ -363,10 +357,33 @@ export async function sleepKaminsForUser(sb: Sb, userId: string): Promise<void> 
   });
 }
 
-export async function wakeKaminsForUser(sb: Sb, userId: string): Promise<void> {
-  await sb.rest("PATCH", `kamins?user_id=eq.${enc(userId)}&status=eq.sleeping`, {
-    status: "active",
-  });
+/**
+ * Wakes sleeping kamins after (re)subscribe — but NEVER past the tier's
+ * slot limit (navid 2026-10-06: hard limit, same as arm). The newest
+ * sleeping kamins wake first (freshest intent); the rest stay sleeping.
+ * Currently uncalled until the M5b subscription webhook lands — when it
+ * does, it must pass the tier's TIER_KAMIN_SLOTS.
+ */
+export async function wakeKaminsForUser(
+  sb: Sb,
+  userId: string,
+  slots: number
+): Promise<number> {
+  const active = await sb.rest<Array<{ id: string }>>(
+    "GET",
+    `kamins?user_id=eq.${enc(userId)}&status=eq.active&select=id`
+  );
+  const free = slots - active.length;
+  if (free <= 0) return 0;
+  const sleeping = await sb.rest<Array<{ id: string }>>(
+    "GET",
+    `kamins?user_id=eq.${enc(userId)}&status=eq.sleeping` +
+      `&order=created_at.desc&limit=${free}&select=id`
+  );
+  for (const k of sleeping) {
+    await sb.rest("PATCH", `kamins?id=eq.${enc(k.id)}`, { status: "active" });
+  }
+  return sleeping.length;
 }
 
 /**
