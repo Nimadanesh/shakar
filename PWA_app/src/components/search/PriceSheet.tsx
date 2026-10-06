@@ -62,7 +62,7 @@ export function PriceSheet({ open, priceMin, priceMax, onApply, onClose }: Price
   }
 
   const inputClass =
-    "h-11 w-full rounded-lg border border-border bg-secondary px-3 text-[15px] tabular-nums text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring";
+    "h-11 w-full rounded-lg border border-border bg-secondary px-3 text-base tabular-nums text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring";
 
   function field(
     kind: "min" | "max",

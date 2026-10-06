@@ -122,7 +122,7 @@ export function SpecChips({
           }}
           placeholder="بنویس و Enter بزن…"
           aria-label={`افزودن به ${title}`}
-          className="h-10 min-w-0 flex-1 rounded-lg border border-border bg-card px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-border bg-card px-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
         />
         <button
           type="button"

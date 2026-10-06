@@ -12,6 +12,7 @@ import { readSavedHunts } from "@/lib/saved-hunts";
 import { HUNTS_PER_MONTH } from "@/lib/pricing";
 import { listKamins } from "@/lib/kamin-store";
 import { readHunts } from "@/lib/hunt-store";
+import { signOut } from "@/lib/auth";
 
 const DATA_KEYS = ["shakar:hunts:v1", "shakar:kamins:v1", "shakar:favorites:v1", "shakar:saved-hunts:v1"];
 
@@ -92,7 +93,7 @@ function IdentitySection() {
             placeholder="اسمت چیه؟"
             aria-label="نام نمایشی"
             maxLength={40}
-            className="h-11 w-full rounded-lg border border-border bg-secondary/50 px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+            className="h-11 w-full rounded-lg border border-border bg-secondary/50 px-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
           />
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -224,6 +225,40 @@ function DataSection() {
 }
 
 /**
+ * Account — sign out of the current session. Device-local data
+ * (hunts, kamins, favorites) is untouched; only the session ends.
+ */
+function AccountSection() {
+  const [signedOut, setSignedOut] = useState(false);
+
+  async function handleSignOut() {
+    await signOut();
+    setSignedOut(true);
+    window.setTimeout(() => window.location.replace("/"), 900);
+  }
+
+  return (
+    <SectionCard title="حساب کاربری">
+      {signedOut ? (
+        <p className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border text-sm font-medium text-muted-foreground">
+          <Check size={16} aria-hidden="true" />
+          خارج شدید — برمی‌گردیم به خانه…
+        </p>
+      ) : (
+        <ConfirmButton
+          label="خروج از حساب"
+          confirmLabel="مطمئنی؟ برای تأیید دوباره بزن"
+          onConfirm={handleSignOut}
+        />
+      )}
+      <p className="text-[12px] leading-5 text-muted-foreground">
+        فقط نشست (session) پاک می‌شود؛ شکارها و علاقه‌مندی‌های این دستگاه می‌ماند.
+      </p>
+    </SectionCard>
+  );
+}
+
+/**
  * Profile — account and settings only. Identity is local until backend
  * auth lands; plan numbers are real; nothing is invented.
  */
@@ -236,6 +271,7 @@ export default function ProfilePage() {
         <ThemeSwitch />
       </SectionCard>
       <DataSection />
+      <AccountSection />
     </main>
   );
 }
