@@ -99,7 +99,8 @@ async function tablesExist(sb: Sb): Promise<boolean> {
   }
 }
 
-async function activeTierHunts(sb: Sb, userId: string): Promise<number | null> {
+/** Active subscription's monthly hunt quota, or null when unsubscribed. */
+export async function activeTierHunts(sb: Sb, userId: string): Promise<number | null> {
   try {
     const rows = await sb.rest<Array<{ tier: string; status: string }>>(
       "GET",

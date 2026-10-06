@@ -4,17 +4,32 @@ import { useMemo, useState } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { HUNTS_PER_MONTH } from "@/lib/pricing";
 import { readHunts } from "@/lib/hunt-store";
+import { useServerUsage } from "@/lib/usage";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * «پلن و هزینه‌ها» — the user's financial surface. Usage numbers are real
- * (derived from fired-hunt history); anything not yet decided (tiers,
- * renewal) is shown honestly as unknown — never invented.
+ * (server first — identical on every device — local history as fallback);
+ * anything not yet decided (tiers, renewal) is shown honestly as unknown —
+ * never invented.
  */
 export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  // Server first (identical on every device), local history as fallback.
+  const serverUsage = useServerUsage();
   const stats = useMemo(() => {
     if (!open) return null;
+    if (serverUsage) {
+      const total = serverUsage.daily.reduce((a, b) => a + b, 0);
+      return {
+        used: serverUsage.usedThisMonth,
+        days: serverUsage.daily,
+        total,
+        quota: serverUsage.quotaTotal,
+        remaining: serverUsage.remaining,
+        kind: serverUsage.kind,
+      };
+    }
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const hunts = readHunts();
@@ -23,13 +38,25 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
       const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (13 - i)).getTime();
       return hunts.filter((h) => h.ts >= dayStart && h.ts < dayStart + DAY_MS).length;
     });
-    return { used: thisMonth.length, days, total: hunts.length };
-  }, [open ]);
+    const quota = HUNTS_PER_MONTH;
+    return {
+      used: thisMonth.length,
+      days,
+      total: hunts.length,
+      quota,
+      remaining: quota === null ? null : Math.max(0, quota - thisMonth.length),
+      kind: null as null,
+    };
+  }, [open, serverUsage ]);
 
-  const quota = HUNTS_PER_MONTH;
-  const remaining = quota === null || !stats ? null : Math.max(0, quota - stats.used);
-  const maxDay = stats ? Math.max(1, ...stats.days) : 1;
   const fa = (n: number) => n.toLocaleString("fa-IR");
+  const quota = stats?.quota ?? HUNTS_PER_MONTH;
+  const remaining = stats?.remaining ?? null;
+  const planLabel =
+    stats?.kind === "user" && quota !== null
+      ? `ماهانه — ${fa(quota)} شکار`
+      : "ماهانه — پلن‌ها هنوز نهایی نشده";
+  const maxDay = stats ? Math.max(1, ...stats.days) : 1;
 
   return (
     <BottomSheet open={open} onClose={onClose} label="پلن و هزینه‌ها" title="پلن و هزینه‌ها">
@@ -38,7 +65,7 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
           <div className="flex items-center justify-between">
             <span className="text-[13px] text-muted-foreground">اشتراک فعلی</span>
             <span className="text-[13px] font-medium text-foreground">
-              {quota === null ? "ماهانه — پلن‌ها هنوز نهایی نشده" : `ماهانه — ${fa(quota)} شکار`}
+              {planLabel}
             </span>
           </div>
           <div className="h-px bg-border/60" aria-hidden="true" />

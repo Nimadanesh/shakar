@@ -13,6 +13,7 @@ import { HUNTS_PER_MONTH } from "@/lib/pricing";
 import { listKamins } from "@/lib/kamin-store";
 import { readHunts } from "@/lib/hunt-store";
 import { signOut } from "@/lib/auth";
+import { useServerUsage } from "@/lib/usage";
 
 const DATA_KEYS = ["shakar:hunts:v1", "shakar:kamins:v1", "shakar:favorites:v1", "shakar:saved-hunts:v1"];
 
@@ -35,7 +36,7 @@ function SectionCard({
 }
 
 function IdentitySection() {
-  const { name, saveName } = useProfile();
+  const { name, saveName, serverBacked } = useProfile();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
@@ -72,9 +73,11 @@ function IdentitySection() {
             {name.trim() !== "" ? name : "مهمان"}
           </p>
           <p className="text-[12px] leading-5 text-muted-foreground">
-            {name.trim() !== ""
-              ? "نام نمایشی — در آواتار هم دیده می‌شود"
-              : "حساب کاربری هنوز ساخته نشده؛ نام فقط روی همین دستگاه می‌ماند"}
+            {serverBacked
+              ? "نام نمایشی — در همه‌ی دستگاه‌ها یکی است"
+              : name.trim() !== ""
+                ? "نام نمایشی — در آواتار هم دیده می‌شود"
+                : "حساب کاربری هنوز ساخته نشده؛ نام فقط روی همین دستگاه می‌ماند"}
           </p>
         </div>
       </div>
@@ -131,21 +134,34 @@ function IdentitySection() {
 
 function PlanSection() {
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Server first (identical on every device), local history as fallback.
+  const serverUsage = useServerUsage();
   // Session-cached: revisits render the known count immediately.
   const { value: hunts } = useHydratedStore("hunts", readHunts);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const usedThisMonth = (hunts ?? []).filter((h) => h.ts >= monthStart).length;
-  const quota = HUNTS_PER_MONTH;
+  const localUsed = (hunts ?? []).filter((h) => h.ts >= monthStart).length;
+  // Server is the billing truth; local is only a stand-in while loading
+  // or when the server can't answer (permissive-dev).
+  const usedThisMonth = serverUsage?.usedThisMonth ?? localUsed;
+  const quota = serverUsage ? serverUsage.quotaTotal : HUNTS_PER_MONTH;
+  const remaining =
+    serverUsage?.remaining ?? (quota === null ? null : Math.max(0, quota - usedThisMonth));
   const fa = (n: number) => n.toLocaleString("fa-IR");
+  // Guest grants aren't a monthly subscription — only subscribers get the
+  // "ماهانه — N شکار" label. Everyone gets true remaining counts.
+  const planLabel =
+    serverUsage?.kind === "user" && quota !== null
+      ? `ماهانه — ${fa(quota)} شکار`
+      : "ماهانه — پلن‌ها هنوز نهایی نشده";
 
   return (
     <SectionCard title="اشتراک">
       <dl className="flex flex-col">
         {[
-          ["اشتراک فعلی", quota === null ? "ماهانه — پلن‌ها هنوز نهایی نشده" : `ماهانه — ${fa(quota)} شکار`],
+          ["اشتراک فعلی", planLabel],
           ["شکارهای این ماه", fa(usedThisMonth)],
-          ["سهمیه باقی‌مانده", quota === null ? "—" : fa(Math.max(0, quota - usedThisMonth))],
+          ["سهمیه باقی‌مانده", remaining === null ? "—" : fa(remaining)],
         ].map(([label, value]) => (
           <div
             key={label}
