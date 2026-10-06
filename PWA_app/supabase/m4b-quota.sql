@@ -18,12 +18,21 @@ create table if not exists quota_counters (
   notified_85 boolean not null default false
 );
 
--- Guest devices: 3 complimentary hunts per device, ever (blueprint §9).
+-- Guest devices. LIVE SCHEMA (2026-10-06, verified against production):
+-- the device id (client UUID) is the PK; fingerprint_hash is reserved for
+-- future device-fingerprint abuse detection (NOT NULL, no default — every
+-- insert must provide it); free_hunts_granted is the per-device limit
+-- (default 3, the product policy); zero_refunds_today/refund_day are the
+-- guest-side refund ladder (not yet wired in the app).
 create table if not exists devices (
-  device_id text primary key,
+  id uuid primary key default gen_random_uuid(),
+  fingerprint_hash text not null,
+  free_hunts_granted integer not null default 3,
   free_hunts_used integer not null default 0,
+  zero_refunds_today integer not null default 0,
+  refund_day date,
   first_seen timestamptz not null default now(),
-  last_ip text
+  last_seen timestamptz not null default now()
 );
 
 -- User notifications (quota 85%, kamin hits, ...). Surfaced in the header bell.

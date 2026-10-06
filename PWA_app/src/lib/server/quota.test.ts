@@ -45,16 +45,17 @@ function fakeDb(
     }
     if (path === "/rpc/consume_guest_hunt") {
       const { p_device_id: did, p_limit: limit } = body as { p_device_id: string; p_limit: number };
-      let row = tables.devices.find((r) => r.device_id === did);
+      let row = tables.devices.find((r) => r.id === did);
       if (!row) {
-        row = { device_id: did, free_hunts_used: 0 };
+        row = { id: did, fingerprint_hash: did, free_hunts_granted: limit, free_hunts_used: 0 };
         tables.devices.push(row);
       }
-      if ((row.free_hunts_used as number) >= limit) {
-        return [{ allowed: false, reason: "guest-exhausted", free_hunts_used: row.free_hunts_used }];
+      const granted = (row.free_hunts_granted as number) ?? limit;
+      if ((row.free_hunts_used as number) >= granted) {
+        return [{ allowed: false, reason: "guest-exhausted", free_hunts_used: row.free_hunts_used, free_hunts_granted: granted }];
       }
       row.free_hunts_used = (row.free_hunts_used as number) + 1;
-      return [{ allowed: true, reason: "ok", free_hunts_used: row.free_hunts_used }];
+      return [{ allowed: true, reason: "ok", free_hunts_used: row.free_hunts_used, free_hunts_granted: granted }];
     }
     if (path === "/rpc/refund_hunt_unit") {
       const row = tables.quota_counters.find((r) => r.user_id === (body as { p_user_id: string }).p_user_id);
@@ -62,7 +63,7 @@ function fakeDb(
       return null;
     }
     if (path === "/rpc/refund_guest_hunt") {
-      const row = tables.devices.find((r) => r.device_id === (body as { p_device_id: string }).p_device_id);
+      const row = tables.devices.find((r) => r.id === (body as { p_device_id: string }).p_device_id);
       if (row) row.free_hunts_used = Math.max(0, (row.free_hunts_used as number) - 1);
       return null;
     }
@@ -147,7 +148,7 @@ describe("consumeHunt", () => {
 
   it("guest: denied after 3 free hunts, honest Persian copy", async () => {
     mockConfigured.mockReturnValue(true);
-    const db = fakeDb({ quota_counters: [], devices: [{ device_id: "dx", free_hunts_used: 3 }] });
+    const db = fakeDb({ quota_counters: [], devices: [{ id: "dx", free_hunts_used: 3, free_hunts_granted: 3 }] });
     mockServer.mockReturnValue({ rest: db.rest } as never);
     const d = await consumeHunt({ userId: null, deviceId: "dx" });
     expect(d.allowed).toBe(false);
@@ -298,7 +299,7 @@ describe("refundHunt", () => {
     mockConfigured.mockReturnValue(true);
     const db = fakeDb({
       quota_counters: [],
-      devices: [{ device_id: "dg", free_hunts_used: 2 }],
+      devices: [{ id: "dg", free_hunts_used: 2, free_hunts_granted: 3 }],
     });
     mockServer.mockReturnValue({ rest: db.rest } as never);
     const r = await refundHunt({ userId: null, deviceId: "dg", kind: "guest", mode: "real" });

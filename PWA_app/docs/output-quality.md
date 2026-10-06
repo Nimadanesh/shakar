@@ -241,14 +241,21 @@
   `supabase/m6-quota-atomic.sql` in the SQL Editor.** Tests: quota.test.ts
   (atomic allow/deny/notify, guest limit, RPC-call assertions; the fake
   PostgREST now simulates the RPCs).
-- **SQL BUG CAUGHT BY LIVE VERIFICATION (2026-10-06):** the first version
-  failed on real Postgres — `RETURNS TABLE (..., hunts_used int, ...)`
-  makes `hunts_used` a PL/pgSQL variable, so `SET hunts_used =
-  hunts_used + 1` was ambiguous (error 42702). Fixed by qualifying
-  (`quota_counters.hunts_used`). **Verified on real Postgres (PGlite):
-  migration applies cleanly; 12 checks green — fresh-user bootstrap,
-  exact limit enforcement, suspension honored, refund floor at 0,
-  guest flow, and a 20-parallel-consumes race → exactly 5 allowed.**
+- **LIVE SCHEMA DRIFT FOUND & FIXED (2026-10-06):** the production
+  `devices` table does NOT match the repo's m4b — live has `id uuid PK`
+  (no `device_id` column at all), `fingerprint_hash text NOT NULL`,
+  `free_hunts_granted int DEFAULT 3`, `zero_refunds_today`/`refund_day`
+  (guest refund ladder, not yet wired). Consequences: (1) the m6 guest
+  functions failed with 42703; (2) worse — the app's `tablesExist` check
+  (`devices?select=device_id`) ALWAYS failed in prod, so **all quota
+  enforcement was silently dormant (permissive-dev for everyone)**.
+  Fixed: m6 guest RPCs use `id uuid` + grant-based limit
+  (`coalesce(free_hunts_granted, p_limit)`); `fingerprint_hash` filled
+  with the device id (no client fingerprint yet — documented);
+  `tablesExist` + all app guest paths use `id`. Repo m4b documents the
+  live schema. **Verified on real Postgres with the EXACT live schema:
+  9 checks green** (fresh-device bootstrap, grant respected when raised
+  externally, guest race 10-parallel → exactly 3 allowed).
 
 ## Standing invariants (never weaken)
 

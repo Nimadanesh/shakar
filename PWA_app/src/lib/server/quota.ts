@@ -90,7 +90,9 @@ function warnMissing(what: string) {
 async function tablesExist(sb: Sb): Promise<boolean> {
   try {
     await sb.rest("GET", "quota_counters?select=user_id&limit=0");
-    await sb.rest("GET", "devices?select=device_id&limit=0");
+    // Live devices schema: id uuid PK (there is no device_id column —
+    // checking for it silently disabled all quota enforcement in prod).
+    await sb.rest("GET", "devices?select=id&limit=0");
     return true;
   } catch {
     return false;
@@ -253,10 +255,20 @@ async function consumeStandard(sb: Sb, userId: string, tierHunts: number): Promi
 async function rpcConsumeGuest(
   sb: Sb,
   deviceId: string
-): Promise<{ allowed: boolean; reason: string; free_hunts_used: number } | null> {
+): Promise<{
+  allowed: boolean;
+  reason: string;
+  free_hunts_used: number;
+  free_hunts_granted: number;
+} | null> {
   try {
     const rows = await sb.rest<
-      Array<{ allowed: boolean; reason: string; free_hunts_used: number }>
+      Array<{
+        allowed: boolean;
+        reason: string;
+        free_hunts_used: number;
+        free_hunts_granted: number;
+      }>
     >("POST", "/rpc/consume_guest_hunt", {
       p_device_id: deviceId,
       p_limit: GUEST_FREE_HUNTS,
@@ -280,11 +292,12 @@ async function consumeGuest(sb: Sb, deviceId: string): Promise<QuotaDecision> {
         message: "شکارهای رایگان این دستگاه تموم شد.",
       };
     }
+    const granted = atomic.free_hunts_granted ?? GUEST_FREE_HUNTS;
     return {
       allowed: true,
       mode: "real",
       kind: "guest",
-      remaining: GUEST_FREE_HUNTS - atomic.free_hunts_used,
+      remaining: granted - atomic.free_hunts_used,
       userId: null,
     };
   }
@@ -293,28 +306,35 @@ async function consumeGuest(sb: Sb, deviceId: string): Promise<QuotaDecision> {
     "[quota] consume_guest_hunt RPC missing — legacy racy read-check-PATCH. " +
       "Run supabase/m6-quota-atomic.sql."
   );
-  let rows = await sb.rest<Array<{ free_hunts_used: number }>>(
+  // Live devices schema: id uuid PK (no device_id column).
+  let rows = await sb.rest<Array<{ free_hunts_used: number; free_hunts_granted: number }>>(
     "GET",
-    `devices?device_id=eq.${d}&select=free_hunts_used`
+    `devices?id=eq.${d}&select=free_hunts_used,free_hunts_granted`
   );
   if (rows.length === 0) {
-    await sb.rest("POST", "devices", { device_id: deviceId, free_hunts_used: 0 });
-    rows = [{ free_hunts_used: 0 }];
+    await sb.rest("POST", "devices", {
+      id: deviceId,
+      fingerprint_hash: deviceId,
+      free_hunts_used: 0,
+      free_hunts_granted: GUEST_FREE_HUNTS,
+    });
+    rows = [{ free_hunts_used: 0, free_hunts_granted: GUEST_FREE_HUNTS }];
   }
-  const used = rows[0].free_hunts_used;
-  if (used >= GUEST_FREE_HUNTS) {
+  const used = rows[0].free_hunts_used ?? 0;
+  const granted = rows[0].free_hunts_granted ?? GUEST_FREE_HUNTS;
+  if (used >= granted) {
     return {
       allowed: false,
       reason: "guest-exhausted",
       message: "شکارهای رایگان این دستگاه تموم شد.",
     };
   }
-  await sb.rest("PATCH", `devices?device_id=eq.${d}`, { free_hunts_used: used + 1 });
+  await sb.rest("PATCH", `devices?id=eq.${d}`, { free_hunts_used: used + 1 });
   return {
     allowed: true,
     mode: "real",
     kind: "guest",
-    remaining: GUEST_FREE_HUNTS - used - 1,
+    remaining: granted - used - 1,
     userId: null,
   };
 }
@@ -353,10 +373,10 @@ export async function refundHunt(opts: {
         try {
           const rows = await sb.rest<Array<{ free_hunts_used: number }>>(
             "GET",
-            `devices?device_id=eq.${d}&select=free_hunts_used`
+            `devices?id=eq.${d}&select=free_hunts_used`
           );
           const used = rows[0]?.free_hunts_used ?? 1;
-          await sb.rest("PATCH", `devices?device_id=eq.${d}`, {
+          await sb.rest("PATCH", `devices?id=eq.${d}`, {
             free_hunts_used: Math.max(0, used - 1),
           });
         } catch (inner) {

@@ -49,36 +49,48 @@ end;
 $$;
 
 -- Guest device quota: limit check + increment, atomically.
-create or replace function consume_guest_hunt(p_device_id text, p_limit int)
-returns table (allowed boolean, reason text, free_hunts_used int)
+-- Live devices schema (2026-10-06): id uuid PK, fingerprint_hash text
+-- NOT NULL (no default), free_hunts_granted int DEFAULT 3,
+-- free_hunts_used int DEFAULT 0, zero_refunds_today/refund_day (guest
+-- refund ladder — not yet wired; the plain decrement below preserves
+-- current app behavior), first_seen/last_seen DEFAULT now().
+create or replace function consume_guest_hunt(p_device_id uuid, p_limit int)
+returns table (allowed boolean, reason text, free_hunts_used int, free_hunts_granted int)
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
   v_used int;
+  v_granted int;
 begin
-  insert into devices (device_id)
-  values (p_device_id)
-  on conflict (device_id) do nothing;
+  -- fingerprint_hash has no default and the client doesn't (yet) send a
+  -- real device fingerprint, so the device id doubles as the fingerprint.
+  -- Fingerprint-based abuse detection is future work; quota logic is exact.
+  insert into devices (id, fingerprint_hash)
+  values (p_device_id, p_device_id::text)
+  on conflict do nothing;
 
-  select d.free_hunts_used
-    into v_used
+  select d.free_hunts_used, d.free_hunts_granted
+    into v_used, v_granted
   from devices d
-  where d.device_id = p_device_id
+  where d.id = p_device_id
   for update;
 
-  if v_used >= p_limit then
-    return query select false, 'guest-exhausted'::text, v_used;
+  -- The row's grant is the limit (grants are managed externally, e.g.
+  -- promos or bans); p_limit is the fallback for the product default.
+  if v_used >= coalesce(v_granted, p_limit) then
+    return query select false, 'guest-exhausted'::text, v_used, coalesce(v_granted, p_limit);
     return;
   end if;
 
   update devices
-  set free_hunts_used = devices.free_hunts_used + 1
-  where devices.device_id = p_device_id
+  set free_hunts_used = devices.free_hunts_used + 1,
+      last_seen = now()
+  where devices.id = p_device_id
   returning devices.free_hunts_used into v_used;
 
-  return query select true, 'ok'::text, v_used;
+  return query select true, 'ok'::text, v_used, coalesce(v_granted, p_limit);
 end;
 $$;
 
@@ -95,7 +107,7 @@ as $$
   where user_id = p_user_id;
 $$;
 
-create or replace function refund_guest_hunt(p_device_id text)
+create or replace function refund_guest_hunt(p_device_id uuid)
 returns void
 language sql
 security definer
@@ -103,5 +115,5 @@ set search_path = public
 as $$
   update devices
   set free_hunts_used = greatest(free_hunts_used - 1, 0)
-  where device_id = p_device_id;
+  where id = p_device_id;
 $$;
