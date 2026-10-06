@@ -27,6 +27,7 @@ import {
   type DimensionId,
 } from "@/lib/dimensions";
 import { getDeviceId } from "@/lib/device";
+import { recordHunt } from "@/lib/hunt-store";
 import { getRememberedCity, rememberCity } from "@/lib/city-memory";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
@@ -225,6 +226,10 @@ export function HuntSetup() {
       }
       const runId = json?.ok === true ? json.data?.runId : undefined;
       if (typeof runId === "string" && runId !== "") {
+        // The server consumed one quota unit for this firing — record it
+        // locally so the profile's consumption section reflects reality.
+        // (Every firing is a paid event, even if the stream is abandoned.)
+        recordHunt(trimmed, base, dismissed);
         router.push(`/hunt/${encodeURIComponent(runId)}?q=${encodeURIComponent(trimmed)}`);
         return;
       }
