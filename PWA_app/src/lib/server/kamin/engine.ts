@@ -44,7 +44,8 @@ export interface Sb {
   rest<T>(
     method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
-    body?: unknown
+    body?: unknown,
+    prefer?: string
   ): Promise<T>;
 }
 
@@ -735,7 +736,10 @@ export async function checkKamin(
             body: kaminPushBody(kamin.name),
             related_kamin_id: kamin.id,
             check_run_id: checkRunId,
-          }
+          },
+          // ignore-duplicates: the loser gets [] instead of a 409, so the
+          // atomic gate works without a try/catch on constraint violation.
+          "return=representation,resolution=ignore-duplicates"
         );
         notified = inserted.length > 0;
       } catch (e) {

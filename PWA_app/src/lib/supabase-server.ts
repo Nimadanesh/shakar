@@ -16,7 +16,12 @@ export class SupabaseError extends Error {
 
 export interface SupabaseServer {
   readonly url: string;
-  rest<T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<T>;
+  rest<T>(
+    method: "GET" | "POST" | "PATCH" | "DELETE",
+    path: string,
+    body?: unknown,
+    prefer?: string
+  ): Promise<T>;
 }
 
 export function supabaseConfigured(): boolean {
@@ -32,7 +37,8 @@ export function supabaseServer(): SupabaseServer | null {
   async function rest<T>(
     method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
-    body?: unknown
+    body?: unknown,
+    prefer?: string
   ): Promise<T> {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);
@@ -44,7 +50,7 @@ export function supabaseServer(): SupabaseServer | null {
           Authorization: `Bearer ${key as string}`,
           "Content-Type": "application/json",
           Accept: "application/json",
-          Prefer: "return=representation",
+          Prefer: prefer ?? "return=representation",
         },
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: ctrl.signal,
