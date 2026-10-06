@@ -252,7 +252,7 @@ function AccountSection() {
         />
       )}
       <p className="text-[12px] leading-5 text-muted-foreground">
-        فقط نشست (session) پاک می‌شود؛ شکارها و علاقه‌مندی‌های این دستگاه می‌ماند.
+        شکارها و علاقه‌مندی‌های این دستگاه می‌ماند.
       </p>
     </SectionCard>
   );
