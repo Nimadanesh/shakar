@@ -6,7 +6,7 @@
 -- with a loud warning if the functions are missing).
 
 -- Standard (subscribed) quota: suspension + limit check + increment, atomically.
-create or replace function consume_hunt_unit(p_user_id text, p_limit int)
+create or replace function consume_hunt_unit(p_user_id uuid, p_limit int)
 returns table (allowed boolean, reason text, hunts_used int, notified_85 boolean)
 language plpgsql
 security definer
@@ -84,7 +84,7 @@ $$;
 
 -- Atomic refund decrement (never below zero; the abuse-ladder counting
 -- stays in application code, the counter move itself is race-free).
-create or replace function refund_hunt_unit(p_user_id text)
+create or replace function refund_hunt_unit(p_user_id uuid)
 returns void
 language sql
 security definer

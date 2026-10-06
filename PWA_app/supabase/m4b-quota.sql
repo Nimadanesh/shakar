@@ -5,7 +5,9 @@
 
 -- Per-cycle hunt quota counters (blueprint §2).
 create table if not exists quota_counters (
-  user_id text primary key,
+  -- user_id matches profiles.id (uuid). Live DBs created before 2026-10-06
+  -- may have text here; the m6 RPCs expect uuid.
+  user_id uuid primary key,
   cycle_start timestamptz not null default now(),
   hunts_used integer not null default 0,
   gifts_used integer not null default 0,
