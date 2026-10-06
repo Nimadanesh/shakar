@@ -1,6 +1,8 @@
 import { getRun } from "@/lib/server/hunt/runs";
 import { refundHunt } from "@/lib/server/quota";
 import { runPipeline, type HuntEvent } from "@/lib/server/hunt/pipeline";
+import { advanceKaminBaseline } from "@/lib/server/kamin/engine";
+import { supabaseServer, supabaseConfigured } from "@/lib/supabase-server";
 
 /**
  * GET /api/hunts/[id]/stream — Server-Sent Events. Runs the pipeline and
@@ -32,8 +34,12 @@ export async function GET(
       };
       let sawResults = false;
       let errored = false;
+      const finalIds: string[] = [];
       const wrappedSend = (e: HuntEvent) => {
-        if (e.type === "done" && e.results.length > 0) sawResults = true;
+        if (e.type === "done") {
+          if (e.results.length > 0) sawResults = true;
+          for (const r of e.results) finalIds.push(r.sourceAdId);
+        }
         if (e.type === "error") errored = true;
         send(e);
       };
@@ -43,6 +49,23 @@ export async function GET(
         // The pipeline already emitted { type: "error" } before throwing.
         errored = true;
       } finally {
+        // Kamin baseline: a run fired from «دیدن نتایج» moves the seen
+        // baseline ONLY after a successful hunt — a failed search never
+        // swallows "new" matches (blueprint §1.8).
+        if (run.kaminId && !errored && run.userId) {
+          try {
+            if (supabaseConfigured()) {
+              await advanceKaminBaseline(
+                supabaseServer(),
+                run.kaminId,
+                run.userId,
+                finalIds
+              );
+            }
+          } catch {
+            /* baseline advance is best-effort; the hunt result matters more */
+          }
+        }
         // Fairness refund: zero results or our failure → give the unit back.
         // Deep-history runs were never charged, so there's nothing to refund.
         if (run.quota.charged && (!sawResults || errored)) {

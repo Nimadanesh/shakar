@@ -1,0 +1,489 @@
+import "server-only";
+
+import { normalizePersian } from "@/lib/normalizePersian";
+import {
+  collectCandidates,
+  confirmCandidates,
+  type Candidate,
+  type HuntDefinition,
+  type HuntStats,
+  type ScoredAd,
+} from "@/lib/server/hunt/pipeline";
+import { kaminPushBody, kaminPushTitle } from "./copy";
+
+/**
+ * M5 kamin engine (blueprint §1.8, §1.9).
+ *
+ * A kamin is the hunt pipeline on a tier cadence, with:
+ *  - canonical_key dedupe (one kamin per search meaning, per user);
+ *  - seen_ids baseline — only genuinely-new ids are confirmed;
+ *  - details fetched ONLY for new ids (never re-fetched for known ads);
+ *  - since-LAST-SUCCESS windows (output-quality.md flaw #6): a failed or
+ *    cooldown-interrupted check never moves last_success_at, so the next
+ *    run catches the missed window up instead of skipping it;
+ *  - first successful check after arming is a SILENT baseline — we never
+ *    push-notify for ads that predate the kamin.
+ *
+ * Invariants (never weaken):
+ *  - failed detail fetch = "unknown", never a silent drop (pipeline);
+ *  - baseline moves only after a successful check — a failed search never
+ *    swallows "new" matches;
+ *  - one notification per (kamin_id, check_run_id): one push per genuinely
+ *    new match set, never duplicates.
+ */
+
+export interface Sb {
+  rest<T>(
+    method: "GET" | "POST" | "PATCH" | "DELETE",
+    path: string,
+    body?: unknown
+  ): Promise<T>;
+}
+
+export interface KaminRow {
+  id: string;
+  user_id: string;
+  name: string;
+  definition: HuntDefinition;
+  canonical_key: string;
+  status: "active" | "sleeping";
+  cadence: string;
+  seen_ids: string[];
+  last_checked_at: string | null;
+  last_success_at: string | null;
+  new_match_count: number;
+  armed_at: string;
+}
+
+export interface KaminPublic {
+  id: string;
+  name: string;
+  status: "active" | "sleeping";
+  cadence: string;
+  new_match_count: number;
+  last_checked_at: string | null;
+  armed_at: string;
+  definition: HuntDefinition;
+}
+
+/** Tier cadence at arm time (blueprint §1.3). */
+export const TIER_CADENCE: Record<string, string> = {
+  paye: "daily",
+  herfei: "hourly",
+  vizhe: "30min",
+  namayandegi: "15min",
+  almas: "5min",
+};
+
+/** Kamin slots per tier (blueprint §1.3). */
+export const TIER_KAMIN_SLOTS: Record<string, number> = {
+  paye: 1,
+  herfei: 3,
+  vizhe: 5,
+  namayandegi: 8,
+  almas: 15,
+};
+
+const CADENCE_MS: Record<string, number> = {
+  "5min": 5 * 60 * 1000,
+  "15min": 15 * 60 * 1000,
+  "30min": 30 * 60 * 1000,
+  hourly: 60 * 60 * 1000,
+  daily: 24 * 60 * 60 * 1000,
+};
+
+export function cadenceMs(cadence: string): number {
+  return CADENCE_MS[cadence] ?? CADENCE_MS.daily;
+}
+
+/**
+ * Recency-window page budget: ~1 page per 30 min since the last SUCCESS,
+ * clamped to 2..20. Cheap for frequent kamins, catch-up after a cooldown
+ * gap — the window is time-derived, never a quality cut.
+ */
+export function pageBudgetForElapsed(elapsedMs: number): number {
+  const pages = 2 + Math.floor(Math.max(0, elapsedMs) / (30 * 60 * 1000));
+  return Math.min(20, Math.max(2, pages));
+}
+
+/** Baseline cap: seen_ids never grows unbounded. */
+const MAX_SEEN_IDS = 500;
+function capIds(ids: string[]): string[] {
+  return ids.slice(-MAX_SEEN_IDS);
+}
+
+/**
+ * Server-side canonical key — same semantics as radar.ts canonicalKey
+ * (term order / whitespace must not change identity), recomputed from the
+ * validated definition. Never trusted from the client.
+ */
+export function kaminCanonicalKey(def: HuntDefinition): string {
+  const sorted = (terms: string[]) =>
+    [...terms].map((t) => normalizePersian(t)).sort();
+  return JSON.stringify({
+    q: normalizePersian(def.query),
+    inc: sorted(def.include),
+    exc: sorted(def.exclude),
+    cat: def.category,
+    city: def.city,
+    min: def.priceMin,
+    max: def.priceMax,
+    tx: def.transaction,
+    cond: def.condition,
+  });
+}
+
+export class KaminError extends Error {
+  constructor(
+    readonly code: "slots-full" | "bad-definition",
+    message: string
+  ) {
+    super(message);
+    this.name = "KaminError";
+  }
+}
+
+const enc = encodeURIComponent;
+
+function toPublic(k: KaminRow): KaminPublic {
+  return {
+    id: k.id,
+    name: k.name,
+    status: k.status,
+    cadence: k.cadence,
+    new_match_count: k.new_match_count,
+    last_checked_at: k.last_checked_at,
+    armed_at: k.armed_at,
+    definition: k.definition,
+  };
+}
+
+export async function listKamins(sb: Sb, userId: string): Promise<KaminPublic[]> {
+  const rows = await sb.rest<KaminRow[]>(
+    "GET",
+    `kamins?user_id=eq.${enc(userId)}&select=*&order=armed_at.desc`
+  );
+  return rows.map(toPublic);
+}
+
+export async function armKamin(
+  sb: Sb,
+  opts: {
+    userId: string;
+    name: string;
+    definition: HuntDefinition;
+    seenIds: string[];
+    /** Active tier, or null when the user has no subscription. */
+    tier: string | null;
+  }
+): Promise<{ kamin: KaminPublic; created: boolean }> {
+  const key = kaminCanonicalKey(opts.definition);
+  const existing = await sb.rest<KaminRow[]>(
+    "GET",
+    `kamins?user_id=eq.${enc(opts.userId)}&canonical_key=eq.${enc(key)}&select=*&limit=1`
+  );
+  if (existing[0]) {
+    const k = existing[0];
+    if (k.status === "sleeping") {
+      // Re-arming a sleeping kamin wakes it (definition refresh included).
+      const rows = await sb.rest<KaminRow[]>("PATCH", `kamins?id=eq.${enc(k.id)}`, {
+        status: "active",
+        name: opts.name,
+        definition: opts.definition,
+      });
+      return { kamin: toPublic(rows[0] ?? k), created: false };
+    }
+    return { kamin: toPublic(k), created: false };
+  }
+
+  const cadence = opts.tier ? (TIER_CADENCE[opts.tier] ?? "daily") : "daily";
+  // No subscription → armed SLEEPING (guest-conversion funnel: «کمینت
+  // آماده‌ست — با اشتراک بیدار می‌شه»). Never consumes a slot it has no tier for.
+  const status = opts.tier ? "active" : "sleeping";
+  if (opts.tier) {
+    const slots = TIER_KAMIN_SLOTS[opts.tier] ?? 1;
+    const active = await sb.rest<Array<{ id: string }>>(
+      "GET",
+      `kamins?user_id=eq.${enc(opts.userId)}&status=eq.active&select=id`
+    );
+    if (active.length >= slots) {
+      throw new KaminError(
+        "slots-full",
+        "به سقف کمین‌هات رسیدی — برای کمین جدید، یکی رو حذف کن."
+      );
+    }
+  }
+
+  const rows = await sb.rest<KaminRow[]>("POST", "kamins", {
+    user_id: opts.userId,
+    name: opts.name.slice(0, 60),
+    definition: opts.definition,
+    canonical_key: key,
+    status,
+    cadence,
+    seen_ids: capIds(opts.seenIds),
+  });
+  return { kamin: toPublic(rows[0]), created: true };
+}
+
+export async function removeKamin(sb: Sb, userId: string, kaminId: string): Promise<void> {
+  await sb.rest(
+    "DELETE",
+    `kamins?id=eq.${enc(kaminId)}&user_id=eq.${enc(userId)}`
+  );
+}
+
+/** Subscription expiry → kamins SLEEP (definitions + history kept). Renewal wakes. */
+export async function sleepKaminsForUser(sb: Sb, userId: string): Promise<void> {
+  await sb.rest("PATCH", `kamins?user_id=eq.${enc(userId)}&status=eq.active`, {
+    status: "sleeping",
+  });
+}
+
+export async function wakeKaminsForUser(sb: Sb, userId: string): Promise<void> {
+  await sb.rest("PATCH", `kamins?user_id=eq.${enc(userId)}&status=eq.sleeping`, {
+    status: "active",
+  });
+}
+
+/**
+ * Advance the seen baseline with ids the user was actually shown (explicit
+ * «دیدن نتایج» run). Union-only: the baseline never shrinks, and a failed
+ * search never swallows "new" matches.
+ */
+export async function advanceKaminBaseline(
+  sb: Sb | null,
+  kaminId: string,
+  userId: string,
+  ids: string[]
+): Promise<void> {
+  if (!sb || ids.length === 0) return;
+  try {
+    const rows = await sb.rest<KaminRow[]>(
+      "GET",
+      `kamins?id=eq.${enc(kaminId)}&user_id=eq.${enc(userId)}&select=seen_ids&limit=1`
+    );
+    const seen = new Set(rows[0]?.seen_ids ?? []);
+    for (const id of ids) seen.add(id);
+    await sb.rest("PATCH", `kamins?id=eq.${enc(kaminId)}`, {
+      seen_ids: capIds([...seen]),
+    });
+  } catch (e) {
+    console.warn("[kamin] baseline advance failed:", (e as Error).message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Check engine
+// ---------------------------------------------------------------------------
+
+export interface PushPayload {
+  title: string;
+  body: string;
+  url: string;
+  tag: string;
+}
+
+export interface EngineDeps {
+  sb: Sb | null;
+  now: () => number;
+  uuid: () => string;
+  collect: (def: HuntDefinition, maxPages: number) => Promise<{ candidates: Candidate[] }>;
+  confirm: (candidates: Candidate[], def: HuntDefinition) => Promise<ScoredAd[]>;
+  sendPush: (userId: string, payload: PushPayload) => Promise<void>;
+}
+
+/** Real (non-test) pipeline wiring for the engine. */
+export function realEnginePipeline(): Pick<EngineDeps, "collect" | "confirm"> {
+  return {
+    collect: (def, maxPages) =>
+      collectCandidates(def, { maxPages }).then((r) => ({
+        candidates: r.candidates,
+      })),
+    confirm: (candidates, def) => {
+      const stats: HuntStats = {
+        adsSeen: 0,
+        titleRejected: 0,
+        dupsCollapsed: 0,
+        candidates: candidates.length,
+        detailsChecked: 0,
+        confirmed: 0,
+        stale: false,
+        nearMiss: 0,
+      };
+      return confirmCandidates(candidates, def, stats);
+    },
+  };
+}
+
+export type CheckStatus = "completed" | "failed" | "baseline";
+
+export interface KaminCheckResult {
+  kaminId: string;
+  status: CheckStatus;
+  newCount: number;
+  checkRunId: string;
+}
+
+/**
+ * One kamin check: collect recent candidates → diff against seen_ids →
+ * confirm ONLY the new ids → notify + push on genuinely-new matches.
+ */
+export async function checkKamin(
+  deps: EngineDeps,
+  kamin: KaminRow
+): Promise<KaminCheckResult> {
+  const sb = deps.sb;
+  const checkRunId = deps.uuid();
+  const nowIso = new Date(deps.now()).toISOString();
+  if (!sb) {
+    console.warn("[kamin] permissive-dev: no Supabase, skipping check");
+    return { kaminId: kamin.id, status: "failed", newCount: 0, checkRunId };
+  }
+
+  await sb.rest("POST", "kamin_runs", {
+    id: checkRunId,
+    kamin_id: kamin.id,
+    user_id: kamin.user_id,
+    status: "running",
+    window_from: kamin.last_success_at,
+    window_to: nowIso,
+  });
+
+  try {
+    const elapsed = kamin.last_success_at
+      ? deps.now() - Date.parse(kamin.last_success_at)
+      : 0;
+    const maxPages = pageBudgetForElapsed(elapsed);
+    const { candidates } = await deps.collect(kamin.definition, maxPages);
+
+    // First successful check after arming = SILENT baseline. We never
+    // push-notify for ads that predate the kamin.
+    if (!kamin.last_success_at) {
+      const baselineIds = capIds([
+        ...kamin.seen_ids,
+        ...candidates.map((c) => c.sourceAdId),
+      ]);
+      await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
+        seen_ids: baselineIds,
+        last_checked_at: nowIso,
+        last_success_at: nowIso,
+        new_match_count: 0,
+      });
+      await sb.rest("PATCH", `kamin_runs?id=eq.${enc(checkRunId)}`, {
+        status: "baseline",
+        completed_at: nowIso,
+        pages_fetched: maxPages,
+        candidates: candidates.length,
+        new_count: 0,
+      });
+      return { kaminId: kamin.id, status: "baseline", newCount: 0, checkRunId };
+    }
+
+    const seen = new Set(kamin.seen_ids);
+    const fresh = candidates.filter((c) => !seen.has(c.sourceAdId));
+    const results = await deps.confirm(fresh, kamin.definition);
+    const newIds = results.map((r) => r.sourceAdId);
+    const newCount = newIds.length;
+
+    await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
+      seen_ids: capIds([...seen, ...newIds]),
+      last_checked_at: nowIso,
+      last_success_at: nowIso,
+      new_match_count: newCount,
+    });
+
+    if (newCount > 0) {
+      // Dedupe guard: one notification per (kamin_id, check_run_id).
+      const dup = await sb.rest<Array<{ id: string }>>(
+        "GET",
+        `notifications?related_kamin_id=eq.${enc(kamin.id)}&check_run_id=eq.${enc(checkRunId)}&select=id&limit=1`
+      );
+      if (dup.length === 0) {
+        await sb.rest("POST", "notifications", {
+          user_id: kamin.user_id,
+          type: "new_kamin_match",
+          title: kaminPushTitle(newCount),
+          body: kaminPushBody(kamin.name),
+          related_kamin_id: kamin.id,
+          check_run_id: checkRunId,
+        });
+      }
+      try {
+        await deps.sendPush(kamin.user_id, {
+          title: kaminPushTitle(newCount),
+          body: kaminPushBody(kamin.name),
+          url: "/saved?tab=fresh",
+          tag: `kamin-${kamin.id}`,
+        });
+      } catch (e) {
+        // Push is best-effort; the in-app notification already exists.
+        console.warn("[kamin] push failed:", (e as Error).message);
+      }
+    }
+
+    await sb.rest("PATCH", `kamin_runs?id=eq.${enc(checkRunId)}`, {
+      status: "completed",
+      completed_at: nowIso,
+      pages_fetched: maxPages,
+      candidates: candidates.length,
+      new_count: newCount,
+    });
+    return { kaminId: kamin.id, status: "completed", newCount, checkRunId };
+  } catch (e) {
+    // Failure (incl. provider cooldown): last_success_at does NOT move, so
+    // the next run uses the since-LAST-SUCCESS window — the missed window
+    // is caught up, never skipped (output-quality.md flaw #6).
+    try {
+      await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
+        last_checked_at: nowIso,
+      });
+      await sb.rest("PATCH", `kamin_runs?id=eq.${enc(checkRunId)}`, {
+        status: "failed",
+        completed_at: nowIso,
+        error: (e as Error).message?.slice(0, 500) ?? "unknown",
+      });
+    } catch {
+      /* bookkeeping must never break the tick */
+    }
+    return { kaminId: kamin.id, status: "failed", newCount: 0, checkRunId };
+  }
+}
+
+export interface TickSummary {
+  mode: "real" | "permissive-dev";
+  due: number;
+  completed: number;
+  failed: number;
+  newMatches: number;
+}
+
+/** Run every due active kamin, sequentially (the provider throttle is global). */
+export async function tickDueKamins(deps: EngineDeps): Promise<TickSummary> {
+  if (!deps.sb) {
+    console.warn("[kamin] tick: permissive-dev (no Supabase)");
+    return { mode: "permissive-dev", due: 0, completed: 0, failed: 0, newMatches: 0 };
+  }
+  const rows = await deps.sb.rest<KaminRow[]>(
+    "GET",
+    "kamins?status=eq.active&select=*"
+  );
+  const now = deps.now();
+  const due = rows.filter(
+    (k) =>
+      !k.last_checked_at ||
+      now - Date.parse(k.last_checked_at) >= cadenceMs(k.cadence)
+  );
+  let completed = 0;
+  let failed = 0;
+  let newMatches = 0;
+  for (const k of due) {
+    const r = await checkKamin(deps, k);
+    if (r.status === "failed") failed++;
+    else {
+      completed++;
+      newMatches += r.newCount;
+    }
+  }
+  return { mode: "real", due: due.length, completed, failed, newMatches };
+}

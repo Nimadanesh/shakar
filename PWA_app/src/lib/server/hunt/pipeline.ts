@@ -92,9 +92,25 @@ const DETAIL_BATCH = 10;
 /** Emit a filter-wave event every N title rejections (chunked discernment). */
 const WAVE_EVERY = 50;
 
-interface Candidate extends ListingSummary {
+export interface Candidate extends ListingSummary {
   titleStrength: number;
   needsDetailReview: boolean;
+}
+
+export interface CollectOptions {
+  /**
+   * First list page. Default honors def.deepHistory (the second phase
+   * starts where the first stopped). Kamin checks always start at 0 —
+   * they scan the recency window, never history.
+   */
+  startPage?: number;
+  /**
+   * List-page budget. Default MAX_LIST_PAGES_PER_HUNT (full hunts).
+   * Kamin checks pass a smaller time-derived budget — the window is
+   * since-last-success, never a quality cut.
+   */
+  maxPages?: number;
+  emit?: (e: HuntEvent) => void;
 }
 
 /** «طرح X» weasel guard: the term appears but prefixed with طرح (fake). */
@@ -162,10 +178,24 @@ function scoreAd(
   return { score: 3 * title + 2 * description + priceKnown, breakdown };
 }
 
-export async function runPipeline(
+/**
+ * M4 pipeline, split for the M5 kamin engine.
+ *
+ * collectCandidates = phases 1-3 (list pages -> title rules -> near-dup
+ * collapse). confirmCandidates = phases 4-5 (details in prioritized batches
+ * of 10 -> ranking). runPipeline composes both — the SSE event stream and
+ * the results are byte-identical to before the split.
+ *
+ * The kamin engine calls collectCandidates with a small recency budget,
+ * diffs candidate ids against its seen baseline, then calls
+ * confirmCandidates with ONLY the new ids — details are never re-fetched
+ * for ads the user already knows about.
+ */
+export async function collectCandidates(
   def: HuntDefinition,
-  emit: (e: HuntEvent) => void
-): Promise<{ results: ScoredAd[]; stats: HuntStats }> {
+  opts: CollectOptions = {}
+): Promise<{ candidates: Candidate[]; stats: HuntStats }> {
+  const emit = opts.emit ?? (() => {});
   const stats: HuntStats = {
     adsSeen: 0,
     titleRejected: 0,
@@ -181,12 +211,14 @@ export async function runPipeline(
 
   // ---- Phase 1: list pages -------------------------------------------------
   // Deep-history second phase starts where the first phase stopped.
-  const startPage = def.deepHistory === true ? MAX_LIST_PAGES_PER_HUNT : 0;
+  const startPage =
+    opts.startPage ?? (def.deepHistory === true ? MAX_LIST_PAGES_PER_HUNT : 0);
+  const maxPages = opts.maxPages ?? MAX_LIST_PAGES_PER_HUNT;
   const categorySlug = CATEGORY_API_VALUE[def.category] ?? "";
   const cityId = def.city !== "all" ? await resolveCityId(def.city) : null;
   const all: ListingSummary[] = [];
   let pagesDone = 0;
-  for (let page = startPage; page < startPage + MAX_LIST_PAGES_PER_HUNT; page++) {
+  for (let page = startPage; page < startPage + maxPages; page++) {
     let res;
     try {
       res = await divarProvider.searchLists({
@@ -251,18 +283,21 @@ export async function runPipeline(
   stats.candidates = unique.length;
   emit({ type: "candidates", count: unique.length, dupsCollapsed: stats.dupsCollapsed });
 
-  if (unique.length === 0) {
-    const results: ScoredAd[] = [];
-    emit({ type: "done", results, stats });
-    return { results, stats };
-  }
-
   // Big-hunt signal: the UI suggests narrowing; pipeline continues with top 100.
   if (unique.length > 100) emit({ type: "big-hunt", candidates: unique.length });
 
+  return { candidates: unique, stats };
+}
+
+export async function confirmCandidates(
+  candidates: Candidate[],
+  def: HuntDefinition,
+  stats: HuntStats,
+  emit: (e: HuntEvent) => void = () => {}
+): Promise<ScoredAd[]> {
   // ---- Phase 4: details in prioritized batches of 10 ----------------------
-  unique.sort((a, b) => b.titleStrength - a.titleStrength);
-  const toCheck = unique.slice(0, MAX_DETAILS_PER_HUNT);
+  candidates.sort((a, b) => b.titleStrength - a.titleStrength);
+  const toCheck = candidates.slice(0, MAX_DETAILS_PER_HUNT);
   const includeCount = def.include.length;
   const results: ScoredAd[] = [];
   const confirmed: ScoredAd[] = [];
@@ -331,6 +366,15 @@ export async function runPipeline(
 
   // ---- Phase 5: ranking ----------------------------------------------------
   results.sort((a, b) => b.score - a.score);
+  return results;
+}
+
+export async function runPipeline(
+  def: HuntDefinition,
+  emit: (e: HuntEvent) => void
+): Promise<{ results: ScoredAd[]; stats: HuntStats }> {
+  const { candidates, stats } = await collectCandidates(def, { emit });
+  const results = await confirmCandidates(candidates, def, stats, emit);
   emit({ type: "done", results, stats });
   return { results, stats };
 }

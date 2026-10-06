@@ -26,6 +26,12 @@ export interface HuntRun {
   createdAt: number;
   userId: string | null;
   quota: QuotaReceipt;
+  /**
+   * Set when the run was fired from a kamin («دیدن نتایج»). On successful
+   * completion the stream route advances the kamin's seen baseline —
+   * baseline moves only after the hunt is persisted, never on failure.
+   */
+  kaminId?: string;
 }
 
 const runs = new Map<string, HuntRun>();
@@ -51,7 +57,8 @@ export function createRun(
   def: HuntDefinition,
   userId: string | null,
   quota: QuotaReceipt,
-  idempotencyKey?: string
+  idempotencyKey?: string,
+  kaminId?: string
 ): HuntRun {
   // Opportunistic cleanup of expired runs and keys.
   const now = Date.now();
@@ -61,7 +68,7 @@ export function createRun(
   for (const [k, v] of idemKeys) {
     if (now - v.at > IDEM_TTL_MS) idemKeys.delete(k);
   }
-  const run: HuntRun = { id: makeId(), def, createdAt: now, userId, quota };
+  const run: HuntRun = { id: makeId(), def, createdAt: now, userId, quota, kaminId };
   runs.set(run.id, run);
   if (idempotencyKey) idemKeys.set(idempotencyKey, { runId: run.id, at: now });
   return run;

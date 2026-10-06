@@ -4,7 +4,7 @@ import { getOtpConfig } from "@/lib/otp/config";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/otp/session";
 import { claimIdempotency, createRun } from "@/lib/server/hunt/runs";
 import { consumeHunt } from "@/lib/server/quota";
-import type { HuntDefinition } from "@/lib/server/hunt/pipeline";
+import { toHuntDefinition } from "@/lib/server/hunt/definition";
 
 /**
  * POST /api/hunts — fire a hunt.
@@ -15,33 +15,6 @@ import type { HuntDefinition } from "@/lib/server/hunt/pipeline";
  *  4. Create the run, return 202 + run id immediately. The pipeline runs on
  *     GET /api/hunts/[id]/stream (SSE).
  */
-function toHuntDefinition(body: unknown): HuntDefinition | null {
-  if (!body || typeof body !== "object") return null;
-  const b = body as Record<string, unknown>;
-  const str = (v: unknown): string => (typeof v === "string" ? v : "");
-  const strArr = (v: unknown): string[] =>
-    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-  const query = str(b.query).trim();
-  if (query === "") return null;
-  const transaction = b.transaction === "rent" || b.transaction === "buy" ? b.transaction : "";
-  const condition =
-    b.condition === "new" || b.condition === "used" || b.condition === "any"
-      ? b.condition
-      : "";
-  return {
-    query,
-    include: strArr(b.include),
-    exclude: strArr(b.exclude),
-    city: str(b.city) || "all",
-    category: str(b.category) || "all",
-    priceMin: str(b.priceMin),
-    priceMax: str(b.priceMax),
-    transaction,
-    condition,
-    deepHistory: b.deepHistory === true,
-  };
-}
-
 export async function POST(req: Request) {
   let body: unknown = null;
   try {

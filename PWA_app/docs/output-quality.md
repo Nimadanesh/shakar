@@ -52,7 +52,13 @@
 **Severity:** LOW — rare, flagged honestly when it happens.
 
 - **PREVENTION (done, in code):** `stale` flag on lists (M3 hardening) — never presented as fresh.
-- **CURE (M5 kamin engine):** after a cooldown ends, the next kamin run uses since-LAST-SUCCESS window (not since-last-run) — the missed window is caught up, not skipped.
+- **CURE (M5 kamin engine — DONE 2026-10-06):** `src/lib/server/kamin/engine.ts`
+  — `checkKamin` moves `last_success_at` ONLY on a successful check; a
+  failed/cooldown-interrupted check leaves it untouched, so the next run's
+  window starts at the last SUCCESS (not the last attempt) — the missed
+  window is caught up, never skipped. `pageBudgetForElapsed` derives the
+  catch-up page budget (~1 page / 30 min, 2..20). Tested:
+  `engine.test.ts` → "a failed check never moves the baseline".
 
 ## Flaw #7 — Intent mismatch (WTB ads in buy hunts) — spotted live 2026-10-06
 **Severity:** LOW-MEDIUM.
