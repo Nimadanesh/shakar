@@ -1167,3 +1167,45 @@ describe("tickDueKamins", () => {
     }
   });
 });
+
+describe("checkKamin — claim release (finding #1, round 5)", () => {
+  it("completed check releases the scheduler claim (claimed_at -> null)", async () => {
+    const k = kaminRow({
+      last_success_at: "2026-10-06T11:00:00.000Z",
+      last_checked_at: "2026-10-06T11:00:00.000Z",
+      claimed_at: "2026-10-06T11:55:00.000Z",
+    });
+    const sb = fakeSb({
+      kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(["a"]),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps } = testDeps(sb, { candidates: [cand("a"), cand("b")] });
+    const r = await checkKamin(deps, k);
+    expect(r.status).toBe("completed");
+    const row = sb.tables.kamins[0] as unknown as Record<string, unknown>;
+    // The lease must not act as a minimum check interval: clearing the
+    // claim lets the next due tick (by last_checked_at) claim immediately.
+    expect(row.claimed_at).toBeNull();
+  });
+
+  it("failed check also releases the claim", async () => {
+    const k = kaminRow({
+      last_success_at: "2026-10-06T11:00:00.000Z",
+      last_checked_at: "2026-10-06T11:00:00.000Z",
+      claimed_at: "2026-10-06T11:55:00.000Z",
+    });
+    const sb = fakeSb({
+      kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(["a"]),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps } = testDeps(sb, { candidates: [], collectThrows: true });
+    const r = await checkKamin(deps, k);
+    expect(r.status).toBe("failed");
+    const row = sb.tables.kamins[0] as unknown as Record<string, unknown>;
+    expect(row.claimed_at).toBeNull();
+  });
+});

@@ -78,8 +78,18 @@ export async function POST(req: Request) {
       : def.query.slice(0, 60);
   // Uncapped by design: the kamin_seen_ads baseline table is unbounded
   // (round-2 #8). The old .slice(0, 500) silently dropped baseline ids.
+  // But the CLIENT input must be bounded (finding #6, round 5): an
+  // attacker could POST a giant array to bloat the baseline or poison it
+  // with unrelated ids. 5000 ids × 200 chars is generous for any real
+  // "seen" set from a hunt; beyond that the client is misbehaving.
   const seenIds = Array.isArray(b.seenIds)
-    ? b.seenIds.filter((x): x is string => typeof x === "string")
+    ? [
+        ...new Set(
+          b.seenIds
+            .filter((x): x is string => typeof x === "string")
+            .map((x) => x.slice(0, 200))
+        ),
+      ].slice(0, 5000)
     : [];
 
   if (!supabaseConfigured()) {

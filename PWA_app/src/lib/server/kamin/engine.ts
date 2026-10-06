@@ -58,6 +58,8 @@ export interface KaminRow {
   cadence: string;
   last_checked_at: string | null;
   last_success_at: string | null;
+  /** Scheduler claim lease (m12, round 3). Null = unclaimed. */
+  claimed_at?: string | null;
   new_match_count: number;
   armed_at: string;
 }
@@ -614,6 +616,21 @@ export async function checkKamin(
     window_to: nowIso,
   });
 
+  // Finding #1/#2 (round 5): the scheduler claim's lease must not act as
+  // a minimum check interval, and a slow check must not lose its claim.
+  // Heartbeat refreshes claimed_at every 5 min while the check runs (so a
+  // >10 min check isn't stolen); the finally block releases the claim
+  // (claimed_at = null) so the next tick's due-calculation uses only
+  // last_checked_at. If this instance crashes, the heartbeat stops and
+  // the 600s lease lets another tick recover the kamin.
+  const heartbeat = setInterval(() => {
+    sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
+      claimed_at: new Date(deps.now()).toISOString(),
+    }).catch((e) =>
+      console.warn("[kamin] heartbeat failed:", (e as Error).message)
+    );
+  }, 5 * 60 * 1000);
+
   try {
     const elapsed = kamin.last_success_at
       ? deps.now() - Date.parse(kamin.last_success_at)
@@ -746,6 +763,17 @@ export async function checkKamin(
       /* bookkeeping must never break the tick */
     }
     return { kaminId: kamin.id, status: "failed", newCount: 0, checkRunId };
+  } finally {
+    // Finding #1: release the scheduler claim. The lease exists only for
+    // crash recovery — a completed check must not block the next due tick.
+    clearInterval(heartbeat);
+    try {
+      await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
+        claimed_at: null,
+      });
+    } catch {
+      /* claim release is best-effort; the lease expires on its own */
+    }
   }
 }
 
