@@ -187,6 +187,15 @@
   An ad stating no condition passes (unknown ≠ dropped). Token-level
   matching so «نوساز» never trips the «نو» cue. Tests: new/used/any +
   the نوساز-vs-نو guard.
+- **LIVE-VERIFIED 2026-10-06:** (a) «گوشی آکبند» + condition=used:
+  482 seen → 79 confirmed (control) vs **0 confirmed** (gated) — the
+  gate fires on real inventory. (b) «گوشی» + condition=new: 96
+  confirmed, 0 contradictions in re-fetched title+description — no
+  false rejections. **Tuning note:** explicit used-cues
+  (کارکرده/دست‌دوم/استوک) are RARE in real ads — sellers write
+  «تمیز»/«در حد نو»/«فابریک» instead. The gate is deliberately
+  conservative (precision-safe); expanding cues needs measured
+  precision/recall work, not guessing.
 
 ## Flaw #16 — Stream had no ownership check (bug-bounty #3, 2026-10-06)
 **Severity:** HIGH (security).
@@ -196,6 +205,13 @@
   (unguessable capabilities for guest runs); the stream and deepen routes
   403 when a signed-in user's run is opened by someone else
   (`canOpenRun`). Tests: `runs.test.ts`.
+- **LIVE-VERIFIED 2026-10-06:** route-level tests against the REAL
+  handler (`src/app/api/hunts/[id]/stream/route.test.ts`, session and
+  Divar mocked): cross-user GET → 403 with the pipeline never invoked;
+  two concurrent GETs → one pipeline execution, both clients receive the
+  identical `done`; post-completion GET → instant log replay, no
+  re-execution. `getSessionUserId` is the same helper already live in
+  the kamin/push routes.
 
 ## Flaw #17 — A run could be re-executed for quota/refund abuse (bug-bounty #4, 2026-10-06)
 **Severity:** HIGH (security/abuse).
@@ -208,7 +224,8 @@
   the live broadcast (refresh-safe); after completion the event log is
   replayed. Pipeline, kamin baseline advance, and refund each run exactly
   once (`finalized` flag). Tests: `runs.test.ts` (single-claim,
-  ownership).
+  ownership) + the live route-handler tests above (concurrent attach,
+  instant replay, single execution).
 
 ## Flaw #18 — Quota race: read-check-PATCH (bug-bounty #5, 2026-10-06)
 **Severity:** HIGH (business logic).
@@ -224,6 +241,14 @@
   `supabase/m6-quota-atomic.sql` in the SQL Editor.** Tests: quota.test.ts
   (atomic allow/deny/notify, guest limit, RPC-call assertions; the fake
   PostgREST now simulates the RPCs).
+- **SQL BUG CAUGHT BY LIVE VERIFICATION (2026-10-06):** the first version
+  failed on real Postgres — `RETURNS TABLE (..., hunts_used int, ...)`
+  makes `hunts_used` a PL/pgSQL variable, so `SET hunts_used =
+  hunts_used + 1` was ambiguous (error 42702). Fixed by qualifying
+  (`quota_counters.hunts_used`). **Verified on real Postgres (PGlite):
+  migration applies cleanly; 12 checks green — fresh-user bootstrap,
+  exact limit enforcement, suspension honored, refund floor at 0,
+  guest flow, and a 20-parallel-consumes race → exactly 5 allowed.**
 
 ## Standing invariants (never weaken)
 

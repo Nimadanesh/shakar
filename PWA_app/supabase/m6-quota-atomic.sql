@@ -40,8 +40,8 @@ begin
   end if;
 
   update quota_counters
-  set hunts_used = hunts_used + 1
-  where user_id = p_user_id
+  set hunts_used = quota_counters.hunts_used + 1
+  where quota_counters.user_id = p_user_id
   returning quota_counters.hunts_used into v_used;
 
   return query select true, 'ok'::text, v_used, v_notified;
@@ -74,8 +74,8 @@ begin
   end if;
 
   update devices
-  set free_hunts_used = free_hunts_used + 1
-  where device_id = p_device_id
+  set free_hunts_used = devices.free_hunts_used + 1
+  where devices.device_id = p_device_id
   returning devices.free_hunts_used into v_used;
 
   return query select true, 'ok'::text, v_used;
