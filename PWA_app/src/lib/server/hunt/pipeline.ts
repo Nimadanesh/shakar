@@ -10,6 +10,7 @@ import {
 } from "../divar/provider";
 import { divarProvider } from "../divar/divarClient";
 import { CATEGORY_API_VALUE, resolveCityId } from "../divar/taxonomy";
+import { parsePriceBound } from "./definition";
 
 /**
  * M4 search pipeline — the actual hunt. Runs server-side, streams progress
@@ -283,10 +284,27 @@ export async function collectCandidates(
   stats.candidates = unique.length;
   emit({ type: "candidates", count: unique.length, dupsCollapsed: stats.dupsCollapsed });
 
-  // Big-hunt signal: the UI suggests narrowing; pipeline continues with top 100.
-  if (unique.length > 100) emit({ type: "big-hunt", candidates: unique.length });
+  // ---- Phase 3b: price bounds (hunt specs are honored) ---------------------
+  // Unknown-price ads STAY (contract) — only KNOWN prices outside the range
+  // are dropped. Runs before the details budget so we never spend detail
+  // fetches on ads the price spec already rules out.
+  const minPrice = parsePriceBound(def.priceMin);
+  const maxPrice = parsePriceBound(def.priceMax);
+  let priced = unique;
+  if (minPrice !== null || maxPrice !== null) {
+    priced = unique.filter(
+      (c) =>
+        c.price === null ||
+        (minPrice === null || c.price >= minPrice) &&
+          (maxPrice === null || c.price <= maxPrice)
+    );
+    stats.candidates = priced.length;
+  }
 
-  return { candidates: unique, stats };
+  // Big-hunt signal: the UI suggests narrowing; pipeline continues with top 100.
+  if (priced.length > 100) emit({ type: "big-hunt", candidates: priced.length });
+
+  return { candidates: priced, stats };
 }
 
 export async function confirmCandidates(

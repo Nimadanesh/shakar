@@ -69,6 +69,36 @@
 - **CURE (M4b):** intent phrases («خریدار»، «دنبال ... هستم») as soft-exclude signals
   in the description filter; verify whether the API exposes a buy/sell facet.
 
+## Flaw #8 — Query text never matched (the «پیانو» incident, 2026-10-06)
+**Severity:** CRITICAL — the trust-killer, live.
+
+- navid hunted «پیانو U3 تهران» on his phone: 520 ads → 86 candidates →
+  100 "confirmed" results, NOT ONE about a piano (pigeons, hay, bicycles,
+  books). He was right to be furious.
+- **Root cause:** the pipeline only matched `def.include`/`def.exclude`.
+  The «چی؟» query text — the item the user named — was NEVER matched. A
+  hunt fired with no «باید» chips had `include=[]`, and `titlePass` /
+  `descriptionPass` passed EVERY ad vacuously. Two companion gaps: a city
+  named in the text never reached `def.city` (results came from every
+  city), and the pipeline ignored `priceMin`/`priceMax` entirely.
+- **Why verification missed it:** the M4a "live verification" hand-built
+  its HuntDefinition with `include: ["گوشی"]` — it never exercised the
+  real client contract (query in `query`, empty `include`). A verification
+  that bypasses the client contract is a false report. Never again:
+  verifications must fire through the real API with real client bodies.
+- **CURE (DONE 2026-10-06, commit `9fd477c`+):**
+  `src/lib/server/hunt/definition.ts` → `resolveHuntDefinition` — the
+  single choke point for `/api/hunts` and kamin arm/run:
+  1. content terms from the query become MANDATORY (merged into include);
+  2. text city applies when the picker is "all"; 3. text price bounds apply
+  when the fields are empty; 4. inline «نه» excludes apply;
+  5. dismissed inferred readings (deterministic ids) never apply.
+  Structural words (city names, price expressions, cue words, «نه») never
+  become content terms. Pipeline honors price bounds (unknown-price ads
+  stay, per contract).
+  Tests: `definition.test.ts` (12 — incl. the exact incident case:
+  a pigeon ad can no longer pass a piano hunt), pipeline price test.
+
 ## Standing invariants (never weaken)
 
 1. Quality > speed, always. Latency is spent on UX, never taken from results.

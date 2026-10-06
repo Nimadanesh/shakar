@@ -161,4 +161,34 @@ describe("runPipeline", () => {
     const done = events.find((e) => e.type === "done");
     if (done?.type === "done") expect(done.stats.detailsChecked).toBeLessThanOrEqual(100);
   });
+
+  it("honors price bounds but keeps unknown-price ads (contract)", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "a1", title: "گوشی", price: 150 }), // in range
+        summary({ sourceAdId: "a2", title: "گوشی", price: 500 }), // too expensive
+        summary({ sourceAdId: "a3", title: "گوشی", price: 10 }), // too cheap
+        summary({ sourceAdId: "a4", title: "گوشی", price: null }), // unknown stays
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: "گوشی",
+      price: null,
+      city: "",
+      description: "گوشی",
+      images: [],
+      categorySlug: "",
+    }));
+    const { events } = await collect({
+      ...DEF,
+      priceMin: "100",
+      priceMax: "200",
+    });
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    const ids = done.results.map((r) => r.sourceAdId).sort();
+    expect(ids).toEqual(["a1", "a4"]);
+  });
 });

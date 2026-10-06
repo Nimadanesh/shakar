@@ -1,7 +1,10 @@
 import { normalizePersian } from "@/lib/normalizePersian";
 import type { Interpretation, InterpretedConstraint } from "@/types/search";
 
-const KNOWN_CITIES: Array<{ id: string; names: string[] }> = [
+/** Cities the interpreter can spot inside query text. Exported for the
+ * server-side query resolver (definition.ts) — the same vocabulary must
+ * decide what is a city in both places. */
+export const KNOWN_CITIES: Array<{ id: string; names: string[] }> = [
   { id: "tehran", names: ["تهران"] },
   { id: "karaj", names: ["کرج"] },
   { id: "isfahan", names: ["اصفهان"] },
@@ -51,9 +54,26 @@ const UNIT_MULTIPLIER: Array<{ unit: string; factor: number }> = [
 
 const MAX_PATTERNS = ["زیر", "حداکثر", "تا", "کمتر از", "پایین‌تر از", "پایین تر از"];
 const MIN_PATTERNS = ["بالای", "بیشتر از", "حداقل"];
-const NEGATION_VERBS = ["نمی‌خوام", "نمیخوام", "نمی‌خواهم", "نمیخواهم", "نمی‌خواد", "نمیخواد", "نه"];
-const EXCLUDE_PREFIXES = ["بدون", "به‌جز", "بجز", "غیر از", "غیراز"];
-const PREFERENCE_CUES = ["ترجیحاً", "ترجیحا", "کاش", "ای کاش"];
+/**
+ * Every word that can appear in a price expression but never names the item
+ * («زیر», «میلیون», «تومان»…). Exported for the server query resolver —
+ * these are structural, never content terms.
+ */
+export const PRICE_STRUCTURAL_WORDS = [
+  ...MAX_PATTERNS,
+  ...MIN_PATTERNS,
+  "میلیارد",
+  "میلیون",
+  "هزار",
+  "تومان",
+  "ت",
+];
+/** Negation verbs («نه», «نمی‌خوام»…) — cue words, never content. Exported for the server query resolver. */
+export const NEGATION_VERBS = ["نمی‌خوام", "نمیخوام", "نمی‌خواهم", "نمیخواهم", "نمی‌خواد", "نمیخواد", "نه"];
+/** Prefixes that turn the rest of a segment into an exclude term. Exported for the server query resolver. */
+export const EXCLUDE_PREFIXES = ["بدون", "به‌جز", "بجز", "غیر از", "غیراز"];
+/** Cue words that turn the rest of a segment into a preference (ranking-only). Exported for the server query resolver. */
+export const PREFERENCE_CUES = ["ترجیحاً", "ترجیحا", "کاش", "ای کاش"];
 
 /** Words that pin a real-estate hunt to rent vs buy. Checked on the
  *  normalized query; «اجاره» also matches «اجاره‌ای». */

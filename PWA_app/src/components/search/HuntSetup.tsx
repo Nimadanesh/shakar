@@ -198,6 +198,9 @@ export function HuntSetup() {
           priceMax: base.priceMax,
           transaction: base.transaction,
           condition: base.condition,
+          // Inferred readings the user dismissed — the server must not
+          // re-apply them (deterministic constraint ids).
+          dismissed: [...dismissed],
           idempotencyKey:
             typeof window !== "undefined" && window.crypto?.randomUUID
               ? window.crypto.randomUUID()

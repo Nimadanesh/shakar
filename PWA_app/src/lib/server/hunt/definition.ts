@@ -1,6 +1,16 @@
 import "server-only";
 
 import type { HuntDefinition } from "./pipeline";
+import {
+  interpretQuery,
+  KNOWN_CITIES,
+  PREFERENCE_CUES,
+  NEGATION_VERBS,
+  EXCLUDE_PREFIXES,
+  PRICE_STRUCTURAL_WORDS,
+} from "@/lib/interpret";
+import { normalizeForMatch, stemToken, tokenize } from "@/lib/persianNormalize";
+import type { InterpretedConstraint } from "@/types/search";
 
 /**
  * Validates an incoming hunt/kamin definition. Shared by POST /api/hunts
@@ -32,4 +42,168 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
     condition,
     deepHistory: b.deepHistory === true,
   };
+}
+
+/**
+ * Query resolution — the fix for the «everything matches» incident
+ * (2026-10-06: a «پیانو» hunt confirmed pigeons, hay and bicycles).
+ *
+ * Root cause: the pipeline only matched def.include/def.exclude. The «چی؟»
+ * query text — the item the user actually named — was NEVER matched, so a
+ * hunt fired with no «باید» chips had include=[] and EVERY ad passed the
+ * title/description filters vacuously.
+ *
+ * resolveHuntDefinition is the single choke point (hunts + kamin arm/run)
+ * that turns the raw query into an honest, complete definition:
+ *  1. content terms from the query text become MANDATORY (merged into
+ *     include) — «پیانو U3 تهران» requires پیانو AND U3 in every ad;
+ *  2. a city named in the text applies when the picker is "all";
+ *  3. price bounds named in the text apply when the fields are empty;
+ *  4. inline «نه» excludes apply;
+ *  5. nothing the user dismissed (by deterministic constraint id) applies.
+ *
+ * Structural words (city names, price expressions, cue words, excludes,
+ * preference wishes) never become content terms.
+ */
+export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
+  const def = toHuntDefinition(body);
+  if (!def) return null;
+
+  const dismissed = getDismissedIds(body);
+  const interp = interpretQuery(def.query);
+  const applied = interp.applied.filter(
+    (c) => c.applied && !dismissed.includes(c.id)
+  );
+
+  // 1. Mandatory content terms from the query text.
+  const terms = contentTerms(def.query, applied, interp.preferences);
+  const seenTerms = new Set<string>();
+  for (const t of def.include) for (const s of tokenize(t)) seenTerms.add(s);
+  const include = [...def.include];
+  for (const t of terms) {
+    const key = stemToken(t);
+    if (!seenTerms.has(key)) {
+      include.push(t);
+      seenTerms.add(key);
+    }
+  }
+
+  // 2. City from text when the picker didn't choose one.
+  const cityC = applied.find((c) => c.kind === "city");
+  const city =
+    (def.city === "all" || def.city === "") && cityC ? cityC.value : def.city;
+
+  // 3. Price bounds from text when the fields are empty.
+  const minC = applied.find((c) => c.kind === "priceMin");
+  const maxC = applied.find((c) => c.kind === "priceMax");
+  let priceMin = def.priceMin.trim() === "" && minC ? minC.value : def.priceMin;
+  let priceMax = def.priceMax.trim() === "" && maxC ? maxC.value : def.priceMax;
+  // Contradictory bounds (min > max) filter out EVERYTHING — fail open
+  // instead of guaranteeing an empty hunt.
+  const minN = parsePriceBound(priceMin);
+  const maxN = parsePriceBound(priceMax);
+  if (minN !== null && maxN !== null && minN > maxN) {
+    priceMin = "";
+    priceMax = "";
+  }
+
+  // 4. Inline «نه» excludes from text.
+  const seenEx = new Set<string>();
+  for (const t of def.exclude) seenEx.add(tokenize(t).join(" "));
+  const exclude = [...def.exclude];
+  for (const c of applied) {
+    if (c.kind !== "exclude") continue;
+    const key = tokenize(c.value).join(" ");
+    if (key !== "" && !seenEx.has(key)) {
+      exclude.push(c.value);
+      seenEx.add(key);
+    }
+  }
+
+  return {
+    ...def,
+    include,
+    exclude,
+    city,
+    priceMin,
+    priceMax,
+  };
+}
+
+/** Deterministic constraint ids the user dismissed in the form (rare). */
+function getDismissedIds(body: unknown): string[] {
+  if (!body || typeof body !== "object") return [];
+  const d = (body as Record<string, unknown>).dismissed;
+  return Array.isArray(d)
+    ? d.filter((x): x is string => typeof x === "string")
+    : [];
+}
+
+/**
+ * The query's content words: everything that names the wanted item.
+ * Structural words are removed: city names, price expressions («زیر ۲۰۰
+ * میلیون»), preference cues + wishes («ترجیحاً تمیز»), exclude terms and
+ * their cue words («نه», «بدون»).
+ *
+ * Returns SURFACE forms («گوشی», not «گوش») — textMatches normalizes
+ * internally, and surface forms read correctly in «چرا این آگهی؟».
+ */
+function contentTerms(
+  query: string,
+  applied: InterpretedConstraint[],
+  preferences: InterpretedConstraint[]
+): string[] {
+  const surface = normalizeForMatch(query)
+    .split(" ")
+    .filter((t) => t !== "");
+  if (surface.length === 0) return [];
+  const structural = new Set<string>();
+  const drop = (text: string) => {
+    for (const t of tokenize(text)) structural.add(t);
+  };
+  for (const city of KNOWN_CITIES) for (const name of city.names) drop(name);
+  for (const w of NEGATION_VERBS) drop(w);
+  for (const p of EXCLUDE_PREFIXES) drop(p);
+  for (const w of PRICE_STRUCTURAL_WORDS) drop(w);
+  for (const c of applied) {
+    if (
+      c.kind === "city" ||
+      c.kind === "priceMin" ||
+      c.kind === "priceMax" ||
+      c.kind === "exclude" ||
+      c.kind === "transaction" ||
+      c.kind === "condition"
+    ) {
+      drop(c.display);
+    }
+  }
+  for (const p of preferences) {
+    drop(p.display);
+    const cue = preferenceCue(p.display, query);
+    if (cue) drop(cue);
+  }
+  return surface.filter((t) => !structural.has(stemToken(t)));
+}
+
+/** The cue word («ترجیحاً»…) that introduced a preference wish, if present. */
+function preferenceCue(wish: string, query: string): string | null {
+  for (const cue of PREFERENCE_CUES) {
+    if (query.includes(cue) && query.indexOf(wish) > query.indexOf(cue)) {
+      return cue;
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse a price bound to toman. Digits-only strings («200000000») and
+ * Persian digits both work; garbage → null (no bound, never a crash).
+ */
+export function parsePriceBound(raw: string): number | null {
+  const digits = raw.replace(/[^\d۰-۹]/g, "");
+  if (digits === "") return null;
+  const fa = "۰۱۲۳۴۵۶۷۸۹";
+  const en = digits.replace(/[۰-۹]/g, (d) => String(fa.indexOf(d)));
+  const n = Number(en);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }

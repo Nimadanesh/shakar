@@ -4,7 +4,7 @@ import { getOtpConfig } from "@/lib/otp/config";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/otp/session";
 import { claimIdempotency, createRun } from "@/lib/server/hunt/runs";
 import { consumeHunt } from "@/lib/server/quota";
-import { toHuntDefinition } from "@/lib/server/hunt/definition";
+import { resolveHuntDefinition } from "@/lib/server/hunt/definition";
 
 /**
  * POST /api/hunts — fire a hunt.
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ ok: false, error: "bad-json" }, { status: 400 });
   }
-  const def = toHuntDefinition(body);
+  const def = resolveHuntDefinition(body);
   if (!def) {
     return NextResponse.json({ ok: false, error: "bad-definition" }, { status: 400 });
   }

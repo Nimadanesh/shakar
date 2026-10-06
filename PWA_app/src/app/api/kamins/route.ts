@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/server/auth";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase-server";
-import { toHuntDefinition } from "@/lib/server/hunt/definition";
+import { resolveHuntDefinition } from "@/lib/server/hunt/definition";
 import {
   armKamin,
   listKamins,
@@ -60,7 +60,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "bad-json" }, { status: 400 });
   }
   const b = (body ?? {}) as Record<string, unknown>;
-  const def = toHuntDefinition(b.definition ?? b);
+  // resolveHuntDefinition: the query's content terms become mandatory, and
+  // text-city/price/excludes apply unless dismissed — the single choke point
+  // so a kamin watches exactly what the hunt ran. `dismissed` may ride at
+  // the top level (M5b client) or inside the definition.
+  const defBody = (b.definition ?? b) as Record<string, unknown>;
+  const def = resolveHuntDefinition({
+    ...defBody,
+    dismissed: b.dismissed ?? defBody.dismissed,
+  });
   if (!def) {
     return NextResponse.json({ ok: false, error: "bad-definition" }, { status: 400 });
   }
