@@ -31,7 +31,6 @@ import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
-import { recordHunt } from "@/lib/hunt-store";
 import { parsePriceInput, formatPriceCompact } from "@/lib/prices";
 import { EMPTY_CONTEXT_BASE, type ContextBase } from "@/lib/search-context";
 import { readParams } from "@/lib/search-params";
@@ -167,7 +166,7 @@ export function HuntSetup() {
     );
   }
 
-  function fireHunt() {
+  async function fireHunt() {
     const trimmed = query.trim();
     if (trimmed === "" || firing) return;
     if (dimsBlocking) {
@@ -177,9 +176,37 @@ export function HuntSetup() {
       return;
     }
     setFiring(true);
-    const record = recordHunt(trimmed, base, dismissed);
-    if (record) router.push(`/hunt/${record.id}`);
-    else setFiring(false);
+    // M4: fire a REAL server hunt. The API returns a run id immediately;
+    // the pipeline streams progress over SSE on /hunt/[runId].
+    try {
+      const res = await fetch("/api/hunts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: trimmed,
+          include: base.include,
+          exclude: base.exclude,
+          city: base.city,
+          category: base.category,
+          priceMin: base.priceMin,
+          priceMax: base.priceMax,
+          transaction: base.transaction,
+          condition: base.condition,
+        }),
+      });
+      const json = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        data?: { runId?: string };
+      } | null;
+      const runId = json?.ok === true ? json.data?.runId : undefined;
+      if (typeof runId === "string" && runId !== "") {
+        router.push(`/hunt/${encodeURIComponent(runId)}?q=${encodeURIComponent(trimmed)}`);
+        return;
+      }
+    } catch {
+      /* fall through to release the button */
+    }
+    setFiring(false);
   }
 
   /** One-tap typo fix from the TypoNudge: replace the offending token. */

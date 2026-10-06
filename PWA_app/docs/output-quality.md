@@ -54,6 +54,15 @@
 - **PREVENTION (done, in code):** `stale` flag on lists (M3 hardening) — never presented as fresh.
 - **CURE (M5 kamin engine):** after a cooldown ends, the next kamin run uses since-LAST-SUCCESS window (not since-last-run) — the missed window is caught up, not skipped.
 
+## Flaw #7 — Intent mismatch (WTB ads in buy hunts) — spotted live 2026-10-06
+**Severity:** LOW-MEDIUM.
+
+- A live pipeline run returned «خریدار فوری گوشی...» (a WANT-TO-BUY ad) inside a
+  buy-hunt — keyword-correct, intent-wrong. Divar mixes buy/sell intent.
+- **PREVENTION:** none yet.
+- **CURE (M4b):** intent phrases («خریدار»، «دنبال ... هستم») as soft-exclude signals
+  in the description filter; verify whether the API exposes a buy/sell facet.
+
 ## Standing invariants (never weaken)
 
 1. Quality > speed, always. Latency is spent on UX, never taken from results.
