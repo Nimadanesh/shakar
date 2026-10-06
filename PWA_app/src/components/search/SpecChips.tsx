@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Check, Plus, X } from "lucide-react";
-import { TypoNudge } from "@/components/search/TypoNudge";
+import { TypoNudge, TYPO_PAUSE_MS } from "@/components/search/TypoNudge";
 import { applyTypoFixToText } from "@/lib/persianTypos";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 export interface InferredChip {
   id: string;
@@ -40,6 +41,9 @@ export function SpecChips({
   onDismiss,
 }: SpecChipsProps) {
   const [draft, setDraft] = useState("");
+  // Same anti-nag rule as the «چی؟» field: never interrupt the word being
+  // typed — the nudge fires for finished words, or a paused last word.
+  const settledDraft = useDebouncedValue(draft, TYPO_PAUSE_MS);
   const positive = tone === "positive";
   const headerBg = positive ? "bg-signal-soft" : "bg-danger-soft";
   const titleColor = positive ? "text-signal" : "text-danger";
@@ -140,6 +144,7 @@ export function SpecChips({
           well as in «چی؟». One tap fixes the draft; Enter still adds it. */}
       <TypoNudge
         query={draft}
+        typingPaused={draft === settledDraft}
         onApplyFix={(originalToken, fixed) =>
           setDraft((d) => applyTypoFixToText(d, originalToken, fixed))
         }

@@ -5,8 +5,21 @@ import { X } from "lucide-react";
 import { normalizePersian } from "@/lib/normalizePersian";
 import { suggestTypoFix } from "@/lib/persianTypos";
 
+/**
+ * Pause after the last keystroke before the word being typed counts as
+ * finished. Long enough to never fire between normal keystrokes on a
+ * Persian mobile keyboard, short enough to feel responsive.
+ */
+export const TYPO_PAUSE_MS = 1200;
+
 interface TypoNudgeProps {
   query: string;
+  /**
+   * True once the user has stopped typing (parent debounces the query by
+   * TYPO_PAUSE_MS and passes query === debouncedQuery). The nudge must
+   * never interrupt the word being formed — see findTypoHit.
+   */
+  typingPaused: boolean;
   /** Replace the first occurrence of the original token with the fix. */
   onApplyFix: (originalToken: string, fixed: string) => void;
 }
@@ -19,14 +32,30 @@ interface TypoHit {
   fix: string;
 }
 
-/** First suspicious word in the query, if any. Cheap — no memo needed. */
-function findTypoHit(query: string): TypoHit | null {
-  const trimmed = query.trim();
-  if (trimmed === "") return null;
-  for (const token of trimmed.split(/\s+/)) {
-    const word = norm(token);
+/**
+ * Natural typing behavior model (Persian mobile keyboards):
+ *
+ * 1. While a word is being formed — no trailing space and keystrokes still
+ *    coming — it is NOT a typo, it is an unfinished word. Interrupting it
+ *    with "did you mean …?" is exactly the phone-autocorrect nagging users
+ *    hate. The word being typed is never nudged.
+ * 2. A word followed by a space is finished — fair game, nudge immediately.
+ * 3. The last word with no trailing space counts as finished only once the
+ *    user pauses (typingPaused): they stopped, so they likely meant what
+ *    they typed. This is what makes single-word queries («پین») work
+ *    without nagging fast typists mid-word.
+ *
+ * Cheap — no memo needed.
+ */
+export function findTypoHit(query: string, typingPaused: boolean): TypoHit | null {
+  const hasTrailingSpace = /\s$/.test(query);
+  const tokens = query.split(/\s+/).filter((t) => t !== "");
+  for (let i = 0; i < tokens.length; i++) {
+    const isLast = i === tokens.length - 1;
+    if (isLast && !hasTrailingSpace && !typingPaused) continue; // still forming it
+    const word = norm(tokens[i]);
     const fix = suggestTypoFix(word);
-    if (fix) return { token, word, fix };
+    if (fix) return { token: tokens[i], word, fix };
   }
   return null;
 }
@@ -50,15 +79,16 @@ export function isTypoDismissed(
 }
 
 /**
- * One-tap typo correction, shown under a hunt text field while typing.
- * Fires only when a typed word is unknown but a near neighbor is a known
- * word (e.g. «نورکیر» → «نورگیر», «پین» → «پیانو»). Dismissible per word,
- * never auto-applies, and costs zero quota — it runs before the hunt fires.
+ * One-tap typo correction under a hunt text field. Fires only for FINISHED
+ * words (see findTypoHit) whose near neighbor is a known word (e.g.
+ * «نورکیر» → «نورگیر», «پین» → «پیانو» once the user pauses). Dismissible
+ * per word, never auto-applies, costs zero quota — it runs before the hunt
+ * fires, and never interrupts the word being typed.
  */
-export function TypoNudge({ query, onApplyFix }: TypoNudgeProps) {
+export function TypoNudge({ query, typingPaused, onApplyFix }: TypoNudgeProps) {
   const [dismissedWord, setDismissedWord] = useState<string | null>(null);
 
-  const hit = findTypoHit(query);
+  const hit = findTypoHit(query, typingPaused);
   if (!hit || isTypoDismissed(query, dismissedWord, hit.word)) return null;
 
   return (

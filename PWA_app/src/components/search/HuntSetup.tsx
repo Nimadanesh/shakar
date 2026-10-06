@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Camera, Music } from "lucide-react";
 import { WhatField } from "@/components/search/WhatField";
-import { TypoNudge } from "@/components/search/TypoNudge";
+import { TypoNudge, TYPO_PAUSE_MS } from "@/components/search/TypoNudge";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { TransactionChips } from "@/components/search/TransactionChips";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { RecentHunts } from "@/components/search/RecentHunts";
@@ -58,6 +59,9 @@ export function HuntSetup() {
   const searchParams = useSearchParams();
 
   const [query, setQuery] = useState("");
+  // Pause detection for the typo nudge: it must never interrupt the word
+  // being typed — only finished words (or a paused last word) get nudged.
+  const settledQuery = useDebouncedValue(query, TYPO_PAUSE_MS);
   // Smart city default: the user's standing preference (remembered from an
   // explicit sheet pick) seeds the form, so the lazy user taps zero times.
   // A city named in the query text still overrides it — flagged as inferred.
@@ -253,7 +257,13 @@ export function HuntSetup() {
   return (
     <div className="flex flex-col gap-4">
       <WhatField ref={inputRef} value={query} onChange={setQuery} />
-      {hasIntent && <TypoNudge query={query} onApplyFix={applyTypoFix} />}
+      {hasIntent && (
+        <TypoNudge
+          query={query}
+          typingPaused={query === settledQuery}
+          onApplyFix={applyTypoFix}
+        />
+      )}
 
       {query.trim() === "" ? (
         <div className="flex flex-col gap-5">

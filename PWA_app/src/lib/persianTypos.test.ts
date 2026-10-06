@@ -5,7 +5,7 @@ import {
   keyboardNeighbors,
   suggestTypoFix,
 } from "./persianTypos";
-import { isTypoDismissed } from "@/components/search/TypoNudge";
+import { findTypoHit, isTypoDismissed } from "@/components/search/TypoNudge";
 
 describe("keyboardNeighbors", () => {
   it("knows گ and ک are adjacent (navid's نورگیر → نورکیر case)", () => {
@@ -106,5 +106,34 @@ describe("isTypoDismissed", () => {
 
   it("does not suppress a different suspicious word", () => {
     expect(isTypoDismissed("خون پین", "پین", "خون")).toBe(false);
+  });
+});
+
+describe("findTypoHit — natural typing behavior", () => {
+  it("never nags the word being typed (no trailing space, still typing)", () => {
+    expect(findTypoHit("پین", false)).toBeNull();
+    expect(findTypoHit("نورکیر", false)).toBeNull();
+  });
+
+  it("nudges the last word once the user pauses", () => {
+    expect(findTypoHit("پین", true)?.fix).toBe("پیانو");
+    expect(findTypoHit("نورکیر", true)?.fix).toBe("نورگیر");
+  });
+
+  it("nudges a finished word (trailing space) immediately, no pause needed", () => {
+    expect(findTypoHit("نورکیر ", false)?.fix).toBe("نورگیر");
+  });
+
+  it("checks earlier finished words while the last one is still forming", () => {
+    const hit = findTypoHit("نورکیر تهر", false);
+    expect(hit?.word).toBe("نورکیر");
+    expect(hit?.fix).toBe("نورگیر");
+  });
+
+  it("stays silent for clean input", () => {
+    expect(findTypoHit("پیانو", true)).toBeNull();
+    expect(findTypoHit("خونه 50 متری تهران", true)).toBeNull();
+    expect(findTypoHit("", true)).toBeNull();
+    expect(findTypoHit("   ", false)).toBeNull();
   });
 });
