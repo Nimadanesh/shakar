@@ -297,7 +297,9 @@ function testDeps(
   opts: {
     candidates?: Candidate[];
     collectThrows?: boolean;
+    collectStale?: boolean;
     confirmRejects?: Set<string>;
+    confirmUnknown?: Set<string>;
   } = {}
 ) {
   const pushed: PushPayload[] = [];
@@ -309,14 +311,17 @@ function testDeps(
     uuid: () => `run-${++n}`,
     collect: async () => {
       if (opts.collectThrows) throw new Error("provider cooldown");
-      return { candidates: opts.candidates ?? [] };
+      return { candidates: opts.candidates ?? [], stale: opts.collectStale ?? false };
     },
     confirm: async (cands) => {
       confirmedBatches.push(cands.map((c) => c.sourceAdId));
       const ids = cands
         .map((c) => c.sourceAdId)
         .filter((id) => !opts.confirmRejects?.has(id));
-      return ids.map(scored);
+      return ids.map((id) => ({
+        ...scored(id),
+        detailUnknown: opts.confirmUnknown?.has(id) ?? false,
+      }));
     },
     sendPush: async (_u, p) => {
       pushed.push(p);
@@ -816,6 +821,138 @@ describe("checkKamin", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe("checkKamin — stale collect (finding #17)", () => {
+  it("stale collect: last_checked_at advances, last_success_at does NOT", async () => {
+    const k = kaminRow({
+      last_success_at: "2026-10-06T11:00:00.000Z",
+      last_checked_at: "2026-10-06T11:00:00.000Z",
+    });
+    const sb = fakeSb({
+      kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(["a"]),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps } = testDeps(sb, {
+      candidates: [cand("a"), cand("b")],
+      collectStale: true,
+    });
+    const r = await checkKamin(deps, k);
+    expect(r.status).toBe("completed");
+    const row = sb.tables.kamins[0] as unknown as Record<string, unknown>;
+    // The check ran...
+    expect(row.last_checked_at).toBe("2026-10-06T12:00:00.000Z");
+    // ...but stale data is not success: the catch-up window is preserved.
+    expect(row.last_success_at).toBe("2026-10-06T11:00:00.000Z");
+    // The run row is marked stale for observability.
+    const run = sb.tables.kamin_runs[0] as unknown as Record<string, unknown>;
+    expect(run.stale).toBe(true);
+  });
+
+  it("fresh collect: both last_checked_at and last_success_at advance", async () => {
+    const k = kaminRow({
+      last_success_at: "2026-10-06T11:00:00.000Z",
+      last_checked_at: "2026-10-06T11:00:00.000Z",
+    });
+    const sb = fakeSb({
+      kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(["a"]),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps } = testDeps(sb, {
+      candidates: [cand("a"), cand("b")],
+      collectStale: false,
+    });
+    const r = await checkKamin(deps, k);
+    expect(r.status).toBe("completed");
+    const row = sb.tables.kamins[0] as unknown as Record<string, unknown>;
+    expect(row.last_checked_at).toBe("2026-10-06T12:00:00.000Z");
+    expect(row.last_success_at).toBe("2026-10-06T12:00:00.000Z");
+    const run = sb.tables.kamin_runs[0] as unknown as Record<string, unknown>;
+    expect(run.stale).toBe(false);
+  });
+
+  it("stale collect on arming: baseline is deferred, last_success_at stays null", async () => {
+    const k = kaminRow(); // last_success_at null — first check
+    const sb = fakeSb({
+      kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: [],
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps, pushed } = testDeps(sb, {
+      candidates: [cand("a"), cand("b")],
+      collectStale: true,
+    });
+    const r = await checkKamin(deps, k);
+    expect(r.status).toBe("completed");
+    expect(pushed).toHaveLength(0);
+    const row = sb.tables.kamins[0] as unknown as Record<string, unknown>;
+    expect(row.last_checked_at).toBe("2026-10-06T12:00:00.000Z");
+    // Not a real baseline — stays null so the next check retries it.
+    expect(row.last_success_at).toBeNull();
+    // Nothing marked seen from stale data.
+    expect(sb.tables.kamin_seen_ads).toHaveLength(0);
+  });
+});
+
+describe("checkKamin — detailUnknown (finding #21)", () => {
+  it("detailUnknown ads are NOT marked seen and do NOT notify", async () => {
+    const k = kaminRow({
+      last_success_at: "2026-10-06T11:00:00.000Z",
+      last_checked_at: "2026-10-06T11:00:00.000Z",
+    });
+    const sb = fakeSb({
+      kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(["a"]),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps, pushed } = testDeps(sb, {
+      candidates: [cand("b"), cand("c")],
+      confirmUnknown: new Set(["b", "c"]),
+    });
+    const r = await checkKamin(deps, k);
+    expect(r.status).toBe("completed");
+    // Both were detailUnknown → zero verified matches.
+    expect(r.newCount).toBe(0);
+    expect(pushed).toHaveLength(0);
+    expect(sb.tables.notifications).toHaveLength(0);
+    // Neither id advanced the baseline — a later successful check can
+    // still catch them.
+    const seenIds = (
+      sb.tables.kamin_seen_ads as Array<Record<string, unknown>>
+    ).map((row) => row.source_ad_id);
+    expect(seenIds).toEqual(["a"]);
+  });
+
+  it("mixed verified + detailUnknown: only verified advance the baseline", async () => {
+    const k = kaminRow({
+      last_success_at: "2026-10-06T11:00:00.000Z",
+      last_checked_at: "2026-10-06T11:00:00.000Z",
+    });
+    const sb = fakeSb({
+      kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed([]),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps, pushed } = testDeps(sb, {
+      candidates: [cand("b"), cand("c")],
+      confirmUnknown: new Set(["c"]),
+    });
+    const r = await checkKamin(deps, k);
+    expect(r.status).toBe("completed");
+    expect(r.newCount).toBe(1);
+    expect(pushed).toHaveLength(1);
+    const seenIds = (
+      sb.tables.kamin_seen_ads as Array<Record<string, unknown>>
+    ).map((row) => row.source_ad_id);
+    expect(seenIds).toEqual(["b"]);
   });
 });
 

@@ -283,6 +283,14 @@ function isNotFound(e: unknown): boolean {
   );
 }
 
+function isBadRequest(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    (e as { status?: unknown }).status === 400
+  );
+}
+
 /**
  * Pre-m9 arm path: GET count → POST. Racy by construction (finding #7) —
  * kept only until the migration runs, then never taken.
@@ -431,6 +439,33 @@ async function readSeenSet(
 }
 
 /**
+ * PATCH a kamin_runs row, tolerating a missing m16 `stale` column.
+ * If the migration hasn't been run yet, PostgREST 400s on the unknown
+ * column — retry without it and warn loudly (round-1 pattern). The
+ * staleness signal is bookkeeping; the correctness fix (frozen
+ * last_success_at) lives in the kamins PATCH, which needs no migration.
+ */
+async function patchKaminRun(
+  sb: Sb,
+  checkRunId: string,
+  patch: Record<string, unknown>
+): Promise<void> {
+  try {
+    await sb.rest("PATCH", `kamin_runs?id=eq.${enc(checkRunId)}`, patch);
+  } catch (e) {
+    if (isBadRequest(e) && "stale" in patch) {
+      console.warn(
+        "[kamin] kamin_runs.stale column missing — run supabase/m16-kamin-runs-stale.sql"
+      );
+      const { stale: _dropped, ...rest } = patch;
+      await sb.rest("PATCH", `kamin_runs?id=eq.${enc(checkRunId)}`, rest);
+      return;
+    }
+    throw e;
+  }
+}
+
+/**
  * Record ids as seen. Union-only: the baseline never shrinks. Pre-m9,
  * unions into the seen_ids column (uncapped — the cap was the bug).
  */
@@ -510,7 +545,10 @@ export interface EngineDeps {
   sb: Sb | null;
   now: () => number;
   uuid: () => string;
-  collect: (def: HuntDefinition, maxPages: number) => Promise<{ candidates: Candidate[] }>;
+  collect: (
+    def: HuntDefinition,
+    maxPages: number
+  ) => Promise<{ candidates: Candidate[]; stale: boolean }>;
   confirm: (candidates: Candidate[], def: HuntDefinition) => Promise<ScoredAd[]>;
   sendPush: (userId: string, payload: PushPayload) => Promise<void>;
 }
@@ -521,6 +559,9 @@ export function realEnginePipeline(): Pick<EngineDeps, "collect" | "confirm"> {
     collect: (def, maxPages) =>
       collectCandidates(def, { maxPages }).then((r) => ({
         candidates: r.candidates,
+        // Finding #17: the stale flag must reach checkKamin — a stale
+        // collect is NOT a success and must not advance last_success_at.
+        stale: r.stats.stale,
       })),
     confirm: (candidates, def) => {
       const stats: HuntStats = {
@@ -578,7 +619,7 @@ export async function checkKamin(
       ? deps.now() - Date.parse(kamin.last_success_at)
       : 0;
     const maxPages = pageBudgetForElapsed(elapsed);
-    const { candidates } = await deps.collect(kamin.definition, maxPages);
+    const { candidates, stale } = await deps.collect(kamin.definition, maxPages);
 
     // The baseline lives in kamin_seen_ads (unbounded) — or the legacy
     // seen_ids column pre-m9. Read once per check; writes union into it.
@@ -587,6 +628,23 @@ export async function checkKamin(
     // First successful check after arming = SILENT baseline. We never
     // push-notify for ads that predate the kamin.
     if (!kamin.last_success_at) {
+      if (stale) {
+        // Finding #17: a stale collect is not a real baseline — the data
+        // may be incomplete. Advance last_checked_at only; the next check
+        // retries the silent baseline with fresh data.
+        await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
+          last_checked_at: nowIso,
+        });
+        await patchKaminRun(sb, checkRunId, {
+          status: "completed",
+          stale: true,
+          completed_at: nowIso,
+          pages_fetched: maxPages,
+          candidates: candidates.length,
+          new_count: 0,
+        });
+        return { kaminId: kamin.id, status: "completed", newCount: 0, checkRunId };
+      }
       const baselineNew = candidates
         .map((c) => c.sourceAdId)
         .filter((id) => !seen.has(id));
@@ -608,15 +666,30 @@ export async function checkKamin(
 
     const fresh = candidates.filter((c) => !seen.has(c.sourceAdId));
     const results = await deps.confirm(fresh, kamin.definition);
-    const newIds = results.map((r) => r.sourceAdId);
+    // Finding #21: detailUnknown ads were never verified — they must not
+    // advance the baseline (stay unseen for a later successful check) and
+    // must not trigger notifications.
+    const verified = results.filter((r) => !r.detailUnknown);
+    const newIds = verified.map((r) => r.sourceAdId);
     const newCount = newIds.length;
 
     await writeSeenIds(sb, kamin.id, newIds, legacy);
-    await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
-      last_checked_at: nowIso,
-      last_success_at: nowIso,
-      new_match_count: newCount,
-    });
+    if (stale) {
+      // Finding #17: stale data is not success. last_checked_at moves
+      // (the check ran), but last_success_at stays — the next check's
+      // since-LAST-SUCCESS window still covers this stale period, so ads
+      // posted during the outage are caught up, never skipped.
+      await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
+        last_checked_at: nowIso,
+        new_match_count: newCount,
+      });
+    } else {
+      await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
+        last_checked_at: nowIso,
+        last_success_at: nowIso,
+        new_match_count: newCount,
+      });
+    }
 
     if (newCount > 0) {
       // Dedupe guard: one notification per (kamin_id, check_run_id).
@@ -647,8 +720,9 @@ export async function checkKamin(
       }
     }
 
-    await sb.rest("PATCH", `kamin_runs?id=eq.${enc(checkRunId)}`, {
+    await patchKaminRun(sb, checkRunId, {
       status: "completed",
+      stale,
       completed_at: nowIso,
       pages_fetched: maxPages,
       candidates: candidates.length,

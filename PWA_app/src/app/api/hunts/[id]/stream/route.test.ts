@@ -20,13 +20,22 @@ vi.mock("@/lib/server/hunt/pipeline", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/server/hunt/runs", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("@/lib/server/hunt/runs")>();
+  return {
+    ...orig,
+    runCompletionSideEffects: vi.fn(),
+  };
+});
+
 import { getSessionUserId } from "@/lib/server/auth";
 import { runPipeline } from "@/lib/server/hunt/pipeline";
-import { createRun } from "@/lib/server/hunt/runs";
+import { createRun, runCompletionSideEffects } from "@/lib/server/hunt/runs";
 import { GET } from "@/app/api/hunts/[id]/stream/route";
 
 const mockSession = vi.mocked(getSessionUserId);
 const mockPipeline = vi.mocked(runPipeline);
+const mockSideEffects = vi.mocked(runCompletionSideEffects);
 
 const DEF = {
   query: "گوشی",
@@ -122,5 +131,63 @@ describe("stream route (live handler, mocked session+pipeline)", () => {
     expect(b2).toContain('"type":"done"');
     expect(mockPipeline).toHaveBeenCalledTimes(1); // no re-execution
     expect(dt).toBeLessThan(2000); // instant replay, not a re-run
+  });
+
+  it("finding #21: all-detailUnknown results → sawResults false (refund path)", async () => {
+    const run = await createRun(DEF, "user-1", {
+      kind: "standard",
+      mode: "real",
+      userId: "user-1",
+      deviceId: "d",
+      charged: true,
+    });
+    mockSession.mockResolvedValue("user-1");
+    mockPipeline.mockImplementationOnce(async (_def, emit) => {
+      emit({
+        type: "done",
+        results: [
+          { sourceAdId: "a1", title: "t", score: 0.5, detailUnknown: true },
+          { sourceAdId: "a2", title: "t", score: 0.4, detailUnknown: true },
+        ],
+        stats: {},
+      } as never);
+      return { results: [], stats: {}, endCursor: undefined } as never;
+    });
+    const res = await get(run.id);
+    await readAll(res);
+    // detailUnknown ads are not "results" — the user pays for hunts,
+    // not for our detail-fetch errors.
+    expect(mockSideEffects).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ sawResults: false })
+    );
+  });
+
+  it("finding #21: mixed verified + detailUnknown → sawResults true", async () => {
+    const run = await createRun(DEF, "user-1", {
+      kind: "standard",
+      mode: "real",
+      userId: "user-1",
+      deviceId: "d",
+      charged: true,
+    });
+    mockSession.mockResolvedValue("user-1");
+    mockPipeline.mockImplementationOnce(async (_def, emit) => {
+      emit({
+        type: "done",
+        results: [
+          { sourceAdId: "a1", title: "t", score: 1 },
+          { sourceAdId: "a2", title: "t", score: 0.4, detailUnknown: true },
+        ],
+        stats: {},
+      } as never);
+      return { results: [], stats: {}, endCursor: undefined } as never;
+    });
+    const res = await get(run.id);
+    await readAll(res);
+    expect(mockSideEffects).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ sawResults: true })
+    );
   });
 });

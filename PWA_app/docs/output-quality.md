@@ -37,10 +37,11 @@
 **Severity:** MEDIUM — visible, annoying, dilutes ranking trust.
 
 - **PREVENTION (now, in code):** `src/lib/nearDup.ts`
-  - `dupKey(title, price, sellerId)` — same title+price = same ad across ad ids.
+  - `dupKey(title, price, city, district)` — same title+price+city+district = same ad across ad ids.
   - `isRepost(a, b)` — keyboard-variant-proof via `canonicalTitle`.
-  - Tests: `src/lib/nearDup.test.ts` (6 tests).
-- **CURE (M4):** pipeline collapses dups AFTER matching, BEFORE ranking — keep newest. Price-drop reposts are NOT dups (different key) — correct.
+  - Tests: `src/lib/nearDup.test.ts` (9 tests).
+- **CURE (M4):** pipeline collapses dups AFTER matching, BEFORE ranking — in fetch order (newest first), keep first = newest (bug #19: dedupe runs before the titleStrength sort). Price-drop reposts are NOT dups (different key) — correct.
+- **HONEST LIMITATION (bug #18, round 4):** seller identity was the intended third key signal, but the provider never supplies it — `ListingSummary` has no seller field, so the old `sellerId` param was always `undefined` and every seller's ads collapsed together. City+district is the working proxy, but it is NOT seller identity: two different sellers with the same popular item at the same round price in the same district will still collapse. Do not claim this fixed until seller identity is available from the provider.
 
 ## Flaw #5 — Image-blindness
 **Severity:** LOW-MEDIUM (category-dependent) — deferred deliberately.

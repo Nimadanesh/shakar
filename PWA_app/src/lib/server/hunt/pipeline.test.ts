@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { HuntDefinition, HuntEvent } from "./pipeline";
+import type { Candidate, HuntDefinition, HuntEvent } from "./pipeline";
 import type { ListingSummary } from "../divar/provider";
 
 // Mock the Divar client module (provider + taxonomy are real).
@@ -25,7 +25,7 @@ vi.mock("../divar/taxonomy", () => ({
 }));
 
 import { divarProvider } from "../divar/divarClient";
-import { runPipeline } from "./pipeline";
+import { collapseDupes, runPipeline } from "./pipeline";
 
 const mockSearchLists = vi.mocked(divarProvider.searchLists);
 const mockGetDetail = vi.mocked(divarProvider.getDetail);
@@ -412,5 +412,48 @@ describe("runPipeline", () => {
     if (done?.type !== "done") throw new Error("no done event");
     const ids = done.results.map((r) => r.sourceAdId).sort();
     expect(ids).toEqual(["a1", "a4"]);
+  });
+});
+
+describe("collapseDupes — bug #19 (dedupe before sort, keep newest)", () => {
+  function cand(over: Partial<Candidate> & { sourceAdId: string }): Candidate {
+    return {
+      title: "گوشی سامسونگ",
+      price: 100,
+      city: "تهران",
+      titleStrength: 1,
+      needsDetailReview: false,
+      ...over,
+    };
+  }
+
+  it("the NEWER dupe survives even when it has LOWER titleStrength", () => {
+    // Fetch order = newest first. The old code sorted by titleStrength
+    // BEFORE dedupe, so the older repost (strength 5) shadowed the newer
+    // one (strength 1). Dedupe must not care about score — only order.
+    // NOTE: with the real titleScore, same-key ads always share a strength
+    // (both derive from the title), so this is constructed directly to lock
+    // the invariant against future scoring changes.
+    const newer = cand({ sourceAdId: "new", titleStrength: 1 });
+    const older = cand({ sourceAdId: "old", titleStrength: 5 });
+    const { unique, dupsCollapsed } = collapseDupes([newer, older]);
+    expect(dupsCollapsed).toBe(1);
+    expect(unique.map((c) => c.sourceAdId)).toEqual(["new"]);
+  });
+
+  it("keeps fetch order for non-dupes (sort happens later, not here)", () => {
+    const a = cand({ sourceAdId: "a", title: "گوشی", titleStrength: 1 });
+    const b = cand({ sourceAdId: "b", title: "لپ‌تاپ", price: 200, titleStrength: 9 });
+    const { unique, dupsCollapsed } = collapseDupes([a, b]);
+    expect(dupsCollapsed).toBe(0);
+    expect(unique.map((c) => c.sourceAdId)).toEqual(["a", "b"]);
+  });
+
+  it("different cities are not dupes (bug #18)", () => {
+    const tehran = cand({ sourceAdId: "t" });
+    const isfahan = cand({ sourceAdId: "i", city: "اصفهان" });
+    const { unique, dupsCollapsed } = collapseDupes([tehran, isfahan]);
+    expect(dupsCollapsed).toBe(0);
+    expect(unique).toHaveLength(2);
   });
 });

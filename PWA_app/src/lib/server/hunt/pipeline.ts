@@ -101,6 +101,40 @@ export interface Candidate extends ListingSummary {
   needsDetailReview: boolean;
 }
 
+/**
+ * Collapse near-duplicate reposts, keeping the FIRST occurrence in input
+ * order. Callers must pass candidates in FETCH order (Divar lists are
+ * newest-first), so the survivor is the newest repost — never the
+ * highest-scoring one (bug #19, round 4: dedupe must run before the
+ * ranking sort, not after).
+ *
+ * Exported for testing — the #19 regression test feeds it dupes where the
+ * newer ad has a LOWER titleStrength and asserts the newer still wins.
+ */
+export function collapseDupes(cands: Candidate[]): {
+  unique: Candidate[];
+  dupsCollapsed: number;
+} {
+  const seen = new Set<string>();
+  const unique: Candidate[] = [];
+  let dupsCollapsed = 0;
+  for (const c of cands) {
+    const key = dupKey(
+      c.title,
+      c.price !== null ? String(c.price) : null,
+      c.city,
+      c.district
+    );
+    if (seen.has(key)) {
+      dupsCollapsed += 1;
+      continue;
+    }
+    seen.add(key);
+    unique.push(c);
+  }
+  return { unique, dupsCollapsed };
+}
+
 export interface CollectOptions {
   /**
    * First LOGICAL list page (cache-key offset only). Default honors
@@ -332,20 +366,20 @@ export async function collectCandidates(
       needsDetailReview: r.needsDetailReview,
     });
   }
-  scored.sort((a, b) => b.titleStrength - a.titleStrength);
+  // NOTE: scored stays in FETCH order here (Divar lists are newest-first).
+  // The ranking sort happens AFTER dedupe on purpose — see Phase 3.
 
-  // ---- Phase 3: near-dup collapse (keep newest = first seen) ---------------
-  const seen = new Set<string>();
-  const unique: Candidate[] = [];
-  for (const c of scored) {
-    const key = dupKey(c.title, c.price !== null ? String(c.price) : null);
-    if (seen.has(key)) {
-      stats.dupsCollapsed += 1;
-      continue;
-    }
-    seen.add(key);
-    unique.push(c);
-  }
+  // ---- Phase 3: near-dup collapse (fetch order = newest first) ------------
+  // Dedupe BEFORE the ranking sort (bug #19, round 4). The old code sorted
+  // by titleStrength first, so "keep newest = first seen" was a lie — first
+  // seen meant "highest titleStrength", and an older repost could shadow
+  // the newer one. Now the first occurrence in fetch order (the newest
+  // repost) wins, and ranking only orders the survivors.
+  const { unique, dupsCollapsed } = collapseDupes(scored);
+  stats.dupsCollapsed = dupsCollapsed;
+
+  // Ranking sort AFTER dedupe — the newest repost already survived.
+  unique.sort((a, b) => b.titleStrength - a.titleStrength);
   emit({
     type: "ranked",
     scored: all.length,

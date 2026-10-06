@@ -8,16 +8,21 @@ describe("canonicalTitle", () => {
 });
 
 describe("dupKey / isRepost", () => {
-  const ad = { title: "پیانو آکوستیک یاماها", price: "120000000", sellerId: "s1" };
+  const ad = {
+    title: "پیانو آکوستیک یاماها",
+    price: "120000000",
+    city: "تهران",
+    district: "سعادت‌آباد",
+  };
 
-  it("flags a repost (same title+price, different ad id) as dup", () => {
+  it("flags a repost (same title+price+city+district, different ad id) as dup", () => {
     expect(isRepost(ad, { ...ad })).toBe(true);
   });
 
   it("still matches when the repost was typed with Arabic keyboard", () => {
-    expect(isRepost(ad, { title: "پيانو آكوستيك یاماها", price: "120000000", sellerId: "s1" })).toBe(
-      true
-    );
+    expect(
+      isRepost(ad, { title: "پيانو آكوستيك یاماها", price: "120000000", city: "تهران", district: "سعادت‌آباد" })
+    ).toBe(true);
   });
 
   it("does not flag a real price drop as a dup", () => {
@@ -28,8 +33,23 @@ describe("dupKey / isRepost", () => {
     expect(isRepost(ad, { ...ad, title: "پیانو دیجیتال یاماها" })).toBe(false);
   });
 
-  it("works without seller id (title+price only)", () => {
-    expect(dupKey("مبل راحتی", null)).toBe(dupKey("مبل راحتی", null));
-    expect(dupKey("مبل راحتی", null)).not.toBe(dupKey("مبل راحتی", "5000000"));
+  it("bug #18: same title+price in a DIFFERENT city are NOT dupes", () => {
+    // The old key (title+price only) collapsed these — two different
+    // sellers' ads destroyed. City in the key fixes it.
+    expect(isRepost(ad, { ...ad, city: "اصفهان" })).toBe(false);
+  });
+
+  it("bug #18: same title+price+city in a DIFFERENT district are NOT dupes", () => {
+    expect(isRepost(ad, { ...ad, district: "ونک" })).toBe(false);
+  });
+
+  it("bug #18: same title+price+city+district ARE dupes (likely repost)", () => {
+    expect(isRepost(ad, { ...ad })).toBe(true);
+  });
+
+  it("works without district (title+price+city only)", () => {
+    expect(dupKey("مبل راحتی", null, "تهران")).toBe(dupKey("مبل راحتی", null, "تهران"));
+    expect(dupKey("مبل راحتی", null, "تهران")).not.toBe(dupKey("مبل راحتی", "5000000", "تهران"));
+    expect(dupKey("مبل راحتی", null, "تهران")).not.toBe(dupKey("مبل راحتی", null, "شیراز"));
   });
 });

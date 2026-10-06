@@ -148,8 +148,9 @@ function memoryStream(run: HuntRun, isOwner: boolean): Response {
       const finalIds: string[] = [];
       const wrappedSend = (e: HuntEvent) => {
         if (e.type === "done") {
-          if (e.results.length > 0) sawResults = true;
-          for (const r of e.results) finalIds.push(r.sourceAdId);
+          if (e.results.some((r) => !r.detailUnknown)) sawResults = true; // Finding #21: detailUnknown ads were never verified — they are not "results" for quota fairness.
+          // Finding #21: unverified ids must not advance the kamin baseline either.
+          for (const r of e.results) if (!r.detailUnknown) finalIds.push(r.sourceAdId);
         }
         if (e.type === "error") errored = true;
         broadcast(e);
@@ -255,8 +256,9 @@ function dbStream(run: HuntRun): Response {
       const finalIds: string[] = [];
       const wrappedSend = (e: HuntEvent) => {
         if (e.type === "done") {
-          if (e.results.length > 0) sawResults = true;
-          for (const r of e.results) finalIds.push(r.sourceAdId);
+          if (e.results.some((r) => !r.detailUnknown)) sawResults = true; // Finding #21: detailUnknown ads were never verified — they are not "results" for quota fairness.
+          // Finding #21: unverified ids must not advance the kamin baseline either.
+          for (const r of e.results) if (!r.detailUnknown) finalIds.push(r.sourceAdId);
         }
         if (e.type === "error") errored = true;
         pending.push(appendRunEvent(run.id, e));
