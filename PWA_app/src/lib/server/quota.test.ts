@@ -68,12 +68,13 @@ function fakeDb(
       return null;
     }
     if (path === "/rpc/check_guest_ip_limit") {
-      // Models the fixed-window atomicity: count-then-insert in one block.
+      // Models the fixed m14: pg_advisory_xact_lock serializes per-IP, so
+      // in JS (single-threaded) this is inherently atomic. The count
+      // includes the current hit; allowed iff count <= limit.
       const { p_ip: ip, p_limit: limit } = body as { p_ip: string; p_limit: number };
-      const hits = (tables.guest_ip_hits ??= []).filter((r) => r.ip === ip);
-      const allowed = hits.length + 1 <= limit;
       (tables.guest_ip_hits ??= []).push({ ip, hit_at: new Date().toISOString() });
-      return [{ allowed }];
+      const n = (tables.guest_ip_hits ?? []).filter((r) => r.ip === ip).length;
+      return [{ allowed: n <= limit }];
     }
     return missing(`rpc ${path}`);
   };

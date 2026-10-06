@@ -12,11 +12,12 @@
 --    free hunts. Generous on purpose (20/day) — it's abuse friction,
 --    not a precision instrument; CGNAT false positives just wait a day.
 --
--- Same atomic fixed-window pattern as m8's check_otp_ip_limit: the hit
--- is inserted and counted in ONE statement (same snapshot — the count
--- sees pre-request rows, hence the +1), so concurrent requests can't
--- slip past the limit. Piggybacked cleanup (24h retention covers the
--- 24h cap window).
+-- Concurrency: pg_advisory_xact_lock serializes concurrent checks for
+-- the SAME ip. Without it, simultaneous transactions all snapshot
+-- count=0 (a CTE's INSERT is invisible to concurrent snapshots) and
+-- all pass — the naive insert+count pattern is racy. The lock is
+-- xact-scoped (auto-released at commit) and per-ip (different IPs
+-- never block each other).
 --
 -- Idempotent: safe to re-run.
 
@@ -28,24 +29,28 @@ create index if not exists guest_ip_hits_ip_at_idx on guest_ip_hits (ip, hit_at)
 
 create or replace function check_guest_ip_limit(p_ip text, p_limit int, p_window_secs int)
 returns table (allowed boolean)
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  with _cleanup as (
-    delete from guest_ip_hits
-    where guest_ip_hits.hit_at < now() - interval '2 hours'
-  ),
-  _hit as (
-    insert into guest_ip_hits (ip, hit_at)
-    values (p_ip, now())
-    returning 1
-  ),
-  _count as (
-    select count(*)::int as n
-    from guest_ip_hits
-    where guest_ip_hits.ip = p_ip
-      and guest_ip_hits.hit_at > now() - make_interval(secs => p_window_secs)
-  )
-  select (_count.n + 1 <= p_limit) from _count;
+declare
+  v_count int;
+begin
+  -- Serialize concurrent checks for this IP (see header comment).
+  perform pg_advisory_xact_lock(hashtext(p_ip));
+
+  -- Piggybacked cleanup: drop hits outside the sliding window.
+  delete from guest_ip_hits
+  where guest_ip_hits.hit_at < now() - make_interval(secs => p_window_secs);
+
+  insert into guest_ip_hits (ip, hit_at) values (p_ip, now());
+
+  select count(*)::int into v_count
+  from guest_ip_hits
+  where guest_ip_hits.ip = p_ip
+    and guest_ip_hits.hit_at > now() - make_interval(secs => p_window_secs);
+
+  -- v_count includes this request's hit.
+  return query select (v_count <= p_limit);
+end;
 $$;
