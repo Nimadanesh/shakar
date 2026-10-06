@@ -14,6 +14,10 @@ import { CATEGORY_API_VALUE, resolveCityId } from "./taxonomy";
 
 const API_BASE = "https://api.divar.ir/v8";
 const LIST_TTL_MS = 3 * 60 * 1000; // blueprint §3: list pages cache 2–5 min
+// Deep pages hold OLDER ads, which don't move — they stay cached 60 min.
+// Only page 0 (the freshest ads) refreshes every 3 min. This cuts list
+// refresh traffic ~4x under load without losing any freshness.
+const LIST_DEEP_TTL_MS = 60 * 60 * 1000;
 const DETAIL_TTL_MS = 60 * 60 * 1000; // blueprint §3: details hourly
 
 /** "۸۰۰,۰۰۰,۰۰۰ تومان" → 800000000. "توافقی"/missing → null (never 0). */
@@ -218,7 +222,7 @@ class FirstPartyDivarProvider implements ListingProvider {
       });
       const rec = asRecord(raw);
       if (!rec) throw new ProviderError("upstream-down", "Divar returned no JSON");
-      setCached(cacheKey, rec, LIST_TTL_MS);
+      setCached(cacheKey, rec, q.page === 0 ? LIST_TTL_MS : LIST_DEEP_TTL_MS);
       return parseListJson(rec);
     } catch (e) {
       // Divar is restricting us — a ban is a normal state, not a death.
