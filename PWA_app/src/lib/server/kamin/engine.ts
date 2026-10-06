@@ -248,6 +248,9 @@ async function rpcTryArmKamin(
   }
 ): Promise<ArmAttempt | null> {
   try {
+    // NOTE (m11): prod kamins.user_id is UUID — the RPC's p_user_id is
+    // uuid. PostgREST casts the session-uuid string. Never pass a
+    // non-uuid here (guests can't arm kamins; the route requires auth).
     const rows = await sb.rest<Array<{ kamin_id: string | null; created: boolean }>>(
       "POST",
       "/rpc/try_arm_kamin",
