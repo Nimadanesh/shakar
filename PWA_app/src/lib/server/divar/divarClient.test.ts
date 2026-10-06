@@ -227,3 +227,93 @@ describe("ip health", () => {
     expect(after.ok).toBeGreaterThan(0);
   });
 });
+
+describe("anti-footprint hardening", () => {
+  it("429 triggers a cooldown: the next request fails fast without network", async () => {
+    const calls = mockFetch(
+      () => ({ ok: false, status: 429, json: async () => ({}) }) as unknown as Response
+    );
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    const q = { categorySlug: "apartment-sell", cityId: "1", keywords: [], page: 7 };
+    await expect(divarProvider.searchLists(q)).rejects.toMatchObject({
+      errorClass: "rate-limited",
+    });
+    // A second hunt during the cooldown never touches the network.
+    await expect(
+      divarProvider.searchLists({ ...q, page: 8 })
+    ).rejects.toMatchObject({ errorClass: "rate-limited" });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("opens the circuit after 5 consecutive failures", async () => {
+    const calls = mockFetch(
+      () => ({ ok: false, status: 403, json: async () => ({}) }) as unknown as Response
+    );
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    for (let page = 0; page < 5; page++) {
+      await expect(
+        divarProvider.searchLists({ categorySlug: "apartment-sell", cityId: "1", keywords: [], page })
+      ).rejects.toMatchObject({ errorClass: "upstream-down" });
+    }
+    expect(calls).toHaveLength(5);
+    // 6th fails fast — the ban is a normal state, not a retry storm.
+    await expect(
+      divarProvider.searchLists({ categorySlug: "apartment-sell", cityId: "1", keywords: [], page: 99 })
+    ).rejects.toThrow("circuit open");
+    expect(calls).toHaveLength(5);
+  }, 30000);
+
+  it("serves stale cache during a restriction, flagged honestly", async () => {
+    const calls = mockFetch(
+      () => ({ ok: false, status: 429, json: async () => ({}) }) as unknown as Response
+    );
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache, setCached } = await import("./cache");
+    clearCache();
+    // Seed an EXPIRED entry — getCached skips it, getStale serves it.
+    setCached("list:1:apartment-sell:0", listJson(), -1);
+    const res = await divarProvider.searchLists({
+      categorySlug: "apartment-sell",
+      cityId: "1",
+      keywords: [],
+      page: 0,
+    });
+    expect(res.stale).toBe(true);
+    expect(res.hasMore).toBe(false);
+    expect(res.listings).toHaveLength(2);
+    expect(calls).toHaveLength(1); // one live attempt, then stale
+  });
+
+  it("throws honestly when restricted with no stale cache", async () => {
+    mockFetch(
+      () => ({ ok: false, status: 429, json: async () => ({}) }) as unknown as Response
+    );
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    await expect(
+      divarProvider.searchLists({ categorySlug: "apartment-sell", cityId: "1", keywords: [], page: 3 })
+    ).rejects.toMatchObject({ errorClass: "rate-limited" });
+  });
+
+  it("exposes cooldown state in IP health", async () => {
+    mockFetch(
+      () => ({ ok: false, status: 429, json: async () => ({}) }) as unknown as Response
+    );
+    const { divarProvider } = await import("./divarClient");
+    const { getIpHealth } = await import("./throttle");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    await expect(
+      divarProvider.searchLists({ categorySlug: "apartment-sell", cityId: "1", keywords: [], page: 4 })
+    ).rejects.toBeDefined();
+    const h = getIpHealth();
+    expect(h.rateLimited429).toBe(1);
+    expect(h.coolingDownUntil).not.toBeNull();
+    expect(h.consecutiveFailures).toBe(1);
+  });
+});

@@ -51,9 +51,20 @@ export interface ListingProvider {
     hasMore: boolean;
     /** Opaque cursor for the next page (pagination_data). */
     nextCursor?: unknown;
+    /** True when served from stale cache during a Divar restriction. */
+    stale?: boolean;
   }>;
   getDetail(sourceAdId: string): Promise<ListingDetail>;
 }
+
+/**
+ * Per-hunt request budgets (blueprint §3 cost cascade). Enforced by M4's
+ * pipeline, declared here so the footprint ceiling is visible in one place:
+ * a single hunt can never cost more than 5 list pages + 100 details, and
+ * the shared TTL cache means concurrent identical hunts cost ~zero extra.
+ */
+export const MAX_LIST_PAGES_PER_HUNT = 5;
+export const MAX_DETAILS_PER_HUNT = 100;
 
 /** Failure classes mapped to the blueprint §5 Persian copy. */
 export type ProviderErrorClass =

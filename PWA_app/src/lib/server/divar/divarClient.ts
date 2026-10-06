@@ -9,7 +9,7 @@ import {
   type ListingSummary,
 } from "./provider";
 import { divarFetch, type RequestKind } from "./throttle";
-import { getCached, setCached } from "./cache";
+import { getCached, getStale, setCached } from "./cache";
 import { CATEGORY_API_VALUE, resolveCityId } from "./taxonomy";
 
 const API_BASE = "https://api.divar.ir/v8";
@@ -159,6 +159,31 @@ function toDetail(token: string, json: DivarJson): ListingDetail {
   };
 }
 
+function parseListJson(json: DivarJson): {
+  listings: ListingSummary[];
+  hasMore: boolean;
+  nextCursor?: unknown;
+} {
+  const code = json.code;
+  if (code !== undefined && json.message) {
+    throw new ProviderError("bad-request", `Divar: ${String(json.message)}`);
+  }
+  const widgets = Array.isArray(json.list_widgets) ? json.list_widgets : [];
+  const listings: ListingSummary[] = [];
+  for (const w of widgets) {
+    const rec = asRecord(w);
+    if (!rec || typeof rec.widget_type !== "string") continue;
+    const s = toSummary(rec as unknown as PostRowWidget);
+    if (s) listings.push(s);
+  }
+  const pagination = asRecord(json.pagination);
+  return {
+    listings,
+    hasMore: pagination?.has_next_page === true,
+    nextCursor: pagination?.data,
+  };
+}
+
 /**
  * FirstPartyDivarProvider — our own server-side Divar client (blueprint §4).
  * Talks to api.divar.ir through the single throttled executor; every
@@ -171,6 +196,7 @@ class FirstPartyDivarProvider implements ListingProvider {
     listings: ListingSummary[];
     hasMore: boolean;
     nextCursor?: unknown;
+    stale?: boolean;
   }> {
     const categorySlug = q.categorySlug !== "" ? q.categorySlug : undefined;
     const body: Record<string, unknown> = {
@@ -183,10 +209,8 @@ class FirstPartyDivarProvider implements ListingProvider {
     };
     const cacheKey = `list:${q.cityId}:${categorySlug ?? "all"}:${q.page}`;
     const cached = getCached<DivarJson>(cacheKey);
-    let json: DivarJson;
-    if (cached) {
-      json = cached;
-    } else {
+    if (cached) return parseListJson(cached);
+    try {
       const raw: unknown = await divarFetch(`${API_BASE}/postlist/w/search`, {
         method: "POST",
         body,
@@ -194,46 +218,56 @@ class FirstPartyDivarProvider implements ListingProvider {
       });
       const rec = asRecord(raw);
       if (!rec) throw new ProviderError("upstream-down", "Divar returned no JSON");
-      json = rec;
-      setCached(cacheKey, json, LIST_TTL_MS);
+      setCached(cacheKey, rec, LIST_TTL_MS);
+      return parseListJson(rec);
+    } catch (e) {
+      // Divar is restricting us — a ban is a normal state, not a death.
+      // Serve the last good list when we have one; the pipeline must
+      // surface `stale` honestly and never present it as fresh.
+      if (
+        e instanceof ProviderError &&
+        (e.errorClass === "rate-limited" ||
+          e.errorClass === "upstream-down" ||
+          e.errorClass === "timeout")
+      ) {
+        const stale = getStale<DivarJson>(cacheKey);
+        if (stale) {
+          try {
+            return { ...parseListJson(stale), hasMore: false, stale: true as const };
+          } catch {
+            /* fall through to throw */
+          }
+        }
+      }
+      throw e;
     }
-    const code = json.code;
-    if (code !== undefined && json.message) {
-      throw new ProviderError("bad-request", `Divar: ${String(json.message)}`);
-    }
-    const widgets = Array.isArray(json.list_widgets) ? json.list_widgets : [];
-    const listings: ListingSummary[] = [];
-    for (const w of widgets) {
-      const rec = asRecord(w);
-      if (!rec || typeof rec.widget_type !== "string") continue;
-      const s = toSummary(rec as unknown as PostRowWidget);
-      if (s) listings.push(s);
-    }
-    const pagination = asRecord(json.pagination);
-    return {
-      listings,
-      hasMore: pagination?.has_next_page === true,
-      nextCursor: pagination?.data,
-    };
   }
 
   async getDetail(sourceAdId: string): Promise<ListingDetail> {
     const cacheKey = `detail:${sourceAdId}`;
     const cached = getCached<DivarJson>(cacheKey);
-    let json: DivarJson;
-    if (cached) {
-      json = cached;
-    } else {
+    if (cached) return toDetail(sourceAdId, cached);
+    try {
       const raw: unknown = await divarFetch(
         `${API_BASE}/posts-v2/web/${encodeURIComponent(sourceAdId)}`,
         { method: "GET", kind: "detail" as RequestKind }
       );
       const rec = asRecord(raw);
       if (!rec) throw new ProviderError("upstream-down", "Divar returned no JSON");
-      json = rec;
-      setCached(cacheKey, json, DETAIL_TTL_MS);
+      setCached(cacheKey, rec, DETAIL_TTL_MS);
+      return toDetail(sourceAdId, rec);
+    } catch (e) {
+      if (
+        e instanceof ProviderError &&
+        (e.errorClass === "rate-limited" ||
+          e.errorClass === "upstream-down" ||
+          e.errorClass === "timeout")
+      ) {
+        const stale = getStale<DivarJson>(cacheKey);
+        if (stale) return toDetail(sourceAdId, stale);
+      }
+      throw e;
     }
-    return toDetail(sourceAdId, json);
   }
 }
 
