@@ -49,6 +49,44 @@ describe("runSearch", () => {
     expect(results.map((r) => r.adId)).toContain("fx-handmade-tehran");
   });
 
+  it("marks price-unknown ads with a warning, never a price signal", () => {
+    const ctx = {
+      ...EMPTY_SEARCH_CONTEXT,
+      includeKeywords: ["آکوستیک"],
+      priceMax: 50000000,
+    };
+    const { results } = runSearch(ctx, SEARCH_FIXTURES);
+    const handmade = results.find((r) => r.adId === "fx-handmade-tehran");
+    expect(handmade?.priceState).toBe("unknown");
+    expect(handmade?.reasons).toContainEqual({
+      tone: "warning",
+      text: "قیمت نامشخص",
+    });
+    expect(
+      handmade?.reasons.some((r) => r.text === "قیمت در محدوده")
+    ).toBe(false);
+  });
+
+  it("marks price-known ads as known with the in-range signal", () => {
+    const { results } = runSearch(pianoContext, SEARCH_FIXTURES);
+    const u3 = results.find((r) => r.adId === "fx-u3-tehran");
+    expect(u3?.priceState).toBe("known");
+    expect(u3?.reasons).toContainEqual({
+      tone: "signal",
+      text: "قیمت در محدوده",
+    });
+  });
+
+  it("treats price as known when no price filter is active", () => {
+    const ctx = { ...EMPTY_SEARCH_CONTEXT, includeKeywords: ["آکوستیک"] };
+    const { results } = runSearch(ctx, SEARCH_FIXTURES);
+    const handmade = results.find((r) => r.adId === "fx-handmade-tehran");
+    expect(handmade?.priceState).toBe("known");
+    expect(
+      handmade?.reasons.some((r) => r.text === "قیمت نامشخص")
+    ).toBe(false);
+  });
+
   it("returns empty results for impossible constraints", () => {
     const ctx = { ...EMPTY_SEARCH_CONTEXT, includeKeywords: ["سازدهنی"] };
     expect(runSearch(ctx, SEARCH_FIXTURES).results).toEqual([]);

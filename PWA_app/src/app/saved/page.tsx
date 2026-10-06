@@ -178,13 +178,25 @@ export default function SavedPage() {
     refresh();
   }
 
-  /** Inbox CTA: re-running is a new paid hunt — the cost label says so. */
+  /**
+   * Inbox CTA: re-running is a new paid hunt — the cost label says so.
+   * Backend contract order: search must succeed and the hunt must be
+   * recorded BEFORE the kamin baseline moves. If the search fails (or no
+   * hunt is recorded), the baseline is untouched — "new matches" are never
+   * silently swallowed.
+   */
   function handleViewResults(kamin: KaminRecord) {
-    const ids = runSearch(kamin.ctx, SEARCH_FIXTURES).results.map((r) => r.adId);
-    markKaminSeen(kamin.id, ids);
+    let ids: string[];
+    try {
+      ids = runSearch(kamin.ctx, SEARCH_FIXTURES).results.map((r) => r.adId);
+    } catch {
+      return;
+    }
     const record = recordHunt(kamin.name, kaminCtxToBase(kamin.ctx), []);
+    if (!record) return;
+    markKaminSeen(kamin.id, ids);
     refresh();
-    if (record) router.push(`/hunt/${record.id}`);
+    router.push(`/hunt/${record.id}`);
   }
 
   return (

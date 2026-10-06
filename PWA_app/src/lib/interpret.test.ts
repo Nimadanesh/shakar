@@ -30,7 +30,11 @@ describe("interpretQuery", () => {
   });
 
   it("returns empty interpretation for blank input", () => {
-    expect(interpretQuery("   ")).toEqual({ applied: [], preferences: [] });
+    expect(interpretQuery("   ")).toEqual({
+      version: "v1",
+      applied: [],
+      preferences: [],
+    });
   });
 
   it("detects a price floor", () => {

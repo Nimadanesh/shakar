@@ -99,7 +99,7 @@ export function interpretQuery(raw: string): Interpretation {
   const applied: InterpretedConstraint[] = [];
   const preferences: InterpretedConstraint[] = [];
   const normalized = normalizePersian(raw);
-  if (normalized === "") return { applied, preferences };
+  if (normalized === "") return { version: "v1", applied, preferences };
 
   for (const city of KNOWN_CITIES) {
     if (city.names.some((name) => normalized.includes(name))) {
@@ -190,5 +190,5 @@ export function interpretQuery(raw: string): Interpretation {
     }
   }
 
-  return { applied, preferences };
+  return { version: "v1", applied, preferences };
 }

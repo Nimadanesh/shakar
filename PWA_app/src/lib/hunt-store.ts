@@ -3,10 +3,20 @@ import { invalidateCached } from "@/lib/session-cache";
 
 /**
  * A fired hunt: one paid search event, persisted as an asset.
- * The record carries everything needed to re-derive the result set
- * deterministically (query + base + dismissed readings) — the triage
- * page re-runs the matcher from this record, so the stored intent is
- * never silently relaxed or re-interpreted.
+ *
+ * SNAPSHOT CONTRACT (frozen 2026-10-06, pre-backend stage):
+ * a Hunt is a snapshot. (query + base + dismissed + interpretationVersion)
+ * must re-derive the same result set deterministically — the triage page
+ * re-runs the matcher from this record, so the stored intent is never
+ * silently relaxed or re-interpreted by a newer engine. If the matching
+ * algorithm changes tomorrow, last week's Hunt keeps showing last week's
+ * results. Money/quota was consumed for THIS hunt ⇒ its result is
+ * returnable as-is.
+ *
+ * Backend mirrors: id, userId (server-derived, never from client),
+ * query, includeKeywords[], excludeKeywords[], category, city, priceMin,
+ * priceMax, hasImage, interpretation (+version), status, quotaConsumed,
+ * createdAt, completedAt, resultCount, results[].
  */
 export interface HuntRecord {
   id: string;
@@ -14,6 +24,15 @@ export interface HuntRecord {
   base: ContextBase;
   dismissed: string[];
   ts: number;
+  /**
+   * Interpretation engine version pinned at fire time. Re-derivation must
+   * use this version's rules, never the current engine's.
+   */
+  interpretationVersion: "v1";
+  /** Quota units this hunt consumed. Local hunts always consume exactly 1. */
+  quotaConsumed: number;
+  /** Local hunts are always completed; the backend adds `processing`. */
+  status: "completed";
 }
 
 const STORAGE_KEY = "shakar:hunts:v1";
@@ -32,6 +51,9 @@ function normalize(raw: unknown): HuntRecord | null {
     base?: unknown;
     dismissed?: unknown;
     ts?: unknown;
+    interpretationVersion?: unknown;
+    quotaConsumed?: unknown;
+    status?: unknown;
   };
   if (typeof v.query !== "string" || v.query.trim() === "") return null;
   if (typeof v.base !== "object" || v.base === null) return null;
@@ -43,6 +65,14 @@ function normalize(raw: unknown): HuntRecord | null {
       ? v.dismissed.filter((d): d is string => typeof d === "string")
       : [],
     ts: typeof v.ts === "number" ? v.ts : Date.now(),
+    // Legacy records predate the snapshot contract: they were fired by the
+    // v1 interpretation engine and consumed exactly 1 quota unit.
+    interpretationVersion: "v1",
+    quotaConsumed:
+      typeof v.quotaConsumed === "number" && v.quotaConsumed > 0
+        ? v.quotaConsumed
+        : 1,
+    status: "completed",
   };
 }
 
@@ -103,6 +133,9 @@ export function recordHunt(
     },
     dismissed: Array.from(dismissed),
     ts: Date.now(),
+    interpretationVersion: "v1",
+    quotaConsumed: 1,
+    status: "completed",
   };
   const next = [record, ...readAll().filter((h) => h.query !== trimmed)].slice(0, MAX_HUNTS);
   persist(next);

@@ -10,6 +10,16 @@ import { invalidateCached } from "@/lib/session-cache";
  * "new matches" are computed by honest local diffing (current run minus
  * the seen baseline), never fabricated. Background monitoring and push
  * notifications do not exist yet.
+ *
+ * BACKEND CONTRACT (frozen 2026-10-06): Kamin = monitor, Hunt = paid
+ * search. The backend Kamin never runs a hunt by itself; it diffs
+ * (current run − seen baseline) on its tier cadence and reports honest
+ * new matches. "View results" is an EXPLICIT new Hunt that consumes
+ * quota (see handleViewResults ordering: baseline moves only after the
+ * hunt is recorded). Kamin checks are DEDUPED by canonical query
+ * (canonicalKey in radar.ts) — mandatory, not an optimization. Plan
+ * expiry = kamins SLEEP (definitions + history kept; renewal wakes them),
+ * never delete.
  */
 export interface KaminRecord {
   /** Stable id derived from the canonical hunt semantics. */

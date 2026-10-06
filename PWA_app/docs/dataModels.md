@@ -28,9 +28,21 @@ interface DivarAd {
 ShekarAd (enriched)
 
 interface ShekarAd extends DivarAd {
-  shekarScore: number;           // 0–100
+  shekarScore: number;           // 0–100, backend-internal
+  scoreBreakdown: {              // backend-internal; UI never renders `score` as a bare magic number
+    score: number;               // 0–100
+    confidence: "high" | "medium" | "low";
+    signals: {
+      queryMatch: number;        // 0–1
+      includeMatch: number;      // 0–1
+      excludeClean: number;      // 0–1
+      priceMatch: number;        // 0–1
+      freshness: number;         // 0–1
+    };
+  };
   smartTags: string[];           // e.g. ["high-match", "good-price", "new"]
   matchReasons?: string[];       // optional debug / UI hints
+  evidence?: Array<{ term: string; status: "detected" | "unknown" }>; // «چرا این آگهی؟» spans
 }
 
 2. Own Database Models
@@ -76,9 +88,12 @@ Favorite
 interface Favorite {
   id: string;
   userId: string;
-  adId: string;                  // Divar ad id
+  source: "divar";               // Listing provider — part of the identity; never a bare adId
+  sourceAdId: string;            // Provider-side ad id
+  adId: string;                  // Canonical local id (source + sourceAdId today)
   title: string;                 // Snapshot
   price?: number;
+  priceState?: "known" | "unknown"; // Snapshot of verifiability at save time
   thumbnail?: string;
   city?: string;
   savedAt: Date;
@@ -168,7 +183,7 @@ saved_searches.userId
 
 
 
-favorites.userId + adId (unique constraint)
+favorites.userId + source + sourceAdId (unique constraint)
 
 
 

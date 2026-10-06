@@ -7,20 +7,68 @@ import { invalidateCached } from "@/lib/session-cache";
 const STORAGE_KEY = "shakar:favorites:v1";
 const CACHE_KEY = "favorites";
 
-export function readFavoriteIds(): string[] {
+/**
+ * Backend-ready favorite record. The provider is part of the identity —
+ * a bare adId would collide the day a second listing provider exists.
+ * Fixture ids are local-only; the backend stores the real provider ad id
+ * in sourceAdId.
+ */
+export interface FavoriteRecord {
+  adId: string;
+  source: "divar";
+  sourceAdId: string;
+  savedAt: number;
+}
+
+function normalizeRecord(raw: unknown): FavoriteRecord | null {
+  if (typeof raw === "string" && raw !== "") {
+    // Legacy shape: bare id list. Fixture ids double as the source id.
+    return { adId: raw, source: "divar", sourceAdId: raw, savedAt: Date.now() };
+  }
+  if (typeof raw !== "object" || raw === null) return null;
+  const v = raw as { adId?: unknown; source?: unknown; sourceAdId?: unknown; savedAt?: unknown };
+  if (typeof v.adId !== "string" || v.adId === "") return null;
+  return {
+    adId: v.adId,
+    source: "divar",
+    sourceAdId: typeof v.sourceAdId === "string" && v.sourceAdId !== "" ? v.sourceAdId : v.adId,
+    savedAt: typeof v.savedAt === "number" ? v.savedAt : Date.now(),
+  };
+}
+
+function readRecords(): FavoriteRecord[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+    if (!Array.isArray(parsed)) return [];
+    const records = parsed
+      .map(normalizeRecord)
+      .filter((r): r is FavoriteRecord => r !== null);
+    return records;
   } catch {
     return [];
   }
 }
 
+export function readFavoriteIds(): string[] {
+  return readRecords().map((r) => r.adId);
+}
+
+/** Full records — the shape the backend migration consumes. */
+export function readFavoriteRecords(): FavoriteRecord[] {
+  return readRecords();
+}
+
 function writeStored(ids: string[]): void {
+  const prev = new Map(readRecords().map((r) => [r.adId, r]));
+  const now = Date.now();
+  const records: FavoriteRecord[] = ids.map(
+    (adId) =>
+      prev.get(adId) ?? { adId, source: "divar", sourceAdId: adId, savedAt: now }
+  );
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
   } catch {
     // Storage unavailable: state still works for this session.
   }

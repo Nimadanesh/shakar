@@ -4,6 +4,7 @@ import type {
   AdEvidence,
   MatchReason,
   MatchResult,
+  PriceState,
   SearchContext,
   SearchOutcome,
   SuppressedAd,
@@ -226,6 +227,17 @@ export function sortResults<T extends { ad: FixtureAd }>(list: T[], sort: SortKe
  * Genuine local matching over explicit data (fixtures today, backend later).
  * Include = must be present. Exclude = suppresses with a factual reason.
  * Unknown stays unknown: preferences absent from text become ؟ notes, never filters.
+ *
+ * Price contract: KNOWN vs UNKNOWN. A price filter the ad cannot answer
+ * (ad.price === null) is UNKNOWN, not a miss — the ad stays in results but
+ * is visibly marked (warning tone) and never earns «قیمت در محدوده».
+ *
+ * Query contract: the queryTerms `some()` gate below is a LOCAL retrieval
+ * stand-in (approximates "the provider returned this ad for the query").
+ * The backend must NOT port it blindly — it implements the four semantic
+ * roles instead (see QueryRole in types/search.ts): query feeds
+ * interpretation + provider query construction; include is mandatory;
+ * preference is ranking-only; exclude is a hard negative.
  */
 export function runSearch(
   ctx: SearchContext,
@@ -236,6 +248,7 @@ export function runSearch(
   const exclude = ctx.excludeKeywords.map((t) => normalizePersian(t)).filter((t) => t !== "");
   const prefs = preferences.map((t) => normalizePersian(t)).filter((t) => t !== "");
   const queryTerms = queryContentTerms(ctx.query, exclude);
+  const priceFilterActive = ctx.priceMin !== null || ctx.priceMax !== null;
 
   const results: MatchResult[] = [];
   const suppressed: SuppressedAd[] = [];
@@ -257,15 +270,18 @@ export function runSearch(
     if (ctx.priceMax !== null && ad.price !== null && ad.price > ctx.priceMax) continue;
     if (ctx.hasImage && !ad.thumbnail) continue;
 
+    const priceState: PriceState =
+      priceFilterActive && ad.price === null ? "unknown" : "known";
+
     const reasons: MatchReason[] = [];
     for (const term of include.slice(0, 2)) {
       reasons.push({ tone: "signal", text: term });
     }
+    if (priceState === "unknown") {
+      reasons.push({ tone: "warning", text: "قیمت نامشخص" });
+    }
     if (ctx.city !== "all") reasons.push({ tone: "signal", text: ad.city });
-    if (
-      (ctx.priceMin !== null || ctx.priceMax !== null) &&
-      ad.price !== null
-    ) {
+    if (priceFilterActive && ad.price !== null) {
       reasons.push({ tone: "signal", text: "قیمت در محدوده" });
     }
 
@@ -278,6 +294,7 @@ export function runSearch(
       reasons: reasons.slice(0, 3),
       evidence,
       strongMatch: unknowns.length === 0 && reasons.length > 0,
+      priceState,
     });
   }
 

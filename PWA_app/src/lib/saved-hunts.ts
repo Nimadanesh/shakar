@@ -76,6 +76,12 @@ function readAll(): SavedHunt[] {
  * Saves a hunt definition for one-tap re-run. Deduplicated by query —
  * re-saving the same query refreshes it to the top. Unlike history,
  * saving is explicit and never automatic.
+ *
+ * CONTRACT (frozen 2026-10-06): SavedHunt ≠ Hunt. A saved hunt is a
+ * DEFINITION (query + base), never a foreign key to a fired Hunt.
+ * Re-running a saved hunt fires a brand-new Hunt (new id, new quota
+ * consumption, new snapshot) — the definition itself is immutable and
+ * carries no results.
  */
 export function saveHunt(query: string, base: ContextBase): SavedHunt | null {
   const trimmed = query.trim();

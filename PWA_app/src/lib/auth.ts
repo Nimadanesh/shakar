@@ -172,6 +172,14 @@ export function takePendingAction(): PendingAction | null {
  * Returns true when the action may proceed (a session exists).
  * Otherwise stores the action and navigates to /auth; returns false.
  * The caller passes its router push as `navigate`.
+ *
+ * BACKEND SECURITY CONTRACT (frozen 2026-10-06):
+ * the `/auth?resume=…` pattern above is LOCAL-ONLY UX plumbing. It must
+ * never become the backend's source of truth. The backend derives the
+ * user exclusively from its own session (cookie/JWT → authenticated
+ * user → userId). A `userId` arriving from the client is untrusted input,
+ * never identity. Every mutation endpoint re-derives ownership
+ * server-side.
  */
 export function requireAuth(
   action: PendingAction,

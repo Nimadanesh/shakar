@@ -5,6 +5,21 @@ any data-fetching code. Violations are correctness bugs, not style issues.
 
 ## divar-mcp (Divar ads data)
 
+> PROVIDER ABSTRACTION (frozen 2026-10-06, pre-backend stage): Shakar
+> depends on a `ListingProvider` interface, never on a concrete source.
+> v1 implementation is our own FIRST-PARTY server-side Divar client —
+> do NOT take a runtime dependency on the community divar-mcp repo
+> (single-maintainer, fragile for launch); its only value is endpoint
+> discovery during development. The abstraction leaves room for later
+> providers (official Divar API, scraper, cached inventory, other
+> marketplaces) without touching hunt/kamin logic:
+>
+> ```text
+> Shakar Search Engine → ListingProvider → FirstPartyDivarProvider (v1)
+> ```
+>
+> Hunt API → MCP directly is forbidden.
+
 - **Read-only, public, free.** Search with filters, full ad details (including
   description text), category helpers. No advanced description-text search —
   keyword matching is implemented by us (`requirements.md` §1.1).
@@ -21,6 +36,13 @@ any data-fetching code. Violations are correctness bugs, not style issues.
 - **Caching (freshness-aware):** search lists ~2–5 min (new ads matter);
   ad details longer (content is stable). Cache keys include the full filter
   set + normalized keywords. User-scoped data is never shared across sessions.
+- **Cache scoping contract (frozen 2026-10-06):** two separate caches, never
+  mixed. (1) PUBLIC listing cache: provider + canonical query key →
+  listing fields (id, title, description, price, images…). Shareable across
+  users when privacy policy allows. (2) USER state: hunts, kamins, seen
+  baselines, favorites, quota counters — strictly per-user, never leaks
+  into the public cache or another session. A raw provider response is
+  never served to a user unfiltered, and never stored as user state.
 - **No seller phone numbers** beyond what the MCP publicly returns
   (`requirements.md`). Contact actions render only if the data exists.
 - **Truthfulness:** real Divar data in production flows. Placeholder, seed, or
