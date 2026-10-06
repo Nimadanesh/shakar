@@ -17,7 +17,10 @@ alter table notifications add column if not exists related_kamin_id uuid;
 alter table notifications add column if not exists check_run_id uuid;
 
 -- The index from m5 is non-unique; replace it with a unique one.
+-- NOTE: no WHERE clause — Postgres ON CONFLICT (col1, col2) cannot use a
+-- partial index. The code always sets both columns, so NULLs never collide
+-- (NULLs are distinct in unique indexes).
 drop index if exists notifications_kamin_run_idx;
+drop index if exists notifications_kamin_check_uidx;
 create unique index if not exists notifications_kamin_check_uidx
-  on notifications (related_kamin_id, check_run_id)
-  where related_kamin_id is not null and check_run_id is not null;
+  on notifications (related_kamin_id, check_run_id);
