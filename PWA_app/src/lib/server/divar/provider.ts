@@ -60,10 +60,11 @@ export interface ListingProvider {
 /**
  * Per-hunt request budgets (blueprint §3 cost cascade). Enforced by M4's
  * pipeline, declared here so the footprint ceiling is visible in one place:
- * a single hunt can never cost more than 5 list pages + 100 details, and
+ * a single hunt can never cost more than 20 list pages + 100 details, and
  * the shared TTL cache means concurrent identical hunts cost ~zero extra.
+ * 20 pages ≈ 500 ads — the miss-free default (navid 2026-10-06).
  */
-export const MAX_LIST_PAGES_PER_HUNT = 5;
+export const MAX_LIST_PAGES_PER_HUNT = 20;
 export const MAX_DETAILS_PER_HUNT = 100;
 
 /** Failure classes mapped to the blueprint §5 Persian copy. */
