@@ -37,7 +37,11 @@ export interface HuntDefinition {
   priceMax: string;
   transaction: "" | "rent" | "buy";
   condition: "" | "new" | "used" | "any";
-  /** Second-phase opt-in: pages beyond the normal window. */
+  /**
+   * Second-phase opt-in («می‌خوای برم سراغ قدیمی‌ترها؟»): when true, the
+   * list phase starts at page MAX_LIST_PAGES_PER_HUNT instead of 0 — the
+   * older half of the inventory. Same hunt, no extra quota.
+   */
   deepHistory?: boolean;
 }
 
@@ -176,11 +180,13 @@ export async function runPipeline(
   emit({ type: "started", query: def.query });
 
   // ---- Phase 1: list pages -------------------------------------------------
+  // Deep-history second phase starts where the first phase stopped.
+  const startPage = def.deepHistory === true ? MAX_LIST_PAGES_PER_HUNT : 0;
   const categorySlug = CATEGORY_API_VALUE[def.category] ?? "";
   const cityId = def.city !== "all" ? await resolveCityId(def.city) : null;
   const all: ListingSummary[] = [];
   let pagesDone = 0;
-  for (let page = 0; page < MAX_LIST_PAGES_PER_HUNT; page++) {
+  for (let page = startPage; page < startPage + MAX_LIST_PAGES_PER_HUNT; page++) {
     let res;
     try {
       res = await divarProvider.searchLists({

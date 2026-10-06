@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
 import { fa, pickVariant } from "@/lib/hunt-copy";
 import { formatPriceToman } from "@/lib/prices";
@@ -53,14 +54,36 @@ interface TraceLine {
 }
 
 export function HuntProgress({ runId, query }: { runId: string; query: string }) {
+  const router = useRouter();
   const [trace, setTrace] = useState<TraceLine[]>([]);
   const [current, setCurrent] = useState<string>("شکار شروع شد — دارم برات می‌گردم.");
   const [results, setResults] = useState<ScoredAd[]>([]);
   const [stats, setStats] = useState<HuntStats | null>(null);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deepening, setDeepening] = useState(false);
   const lineId = useRef(0);
   const seenResults = useRef(new Set<string>());
+
+  async function goDeep() {
+    if (deepening) return;
+    setDeepening(true);
+    try {
+      const res = await fetch(`/api/hunts/${encodeURIComponent(runId)}/deepen`, { method: "POST" });
+      const json = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        data?: { runId?: string };
+      } | null;
+      const nextId = json?.ok === true ? json.data?.runId : undefined;
+      if (typeof nextId === "string" && nextId !== "") {
+        router.push(`/hunt/${encodeURIComponent(nextId)}?q=${encodeURIComponent(query)}`);
+        return;
+      }
+    } catch {
+      /* fall through */
+    }
+    setDeepening(false);
+  }
 
   const pushTrace = (text: string, isDone: boolean) => {
     lineId.current += 1;
@@ -220,6 +243,20 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         </section>
       )}
 
+      {/* Deep history opt-in — the same hunt continued, no extra quota. */}
+      {done && stats !== null && stats.adsSeen > 0 && (
+        <section className="mt-6 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
+          <p className="text-sm">این‌ها از آگهی‌های چند روز اخیر بودن.</p>
+          <button
+            type="button"
+            onClick={goDeep}
+            disabled={deepening}
+            className="mt-2 rounded-full bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            {deepening ? "دارم آماده می‌کنم..." : "می‌خوای برم سراغ قدیمی‌ترها؟"}
+          </button>
+        </section>
+      )}
     </div>
   );
 }

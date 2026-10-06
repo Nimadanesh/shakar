@@ -1,4 +1,5 @@
 import { getRun } from "@/lib/server/hunt/runs";
+import { refundHunt } from "@/lib/server/quota";
 import { runPipeline, type HuntEvent } from "@/lib/server/hunt/pipeline";
 
 /**
@@ -8,6 +9,10 @@ import { runPipeline, type HuntEvent } from "@/lib/server/hunt/pipeline";
  *
  * If the client disconnects, the request aborts and the pipeline stops —
  * no wasted upstream work for an abandoned hunt.
+ *
+ * Fairness: a hunt that yields ZERO confirmed results, or fails on OUR side
+ * (timeout / upstream-down), refunds the consumed quota unit — the user pays
+ * for hunts, not for our errors. (Abuse ladder inside refundHunt.)
  */
 export async function GET(
   _req: Request,
@@ -25,11 +30,33 @@ export async function GET(
       const send = (e: HuntEvent) => {
         controller.enqueue(enc.encode(`data: ${JSON.stringify(e)}\n\n`));
       };
+      let sawResults = false;
+      let errored = false;
+      const wrappedSend = (e: HuntEvent) => {
+        if (e.type === "done" && e.results.length > 0) sawResults = true;
+        if (e.type === "error") errored = true;
+        send(e);
+      };
       try {
-        await runPipeline(run.def, send);
+        await runPipeline(run.def, wrappedSend);
       } catch {
         // The pipeline already emitted { type: "error" } before throwing.
+        errored = true;
       } finally {
+        // Fairness refund: zero results or our failure → give the unit back.
+        // Deep-history runs were never charged, so there's nothing to refund.
+        if (run.quota.charged && (!sawResults || errored)) {
+          try {
+            await refundHunt({
+              userId: run.quota.userId,
+              deviceId: run.quota.deviceId,
+              kind: run.quota.kind,
+              mode: run.quota.mode,
+            });
+          } catch {
+            /* refund is best-effort; the hunt result matters more */
+          }
+        }
         try {
           controller.close();
         } catch {

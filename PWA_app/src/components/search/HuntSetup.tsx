@@ -26,6 +26,7 @@ import {
   isDimensionsBlocking,
   type DimensionId,
 } from "@/lib/dimensions";
+import { getDeviceId } from "@/lib/device";
 import { getRememberedCity, rememberCity } from "@/lib/city-memory";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
@@ -136,6 +137,7 @@ export function HuntSetup() {
    * zero quota.
    */
   const [firing, setFiring] = useState(false);
+  const [quotaError, setQuotaError] = useState<string | null>(null);
   const dimsSectionRef = useRef<HTMLDivElement | null>(null);
   const [dimsFlash, setDimsFlash] = useState(false);
 
@@ -176,12 +178,16 @@ export function HuntSetup() {
       return;
     }
     setFiring(true);
+    setQuotaError(null);
     // M4: fire a REAL server hunt. The API returns a run id immediately;
     // the pipeline streams progress over SSE on /hunt/[runId].
     try {
       const res = await fetch("/api/hunts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Id": getDeviceId(),
+        },
         body: JSON.stringify({
           query: trimmed,
           include: base.include,
@@ -192,12 +198,28 @@ export function HuntSetup() {
           priceMax: base.priceMax,
           transaction: base.transaction,
           condition: base.condition,
+          idempotencyKey:
+            typeof window !== "undefined" && window.crypto?.randomUUID
+              ? window.crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         }),
       });
       const json = (await res.json().catch(() => null)) as {
         ok?: boolean;
         data?: { runId?: string };
+        message?: string;
       } | null;
+      if (res.status === 402 || res.status === 403) {
+        // Quota exhausted / suspended — honest Persian copy from the API.
+        // Never any per-hunt pricing language.
+        setQuotaError(
+          typeof json?.message === "string" && json.message !== ""
+            ? json.message
+            : "سهمیه‌ات تموم شده."
+        );
+        setFiring(false);
+        return;
+      }
       const runId = json?.ok === true ? json.data?.runId : undefined;
       if (typeof runId === "string" && runId !== "") {
         router.push(`/hunt/${encodeURIComponent(runId)}?q=${encodeURIComponent(trimmed)}`);
@@ -447,6 +469,11 @@ export function HuntSetup() {
               "شکار کن"
             )}
           </button>
+          {quotaError !== null && (
+            <p role="alert" className="text-center text-[13px] text-destructive">
+              {quotaError}
+            </p>
+          )}
         </div>
       )}
 
