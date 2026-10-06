@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { KeyRound, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 import {
   isDevBypass,
-  normalizeCode,
   normalizeMobile,
   requestOtp,
   storeSession,
   verifyOtp,
   type PendingAction,
+  type Session,
 } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { OtpOrbit } from "./OtpOrbit";
 
 const RESEND_SECONDS = 60;
 
@@ -46,10 +47,11 @@ export function AuthFlow() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState<"mobile" | "code">("mobile");
   const [mobile, setMobile] = useState("");
-  const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
+  /** Holds the verified session until the user taps «ادامه» in OtpOrbit. */
+  const pendingSession = useRef<Session | null>(null);
 
   const pendingAction = useMemo(
     () => parseResume(searchParams.get("resume")),
@@ -78,40 +80,18 @@ export function AuthFlow() {
       return;
     }
     setMobile(normalized);
-    setCode("");
     setStep("code");
     setResendIn(result.data.retryAfterSec || RESEND_SECONDS);
   }
 
-  async function handleVerify() {
-    const normalizedCode = normalizeCode(code);
-    if (!normalizedCode) {
-      setError("کد ۵ رقمی را کامل وارد کنید.");
-      return;
-    }
-    setPending(true);
-    setError(null);
-    const result = await verifyOtp(mobile, normalizedCode);
-    setPending(false);
-    if (!result.ok) {
-      setError(result.error.message);
-      return;
-    }
-    storeSession(result.data);
-    router.replace(returnTo);
-  }
-
-  async function handleResend() {
-    if (resendIn > 0 || pending) return;
-    setPending(true);
-    setError(null);
+  async function handleResend(): Promise<boolean> {
     const result = await requestOtp(mobile);
-    setPending(false);
     if (!result.ok) {
       setError(result.error.message);
-      return;
+      return false;
     }
     setResendIn(result.data.retryAfterSec || RESEND_SECONDS);
+    return true;
   }
 
   const inputClass =
@@ -120,101 +100,71 @@ export function AuthFlow() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center py-10">
       <div className="flex w-full max-w-xs flex-col gap-6">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span
-            aria-hidden="true"
-            className="flex size-14 items-center justify-center rounded-full border border-border bg-card text-foreground"
-          >
-            {step === "mobile" ? <Phone size={24} strokeWidth={1.5} /> : <KeyRound size={24} strokeWidth={1.5} />}
-          </span>
-          <h1 className="text-xl font-bold text-foreground">ورود به شکار</h1>
-          <p className="text-sm leading-6 text-muted-foreground">{contextLine(pendingAction)}</p>
-        </div>
-
         {step === "mobile" ? (
-          <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-2 text-[13px] font-medium text-foreground">
-              شماره موبایل
-              <input
-                type="tel"
-                inputMode="tel"
-                dir="ltr"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                placeholder="09123456789"
-                aria-label="شماره موبایل"
-                autoComplete="tel"
-                className={inputClass}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={handleRequestOtp}
-              disabled={pending}
-              className={cn(
-                "min-h-[52px] w-full rounded-lg bg-action-primary py-3.5 text-[15px] font-semibold text-primary-foreground transition-colors focus-visible:outline-2 focus-visible:outline-ring",
-                pending ? "opacity-60" : "hover:bg-action-primary-hover active:bg-action-primary-active"
-              )}
-            >
-              {pending ? "در حال ارسال…" : "ارسال کد تأیید"}
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <p className="text-center text-[13px] text-muted-foreground">
-              کد ۵ رقمی به <span dir="ltr" className="tabular-nums text-foreground">{mobile}</span> ارسال شد.
-            </p>
-            <label className="flex flex-col gap-2 text-[13px] font-medium text-foreground">
-              کد تأیید
-              <input
-                type="text"
-                inputMode="numeric"
-                dir="ltr"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/[^\d۰-۹]/g, "").slice(0, 5))}
-                placeholder="•••••"
-                aria-label="کد تأیید ۵ رقمی"
-                autoComplete="one-time-code"
-                className={cn(inputClass, "tracking-[0.5em]")}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={handleVerify}
-              disabled={pending}
-              className={cn(
-                "min-h-[52px] w-full rounded-lg bg-action-primary py-3.5 text-[15px] font-semibold text-primary-foreground transition-colors focus-visible:outline-2 focus-visible:outline-ring",
-                pending ? "opacity-60" : "hover:bg-action-primary-hover active:bg-action-primary-active"
-              )}
-            >
-              {pending ? "در حال بررسی…" : "تأیید و ورود"}
-            </button>
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep("mobile");
-                  setError(null);
-                }}
-                className="min-h-11 rounded-lg px-2 text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          <>
+            <div className="flex flex-col items-center gap-3 text-center">
+              <span
+                aria-hidden="true"
+                className="flex size-14 items-center justify-center rounded-full border border-border bg-card text-foreground"
               >
-                ویرایش شماره
-              </button>
+                <Phone size={24} strokeWidth={1.5} />
+              </span>
+              <h1 className="text-xl font-bold text-foreground">ورود به شکار</h1>
+              <p className="text-sm leading-6 text-muted-foreground">{contextLine(pendingAction)}</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-2 text-[13px] font-medium text-foreground">
+                شماره موبایل
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  placeholder="09123456789"
+                  aria-label="شماره موبایل"
+                  autoComplete="tel"
+                  className={inputClass}
+                />
+              </label>
               <button
                 type="button"
-                onClick={handleResend}
-                disabled={pending || resendIn > 0}
+                onClick={handleRequestOtp}
+                disabled={pending}
                 className={cn(
-                  "min-h-11 rounded-lg px-2 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-ring",
-                  resendIn > 0 || pending
-                    ? "cursor-default text-muted-foreground/60 tabular-nums"
-                    : "text-muted-foreground hover:text-foreground"
+                  "min-h-[52px] w-full rounded-lg bg-action-primary py-3.5 text-[15px] font-semibold text-primary-foreground transition-colors focus-visible:outline-2 focus-visible:outline-ring",
+                  pending ? "opacity-60" : "hover:bg-action-primary-hover active:bg-action-primary-active"
                 )}
               >
-                {resendIn > 0 ? `ارسال مجدد (${resendIn.toLocaleString("fa-IR")})` : "ارسال مجدد کد"}
+                {pending ? "در حال ارسال…" : "ارسال کد تأیید"}
               </button>
             </div>
-          </div>
+          </>
+        ) : (
+          <OtpOrbit
+            mobile={mobile}
+            context={contextLine(pendingAction)}
+            resendIn={resendIn}
+            onResend={handleResend}
+            onEditNumber={() => {
+              setStep("mobile");
+              setError(null);
+            }}
+            onVerify={async (code) => {
+              const result = await verifyOtp(mobile, code);
+              if (!result.ok) return { ok: false as const, message: result.error.message };
+              pendingSession.current = result.data;
+              return { ok: true as const };
+            }}
+            onSuccess={() => {
+              if (pendingSession.current) {
+                storeSession(pendingSession.current);
+                pendingSession.current = null;
+              }
+              router.replace(returnTo);
+            }}
+          />
         )}
 
         {error && (

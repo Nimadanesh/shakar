@@ -8,7 +8,7 @@ interface WhyMatchedProps {
 }
 
 /**
- * «چرا این آگهی نمایش داده شده؟» — Shakar's signature verification surface.
+ * «چرا این آگهی نمایش داده شده؟» — Shekaar's signature verification surface.
  * Every row is factual evidence from the listing text:
  * - include terms actually detected → signal
  * - excluded terms verified absent → signal

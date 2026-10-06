@@ -5,7 +5,7 @@
  */
 import { SignJWT, jwtVerify } from "jose";
 
-export const SESSION_COOKIE = "shakar_session";
+export const SESSION_COOKIE = "shekaar_session";
 const SESSION_TTL_SECONDS = 30 * 24 * 3600; // 30 days
 
 export interface SessionClaims {

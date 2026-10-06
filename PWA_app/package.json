@@ -1,5 +1,5 @@
 {
-  "name": "base-template",
+  "name": "shekaar",
   "version": "0.1.0",
   "private": true,
   "description": "Agent-driven UI/UX vibe coding starter template (Next.js + shadcn/ui + Tailwind)",

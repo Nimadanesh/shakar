@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "شکار | Shekar",
+  title: "شکار | Shekaar",
   description:
     "سرویس مستقل برای کاربران حرفه‌ای دیوار؛ کاهش زمان شکار از روزها به ۱–۲ ساعت.",
   manifest: "/manifest.webmanifest",

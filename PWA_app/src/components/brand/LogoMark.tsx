@@ -1,5 +1,5 @@
 /**
- * Shekar logo mark — inline vector S ribbon. Uses currentColor so the mark
+ * Shekaar logo mark — inline vector S ribbon. Uses currentColor so the mark
  * adapts to the theme automatically (white on dark, black on light).
  * Source: shakar-logo-mark.svg (Navid, 2026-10-05), with a subtle
  * spearhead refinement on the two outer tips (2026-10-05): the rounded

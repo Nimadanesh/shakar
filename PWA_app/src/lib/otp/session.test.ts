@@ -39,7 +39,7 @@ describe("session tokens", () => {
 describe("session cookie headers", () => {
   it("sets httpOnly + SameSite=Lax, Secure only when asked", () => {
     const h = sessionCookieHeader("t", { secure: true, maxAge: 60 });
-    expect(h).toContain("shakar_session=t");
+    expect(h).toContain("shekaar_session=t");
     expect(h).toContain("HttpOnly");
     expect(h).toContain("SameSite=Lax");
     expect(h).toContain("Secure");
