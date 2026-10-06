@@ -19,6 +19,7 @@ import {
   cityLabel,
 } from "@/data/taxonomy";
 import { detectTransaction, interpretQuery, mentionsRealEstate } from "@/lib/interpret";
+import { getRememberedCity, rememberCity } from "@/lib/city-memory";
 import { normalizePersian } from "@/lib/normalizePersian";
 import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
@@ -57,7 +58,13 @@ export function HuntSetup() {
   const searchParams = useSearchParams();
 
   const [query, setQuery] = useState("");
-  const [base, setBase] = useState<ContextBase>(EMPTY_CONTEXT_BASE);
+  // Smart city default: the user's standing preference (remembered from an
+  // explicit sheet pick) seeds the form, so the lazy user taps zero times.
+  // A city named in the query text still overrides it — flagged as inferred.
+  const [base, setBase] = useState<ContextBase>(() => ({
+    ...EMPTY_CONTEXT_BASE,
+    city: getRememberedCity() ?? "all",
+  }));
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
@@ -88,8 +95,12 @@ export function HuntSetup() {
       .filter((c) => c.kind === "exclude" && live(c.id) && !base.exclude.includes(c.value))
       .map((c) => ({ id: c.id, value: c.value, label: c.display }));
     const cityC = liveInterp.applied.find((c) => c.kind === "city" && live(c.id));
+    // A city named in the text is flagged (dashed «حدسی») whenever it
+    // differs from the current selection — including a remembered default.
+    // The text is the freshest signal, so it wins at fire time unless
+    // dismissed; the dashed display is the visible conflict flag.
     const city =
-      cityC && base.city === "all"
+      cityC && cityC.value !== base.city
         ? { id: cityC.id, value: cityC.value, display: cityC.display }
         : null;
     const minC = liveInterp.applied.find((c) => c.kind === "priceMin" && live(c.id));
@@ -397,8 +408,17 @@ export function HuntSetup() {
         title="شهر"
         options={CITIES}
         selected={base.city}
-        onSelect={(value) => setBase((b) => ({ ...b, city: value }))}
+        onSelect={(value) => {
+          setBase((b) => ({ ...b, city: value }));
+          // An explicit pick becomes the standing preference for next time…
+          rememberCity(value);
+          // …and settles the conflict: a hand-picked city dismisses the
+          // text's inference for this query (a new query re-infers fresh).
+          const inferredId = inferred.city?.id;
+          if (inferredId) setDismissed((d) => new Set(d).add(inferredId));
+        }}
         onClose={() => setCityOpen(false)}
+        searchable
       />
       <PriceSheet
         open={priceOpen}

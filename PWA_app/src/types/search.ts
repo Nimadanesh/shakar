@@ -8,6 +8,17 @@ export interface SearchContext {
   excludeKeywords: string[];
   category: string;
   city: string;
+  /**
+   * How the (M3) backend must treat `city`. Computed from the category, not
+   * stored — the mapping lives in one place (buildEffectiveContext).
+   * - "hard": location-bound category (real estate, vehicles). The city is a
+   *   filter; out-of-city results are excluded.
+   * - "soft": shippable / remote-friendly. The city is a ranking boost only —
+   *   out-of-city results stay, ranked lower. Never silently dropped, or the
+   *   best ad in Karaj dies for a Tehrani user.
+   * - null: city is "all" — no geo signal at all.
+   */
+  cityScope: "hard" | "soft" | null;
   priceMin: number | null;
   priceMax: number | null;
   hasImage: boolean;
@@ -21,6 +32,7 @@ export const EMPTY_SEARCH_CONTEXT: SearchContext = {
   excludeKeywords: [],
   category: "all",
   city: "all",
+  cityScope: null,
   priceMin: null,
   priceMax: null,
   hasImage: false,

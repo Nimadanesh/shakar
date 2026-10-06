@@ -8,7 +8,40 @@ const KNOWN_CITIES: Array<{ id: string; names: string[] }> = [
   { id: "shiraz", names: ["شیراز"] },
   { id: "mashhad", names: ["مشهد"] },
   { id: "tabriz", names: ["تبریز"] },
+  { id: "ahvaz", names: ["اهواز"] },
+  { id: "qom", names: ["قم"] },
+  { id: "kermanshah", names: ["کرمانشاه"] },
+  { id: "urmia", names: ["ارومیه", "اورمیه"] },
+  { id: "rasht", names: ["رشت"] },
+  { id: "zahedan", names: ["زاهدان"] },
+  { id: "hamadan", names: ["همدان"] },
+  { id: "kerman", names: ["کرمان"] },
+  { id: "yazd", names: ["یزد"] },
+  { id: "ardabil", names: ["اردبیل"] },
+  { id: "bandar-abbas", names: ["بندرعباس", "بندر عباس"] },
+  { id: "arak", names: ["اراک"] },
+  { id: "zanjan", names: ["زنجان"] },
+  { id: "qazvin", names: ["قزوین"] },
+  { id: "sanandaj", names: ["سنندج"] },
+  { id: "khorramabad", names: ["خرم‌آباد", "خرم آباد"] },
+  { id: "gorgan", names: ["گرگان"] },
+  { id: "sari", names: ["ساری"] },
+  { id: "bushehr", names: ["بوشهر"] },
+  { id: "kashan", names: ["کاشان"] },
+  { id: "dezful", names: ["دزفول"] },
+  { id: "kish", names: ["کیش"] },
 ];
+
+/**
+ * Word-boundary city mention check. Plain substring matching would fire
+ * «رشت» inside «درشت» — with 28 cities in the lexicon that class of false
+ * positive is no longer negligible. Persian words are space-separated
+ * (ZWNJ stays inside a word), so (^|\s)…(\s|$) is the right boundary.
+ */
+function mentionsCity(normalized: string, name: string): boolean {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|\\s)${escaped}(\\s|$)`).test(normalized);
+}
 
 const UNIT_MULTIPLIER: Array<{ unit: string; factor: number }> = [
   { unit: "میلیارد", factor: 1_000_000_000 },
@@ -140,7 +173,7 @@ export function interpretQuery(raw: string): Interpretation {
   if (normalized === "") return { version: "v1", applied, preferences };
 
   for (const city of KNOWN_CITIES) {
-    if (city.names.some((name) => normalized.includes(name))) {
+    if (city.names.some((name) => mentionsCity(normalized, name))) {
       pushUnique(applied, {
         id: `city:${city.id}`,
         kind: "city",

@@ -5,6 +5,10 @@ function kinds(raw: string): string[] {
   return interpretQuery(raw).applied.map((c) => `${c.kind}:${c.value}`);
 }
 
+function ids(raw: string): string[] {
+  return interpretQuery(raw).applied.map((c) => c.id);
+}
+
 describe("interpretQuery", () => {
   it("interprets the canonical piano query without inventing precision", () => {
     const { applied, preferences } = interpretQuery(
@@ -41,6 +45,22 @@ describe("interpretQuery", () => {
     const { applied } = interpretQuery("آپارتمان بالای ۵ میلیارد تهران");
     expect(applied.map((c) => c.id)).toContain("priceMin:5000000000");
     expect(applied.map((c) => c.id)).toContain("city:tehran");
+  });
+
+  it("detects expanded cities and name variants", () => {
+    expect(ids("آپارتمان در شیراز")).toContain("city:shiraz");
+    expect(ids("خونه در اورمیه")).toContain("city:urmia");
+    expect(ids("ویلا در بندر عباس")).toContain("city:bandar-abbas");
+    expect(ids("سوئیت در خرم‌آباد")).toContain("city:khorramabad");
+    expect(ids("مغازه در قم")).toContain("city:qom");
+  });
+
+  it("does not match a city inside another word (word boundaries)", () => {
+    // «درشت» contains «رشت» — must not infer Rasht.
+    expect(ids("ماهی درشت")).not.toContain("city:rasht");
+    expect(ids("ماهی درشت")).not.toContainEqual(
+      expect.stringMatching(/^city:/)
+    );
   });
 
   it("detects بدون exclusion", () => {

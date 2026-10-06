@@ -8,6 +8,7 @@ import { WhyMatched } from "@/components/ads/WhyMatched";
 import { DescriptionEvidence } from "@/components/ads/DescriptionEvidence";
 import { SEARCH_FIXTURES } from "@/data/search-fixtures";
 import { formatPriceToman } from "@/lib/prices";
+import { cityScopeFor } from "@/lib/search-context";
 import type { SearchContext } from "@/types/search";
 
 function asArray(value: string | string[] | undefined): string[] {
@@ -45,12 +46,14 @@ export default async function AdDetailPage({
   const ad = SEARCH_FIXTURES.find((item) => item.id === id);
   if (!ad) notFound();
 
+  const city = first(query.city) ?? "all";
   const ctx: SearchContext = {
     query: first(query.q) ?? "",
     includeKeywords: asArray(query.inc),
     excludeKeywords: asArray(query.exc),
     category: first(query.cat) ?? "all",
-    city: first(query.city) ?? "all",
+    city,
+    cityScope: cityScopeFor(city, first(query.cat) ?? "all", first(query.q) ?? ""),
     priceMin: num(query.min),
     priceMax: num(query.max),
     hasImage: query.img === "1",

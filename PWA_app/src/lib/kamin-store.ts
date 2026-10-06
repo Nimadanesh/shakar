@@ -2,6 +2,7 @@ import type { FixtureAd } from "@/data/search-fixtures";
 import { buildRadarConfig } from "@/lib/radar";
 import { runSearch } from "@/lib/search";
 import type { ContextBase } from "@/lib/search-context";
+import { cityScopeFor } from "@/lib/search-context";
 import type { SearchContext } from "@/types/search";
 import { invalidateCached } from "@/lib/session-cache";
 
@@ -63,14 +64,20 @@ function normalizeCtx(
   const v = raw as Record<string, unknown>;
   const includeKeywords = strArray(v.includeKeywords);
   const excludeKeywords = strArray(v.excludeKeywords);
+  const query = typeof v.query === "string" ? v.query : fallbackQuery;
+  const category = typeof v.category === "string" ? v.category : "all";
+  const city = typeof v.city === "string" ? v.city : "all";
   return {
-    query: typeof v.query === "string" ? v.query : fallbackQuery,
+    query,
     includeKeywords:
       includeKeywords.length > 0 ? includeKeywords : strArray(v.include),
     excludeKeywords:
       excludeKeywords.length > 0 ? excludeKeywords : strArray(v.exclude),
-    category: typeof v.category === "string" ? v.category : "all",
-    city: typeof v.city === "string" ? v.city : "all",
+    category,
+    city,
+    // Derived, never trusted from storage: old kamin records predate the
+    // field, and the mapping must stay single-sourced in cityScopeFor.
+    cityScope: cityScopeFor(city, category, query),
     priceMin: numOrNull(v.priceMin),
     priceMax: numOrNull(v.priceMax),
     hasImage: v.hasImage === true,

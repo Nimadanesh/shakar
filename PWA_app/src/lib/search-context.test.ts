@@ -23,8 +23,20 @@ describe("buildEffectiveContext", () => {
       interp(),
       new Set()
     );
-    expect(ctx.city).toBe("isfahan");
+    // City is the exception: the query text is the freshest signal, so the
+    // text-named city wins over a stored preference (flagged inferred in UI).
+    expect(ctx.city).toBe("tehran");
     expect(ctx.priceMax).toBe(100000000);
+  });
+
+  it("keeps the stored city while the text stays silent about location", () => {
+    const ctx = buildEffectiveContext(
+      "پیانو یاماها زیر ۲۰۰ میلیون",
+      { ...EMPTY_CONTEXT_BASE, city: "isfahan" },
+      interpretQuery("پیانو یاماها زیر ۲۰۰ میلیون"),
+      new Set()
+    );
+    expect(ctx.city).toBe("isfahan");
   });
 
   it("respects dismissed inferred constraints", () => {
@@ -52,5 +64,37 @@ describe("buildEffectiveContext", () => {
       new Set()
     );
     expect(ctx.includeKeywords).toEqual([]);
+  });
+
+  it("marks city scope hard for location-bound hunts", () => {
+    const q = "خونه ۵۰ متری تهران";
+    const ctx = buildEffectiveContext(q, EMPTY_CONTEXT_BASE, interpretQuery(q), new Set());
+    expect(ctx.city).toBe("tehran");
+    expect(ctx.cityScope).toBe("hard");
+  });
+
+  it("marks city scope hard for the vehicles category", () => {
+    const q = "۲۰۶ تیپ ۲ مشهد";
+    const ctx = buildEffectiveContext(
+      q,
+      { ...EMPTY_CONTEXT_BASE, category: "vehicles" },
+      interpretQuery(q),
+      new Set()
+    );
+    expect(ctx.city).toBe("mashhad");
+    expect(ctx.cityScope).toBe("hard");
+  });
+
+  it("marks city scope soft for shippable goods — never a silent filter", () => {
+    const ctx = buildEffectiveContext(QUERY, EMPTY_CONTEXT_BASE, interp(), new Set());
+    expect(ctx.city).toBe("tehran");
+    expect(ctx.cityScope).toBe("soft");
+  });
+
+  it("has no city scope when no city is set", () => {
+    const q = "پیانو یاماها";
+    const ctx = buildEffectiveContext(q, EMPTY_CONTEXT_BASE, interpretQuery(q), new Set());
+    expect(ctx.city).toBe("all");
+    expect(ctx.cityScope).toBeNull();
   });
 });

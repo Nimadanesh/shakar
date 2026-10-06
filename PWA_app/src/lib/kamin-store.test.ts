@@ -32,6 +32,9 @@ const goodCtx = {
   excludeKeywords: [],
   category: "music",
   city: "tehran",
+  // Derived on normalize: stored kamins predate the field, so the
+  // migration computes it (music + tehran → soft).
+  cityScope: "soft",
   priceMin: 100000000,
   priceMax: 400000000,
   hasImage: false,

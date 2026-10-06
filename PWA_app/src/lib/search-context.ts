@@ -1,3 +1,4 @@
+import { mentionsRealEstate } from "@/lib/interpret";
 import { parsePriceInput } from "@/lib/prices";
 import type { Interpretation, SearchContext } from "@/types/search";
 
@@ -25,9 +26,29 @@ export const EMPTY_CONTEXT_BASE: ContextBase = {
 };
 
 /**
+ * The single source of truth for city geo-semantics (M3 contract):
+ * location-bound categories filter hard, everything else only boosts.
+ * null when no city is set. Never duplicated — callers derive, never guess.
+ */
+export function cityScopeFor(
+  city: string,
+  category: string,
+  query: string
+): SearchContext["cityScope"] {
+  if (city === "all") return null;
+  const locationBound =
+    category === "real-estate" ||
+    category === "vehicles" ||
+    mentionsRealEstate(query);
+  return locationBound ? "hard" : "soft";
+}
+
+/**
  * Merge explicit user refinements with inferred interpretation.
- * Explicit always wins; dismissed inferred constraints stay off until the
- * raw query changes. Preferences never enter the context.
+ * Explicit wins — except for city, where the query text is the freshest
+ * signal and overrides a stored preference (flagged as inferred in the UI).
+ * Dismissed inferred constraints stay off until the raw query changes.
+ * Preferences never enter the context.
  */
 export function buildEffectiveContext(
   query: string,
@@ -47,10 +68,18 @@ export function buildEffectiveContext(
   }
 
   let city = base.city;
-  if (city === "all") {
-    const inferredCity = inferred("city");
-    if (inferredCity) city = inferredCity.value;
-  }
+  // The query text is the freshest signal of intent: a city named in the
+  // text wins over the stored preference (remembered or explicitly picked
+  // earlier this session) — same principle as the transaction rule below.
+  // The form flags it as inferred (dashed «حدسی») so the conflict is
+  // visible; dismissing restores the stored city. A stored city only stands
+  // while the text stays silent about location.
+  const inferredCity = inferred("city");
+  if (inferredCity) city = inferredCity.value;
+
+  // Geo semantics for the M3 backend live in cityScopeFor — one mapping,
+  // never duplicated or guessed at the call site.
+  const cityScope = cityScopeFor(city, base.category, query);
 
   let priceMin = parsePriceInput(base.priceMin);
   if (priceMin === null) {
@@ -81,6 +110,7 @@ export function buildEffectiveContext(
     excludeKeywords: exclude,
     category: base.category,
     city,
+    cityScope,
     priceMin,
     priceMax,
     hasImage: base.hasImage,
