@@ -24,6 +24,12 @@ export function unifyChars(text: string): string {
       .replace(/ي/g, "ی")
       .replace(/ك/g, "ک")
       .replace(/ة/g, "ه")
+      // Alef variants → plain Alef («آپارتمان» vs «اپارتمان» is THE most
+      // common Persian spelling split in ads — missing this hid the
+      // majority of apartment listings; flaw #9 in docs/output-quality.md)
+      .replace(/آ/g, "ا")
+      .replace(/ؤ/g, "و")
+      .replace(/ئ/g, "ی")
       // Arabic diacritics (fatha..sukun) + superscript alef
       .replace(/[ً-ْٰ]/g, "")
       // Tatweel (kashida)

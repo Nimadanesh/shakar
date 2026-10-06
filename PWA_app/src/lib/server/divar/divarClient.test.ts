@@ -136,7 +136,41 @@ describe("FirstPartyDivarProvider", () => {
     expect(calls).toHaveLength(1);
     const sent = JSON.parse(calls[0].init.body ?? "{}");
     expect(sent.city_ids).toEqual(["1"]);
-    expect(sent.search_data.form_data.data.category.str.value).toBe("apartment-sell");
+    expect(sent.search_data.form_data.data.category.str.value).toBe(
+      "apartment-sell"
+    );
+  });
+
+  it("sends keywords as the API text query (flaw #11)", async () => {
+    const calls = mockFetch(() => okJson(listJson()));
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    await divarProvider.searchLists({
+      categorySlug: "",
+      cityId: "1",
+      keywords: ["آپارتمان", "نوساز"],
+      page: 0,
+    });
+    const sentBody = JSON.parse(String(calls[0].init.body ?? "{}"));
+    expect(
+      sentBody.search_data.form_data.data.query.str.value
+    ).toBe("آپارتمان نوساز");
+  });
+
+  it("omits the text query when there are no keywords", async () => {
+    const calls = mockFetch(() => okJson(listJson()));
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    await divarProvider.searchLists({
+      categorySlug: "",
+      cityId: "1",
+      keywords: [],
+      page: 0,
+    });
+    const sentBody = JSON.parse(String(calls[0].init.body ?? "{}"));
+    expect(sentBody.search_data.form_data.data.query).toBeUndefined();
   });
 
   it("extracts detail description, price and category", async () => {
@@ -275,7 +309,8 @@ describe("anti-footprint hardening", () => {
     const { clearCache, setCached } = await import("./cache");
     clearCache();
     // Seed an EXPIRED entry — getCached skips it, getStale serves it.
-    setCached("list:1:apartment-sell:0", listJson(), -1);
+    // Key format: list:{cityId}:{category}:{queryText}:{page}.
+    setCached("list:1:apartment-sell::0", listJson(), -1);
     const res = await divarProvider.searchLists({
       categorySlug: "apartment-sell",
       cityId: "1",

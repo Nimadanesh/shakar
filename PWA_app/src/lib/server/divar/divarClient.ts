@@ -203,15 +203,24 @@ class FirstPartyDivarProvider implements ListingProvider {
     stale?: boolean;
   }> {
     const categorySlug = q.categorySlug !== "" ? q.categorySlug : undefined;
+    // Text query: Divar's search API honors search_data.form_data.data.query
+    // (probed live 2026-10-06 — "q"/"text" are ignored, "query" filters).
+    // This is what turns the list phase from "freshest N ads of everything"
+    // into "ads matching the hunt", so older relevant inventory is reachable
+    // (flaw #11 in docs/output-quality.md).
+    const queryText = q.keywords.filter((k) => k.trim() !== "").join(" ").trim();
     const body: Record<string, unknown> = {
       city_ids: q.cityId !== "" ? [q.cityId] : [],
       search_data: {
         form_data: {
-          data: categorySlug ? { category: { str: { value: categorySlug } } } : {},
+          data: {
+            ...(categorySlug ? { category: { str: { value: categorySlug } } } : {}),
+            ...(queryText !== "" ? { query: { str: { value: queryText } } } : {}),
+          },
         },
       },
     };
-    const cacheKey = `list:${q.cityId}:${categorySlug ?? "all"}:${q.page}`;
+    const cacheKey = `list:${q.cityId}:${categorySlug ?? "all"}:${queryText}:${q.page}`;
     const cached = getCached<DivarJson>(cacheKey);
     if (cached) return parseListJson(cached);
     try {

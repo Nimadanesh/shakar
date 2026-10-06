@@ -15,6 +15,12 @@ describe("unifyChars", () => {
   it("strips diacritics and tatweel", () => {
     expect(unifyChars("مُوبایـل")).toBe("موبایل");
   });
+  it("unifies Alef variants (آپارتمان vs اپارتمان — flaw #9)", () => {
+    expect(unifyChars("آپارتمان")).toBe("اپارتمان");
+    expect(unifyChars("مؤسسه")).toBe("موسسه");
+    expect(unifyChars("رئیس")).toBe("رییس");
+    expect(textMatches("اپارتمان ۹۰ متری نوساز", "آپارتمان")).toBe(true);
+  });
 });
 
 describe("normalizeForMatch", () => {
@@ -46,7 +52,8 @@ describe("tokenize", () => {
 describe("expandSynonyms", () => {
   it("expands bidirectionally (آپارتمان ↔ واحد)", () => {
     expect(expandSynonyms("آپارتمان")).toContain("واحد");
-    expect(expandSynonyms("واحد")).toContain("آپارتمان");
+    // Canonical form is the normalized one (آ→ا since flaw #9).
+    expect(expandSynonyms("واحد")).toContain("اپارتمان");
   });
   it("returns the term itself for unknown words", () => {
     expect(expandSynonyms("زرافه")).toEqual(["زرافه"]);

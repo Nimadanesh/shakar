@@ -86,7 +86,7 @@
   real client contract (query in `query`, empty `include`). A verification
   that bypasses the client contract is a false report. Never again:
   verifications must fire through the real API with real client bodies.
-- **CURE (DONE 2026-10-06, commit `9fd477c`+):**
+- **CURE (DONE 2026-10-06, commit `49b43b9`):**
   `src/lib/server/hunt/definition.ts` → `resolveHuntDefinition` — the
   single choke point for `/api/hunts` and kamin arm/run:
   1. content terms from the query become MANDATORY (merged into include);
@@ -98,6 +98,68 @@
   stay, per contract).
   Tests: `definition.test.ts` (12 — incl. the exact incident case:
   a pigeon ad can no longer pass a piano hunt), pipeline price test.
+
+## Flaw #9 — Alef variants never unified (آپارتمان vs اپارتمان, 2026-10-06)
+**Severity:** HIGH — silent recall loss, live.
+- `unifyChars` unified ي/ك/ة but NOT آ→ا. The user's «آپارتمان» never
+  matched the majority ad spelling «اپارتمان». Measured live: a
+  real-estate scan found 27 apartment titles without the fix, 126 with it —
+  the bug hid ~75% of apartment inventory.
+- **CURE (DONE 2026-10-06):** `unifyChars` now folds آ→ا, ؤ→و, ئ→ی
+  (standard Persian IR folding). Test: `persianNormalize.test.ts`
+  («اپارتمان ۹۰ متری نوساز» matches «آپارتمان»).
+
+## Flaw #10 — Text category never reached the provider (2026-10-06)
+**Severity:** HIGH — the «آپارتمان نوساز سعادت‌آباد» zero-result.
+- `detectCategoryFromText` existed but `resolveHuntDefinition` never applied
+  it — the same class of bug as the piano incident's city gap. The hunt
+  scanned 500 ALL-category ads (~27 apartment titles) instead of 500
+  real-estate ads (~126 apartment titles).
+- **CURE (DONE 2026-10-06):** text category applies when the picker is
+  "all" (explicit picker wins; unmapped "personal" fails open to unfiltered).
+  Tests: `definition.test.ts` («آپارتمان…» → real-estate; picker wins).
+
+## Flaw #11 — Keywords never sent to Divar; recency-window blindness (2026-10-06)
+**Severity:** CRITICAL — structural recall ceiling.
+- `ListingQuery.keywords` existed in the contract but the pipeline always
+  sent `[]` and the client ignored the field. Every hunt scanned only the
+  FRESHEST N ads of everything — older relevant inventory was unreachable
+  by construction. («صدها نمونه تو دیوار هست» — all older than the window.)
+- **CURE (DONE 2026-10-06):** Divar's `/v8/postlist/w/search` DOES honor a
+  text query at `search_data.form_data.data.query.str.value` (probed live;
+  `q`/`text` are ignored). The pipeline now sends `def.include` as the
+  provider query; the cache key includes the query text. The list phase went
+  from "freshest N of everything" to "ads matching the hunt". Live proof:
+  «آپارتمان نوساز سعادت آباد» → 520 query-scoped ads → 9 confirmed
+  (was: 0). Tests: `divarClient.test.ts` (query serialization, omission
+  when empty), pipeline keywords test.
+- Credit: the query-field shape was confirmed against the public docs of
+  [mmdju/divar-mcp](https://github.com/mmdju/divar-mcp) (docs-only repo) —
+  studied, not depended on. No runtime dependency on third-party servers.
+
+## Flaw #12 — Title hard-AND killed description-only attributes (2026-10-06)
+**Severity:** HIGH — false negatives by construction.
+- `titlePass` required EVERY include term in the TITLE. Attributes like
+  neighborhoods routinely live in descriptions («اپارتمان نوساز ۱۰۰ متری»
+  + سعادت‌آباد only in the description) — killed before the description
+  was ever read. The piano fix (mandatory terms) overshot into recall loss.
+- **CURE (DONE 2026-10-06):** the title phase is now SCORING, not
+  filtering — hard-reject only on excludes; everything else ranks by title
+  strength and the top goes to details. The hard AND moved to
+  `descriptionPass` over title+description COMBINED. Recall at the title,
+  precision at the description. The `filter-wave` progress event became
+  `ranked` («۵۱۲ آگهی رو مرور کردم — ۱۰۰ تای مرتبط‌تر رو جدا کردم»).
+  Tests: pipeline (description-only attribute survives; excludes still
+  hard-reject; ranked event).
+
+## Flaw #13 — Transaction answer ignored by the engine (2026-10-06)
+**Severity:** MEDIUM — the form asks اجاره/خرید, the pipeline didn't listen.
+- `def.transaction` was parsed and stored but never used — a «خرید» hunt
+  scanned rentals too (Divar splits them: `apartment-sell` vs
+  `apartment-rent`).
+- **CURE (DONE 2026-10-06):** real-estate + transaction now selects Divar's
+  leaf category at the provider. No answer → whole real-estate (never a
+  silent half). Tests: pipeline leaf-selection (buy/rent/unset).
 
 ## Standing invariants (never weaken)
 

@@ -52,6 +52,24 @@ describe("resolveHuntDefinition — the «پیانو» incident (2026-10-06)", (
     );
   });
 
+  it("applies the text category when the picker is all (flaw #10)", () => {
+    const def = resolveHuntDefinition(
+      body({ query: "آپارتمان نوساز سعادت آباد" })
+    )!;
+    expect(def.category).toBe("real-estate");
+  });
+
+  it("keeps an explicit category over the text", () => {
+    const def = resolveHuntDefinition(
+      body({ query: "آپارتمان نوساز سعادت آباد", category: "vehicles" })
+    )!;
+    expect(def.category).toBe("vehicles");
+  });
+
+  it("detects the piano category from text (music)", () => {
+    expect(resolveHuntDefinition(body())!.category).toBe("music");
+  });
+
   it("honors a dismissed city reading — but keeps the content terms", () => {
     const def = resolveHuntDefinition(body({ dismissed: ["city:tehran"] }))!;
     expect(def.city).toBe("all");

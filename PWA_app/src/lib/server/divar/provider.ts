@@ -14,7 +14,7 @@ export interface ListingQuery {
   cityId: string;
   priceMin?: number;
   priceMax?: number;
-  /** Free-text keywords (normalized Persian). */
+  /** Free-text keywords (normalized Persian) — sent as the API text query. */
   keywords: string[];
   /** e.g. { transaction: "rent" } — provider-level filters when available. */
   attributes?: Record<string, string>;

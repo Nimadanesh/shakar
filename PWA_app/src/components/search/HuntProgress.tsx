@@ -118,14 +118,12 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
             ])
           );
           break;
-        case "filter-wave":
+        case "ranked":
           pushTrace(
-            e.wave === 0 && e.rejected > 0
-              ? `این ${fa(e.rejected)} تای اول به دردت نمی‌خورن...`
-              : `${fa(e.totalRejected)} تا رد شد...`,
+            `${fa(e.scored)} آگهی رو مرور کردم — ${fa(e.shortlisted)} تای مرتبط‌تر رو جدا کردم${e.excluded > 0 ? ` (${fa(e.excluded)} تا با «نباید»هات حذف شد)` : ""}.`,
             true
           );
-          setCurrent("دارم بقیه‌ی تیترها رو چک می‌کنم...");
+          setCurrent("حالا دارم توضیحاتشون رو یکی‌یکی می‌خونم...");
           break;
         case "candidates":
           pushTrace(

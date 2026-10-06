@@ -2,6 +2,7 @@ import "server-only";
 
 import type { HuntDefinition } from "./pipeline";
 import {
+  detectCategoryFromText,
   interpretQuery,
   KNOWN_CITIES,
   PREFERENCE_CUES,
@@ -58,9 +59,13 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
  *  1. content terms from the query text become MANDATORY (merged into
  *     include) — «پیانو U3 تهران» requires پیانو AND U3 in every ad;
  *  2. a city named in the text applies when the picker is "all";
- *  3. price bounds named in the text apply when the fields are empty;
- *  4. inline «نه» excludes apply;
- *  5. nothing the user dismissed (by deterministic constraint id) applies.
+ *  3. a category named in the text («آپارتمان» → real-estate) applies when
+ *     the picker is "all" — without this the provider scans every category
+ *     and the 500-ad window dilutes to ~27 apartments (flaw #10,
+ *     2026-10-06: «آپارتمان نوساز سعادت‌آباد» found nothing);
+ *  4. price bounds named in the text apply when the fields are empty;
+ *  5. inline «نه» excludes apply;
+ *  6. nothing the user dismissed (by deterministic constraint id) applies.
  *
  * Structural words (city names, price expressions, cue words, excludes,
  * preference wishes) never become content terms.
@@ -92,6 +97,15 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   const cityC = applied.find((c) => c.kind === "city");
   const city =
     (def.city === "all" || def.city === "") && cityC ? cityC.value : def.city;
+
+  // 3. Category from text when the picker didn't choose one. Explicit
+  // picker wins. An unmapped text category ("personal") falls back to "all"
+  // downstream (CATEGORY_API_VALUE ?? "") — fail open, never fail silent.
+  const textCategory =
+    def.category === "all" || def.category === ""
+      ? detectCategoryFromText(def.query)
+      : null;
+  const category = textCategory ?? def.category;
 
   // 3. Price bounds from text when the fields are empty.
   const minC = applied.find((c) => c.kind === "priceMin");
@@ -125,6 +139,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     include,
     exclude,
     city,
+    category,
     priceMin,
     priceMax,
   };
@@ -161,6 +176,11 @@ function contentTerms(
   const drop = (text: string) => {
     for (const t of tokenize(text)) structural.add(t);
   };
+  // NOTE: city names drop at TOKEN level («خرم آباد» drops both «خرم» and
+  // «آباد»), so «آباد» never becomes a content term. That's recall-safe
+  // (place suffixes are weak terms) but slightly imprecise for X+آباد
+  // place queries («شهرک آباد» vs «شهرک غرب»). Phrase-level dropping is
+  // the future refinement — see docs/output-quality.md flaw #8 note.
   for (const city of KNOWN_CITIES) for (const name of city.names) drop(name);
   for (const w of NEGATION_VERBS) drop(w);
   for (const p of EXCLUDE_PREFIXES) drop(p);

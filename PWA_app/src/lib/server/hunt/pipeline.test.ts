@@ -12,7 +12,15 @@ vi.mock("../divar/divarClient", () => ({
   },
 }));
 vi.mock("../divar/taxonomy", () => ({
-  CATEGORY_API_VALUE: { all: "", mobile: "electronic-devices" },
+  CATEGORY_API_VALUE: {
+    all: "",
+    mobile: "electronic-devices",
+    "real-estate": "real-estate",
+  },
+  LEAF_CATEGORY: {
+    apartmentSell: "apartment-sell",
+    apartmentRent: "apartment-rent",
+  },
   resolveCityId: vi.fn(async () => "1"),
 }));
 
@@ -53,12 +61,12 @@ function collect(def: HuntDefinition): Promise<{ events: HuntEvent[] }> {
 }
 
 describe("runPipeline", () => {
-  it("filters by title rules, dedups reposts, scores by description", async () => {
+  it("scores titles (no hard include filter), dedups reposts, confirms via description", async () => {
     mockSearchLists.mockResolvedValueOnce({
       listings: [
         summary({ sourceAdId: "a1", title: "گوشی موبایل نو", price: 100 }),
         summary({ sourceAdId: "a2", title: "گوشی موبایل نو", price: 100 }), // repost dup
-        summary({ sourceAdId: "a3", title: "لپ تاپ استوک", price: 50 }), // title reject
+        summary({ sourceAdId: "a3", title: "لپ تاپ استوک", price: 50 }), // weak title, checked anyway
         summary({ sourceAdId: "a4", title: "گوشی خراب", price: 10 }), // exclude reject
       ],
       hasMore: false,
@@ -77,24 +85,105 @@ describe("runPipeline", () => {
     const done = events.find((e) => e.type === "done");
     expect(done?.type).toBe("done");
     if (done?.type !== "done") return;
-    // a1 confirmed; a2 collapsed as dup; a3/a4 rejected at title.
+    // a1 confirmed; a2 collapsed as dup; a3 checked (weak title) but failed
+    // description; a4 hard-rejected at title by the exclude.
     expect(done.results.map((r) => r.sourceAdId)).toEqual(["a1"]);
     expect(done.stats.adsSeen).toBe(4);
-    expect(done.stats.titleRejected).toBe(2);
+    expect(done.stats.titleRejected).toBe(1);
     expect(done.stats.dupsCollapsed).toBe(1);
+    expect(done.stats.nearMiss).toBe(1);
     expect(done.results[0].evidence).toContain("گوشی");
+    const ranked = events.find((e) => e.type === "ranked");
+    expect(ranked).toMatchObject({ scored: 4, shortlisted: 2, excluded: 1 });
   });
 
-  it("emits filter waves in chunks (chunked discernment)", async () => {
+  it("emits a single ranked event instead of rejection waves", async () => {
     const listings = Array.from({ length: 120 }, (_, i) =>
       summary({ sourceAdId: `x${i}`, title: `آگهی شماره ${i}` })
     );
     mockSearchLists.mockResolvedValueOnce({ listings, hasMore: false });
     const { events } = await collect({ ...DEF, include: ["گوشی"] });
-    const waves = events.filter((e) => e.type === "filter-wave");
-    // 120 rejects → waves at 50, 100, + final flush.
-    expect(waves.length).toBe(3);
-    expect(waves[0]).toMatchObject({ wave: 1, rejected: 50, totalRejected: 50 });
+    const ranked = events.filter((e) => e.type === "ranked");
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0]).toMatchObject({ scored: 120, shortlisted: 120, excluded: 0 });
+    expect(events.map((e) => e.type)).not.toContain("filter-wave");
+  });
+
+  it("does NOT kill an ad at title level when the attribute lives only in the description (flaw #12)", async () => {
+    const def: HuntDefinition = {
+      query: "آپارتمان نوساز سعادت آباد",
+      include: ["آپارتمان", "نوساز", "سعادت", "آباد"],
+      exclude: [],
+      city: "tehran",
+      category: "real-estate",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+    };
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({
+          sourceAdId: "s1",
+          // No neighborhood in the title — the old hard-AND killed this.
+          title: "اپارتمان ۱۰۰ متری نوساز",
+          price: 100,
+        }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockResolvedValue({
+      sourceAdId: "s1",
+      title: "اپارتمان ۱۰۰ متری نوساز",
+      price: 100,
+      city: "تهران",
+      description: "آپارتمان نوساز در سعادت آباد، طبقه سوم",
+      images: [],
+      categorySlug: "",
+    });
+    const { events } = await collect(def);
+    const done = events.find((e) => e.type === "done");
+    expect(done?.type).toBe("done");
+    if (done?.type !== "done") return;
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["s1"]);
+  });
+
+  it("passes the hunt content terms as provider keywords (flaw #11)", async () => {
+    mockSearchLists.mockResolvedValueOnce({ listings: [], hasMore: false });
+    await collect(DEF);
+    expect(mockSearchLists).toHaveBeenCalledWith(
+      expect.objectContaining({ keywords: ["گوشی"] })
+    );
+  });
+
+  it("honors the transaction answer with Divar's sell/rent leaf (flaw #13)", async () => {
+    mockSearchLists.mockResolvedValueOnce({ listings: [], hasMore: false });
+    const base: HuntDefinition = {
+      query: "آپارتمان نوساز",
+      include: ["آپارتمان", "نوساز"],
+      exclude: [],
+      city: "tehran",
+      category: "real-estate",
+      priceMin: "",
+      priceMax: "",
+      transaction: "buy",
+      condition: "",
+    };
+    await collect(base);
+    expect(mockSearchLists).toHaveBeenCalledWith(
+      expect.objectContaining({ categorySlug: "apartment-sell" })
+    );
+    mockSearchLists.mockResolvedValueOnce({ listings: [], hasMore: false });
+    await collect({ ...base, transaction: "rent" });
+    expect(mockSearchLists).toHaveBeenCalledWith(
+      expect.objectContaining({ categorySlug: "apartment-rent" })
+    );
+    // No answer → the whole real-estate category, never a silent half.
+    mockSearchLists.mockResolvedValueOnce({ listings: [], hasMore: false });
+    await collect({ ...base, transaction: "" });
+    expect(mockSearchLists).toHaveBeenCalledWith(
+      expect.objectContaining({ categorySlug: "real-estate" })
+    );
   });
 
   it("streams details in batches of 10, prioritized", async () => {

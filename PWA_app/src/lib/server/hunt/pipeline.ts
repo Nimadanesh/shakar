@@ -9,16 +9,21 @@ import {
   type ListingSummary,
 } from "../divar/provider";
 import { divarProvider } from "../divar/divarClient";
-import { CATEGORY_API_VALUE, resolveCityId } from "../divar/taxonomy";
+import { CATEGORY_API_VALUE, LEAF_CATEGORY, resolveCityId } from "../divar/taxonomy";
 import { parsePriceBound } from "./definition";
 
 /**
  * M4 search pipeline — the actual hunt. Runs server-side, streams progress
  * events (the client renders them with docs/hunt-progress-copy.md).
  *
- * Flow: list pages (cap 20) → title rules (textMatches, Persian-aware) →
- * near-dup collapse → details in prioritized batches of 10 → description
- * rules → scoring (rubric in docs/output-quality.md flaw #2) → ranked.
+ * Flow: list pages (cap 20, query-scoped) → title SCORING (recall-oriented,
+ * Persian-aware) → near-dup collapse → details in prioritized batches of
+ * 10 → description rules (hard AND over title+description) → scoring
+ * (rubric in docs/output-quality.md flaw #2) → ranked.
+ *
+ * The title phase never hard-filters on includes (flaw #12): attributes
+ * like neighborhoods routinely live in descriptions, not titles. Precision
+ * lives in the description phase; the title phase exists for recall.
  *
  * Quality invariants (never weaken):
  * - textMatches, never raw includes (output-quality.md flaw #1);
@@ -82,7 +87,7 @@ export type HuntEvent =
   | { type: "started"; query: string }
   | { type: "lists-progress"; pagesDone: number; adsSeen: number }
   | { type: "lists-done"; adsSeen: number; stale: boolean }
-  | { type: "filter-wave"; wave: number; rejected: number; totalRejected: number }
+  | { type: "ranked"; scored: number; shortlisted: number; excluded: number }
   | { type: "candidates"; count: number; dupsCollapsed: number }
   | { type: "big-hunt"; candidates: number }
   | { type: "details-batch"; checked: number; total: number; confirmed: ScoredAd[] }
@@ -90,8 +95,6 @@ export type HuntEvent =
   | { type: "error"; errorClass: string; message: string };
 
 const DETAIL_BATCH = 10;
-/** Emit a filter-wave event every N title rejections (chunked discernment). */
-const WAVE_EVERY = 50;
 
 export interface Candidate extends ListingSummary {
   titleStrength: number;
@@ -119,27 +122,39 @@ function isWeasel(title: string, term: string): boolean {
   return title.includes(`طرح ${term}`) || title.includes(`طرح${term}`);
 }
 
-function titlePass(ad: ListingSummary, def: HuntDefinition): {
-  pass: boolean;
+/**
+ * Title SCORING — deliberately NOT a filter (flaw #12, 2026-10-06).
+ *
+ * The old titlePass was a hard AND over every include term: an ad titled
+ * «اپارتمان نوساز ۱۰۰ متری» that named سعادت‌آباد only in its description
+ * was killed before the description was ever read — and attributes
+ * (neighborhood, specs) routinely live in descriptions, not titles.
+ *
+ * Now the title phase hard-rejects ONLY on excludes («نه» means نه — cheap
+ * and safe). Everything else is scored by title strength; the top of the
+ * ranking goes to the detail phase, where descriptionPass applies the hard
+ * AND over title+description combined. Recall at the title, precision at
+ * the description.
+ */
+function titleScore(ad: ListingSummary, def: HuntDefinition): {
+  excluded: boolean;
   strength: number;
   needsDetailReview: boolean;
 } {
+  for (const term of def.exclude) {
+    if (textMatches(ad.title, term)) {
+      return { excluded: true, strength: 0, needsDetailReview: false };
+    }
+  }
   let strength = 0;
   let needsDetailReview = false;
   for (const term of def.include) {
     if (textMatches(ad.title, term)) {
       strength += 1;
       if (isWeasel(ad.title, term)) needsDetailReview = true;
-    } else {
-      return { pass: false, strength: 0, needsDetailReview: false };
     }
   }
-  for (const term of def.exclude) {
-    if (textMatches(ad.title, term)) {
-      return { pass: false, strength: 0, needsDetailReview: false };
-    }
-  }
-  return { pass: true, strength, needsDetailReview };
+  return { excluded: false, strength, needsDetailReview };
 }
 
 function descriptionPass(
@@ -182,10 +197,9 @@ function scoreAd(
 /**
  * M4 pipeline, split for the M5 kamin engine.
  *
- * collectCandidates = phases 1-3 (list pages -> title rules -> near-dup
- * collapse). confirmCandidates = phases 4-5 (details in prioritized batches
- * of 10 -> ranking). runPipeline composes both — the SSE event stream and
- * the results are byte-identical to before the split.
+ * collectCandidates = phases 1-3 (query-scoped list pages -> title scoring
+ * -> near-dup collapse). confirmCandidates = phases 4-5 (details in
+ * prioritized batches of 10 -> ranking). runPipeline composes both.
  *
  * The kamin engine calls collectCandidates with a small recency budget,
  * diffs candidate ids against its seen baseline, then calls
@@ -215,7 +229,15 @@ export async function collectCandidates(
   const startPage =
     opts.startPage ?? (def.deepHistory === true ? MAX_LIST_PAGES_PER_HUNT : 0);
   const maxPages = opts.maxPages ?? MAX_LIST_PAGES_PER_HUNT;
-  const categorySlug = CATEGORY_API_VALUE[def.category] ?? "";
+  // The transaction answer is honored at the provider (flaw #13): Divar
+  // splits apartments into sell/rent leaves, so a «خرید» answer must not
+  // scan rentals (and vice versa). The form asks — the engine must obey.
+  const categorySlug =
+    def.category === "real-estate" && def.transaction === "rent"
+      ? LEAF_CATEGORY.apartmentRent
+      : def.category === "real-estate" && def.transaction === "buy"
+        ? LEAF_CATEGORY.apartmentSell
+        : (CATEGORY_API_VALUE[def.category] ?? "");
   const cityId = def.city !== "all" ? await resolveCityId(def.city) : null;
   const all: ListingSummary[] = [];
   let pagesDone = 0;
@@ -225,7 +247,10 @@ export async function collectCandidates(
       res = await divarProvider.searchLists({
         categorySlug,
         cityId: cityId ?? "",
-        keywords: [],
+        // The hunt's content terms scope the list phase server-side
+        // (flaw #11): without this we only ever see the freshest N ads of
+        // everything, and older relevant inventory is unreachable.
+        keywords: def.include,
         page,
       });
     } catch (e) {
@@ -244,35 +269,31 @@ export async function collectCandidates(
   }
   emit({ type: "lists-done", adsSeen: all.length, stale: stats.stale });
 
-  // ---- Phase 2: title rules (chunked discernment waves) --------------------
-  const survivors: Candidate[] = [];
-  let waveRejected = 0;
-  let wave = 0;
-  const emitWave = () => {
-    wave += 1;
-    emit({ type: "filter-wave", wave, rejected: waveRejected, totalRejected: stats.titleRejected });
-  };
+  // ---- Phase 2: title scoring + shortlist (recall-oriented) -----------------
+  // No hard include filter at title level (flaw #12). Score every ad,
+  // rank by title strength, and let the detail phase decide. Only EXCLUDES
+  // hard-reject here — «نه» means نه.
+  const scored: Candidate[] = [];
+  let excluded = 0;
   for (const ad of all) {
-    const r = titlePass(ad, def);
-    if (!r.pass) {
+    const r = titleScore(ad, def);
+    if (r.excluded) {
+      excluded += 1;
       stats.titleRejected += 1;
-      waveRejected += 1;
-      if (waveRejected >= WAVE_EVERY) {
-        emitWave();
-        waveRejected = 0;
-      }
       continue;
     }
-    survivors.push({ ...ad, titleStrength: r.strength, needsDetailReview: r.needsDetailReview });
+    scored.push({
+      ...ad,
+      titleStrength: r.strength,
+      needsDetailReview: r.needsDetailReview,
+    });
   }
-  if (waveRejected > 0 || stats.titleRejected > 0) {
-    emitWave();
-  }
+  scored.sort((a, b) => b.titleStrength - a.titleStrength);
 
   // ---- Phase 3: near-dup collapse (keep newest = first seen) ---------------
   const seen = new Set<string>();
   const unique: Candidate[] = [];
-  for (const c of survivors) {
+  for (const c of scored) {
     const key = dupKey(c.title, c.price !== null ? String(c.price) : null);
     if (seen.has(key)) {
       stats.dupsCollapsed += 1;
@@ -281,6 +302,12 @@ export async function collectCandidates(
     seen.add(key);
     unique.push(c);
   }
+  emit({
+    type: "ranked",
+    scored: all.length,
+    shortlisted: unique.length,
+    excluded,
+  });
   stats.candidates = unique.length;
   emit({ type: "candidates", count: unique.length, dupsCollapsed: stats.dupsCollapsed });
 
