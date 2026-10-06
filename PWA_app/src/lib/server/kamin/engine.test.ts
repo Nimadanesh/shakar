@@ -954,6 +954,62 @@ describe("checkKamin — detailUnknown (finding #21)", () => {
     ).map((row) => row.source_ad_id);
     expect(seenIds).toEqual(["b"]);
   });
+
+  it("ALL details degraded (stale/failed) → last_success_at frozen (finding #1, round 6)", async () => {
+    const k = kaminRow({
+      last_success_at: "2026-10-06T11:00:00.000Z",
+      last_checked_at: "2026-10-06T11:00:00.000Z",
+    });
+    const sb = fakeSb({
+      kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(["a"]),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps } = testDeps(sb, {
+      candidates: [cand("b"), cand("c")],
+      // Every detail fetch failed or served stale cache — the pipeline
+      // flags them all detailUnknown. The check verified NOTHING.
+      confirmUnknown: new Set(["b", "c"]),
+    });
+    const r = await checkKamin(deps, k);
+    expect(r.status).toBe("completed");
+    expect(r.newCount).toBe(0);
+    const row = sb.tables.kamins[0] as unknown as Record<string, unknown>;
+    // last_checked_at moves (the check ran)...
+    expect(row.last_checked_at).toBe("2026-10-06T12:00:00.000Z");
+    // ...but last_success_at is FROZEN — same as a stale list collect
+    // (finding #17). Advancing it would fake a success and shrink the
+    // next check's crawl budget via pageBudgetForElapsed.
+    expect(row.last_success_at).toBe("2026-10-06T11:00:00.000Z");
+    // The run is flagged for observability.
+    const run = sb.tables.kamin_runs[0] as unknown as Record<string, unknown>;
+    expect(run.stale).toBe(true);
+  });
+
+  it("SOME details verified → last_success_at advances (partial success is real)", async () => {
+    const k = kaminRow({
+      last_success_at: "2026-10-06T11:00:00.000Z",
+      last_checked_at: "2026-10-06T11:00:00.000Z",
+    });
+    const sb = fakeSb({
+      kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed([]),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps } = testDeps(sb, {
+      candidates: [cand("b"), cand("c")],
+      confirmUnknown: new Set(["c"]), // c degraded, b verified
+    });
+    const r = await checkKamin(deps, k);
+    expect(r.status).toBe("completed");
+    expect(r.newCount).toBe(1);
+    const row = sb.tables.kamins[0] as unknown as Record<string, unknown>;
+    // Genuine progress was made — the window advances. The degraded ad
+    // stays unseen (detailUnknown filter) for a later retry.
+    expect(row.last_success_at).toBe("2026-10-06T12:00:00.000Z");
+  });
 });
 
 describe("seen baseline — unbounded (finding #8)", () => {

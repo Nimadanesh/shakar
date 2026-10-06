@@ -1,0 +1,22 @@
+-- M18: execution lease for hunt_runs (findings #7/#8, bug-bounty final
+-- round, 2026-10-07).
+--
+-- claimRunForExecution() was created → running with no recovery: if the
+-- instance crashed mid-pipeline, the run stayed `running` forever — the
+-- user reopens the stream, the claim fails (not `created`), and
+-- replayAndFollow waits for a terminal state that never comes. Paid hunt
+-- stuck, quota consumed, no refund.
+--
+-- claimed_at is the execution lease (same pattern as m12's kamin
+-- scheduler claim):
+-- - claimRunForExecution sets claimed_at = now() on claim. It now also
+--   claims a `running` run whose lease expired (crashed owner) — the new
+--   owner re-runs the pipeline (at-least-once recovery).
+-- - The owner heartbeats claimed_at during runPipeline and finalizeRun
+--   clears it (claimed_at = null) atomically with the terminal status.
+-- - If the owner crashes, the heartbeat stops; after the 15 min lease a
+--   new opener can claim the run instead of waiting forever.
+--
+-- Idempotent: safe to re-run.
+
+alter table hunt_runs add column if not exists claimed_at timestamptz;

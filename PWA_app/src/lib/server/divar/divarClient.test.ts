@@ -367,6 +367,36 @@ describe("anti-footprint hardening", () => {
     ).rejects.toMatchObject({ errorClass: "rate-limited" });
   });
 
+  it("serves stale detail cache during a restriction, flagged honestly (finding #1, round 6)", async () => {
+    const calls = mockFetch(
+      () => ({ ok: false, status: 429, json: async () => ({}) }) as unknown as Response
+    );
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache, setCached } = await import("./cache");
+    clearCache();
+    // Seed an EXPIRED detail entry — getCached skips it, getStale serves it.
+    // Key format: detail:{sourceAdId}.
+    setCached("detail:tok123", detailJson(), -1);
+    const detail = await divarProvider.getDetail("tok123");
+    // The stale flag must survive — the pipeline treats stale details like
+    // failed fetches (detailUnknown), never as verified confirmations.
+    expect(detail.stale).toBe(true);
+    expect(detail.title).toBe("آپارتمان ۸۰ متری");
+    expect(calls).toHaveLength(1); // one live attempt, then stale
+  });
+
+  it("throws honestly when restricted with no stale detail cache", async () => {
+    mockFetch(
+      () => ({ ok: false, status: 429, json: async () => ({}) }) as unknown as Response
+    );
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    await expect(divarProvider.getDetail("tok999")).rejects.toMatchObject({
+      errorClass: "rate-limited",
+    });
+  });
+
   it("exposes cooldown state in IP health", async () => {
     mockFetch(
       () => ({ ok: false, status: 429, json: async () => ({}) }) as unknown as Response

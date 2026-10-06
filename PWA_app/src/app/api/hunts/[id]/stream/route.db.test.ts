@@ -128,6 +128,16 @@ function makeFakeDb() {
       if (!row) return [];
       const statusEq = eq("status");
       if (statusEq !== null && row.status !== statusEq) return [];
+      // Model the lease-recovery or= filter (finding #7): the second claim
+      // PATCH requires status=running AND (claimed_at null OR < cutoff).
+      const orRaw = params.get("or");
+      if (orRaw) {
+        const m = orRaw.match(/claimed_at\.lt\.(.+)$/);
+        const cutoff = m ? decodeURIComponent(m[1].replace(/\)$/, "")) : null;
+        const leaseOk =
+          row.claimed_at == null || (cutoff !== null && String(row.claimed_at) < cutoff);
+        if (!leaseOk) return [];
+      }
       Object.assign(row, b, { updated_at: new Date().toISOString() });
       return [{ id: row.id }];
     }

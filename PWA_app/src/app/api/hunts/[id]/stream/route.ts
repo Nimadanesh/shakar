@@ -6,8 +6,10 @@ import {
   getBackendKind,
   getRun,
   getRunStatus,
+  heartbeatRunClaim,
   readRunEvents,
   runCompletionSideEffects,
+  RUN_HEARTBEAT_MS,
 } from "@/lib/server/hunt/runs";
 import type { HuntRun } from "@/lib/server/hunt/runs";
 import { runPipeline, type HuntEvent } from "@/lib/server/hunt/pipeline";
@@ -216,6 +218,18 @@ async function replayAndFollow(
     await sleep(streamTuning.pollMs);
     await drain();
   }
+  // Finding #6 (final round): if the run reached a terminal status but the
+  // terminal event was never persisted (appendRunEvent failed silently),
+  // synthesize it so the reconnecting client isn't left hanging. The run
+  // row is the ground truth; the event log is best-effort.
+  if (!terminal) {
+    const st = await getRunStatus(runId);
+    if (st === "done") {
+      send({ type: "done", results: [], stats: {} as never });
+    } else if (st === "failed") {
+      send({ type: "error", errorClass: "unknown", message: "run failed" });
+    }
+  }
 }
 
 function dbStream(run: HuntRun): Response {
@@ -250,6 +264,12 @@ function dbStream(run: HuntRun): Response {
       // Event inserts are tracked (not fire-and-forget) and ALL awaited
       // before finalization — the event table is the replay source, so no
       // emitted event may be silently lost.
+      // Finding #7: heartbeat the execution lease while the pipeline runs.
+      // If this instance crashes, the heartbeat stops and another opener
+      // can claim the run after the lease expires instead of waiting forever.
+      const heartbeat = setInterval(() => {
+        void heartbeatRunClaim(run.id);
+      }, RUN_HEARTBEAT_MS);
       const pending: Promise<void>[] = [];
       let sawResults = false;
       let errored = false;
@@ -266,20 +286,25 @@ function dbStream(run: HuntRun): Response {
       };
       let endCursor: unknown;
       try {
-        ({ endCursor } = await runPipeline(run.def, wrappedSend, {
-          startCursor: run.startCursor,
-        }));
-      } catch {
-        // The pipeline already emitted { type: "error" } before throwing.
-        errored = true;
-      }
-      await Promise.all(pending);
-      const status = errored ? "failed" : "done";
-      // Conditional finalization: exactly one closer per run, and the end
-      // cursor lands in the row for the deepen phase.
-      const finalized = await finalizeRun(run.id, status, endCursor);
-      if (finalized) {
-        await runCompletionSideEffects(run, { sawResults, errored, finalIds });
+        try {
+          ({ endCursor } = await runPipeline(run.def, wrappedSend, {
+            startCursor: run.startCursor,
+          }));
+        } catch {
+          // The pipeline already emitted { type: "error" } before throwing.
+          errored = true;
+        }
+        await Promise.all(pending);
+        const status = errored ? "failed" : "done";
+        // Conditional finalization: exactly one closer per run, and the end
+        // cursor lands in the row for the deepen phase. finalizeRun also
+        // releases the execution lease (claimed_at = null).
+        const finalized = await finalizeRun(run.id, status, endCursor);
+        if (finalized) {
+          await runCompletionSideEffects(run, { sawResults, errored, finalIds });
+        }
+      } finally {
+        clearInterval(heartbeat);
       }
       close();
     },

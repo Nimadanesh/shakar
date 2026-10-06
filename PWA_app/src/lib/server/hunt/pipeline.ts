@@ -434,7 +434,16 @@ export async function confirmCandidates(
       let detailUnknown = false;
       try {
         const detail = await divarProvider.getDetail(c.sourceAdId);
-        description = detail.description;
+        if (detail.stale === true) {
+          // Finding #1 (bug-bounty round 6): a stale detail is NOT verified
+          // data — the detail API was down and this may be up to 60 min old
+          // (price changed, ad deleted). Treating it as confirmed would let
+          // the kamin baseline permanently consume an ad that was never
+          // actually verified. Same path as a failed fetch: detailUnknown.
+          detailUnknown = true;
+        } else {
+          description = detail.description;
+        }
       } catch {
         // Invariant: failed detail = "unknown", never a silent drop.
         detailUnknown = true;

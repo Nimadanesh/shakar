@@ -24,9 +24,11 @@ import {
   getRun,
   getRunStatus,
   hasDeepChild,
+  heartbeatRunClaim,
   isDeepenConflict,
   readRunEvents,
   releaseIdempotency,
+  RUN_LEASE_MS,
   setRunStartCursor,
 } from "./runs";
 
@@ -155,6 +157,16 @@ function makeFakeDb(): FakeDb {
       if (!row) return [];
       const statusEq = eq(params, "status");
       if (statusEq !== null && row.status !== statusEq) return [];
+      // Model the lease-recovery or= filter (finding #7): the second claim
+      // PATCH requires status=running AND (claimed_at null OR < cutoff).
+      const orRaw = params.get("or");
+      if (orRaw) {
+        const m = orRaw.match(/claimed_at\.lt\.(.+)$/);
+        const cutoff = m ? decodeURIComponent(m[1]) : null;
+        const leaseOk =
+          row.claimed_at == null || (cutoff !== null && String(row.claimed_at) < cutoff);
+        if (!leaseOk) return [];
+      }
       Object.assign(row, b, { updated_at: new Date().toISOString() });
       return [{ id: row.id }];
     }
@@ -277,8 +289,62 @@ describe("conditional execution + finalization (exactly one winner)", () => {
   });
 });
 
-describe("event log", () => {
-  it("persists and replays events in id order, with afterId filtering", async () => {
+describe("execution lease — crash recovery (finding #7)", () => {
+  it("fresh lease: second claim while owner alive fails", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    expect(await claimRunForExecution((await getRun(run.id))!)).toBe(true);
+    // Owner just claimed; lease is fresh — nobody may steal it.
+    expect(await claimRunForExecution((await getRun(run.id))!)).toBe(false);
+    expect(await getRunStatus(run.id)).toBe("running");
+  });
+
+  it("expired lease: crashed owner's run becomes claimable again", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    expect(await claimRunForExecution((await getRun(run.id))!)).toBe(true);
+    // Simulate the crash: owner died, heartbeat stopped long ago.
+    const row = fake.runs.get(run.id)!;
+    row.claimed_at = new Date(Date.now() - RUN_LEASE_MS - 60_000).toISOString();
+    // A new opener recovers the run instead of waiting forever.
+    expect(await claimRunForExecution((await getRun(run.id))!)).toBe(true);
+    expect(await getRunStatus(run.id)).toBe("running");
+  });
+
+  it("heartbeat refreshes claimed_at; finalizeRun releases the claim", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    await claimRunForExecution((await getRun(run.id))!);
+    const before = fake.runs.get(run.id)!.claimed_at as string;
+    await new Promise((r) => setTimeout(r, 5));
+    await heartbeatRunClaim(run.id);
+    const after = fake.runs.get(run.id)!.claimed_at as string;
+    expect(after > before).toBe(true);
+    // Finalization clears the lease atomically with the terminal status.
+    expect(await finalizeRun(run.id, "done")).toBe(true);
+    expect(fake.runs.get(run.id)!.claimed_at).toBeNull();
+    expect(await getRunStatus(run.id)).toBe("done");
+  });
+});
+
+describe("TTL applies only to terminal runs (finding #8)", () => {
+  it("running run older than 30min is still reachable via getRun", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    await claimRunForExecution((await getRun(run.id))!);
+    // Age the row 31 minutes; status stays running.
+    fake.runs.get(run.id)!.created_at = new Date(Date.now() - 31 * 60_000).toISOString();
+    const reread = await getRun(run.id);
+    expect(reread).toBeDefined();
+    expect(reread!.status).toBe("running");
+  });
+
+  it("done run older than 30min is reaped by getRun", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    await claimRunForExecution((await getRun(run.id))!);
+    await finalizeRun(run.id, "done");
+    fake.runs.get(run.id)!.created_at = new Date(Date.now() - 31 * 60_000).toISOString();
+    expect(await getRun(run.id)).toBeUndefined();
+  });
+});
+
+describe("event log", () => {  it("persists and replays events in id order, with afterId filtering", async () => {
     const run = await createRun(DEF, null, QUOTA);
     await appendRunEvent(run.id, { type: "started", query: "گوشی" });
     await appendRunEvent(run.id, {

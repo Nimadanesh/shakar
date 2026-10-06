@@ -689,13 +689,22 @@ export async function checkKamin(
     const verified = results.filter((r) => !r.detailUnknown);
     const newIds = verified.map((r) => r.sourceAdId);
     const newCount = newIds.length;
+    // Finding #1 (bug-bounty round 6): if the detail layer was completely
+    // degraded — every result is detailUnknown (failed fetches) or stale
+    // (served from old cache, now flagged by the pipeline) — this check
+    // verified nothing. Advancing last_success_at would fake a success:
+    // the timestamp feeds pageBudgetForElapsed, so a fake success shrinks
+    // the next check's crawl budget and missed ads become unrecoverable.
+    // Same treatment as a stale list collect (finding #17).
+    const detailDegraded = results.length > 0 && verified.length === 0;
 
     await writeSeenIds(sb, kamin.id, newIds, legacy);
-    if (stale) {
-      // Finding #17: stale data is not success. last_checked_at moves
-      // (the check ran), but last_success_at stays — the next check's
-      // since-LAST-SUCCESS window still covers this stale period, so ads
-      // posted during the outage are caught up, never skipped.
+    if (stale || detailDegraded) {
+      // Findings #17 / #1-round-6: neither a stale list collect nor a fully
+      // degraded detail layer is a success. last_checked_at moves (the check
+      // ran), but last_success_at stays — the next check's since-LAST-SUCCESS
+      // window still covers this period, so ads missed during the outage are
+      // caught up, never skipped.
       await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
         last_checked_at: nowIso,
         new_match_count: newCount,
@@ -709,37 +718,69 @@ export async function checkKamin(
     }
 
     if (newCount > 0) {
-      // Dedupe guard: one notification per (kamin_id, check_run_id).
-      const dup = await sb.rest<Array<{ id: string }>>(
-        "GET",
-        `notifications?related_kamin_id=eq.${enc(kamin.id)}&check_run_id=eq.${enc(checkRunId)}&select=id&limit=1`
-      );
-      if (dup.length === 0) {
-        await sb.rest("POST", "notifications", {
-          user_id: kamin.user_id,
-          type: "new_kamin_match",
-          title: kaminPushTitle(newCount),
-          body: kaminPushBody(kamin.name),
-          related_kamin_id: kamin.id,
-          check_run_id: checkRunId,
-        });
-      }
+      // Dedupe guard: one notification per (kamin_id, check_run_id), ATOMIC.
+      // The m19 unique index makes the INSERT the gate: ON CONFLICT DO
+      // NOTHING returns zero rows for the loser. Only the winner sends the
+      // push — Web Push has no idempotency, so sendPush must live inside
+      // the atomic gate (finding #4, final round).
+      let notified = false;
       try {
-        await deps.sendPush(kamin.user_id, {
-          title: kaminPushTitle(newCount),
-          body: kaminPushBody(kamin.name),
-          url: "/saved?tab=fresh",
-          tag: `kamin-${kamin.id}`,
-        });
+        const inserted = await sb.rest<Array<{ id: string }>>(
+          "POST",
+          "notifications?on_conflict=related_kamin_id,check_run_id",
+          {
+            user_id: kamin.user_id,
+            type: "new_kamin_match",
+            title: kaminPushTitle(newCount),
+            body: kaminPushBody(kamin.name),
+            related_kamin_id: kamin.id,
+            check_run_id: checkRunId,
+          }
+        );
+        notified = inserted.length > 0;
       } catch (e) {
-        // Push is best-effort; the in-app notification already exists.
-        console.warn("[kamin] push failed:", (e as Error).message);
+        // Pre-m19 (no unique index): fall back to the old GET-then-INSERT
+        // with a loud warning. Still racy, but better than crashing.
+        console.warn(
+          "[kamin] notification upsert failed, falling back — run supabase/m19-notification-dedupe.sql:",
+          (e as Error).message
+        );
+        const dup = await sb.rest<Array<{ id: string }>>(
+          "GET",
+          `notifications?related_kamin_id=eq.${enc(kamin.id)}&check_run_id=eq.${enc(checkRunId)}&select=id&limit=1`
+        );
+        if (dup.length === 0) {
+          await sb.rest("POST", "notifications", {
+            user_id: kamin.user_id,
+            type: "new_kamin_match",
+            title: kaminPushTitle(newCount),
+            body: kaminPushBody(kamin.name),
+            related_kamin_id: kamin.id,
+            check_run_id: checkRunId,
+          });
+          notified = true;
+        }
+      }
+      if (notified) {
+        try {
+          await deps.sendPush(kamin.user_id, {
+            title: kaminPushTitle(newCount),
+            body: kaminPushBody(kamin.name),
+            url: "/saved?tab=fresh",
+            tag: `kamin-${kamin.id}`,
+          });
+        } catch (e) {
+          // Push is best-effort; the in-app notification already exists.
+          console.warn("[kamin] push failed:", (e as Error).message);
+        }
       }
     }
 
     await patchKaminRun(sb, checkRunId, {
       status: "completed",
-      stale,
+      // Finding #1 (round 6): a fully degraded detail layer is as much
+      // "not a real success" as a stale list — flag it for observability.
+      stale: stale || detailDegraded,
       completed_at: nowIso,
       pages_fetched: maxPages,
       candidates: candidates.length,

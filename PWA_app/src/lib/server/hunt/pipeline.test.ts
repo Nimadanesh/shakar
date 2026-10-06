@@ -305,6 +305,30 @@ describe("runPipeline", () => {
     expect(done.results[0].detailUnknown).toBe(true);
   });
 
+  it("marks STALE details as unknown — stale cache is not verification (finding #1, round 6)", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "s1", title: "گوشی کارکرده" })],
+      hasMore: false,
+    });
+    // The detail API was down; the provider served 60-min-old cache flagged
+    // stale. The pipeline must NOT treat this as a verified confirmation.
+    mockGetDetail.mockResolvedValueOnce({
+      sourceAdId: "s1",
+      title: "گوشی کارکرده",
+      price: 100,
+      city: "تهران",
+      description: "توضیح",
+      images: [],
+      categorySlug: "mobile",
+      stale: true,
+    });
+    const { events } = await collect(DEF);
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].detailUnknown).toBe(true);
+  });
+
   it("returns empty results (zero-result hunt) without throwing", async () => {
     mockSearchLists.mockResolvedValueOnce({ listings: [], hasMore: false });
     const { events } = await collect(DEF);

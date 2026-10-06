@@ -150,3 +150,20 @@ describe("one deepen per hunt, memory backend (finding #12)", () => {
     expect(await hasDeepChild(a.id)).toBe(false);
   });
 });
+
+describe("TTL applies only to terminal runs, memory backend (finding #8)", () => {
+  it("running run older than 30min stays reachable", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    expect(await claimRunForExecution(run)).toBe(true);
+    // Age the run 31 minutes without touching its status.
+    const realNow = Date.now;
+    try {
+      Date.now = () => realNow() + 31 * 60_000;
+      const reread = await getRun(run.id);
+      expect(reread).toBeDefined();
+      expect(reread!.status).toBe("running");
+    } finally {
+      Date.now = realNow;
+    }
+  });
+});

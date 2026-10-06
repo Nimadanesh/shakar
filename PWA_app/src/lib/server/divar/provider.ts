@@ -51,6 +51,13 @@ export interface ListingDetail extends ListingSummary {
   images: string[];
   categorySlug: string;
   postedAt?: string;
+  /**
+   * True when served from stale cache during a Divar restriction — the
+   * data may be up to DETAIL_TTL_MS old (price changed, ad deleted).
+   * Finding #1 (bug-bounty round 6): a stale detail is NOT verified data;
+   * the pipeline must treat it like a failed fetch, never as confirmation.
+   */
+  stale?: boolean;
 }
 
 export interface ListingProvider {

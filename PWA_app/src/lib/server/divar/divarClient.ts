@@ -14,10 +14,12 @@ import { CATEGORY_API_VALUE, resolveCityId } from "./taxonomy";
 
 const API_BASE = "https://api.divar.ir/v8";
 const LIST_TTL_MS = 3 * 60 * 1000; // blueprint §3: list pages cache 2–5 min
-// Deep pages hold OLDER ads, which don't move — they stay cached 60 min.
-// Only page 0 (the freshest ads) refreshes every 3 min. This cuts list
-// refresh traffic ~4x under load without losing any freshness.
-const LIST_DEEP_TTL_MS = 60 * 60 * 1000;
+// Deep pages hold OLDER ads, but page N is a SLIDING window — new ads push
+// old ones to higher pages. A 60-min TTL (the old value) meant a kamin
+// checking every 5 min saw the same deep-page snapshot 12 times, missing
+// ads that slid through. 10 min is the honest compromise: 6x fresher,
+// still far less upstream traffic than no cache. (Finding #2, final round.)
+const LIST_DEEP_TTL_MS = 10 * 60 * 1000;
 const DETAIL_TTL_MS = 60 * 60 * 1000; // blueprint §3: details hourly
 
 /** "۸۰۰,۰۰۰,۰۰۰ تومان" → 800000000. "توافقی"/missing → null (never 0). */
@@ -300,7 +302,18 @@ class FirstPartyDivarProvider implements ListingProvider {
           e.errorClass === "timeout")
       ) {
         const stale = getStale<DivarJson>(cacheKey);
-        if (stale) return toDetail(sourceAdId, stale);
+        if (stale) {
+          // Finding #1 (bug-bounty round 6): the list path flags staleness
+          // honestly — the detail path must too. A stale detail served as
+          // "verified" would poison the kamin baseline with possibly-wrong
+          // data (price changed, ad deleted). Flag it; the pipeline treats
+          // stale details like failed fetches (detailUnknown).
+          try {
+            return { ...toDetail(sourceAdId, stale), stale: true as const };
+          } catch {
+            /* fall through to throw */
+          }
+        }
       }
       throw e;
     }

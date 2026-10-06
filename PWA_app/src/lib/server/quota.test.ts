@@ -62,6 +62,31 @@ function fakeDb(
       if (row) row.hunts_used = Math.max(0, (row.hunts_used as number) - 1);
       return null;
     }
+    if (path === "/rpc/claim_refund_slot") {
+      // Models m17: pg_advisory_xact_lock serializes per-user, so in JS
+      // (single-threaded) this is inherently atomic. Day rollover resets
+      // refunds_today; ladder: <3 refund, <6 warning, else suspension.
+      const { p_user_id: uid, p_today: today } = body as { p_user_id: string; p_today: string };
+      const row = tables.quota_counters.find((r) => r.user_id === uid);
+      if (!row) return [{ allowed: false, outcome: "noop" }];
+      const refunds = row.refund_day === today ? (row.refunds_today as number) : 0;
+      if (refunds < 3) {
+        row.hunts_used = Math.max(0, (row.hunts_used as number) - 1);
+        row.refunds_today = refunds + 1;
+        row.refund_day = today;
+        return [{ allowed: true, outcome: "refund" }];
+      }
+      if (refunds < 6) {
+        row.refunds_today = refunds + 1;
+        row.refund_day = today;
+        row.warnings = ((row.warnings as number) ?? 0) + 1;
+        return [{ allowed: false, outcome: "warning" }];
+      }
+      row.refunds_today = refunds + 1;
+      row.refund_day = today;
+      row.suspended_until = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+      return [{ allowed: false, outcome: "suspended" }];
+    }
     if (path === "/rpc/refund_guest_hunt") {
       const row = tables.devices.find((r) => r.id === (body as { p_device_id: string }).p_device_id);
       if (row) row.free_hunts_used = Math.max(0, (row.free_hunts_used as number) - 1);
@@ -360,5 +385,66 @@ describe("refundHunt", () => {
   it("noop in permissive-dev mode", async () => {
     const r = await refundHunt({ userId: "u", deviceId: "d", kind: "standard", mode: "permissive-dev" });
     expect(r).toMatchObject({ refunded: false, note: "noop" });
+  });
+
+  it("finding #5: 5 concurrent refunds with 2 used → exactly 1 wins (total 3)", async () => {
+    mockConfigured.mockReturnValue(true);
+    const db = fakeDb(
+      {
+        quota_counters: [
+          {
+            user_id: "u6",
+            hunts_used: 10,
+            refunds_today: 2,
+            refund_day: new Date().toISOString().slice(0, 10),
+            warnings: 0,
+          },
+        ],
+        devices: [],
+      },
+      { rpc: true }
+    );
+    mockServer.mockReturnValue({ rest: db.rest } as never);
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        refundHunt({ userId: "u6", deviceId: "d6", kind: "standard", mode: "real" })
+      )
+    );
+    const refunded = results.filter((r) => r.refunded).length;
+    const warned = results.filter((r) => r.note === "no-refund-warning").length;
+    const suspended = results.filter((r) => r.note === "suspended").length;
+    // Exactly 1 refund (2+1=3 hits the cap); next 3 get warnings (3,4,5);
+    // the 5th hits 6 → suspension. The ladder is a strict state machine.
+    expect(refunded).toBe(1);
+    expect(warned).toBe(3);
+    expect(suspended).toBe(1);
+    expect(db.tables.quota_counters[0].refunds_today).toBe(7);
+    expect(db.tables.quota_counters[0].hunts_used).toBe(9); // one decrement
+    expect(db.tables.quota_counters[0].warnings).toBe(3);
+  });
+
+  it("finding #5: warning path via atomic RPC (3-5/day)", async () => {
+    mockConfigured.mockReturnValue(true);
+    const db = fakeDb(
+      {
+        quota_counters: [
+          {
+            user_id: "u7",
+            hunts_used: 10,
+            refunds_today: 4,
+            refund_day: new Date().toISOString().slice(0, 10),
+            warnings: 1,
+          },
+        ],
+        devices: [],
+      },
+      { rpc: true }
+    );
+    mockServer.mockReturnValue({ rest: db.rest } as never);
+    const r = await refundHunt({ userId: "u7", deviceId: "d7", kind: "standard", mode: "real" });
+    expect(r).toMatchObject({ refunded: false, note: "no-refund-warning" });
+    // No hunts_used decrement on the warning path.
+    expect(db.tables.quota_counters[0].hunts_used).toBe(10);
+    expect(db.tables.quota_counters[0].warnings).toBe(2);
   });
 });

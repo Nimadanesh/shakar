@@ -460,6 +460,32 @@ export async function refundHunt(opts: {
   }
 
   const q = encodeURIComponent(opts.userId);
+  // Finding #5 (final round): the abuse ladder is now claimed atomically
+  // via claim_refund_slot (m17) — the old GET+PATCH read-modify-write let
+  // concurrent refunds bypass the 3/day cap. Falls back to the legacy
+  // racy path with a loud warning when the RPC is not installed yet.
+  try {
+    const rows = await sb.rest<Array<{ allowed: boolean; outcome: string }>>(
+      "POST",
+      "/rpc/claim_refund_slot",
+      { p_user_id: opts.userId, p_today: new Date().toISOString().slice(0, 10) }
+    );
+    const r = rows[0];
+    if (!r) return { refunded: false, note: "noop" };
+    if (r.outcome === "refund") return { refunded: true, note: "refunded" };
+    if (r.outcome === "warning") return { refunded: false, note: "no-refund-warning" };
+    if (r.outcome === "suspended") return { refunded: false, note: "suspended" };
+    return { refunded: false, note: "noop" };
+  } catch (e) {
+    if (!isMissingRpc(e)) {
+      console.warn("[quota] refund failed:", (e as Error).message);
+      return { refunded: false, note: "noop" };
+    }
+    console.warn(
+      "[quota] claim_refund_slot RPC missing — legacy racy refund ladder. " +
+        "Run supabase/m17-refund-ladder-atomic.sql."
+    );
+  }
   try {
     const rows = await sb.rest<
       Array<{

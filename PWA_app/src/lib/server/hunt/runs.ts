@@ -133,6 +133,23 @@ export async function getBackendKind(): Promise<"db" | "memory"> {
 const runs = new Map<string, HuntRun>();
 const RUN_TTL_MS = 30 * 60 * 1000;
 
+/**
+ * Execution lease for hunt_runs (finding #7, final round). If the owning
+ * instance crashes mid-pipeline, the heartbeat stops and another opener
+ * may claim the run after this long instead of waiting forever.
+ * 15 min is generous: a hunt's pipeline is bounded (≤20 list pages +
+ * ≤100 details, ~1–1.8s throttled each ≈ under 5 min worst case), and
+ * the owner heartbeats every 5 min while running.
+ */
+export const RUN_LEASE_MS = 15 * 60 * 1000;
+/** Heartbeat cadence while a run is executing (must be < RUN_LEASE_MS). */
+export const RUN_HEARTBEAT_MS = 5 * 60 * 1000;
+
+/** True for done/failed — the only states the TTL may reap. */
+function isTerminalStatus(s: RunStatus): boolean {
+  return s === "done" || s === "failed";
+}
+
 const idemKeys = new Map<string, { runId: string; at: number }>();
 const IDEM_TTL_MS = 24 * 3600 * 1000;
 
@@ -400,10 +417,12 @@ export async function createRun(
   const b = await backend();
   const id = runId ?? makeId();
   if (b.kind === "memory") {
-    // Opportunistic cleanup of expired runs and keys.
+    // Opportunistic cleanup of expired runs and keys. Finding #8: the TTL
+    // reaps only terminal runs — a still-running run stays addressable
+    // until it finishes (or its lease expires and another owner claims it).
     const now = Date.now();
     for (const [rid, r] of runs) {
-      if (now - r.createdAt > RUN_TTL_MS) runs.delete(rid);
+      if (isTerminalStatus(r.status) && now - r.createdAt > RUN_TTL_MS) runs.delete(rid);
     }
     for (const [k, v] of idemKeys) {
       if (now - v.at > IDEM_TTL_MS) idemKeys.delete(k);
@@ -466,7 +485,10 @@ export async function getRun(id: string): Promise<HuntRun | undefined> {
   if (b.kind === "memory") {
     const run = runs.get(id);
     if (!run) return undefined;
-    if (Date.now() - run.createdAt > RUN_TTL_MS) {
+    // Finding #8: the 30 min TTL applies only to terminal runs. A
+    // still-running run (legit long hunt, or a stuck one awaiting lease
+    // recovery) must stay reachable — otherwise it reads as "not found".
+    if (isTerminalStatus(run.status) && Date.now() - run.createdAt > RUN_TTL_MS) {
       runs.delete(id);
       return undefined;
     }
@@ -479,7 +501,7 @@ export async function getRun(id: string): Promise<HuntRun | undefined> {
   const row = rows[0];
   if (!row) return undefined;
   const run = rowToRun(row);
-  if (Date.now() - run.createdAt > RUN_TTL_MS) return undefined;
+  if (isTerminalStatus(run.status) && Date.now() - run.createdAt > RUN_TTL_MS) return undefined;
   return run;
 }
 
@@ -499,10 +521,16 @@ export async function hasDeepChild(parentId: string): Promise<boolean> {
 }
 
 /**
- * Atomically claim a run for execution (created → running). Memory path:
- * the check-and-set runs synchronously inside this call, so two racing
- * GETs in one process can never both become the owner. DB path: a
- * conditional UPDATE — exactly one instance wins.
+ * Atomically claim a run for execution. Memory path: the check-and-set
+ * runs synchronously inside this call, so two racing GETs in one process
+ * can never both become the owner. (No lease needed — a crashed process
+ * loses its memory with it.)
+ *
+ * DB path, finding #7: two sequential conditional UPDATEs, each atomic —
+ * 1. created → running (the normal claim), stamping claimed_at = now();
+ * 2. running with an expired lease → running (crash recovery: the previous
+ *    owner died mid-pipeline, its heartbeat stopped). Exactly one instance
+ *    wins each race, so execution stays single-owner.
  */
 export async function claimRunForExecution(run: HuntRun): Promise<boolean> {
   const b = await backend();
@@ -511,12 +539,45 @@ export async function claimRunForExecution(run: HuntRun): Promise<boolean> {
     run.status = "running";
     return true;
   }
-  const rows = await b.sb.rest<Array<{ id: string }>>(
+  const nowIso = new Date().toISOString();
+  const fresh = await b.sb.rest<Array<{ id: string }>>(
     "PATCH",
     `hunt_runs?id=eq.${encodeURIComponent(run.id)}&status=eq.created&select=id`,
-    { status: "running", updated_at: new Date().toISOString() }
+    { status: "running", claimed_at: nowIso, updated_at: nowIso }
   );
-  return rows.length > 0;
+  if (fresh.length > 0) return true;
+  // Crash recovery: steal the lease only when the owner is demonstrably
+  // gone (claimed_at older than the lease, or never stamped pre-m18).
+  const leaseCutoff = new Date(Date.now() - RUN_LEASE_MS).toISOString();
+  const recovered = await b.sb.rest<Array<{ id: string }>>(
+    "PATCH",
+    `hunt_runs?id=eq.${encodeURIComponent(run.id)}` +
+      `&status=eq.running&or=(claimed_at.is.null,claimed_at.lt.${encodeURIComponent(leaseCutoff)})` +
+      `&select=id`,
+    { claimed_at: nowIso, updated_at: nowIso }
+  );
+  return recovered.length > 0;
+}
+
+/**
+ * Refresh the execution lease while the pipeline runs (finding #7).
+ * The owner calls this every RUN_HEARTBEAT_MS; a crashed owner's lease
+ * goes stale and becomes claimable after RUN_LEASE_MS. Best-effort:
+ * heartbeat failure must never break the hunt.
+ */
+export async function heartbeatRunClaim(runId: string): Promise<void> {
+  const b = await backend();
+  if (b.kind !== "db") return;
+  try {
+    const nowIso = new Date().toISOString();
+    await b.sb.rest(
+      "PATCH",
+      `hunt_runs?id=eq.${encodeURIComponent(runId)}&status=eq.running&select=id`,
+      { claimed_at: nowIso, updated_at: nowIso }
+    );
+  } catch (e) {
+    console.warn("[runs] heartbeat failed:", (e as Error).message);
+  }
 }
 
 /**
@@ -585,7 +646,9 @@ export async function getRunStatus(runId: string): Promise<RunStatus | null> {
 
 /**
  * Finalize a run (running → done|failed), persisting the end cursor.
- * Conditional: exactly one closer wins per run.
+ * Conditional: exactly one closer wins per run. Also releases the
+ * execution lease (claimed_at = null, finding #7) in the same atomic
+ * PATCH — after this the run is terminal, so no tick may claim it again.
  */
 export async function finalizeRun(
   runId: string,
@@ -600,6 +663,7 @@ export async function finalizeRun(
     {
       status,
       end_cursor: endCursor ?? null,
+      claimed_at: null,
       updated_at: new Date().toISOString(),
     }
   );
