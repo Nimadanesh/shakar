@@ -122,7 +122,6 @@ export async function playVerification(els: OrbitElements): Promise<void> {
   const orbitRect = els.orbit.getBoundingClientRect();
   const layout = measureLayout(els);
   const targets = computeOrbitTargets(layout);
-  const n = els.slots.length;
 
   // Reparent: pin each slot at its current visual spot inside the orbit box.
   // The orbit box has no border/padding, so viewport coords map 1:1.
