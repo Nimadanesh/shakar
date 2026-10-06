@@ -2,18 +2,24 @@
  * Auth backend seam. Guest-first product: guests hunt fully; auth gates
  * ONLY persistent actions (favorite, save hunt, کمین).
  *
- * HONESTY CONTRACT: these functions are the boundary to the real auth
- * backend (OTP via Iranian mobile). No backend is connected yet, so in
- * PRODUCTION requestOtp/verifyOtp return an explicit NOT_CONFIGURED
- * error — they NEVER fake a successful login. The UI surfaces
- * pending/error states honestly. When the backend lands, implement the
- * network calls here; the UI needs no changes.
+ * BACKEND (M2): real phone OTP via /api/auth/* routes (Kavenegar in
+ * production, mock provider in development). The session cookie
+ * (httpOnly) is the real session; the localStorage mirror below is a
+ * display hint only — the server re-derives the user from its own
+ * session on every request and never trusts a client-sent userId.
+ *
+ * HONESTY CONTRACT: requestOtp/verifyOtp never fake a result. In
+ * PRODUCTION they return an explicit NOT_CONFIGURED error when the
+ * provider is not configured — they NEVER fake a sent SMS or a login.
  *
  * DEV EXCEPTION: in development builds only (NODE_ENV=development),
- * any well-formed 5-digit code verifies a local dev session so the
- * full gate→resume loop can be exercised end-to-end. The auth UI labels
- * this clearly. Production builds never take this path.
+ * the API routes use the mock provider and any well-formed 5-digit code
+ * verifies, so the full gate→resume loop can be exercised end-to-end.
+ * The auth UI labels this clearly. Production builds never take this path.
  */
+import { normalizeCode, normalizeMobile } from "@/lib/otp/mobile";
+
+export { normalizeCode, normalizeMobile };
 
 /**
  * True only in local development. Gates the clearly-labeled dev bypass
@@ -40,6 +46,7 @@ export interface AuthError {
   code: AuthErrorCode;
   /** User-facing Persian message. */
   message: string;
+  retryAfterSec?: number;
 }
 
 export type AuthResult<T> = { ok: true; data: T } | { ok: false; error: AuthError };
@@ -47,57 +54,73 @@ export type AuthResult<T> = { ok: true; data: T } | { ok: false; error: AuthErro
 const SESSION_KEY = "shakar:session:v1";
 const PENDING_KEY = "shakar:pending-action:v1";
 
-/**
- * Iranian mobile: 09xxxxxxxxx. Accepts Persian digits, spaces and dashes.
- * Returns the normalized 11-digit string, or null when invalid.
- */
-export function normalizeMobile(input: string): string | null {
-  const en = input
-    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-    .replace(/[\s-]/g, "");
-  return /^09\d{9}$/.test(en) ? en : null;
+function toAuthError(payload: unknown, fallback: AuthError): AuthError {
+  if (typeof payload === "object" && payload !== null) {
+    const e = (payload as { error?: unknown }).error;
+    if (typeof e === "object" && e !== null) {
+      const code = (e as { code?: unknown }).code;
+      const message = (e as { message?: unknown }).message;
+      const retryAfterSec = (e as { retryAfterSec?: unknown }).retryAfterSec;
+      return {
+        code:
+          code === "NOT_CONFIGURED" ||
+          code === "INVALID_MOBILE" ||
+          code === "INVALID_CODE" ||
+          code === "EXPIRED_CODE" ||
+          code === "RATE_LIMITED" ||
+          code === "NETWORK"
+            ? code
+            : fallback.code,
+        message: typeof message === "string" ? message : fallback.message,
+        retryAfterSec: typeof retryAfterSec === "number" ? retryAfterSec : undefined,
+      };
+    }
+  }
+  return fallback;
 }
 
-/** OTP codes are 5 digits (Persian digits accepted). */
-export function normalizeCode(input: string): string | null {
-  const en = input.replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0)).replace(/\s/g, "");
-  return /^\d{5}$/.test(en) ? en : null;
+async function postAuth<T>(
+  path: string,
+  body: unknown,
+  fallback: AuthError
+): Promise<AuthResult<T>> {
+  try {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload: unknown = await res.json().catch(() => null);
+    if (res.ok && typeof payload === "object" && payload !== null) {
+      const p = payload as { ok?: unknown; data?: unknown };
+      if (p.ok === true) return { ok: true, data: p.data as T };
+    }
+    return { ok: false, error: toAuthError(payload, fallback) };
+  } catch {
+    return { ok: false, error: fallback };
+  }
 }
 
 export async function requestOtp(
-  _mobile: string
+  mobile: string
 ): Promise<AuthResult<{ retryAfterSec: number }>> {
-  // Dev bypass: lets the full auth loop be exercised locally.
-  if (isDevBypass()) return { ok: true, data: { retryAfterSec: 60 } };
-  // No SMS provider is connected. Explicit failure — never a fake "sent".
-  return {
-    ok: false,
-    error: {
-      code: "NOT_CONFIGURED",
-      message: "سرویس پیامک هنوز وصل نشده است. به‌زودی فعال می‌شود.",
-    },
-  };
+  return postAuth<{ retryAfterSec: number }>("/api/auth/request-otp", { mobile }, {
+    code: "NETWORK",
+    message: "خطای شبکه؛ دوباره تلاش کن.",
+  });
 }
 
 export async function verifyOtp(
-  _mobile: string,
-  _code: string
+  mobile: string,
+  code: string
 ): Promise<AuthResult<Session>> {
-  // Dev bypass: any well-formed code verifies a LOCAL dev session only.
-  if (isDevBypass()) {
-    return { ok: true, data: { userId: "dev-user", mobile: _mobile } };
-  }
-  // No auth backend is connected. Explicit failure — never a fake session.
-  return {
-    ok: false,
-    error: {
-      code: "NOT_CONFIGURED",
-      message: "سرویس ورود هنوز وصل نشده است. به‌زودی فعال می‌شود.",
-    },
-  };
+  return postAuth<Session>("/api/auth/verify-otp", { mobile, code }, {
+    code: "NETWORK",
+    message: "خطای شبکه؛ دوباره تلاش کن.",
+  });
 }
 
-/** Local session check. Null until a real verify succeeds. */
+/** Local session mirror (display hint). The httpOnly cookie is the real session. */
 export function getSession(): Session | null {
   try {
     const raw = window.localStorage.getItem(SESSION_KEY);
@@ -117,7 +140,7 @@ export function getSession(): Session | null {
   }
 }
 
-/** Persist a verified session. Called only with a real backend session. */
+/** Persist a verified session mirror. Called only with a real backend session. */
 export function storeSession(session: Session): void {
   try {
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -126,11 +149,48 @@ export function storeSession(session: Session): void {
   }
 }
 
-export function signOut(): void {
+/**
+ * Reconciles the local mirror with the server session (source of truth).
+ * Returns the fresh session, or null when signed out (mirror cleared).
+ */
+export async function refreshSession(): Promise<Session | null> {
+  try {
+    const res = await fetch("/api/auth/session");
+    const payload: unknown = await res.json().catch(() => null);
+    if (typeof payload === "object" && payload !== null) {
+      const user = (payload as { data?: { user?: unknown } }).data?.user;
+      if (
+        typeof user === "object" &&
+        user !== null &&
+        typeof (user as Session).userId === "string" &&
+        typeof (user as Session).mobile === "string"
+      ) {
+        const session = user as Session;
+        storeSession(session);
+        return session;
+      }
+    }
+  } catch {
+    // ignore — keep whatever the mirror says
+  }
   try {
     window.localStorage.removeItem(SESSION_KEY);
   } catch {
     // ignore
+  }
+  return null;
+}
+
+export async function signOut(): Promise<void> {
+  try {
+    window.localStorage.removeItem(SESSION_KEY);
+  } catch {
+    // ignore
+  }
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch {
+    // ignore — the mirror is already cleared
   }
 }
 

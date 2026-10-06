@@ -57,14 +57,29 @@ any data-fetching code. Violations are correctness bugs, not style issues.
   per-request. For MVP scale, Supabase pooler settings are sufficient —
   revisit only with measured connection pressure.
 
-## Auth — Mobile + OTP (P1, structure-ready)
+## Auth — Mobile + OTP (M2 implemented)
 
-- Provider deferred (Kavenegar / Ghasedak / SMS.ir or mock for early MVP).
-- A mock OTP service is allowed **in development only**, clearly labeled in
-  code and UI copy, and must fail closed (never authenticates in production
-  builds). Real OTP is a pre-launch blocker, not polish.
-- Sessions via Next.js cookies/JWT or Supabase Auth; guests can search and
-  view, mutations require auth (`brief.md` flows).
+- Provider: **Kavenegar** (`verify/lookup` API) in production. A provider
+  interface (`src/lib/otp/provider.ts`) keeps Ghasedak/SMS.ir a one-class
+  swap; changing providers never rewrites the routes.
+- Sessions are **custom JWT (jose, HS256) in an httpOnly cookie**
+  (`shakar_session`, 30d, SameSite=Lax, Secure in prod). The cookie is the
+  real session; the client's localStorage mirror (`lib/auth.ts`) is a
+  display hint only. `profiles.id` is a plain uuid PK — the old FK to
+  `auth.users(id)` was dropped in migration 002 (no Supabase Auth rows
+  exist for OTP users).
+- Codes: 5 digits, SHA-256 hashed at rest (`otp_verifications`), 5-min
+  expiry, 5 attempts, cooldown 60s, 5 sends/mobile/hour, 20 sends/IP/hour.
+  Send failure deletes the record so the retry isn't punished.
+- Fail-closed: production without `OTP_PROVIDER=kavenegar`,
+  `KAVENEGAR_API_KEY`, `KAVENEGAR_TEMPLATE`, `SESSION_SECRET`,
+  `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` returns `NOT_CONFIGURED` —
+  never a fake send or login.
+- Dev: mock provider (logs the code server-side) + any well-formed
+  5-digit code verifies (documented backdoor, dev only). Env:
+  `KAVENEGAR_TEMPLATE` must be a panel-approved template name.
+- Routes: `POST /api/auth/request-otp`, `POST /api/auth/verify-otp`,
+  `POST /api/auth/logout`, `GET /api/auth/session`.
 
 ## Payments (post-MVP)
 
