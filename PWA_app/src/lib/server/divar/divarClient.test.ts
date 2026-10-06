@@ -158,6 +158,38 @@ describe("FirstPartyDivarProvider", () => {
     ).toBe("آپارتمان نوساز");
   });
 
+  it("sends the cursor as top-level pagination_data (finding #1)", async () => {
+    const calls = mockFetch(() => okJson(listJson()));
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    const cursor = { "@type": "type.googleapis.com/post_list.PaginationData" };
+    await divarProvider.searchLists({
+      categorySlug: "",
+      cityId: "1",
+      keywords: [],
+      page: 1,
+      cursor,
+    });
+    const sentBody = JSON.parse(String(calls[0].init.body ?? "{}"));
+    expect(sentBody.pagination_data).toEqual(cursor);
+  });
+
+  it("omits pagination_data when there is no cursor", async () => {
+    const calls = mockFetch(() => okJson(listJson()));
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    await divarProvider.searchLists({
+      categorySlug: "",
+      cityId: "1",
+      keywords: [],
+      page: 0,
+    });
+    const sentBody = JSON.parse(String(calls[0].init.body ?? "{}"));
+    expect(sentBody.pagination_data).toBeUndefined();
+  });
+
   it("omits the text query when there are no keywords", async () => {
     const calls = mockFetch(() => okJson(listJson()));
     const { divarProvider } = await import("./divarClient");
@@ -309,8 +341,8 @@ describe("anti-footprint hardening", () => {
     const { clearCache, setCached } = await import("./cache");
     clearCache();
     // Seed an EXPIRED entry — getCached skips it, getStale serves it.
-    // Key format: list:{cityId}:{category}:{queryText}:{page}.
-    setCached("list:1:apartment-sell::0", listJson(), -1);
+    // Key format: list:{cityId}:{category}:{queryText}:{page}:{cursorKey}.
+    setCached("list:1:apartment-sell::0:start", listJson(), -1);
     const res = await divarProvider.searchLists({
       categorySlug: "apartment-sell",
       cityId: "1",

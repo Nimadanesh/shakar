@@ -21,6 +21,15 @@ const LIST_DEEP_TTL_MS = 60 * 60 * 1000;
 const DETAIL_TTL_MS = 60 * 60 * 1000; // blueprint §3: details hourly
 
 /** "۸۰۰,۰۰۰,۰۰۰ تومان" → 800000000. "توافقی"/missing → null (never 0). */
+/** Short non-crypto hash for cache-key fragments. */
+function hashStr(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
+}
+
 function parsePriceFa(text: string | undefined): number | null {
   if (!text) return null;
   const en = text
@@ -219,8 +228,22 @@ class FirstPartyDivarProvider implements ListingProvider {
           },
         },
       },
+      // Cursor pagination (finding #1): Divar honors top-level
+      // pagination_data (probed live 2026-10-06 — inside form_data.data it
+      // is silently ignored and every request returns page 0).
+      ...(q.cursor !== undefined && q.cursor !== null
+        ? { pagination_data: q.cursor }
+        : {}),
     };
-    const cacheKey = `list:${q.cityId}:${categorySlug ?? "all"}:${queryText}:${q.page}`;
+    // The cursor identifies the walk position: two walks of the same query
+    // have different cursors per page, so the cursor hash is part of the
+    // key — otherwise walk B would read walk A's page-1 as its own.
+    const cursorKey =
+      q.cursor === undefined || q.cursor === null
+        ? "start"
+        : `c${hashStr(JSON.stringify(q.cursor))}`;
+    const cacheKey =
+      `list:${q.cityId}:${categorySlug ?? "all"}:${queryText}:${q.page}:${cursorKey}`;
     const cached = getCached<DivarJson>(cacheKey);
     if (cached) return parseListJson(cached);
     try {

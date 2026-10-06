@@ -16,10 +16,28 @@ import { supabaseServer, supabaseConfigured } from "@/lib/supabase-server";
  * (3 free hunts/device) — the conversion funnel wants tasters, and it keeps
  * the demo working before real subscriptions exist.
  *
- * Race note: read-check-PATCH is not a true transaction (no row lock via
- * PostgREST). The window is tiny at our volumes; a Postgres RPC with a real
- * transaction is the M5 hardening. Documented, not hidden.
+ * Concurrency (finding #5, bug-bounty 2026-10-06): consume is an ATOMIC
+ * check-and-increment via the consume_hunt_unit / consume_guest_hunt RPCs
+ * (supabase/m6-quota-atomic.sql) — a single statement with a row lock, so
+ * two racing requests can never both slip past the limit. If the RPCs are
+ * not installed yet, the code falls back to the legacy read-check-PATCH
+ * with a loud warning (racy — run the migration).
  */
+
+
+/**
+ * The RPC functions may not be installed yet (navid runs the migration
+ * manually). A 404 from PostgREST means "function missing" → fall back.
+ * Duck-typed on status: the test mock replaces supabase-server without
+ * exporting the SupabaseError class.
+ */
+function isMissingRpc(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    (e as { status?: unknown }).status === 404
+  );
+}
 
 // Locked tier quotas — shakar-lock-list.md / blueprint §1.3 (hunts/mo).
 const TIER_HUNTS: Record<string, number> = {
@@ -127,8 +145,74 @@ export async function consumeHunt(opts: {
   return consumeGuest(sb, opts.deviceId);
 }
 
+/**
+ * Atomic consume via the consume_hunt_unit RPC. Returns null when the RPC
+ * is not installed (404) — the caller falls back to the legacy path.
+ */
+async function rpcConsumeStandard(
+  sb: Sb,
+  userId: string,
+  tierHunts: number
+): Promise<{
+  allowed: boolean;
+  reason: string;
+  hunts_used: number;
+  notified_85: boolean;
+} | null> {
+  try {
+    const rows = await sb.rest<
+      Array<{ allowed: boolean; reason: string; hunts_used: number; notified_85: boolean }>
+    >("POST", "/rpc/consume_hunt_unit", { p_user_id: userId, p_limit: tierHunts });
+    return rows[0] ?? null;
+  } catch (e) {
+    if (isMissingRpc(e)) return null;
+    throw e;
+  }
+}
+
 async function consumeStandard(sb: Sb, userId: string, tierHunts: number): Promise<QuotaDecision> {
   const q = encodeURIComponent(userId);
+
+  const atomic = await rpcConsumeStandard(sb, userId, tierHunts);
+  if (atomic) {
+    if (!atomic.allowed) {
+      return atomic.reason === "suspended"
+        ? {
+            allowed: false,
+            reason: "suspended",
+            message: "فعالیت غیرعادی شناسایی شد — شکار فعلاً متوقفه.",
+          }
+        : {
+            allowed: false,
+            reason: "no-quota",
+            message: "سهمیه‌ی شکار این ماهت تموم شد.",
+          };
+    }
+    // 85% notification — the PATCH is conditional (notified_85=eq.false) so
+    // racing requests can't double-fire; only the winner notifies.
+    if (!atomic.notified_85 && atomic.hunts_used >= Math.ceil(0.85 * tierHunts)) {
+      const updated = await sb.rest<Array<unknown>>(
+        "PATCH",
+        `quota_counters?user_id=eq.${q}&notified_85=eq.false`,
+        { notified_85: true }
+      );
+      if (Array.isArray(updated) && updated.length > 0) {
+        await fire85Notification(sb, userId, tierHunts - atomic.hunts_used);
+      }
+    }
+    return {
+      allowed: true,
+      mode: "real",
+      kind: "standard",
+      remaining: tierHunts - atomic.hunts_used,
+      userId,
+    };
+  }
+
+  console.warn(
+    "[quota] consume_hunt_unit RPC missing — legacy racy read-check-PATCH. " +
+      "Run supabase/m6-quota-atomic.sql."
+  );
   let rows = await sb.rest<Array<Record<string, unknown>>>(
     "GET",
     `quota_counters?user_id=eq.${q}&select=hunts_used,suspended_until,notified_85`
@@ -166,8 +250,49 @@ async function consumeStandard(sb: Sb, userId: string, tierHunts: number): Promi
   return { allowed: true, mode: "real", kind: "standard", remaining: tierHunts - newUsed, userId };
 }
 
+async function rpcConsumeGuest(
+  sb: Sb,
+  deviceId: string
+): Promise<{ allowed: boolean; reason: string; free_hunts_used: number } | null> {
+  try {
+    const rows = await sb.rest<
+      Array<{ allowed: boolean; reason: string; free_hunts_used: number }>
+    >("POST", "/rpc/consume_guest_hunt", {
+      p_device_id: deviceId,
+      p_limit: GUEST_FREE_HUNTS,
+    });
+    return rows[0] ?? null;
+  } catch (e) {
+    if (isMissingRpc(e)) return null;
+    throw e;
+  }
+}
+
 async function consumeGuest(sb: Sb, deviceId: string): Promise<QuotaDecision> {
   const d = encodeURIComponent(deviceId);
+
+  const atomic = await rpcConsumeGuest(sb, deviceId);
+  if (atomic) {
+    if (!atomic.allowed) {
+      return {
+        allowed: false,
+        reason: "guest-exhausted",
+        message: "شکارهای رایگان این دستگاه تموم شد.",
+      };
+    }
+    return {
+      allowed: true,
+      mode: "real",
+      kind: "guest",
+      remaining: GUEST_FREE_HUNTS - atomic.free_hunts_used,
+      userId: null,
+    };
+  }
+
+  console.warn(
+    "[quota] consume_guest_hunt RPC missing — legacy racy read-check-PATCH. " +
+      "Run supabase/m6-quota-atomic.sql."
+  );
   let rows = await sb.rest<Array<{ free_hunts_used: number }>>(
     "GET",
     `devices?device_id=eq.${d}&select=free_hunts_used`
@@ -216,18 +341,30 @@ export async function refundHunt(opts: {
   if (!sb) return { refunded: false, note: "noop" };
 
   if (opts.kind === "guest" || !opts.userId) {
-    const d = encodeURIComponent(opts.deviceId);
     try {
-      const rows = await sb.rest<Array<{ free_hunts_used: number }>>(
-        "GET",
-        `devices?device_id=eq.${d}&select=free_hunts_used`
-      );
-      const used = rows[0]?.free_hunts_used ?? 1;
-      await sb.rest("PATCH", `devices?device_id=eq.${d}`, {
-        free_hunts_used: Math.max(0, used - 1),
+      // Atomic decrement (never below zero); falls back to the legacy
+      // read-modify-write when the RPC is not installed yet.
+      await sb.rest("POST", "/rpc/refund_guest_hunt", {
+        p_device_id: opts.deviceId,
       });
     } catch (e) {
-      console.warn("[quota] guest refund failed:", (e as Error).message);
+      if (isMissingRpc(e)) {
+        const d = encodeURIComponent(opts.deviceId);
+        try {
+          const rows = await sb.rest<Array<{ free_hunts_used: number }>>(
+            "GET",
+            `devices?device_id=eq.${d}&select=free_hunts_used`
+          );
+          const used = rows[0]?.free_hunts_used ?? 1;
+          await sb.rest("PATCH", `devices?device_id=eq.${d}`, {
+            free_hunts_used: Math.max(0, used - 1),
+          });
+        } catch (inner) {
+          console.warn("[quota] guest refund failed:", (inner as Error).message);
+        }
+      } else {
+        console.warn("[quota] guest refund failed:", (e as Error).message);
+      }
     }
     return { refunded: true, note: "refunded" };
   }
@@ -248,8 +385,16 @@ export async function refundHunt(opts: {
     const refundsToday = row.refund_day === today ? row.refunds_today : 0;
 
     if (refundsToday < 3) {
+      // Atomic decrement (finding #5); the ladder counters stay here.
+      try {
+        await sb.rest("POST", "/rpc/refund_hunt_unit", { p_user_id: opts.userId });
+      } catch (e) {
+        if (!isMissingRpc(e)) throw e;
+        await sb.rest("PATCH", `quota_counters?user_id=eq.${q}`, {
+          hunts_used: Math.max(0, row.hunts_used - 1),
+        });
+      }
       await sb.rest("PATCH", `quota_counters?user_id=eq.${q}`, {
-        hunts_used: Math.max(0, row.hunts_used - 1),
         refunds_today: refundsToday + 1,
         refund_day: today,
       });

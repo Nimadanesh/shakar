@@ -148,6 +148,90 @@ describe("runPipeline", () => {
     expect(done.results.map((r) => r.sourceAdId)).toEqual(["s1"]);
   });
 
+  it("enforces condition=new by rejecting explicit used cues only (finding #2)", async () => {
+    const def: HuntDefinition = {
+      ...DEF,
+      include: ["گوشی"],
+      exclude: [],
+      condition: "new",
+    };
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "n1", title: "گوشی آکبند" }),
+        summary({ sourceAdId: "n2", title: "گوشی کارکرده تمیز" }),
+        summary({ sourceAdId: "n3", title: "گوشی" }), // no condition cue → stays
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: "گوشی سالم",
+      images: [],
+      categorySlug: "",
+    }));
+    const { events } = await collect(def);
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    const ids = done.results.map((r) => r.sourceAdId).sort();
+    expect(ids).toEqual(["n1", "n3"]);
+  });
+
+  it("enforces condition=used by rejecting explicit new cues only (finding #2)", async () => {
+    const def: HuntDefinition = { ...DEF, include: ["گوشی"], exclude: [], condition: "used" };
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "u1", title: "گوشی آکبند" }),
+        summary({ sourceAdId: "u2", title: "گوشی کارکرده" }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: "گوشی",
+      images: [],
+      categorySlug: "",
+    }));
+    const { events } = await collect(def);
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["u2"]);
+  });
+
+  it("does not confuse «نوساز» with the «نو» cue (token-level, finding #2)", async () => {
+    // «آپارتمان نوساز» with condition=used must NOT be rejected: «نوساز»
+    // is not the token «نو».
+    const def: HuntDefinition = {
+      ...DEF,
+      query: "آپارتمان",
+      include: ["آپارتمان"],
+      exclude: [],
+      condition: "used",
+    };
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "w1", title: "آپارتمان نوساز" })],
+      hasMore: false,
+    });
+    mockGetDetail.mockResolvedValue({
+      sourceAdId: "w1",
+      title: "آپارتمان نوساز",
+      price: null,
+      city: "",
+      description: "آپارتمان نوساز",
+      images: [],
+      categorySlug: "",
+    });
+    const { events } = await collect(def);
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["w1"]);
+  });
+
   it("passes the hunt content terms as provider keywords (flaw #11)", async () => {
     mockSearchLists.mockResolvedValueOnce({ listings: [], hasMore: false });
     await collect(DEF);
@@ -231,10 +315,13 @@ describe("runPipeline", () => {
   });
 
   it("paginates while hasMore and stops at the cap", async () => {
-    mockSearchLists.mockImplementation(async ({ page }: { page: number }) => ({
-      listings: [summary({ sourceAdId: `p${page}`, title: "گوشی" })],
-      hasMore: page < 100, // infinite — cap must stop it
-    }));
+    mockSearchLists.mockImplementation(
+      async ({ page }: { page: number; cursor?: unknown }) => ({
+        listings: [summary({ sourceAdId: `p${page}`, title: "گوشی" })],
+        hasMore: page < 100, // infinite — cap must stop it
+        nextCursor: `cursor-${page}`,
+      })
+    );
     mockGetDetail.mockImplementation(async (id: string) => ({
       sourceAdId: id,
       title: "گوشی",
@@ -247,8 +334,54 @@ describe("runPipeline", () => {
     const { events } = await collect(DEF);
     // 20 pages max (MAX_LIST_PAGES_PER_HUNT), 100 details max.
     expect(mockSearchLists).toHaveBeenCalledTimes(20);
+    // The cursor actually threads forward (finding #1) — page N+1 carries
+    // page N's cursor. Without this, every request re-fetches page 0.
+    expect(mockSearchLists).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ cursor: "cursor-0" })
+    );
+    expect(mockSearchLists).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ cursor: "cursor-1" })
+    );
     const done = events.find((e) => e.type === "done");
     if (done?.type === "done") expect(done.stats.detailsChecked).toBeLessThanOrEqual(100);
+  });
+
+  it("stops the walk when the cursor runs out — never re-fetches page 0 (finding #1)", async () => {
+    // hasMore lies, but no cursor: the walk MUST stop, not loop on page 0.
+    mockSearchLists.mockResolvedValue({
+      listings: [summary({ sourceAdId: "p0", title: "گوشی" })],
+      hasMore: true,
+      nextCursor: undefined,
+    });
+    await collect(DEF);
+    expect(mockSearchLists).toHaveBeenCalledTimes(1);
+  });
+
+  it("deep-history resumes from the first phase's endCursor", async () => {
+    const { collectCandidates } = await import("./pipeline");
+    mockSearchLists.mockImplementation(async ({ cursor }: { cursor?: unknown }) => ({
+      listings: [],
+      hasMore: true,
+      nextCursor: cursor === undefined ? "cursor-A" : "cursor-B",
+    }));
+    const first = await collectCandidates(DEF, { maxPages: 1 });
+    expect(first.endCursor).toBe("cursor-A");
+    mockSearchLists.mockClear();
+    mockSearchLists.mockImplementation(async () => ({
+      listings: [],
+      hasMore: false,
+      nextCursor: "cursor-B",
+    }));
+    await collectCandidates(
+      { ...DEF, deepHistory: true },
+      { maxPages: 1, startCursor: first.endCursor, startPage: 20 }
+    );
+    // The deep walk resumes where the first stopped — not from page 0.
+    expect(mockSearchLists).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: "cursor-A", page: 20 })
+    );
   });
 
   it("honors price bounds but keeps unknown-price ads (contract)", async () => {

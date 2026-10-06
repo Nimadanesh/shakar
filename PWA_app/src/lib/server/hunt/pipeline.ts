@@ -103,11 +103,17 @@ export interface Candidate extends ListingSummary {
 
 export interface CollectOptions {
   /**
-   * First list page. Default honors def.deepHistory (the second phase
-   * starts where the first stopped). Kamin checks always start at 0 —
-   * they scan the recency window, never history.
+   * First LOGICAL list page (cache-key offset only). Default honors
+   * def.deepHistory (the second phase continues after the first).
+   * Kamin checks always start at 0 — they scan the recency window,
+   * never history.
    */
   startPage?: number;
+  /**
+   * Cursor to resume from (the first phase's endCursor, for deep-history).
+   * Undefined = start at the newest page.
+   */
+  startCursor?: unknown;
   /**
    * List-page budget. Default MAX_LIST_PAGES_PER_HUNT (full hunts).
    * Kamin checks pass a smaller time-derived budget — the window is
@@ -157,6 +163,30 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
   return { excluded: false, strength, needsDetailReview };
 }
 
+/**
+ * Explicit condition cues, matched at TOKEN level (textMatches) so «نوساز»
+ * never matches «نو». Finding #2 (bug-bounty 2026-10-06): the form asks
+ * نو/کارکرده and the engine must honor it.
+ */
+const NEW_CUES = ["آکبند", "نو"];
+const USED_CUES = ["کارکرده", "دست دوم", "استوک"];
+
+/**
+ * Condition gate — rejects ONLY on explicit contradiction.
+ * condition=new + «کارکرده» in the ad → out. condition=used + «آکبند» → out.
+ * An ad that states NO condition passes (unknown ≠ dropped — invariant).
+ * "any"/"" = no gate.
+ */
+function conditionPass(combined: string, def: HuntDefinition): boolean {
+  if (def.condition === "new") {
+    return !USED_CUES.some((cue) => textMatches(combined, cue));
+  }
+  if (def.condition === "used") {
+    return !NEW_CUES.some((cue) => textMatches(combined, cue));
+  }
+  return true;
+}
+
 function descriptionPass(
   description: string,
   title: string,
@@ -177,6 +207,9 @@ function descriptionPass(
     if (textMatches(combined, term)) {
       return { pass: false, strength: 0, evidence: [] };
     }
+  }
+  if (!conditionPass(combined, def)) {
+    return { pass: false, strength: 0, evidence: [] };
   }
   return { pass: true, strength, evidence };
 }
@@ -209,7 +242,7 @@ function scoreAd(
 export async function collectCandidates(
   def: HuntDefinition,
   opts: CollectOptions = {}
-): Promise<{ candidates: Candidate[]; stats: HuntStats }> {
+): Promise<{ candidates: Candidate[]; stats: HuntStats; endCursor?: unknown }> {
   const emit = opts.emit ?? (() => {});
   const stats: HuntStats = {
     adsSeen: 0,
@@ -224,8 +257,12 @@ export async function collectCandidates(
 
   emit({ type: "started", query: def.query });
 
-  // ---- Phase 1: list pages -------------------------------------------------
-  // Deep-history second phase starts where the first phase stopped.
+  // ---- Phase 1: list pages (cursor-chained) ---------------------------------
+  // Finding #1 (bug-bounty 2026-10-06): page numbers alone do NOT paginate
+  // Divar — every request without pagination_data returns page 0. The walk
+  // threads the opaque cursor (pagination.data) through top-level
+  // pagination_data; `page` is only a logical counter (cache key, budget).
+  // Deep-history resumes from the first phase's endCursor.
   const startPage =
     opts.startPage ?? (def.deepHistory === true ? MAX_LIST_PAGES_PER_HUNT : 0);
   const maxPages = opts.maxPages ?? MAX_LIST_PAGES_PER_HUNT;
@@ -241,7 +278,9 @@ export async function collectCandidates(
   const cityId = def.city !== "all" ? await resolveCityId(def.city) : null;
   const all: ListingSummary[] = [];
   let pagesDone = 0;
-  for (let page = startPage; page < startPage + maxPages; page++) {
+  let cursor: unknown = opts.startCursor;
+  let endCursor: unknown = undefined;
+  for (let i = 0; i < maxPages; i++) {
     let res;
     try {
       res = await divarProvider.searchLists({
@@ -251,7 +290,8 @@ export async function collectCandidates(
         // (flaw #11): without this we only ever see the freshest N ads of
         // everything, and older relevant inventory is unreachable.
         keywords: def.include,
-        page,
+        page: startPage + i,
+        cursor,
       });
     } catch (e) {
       if (e instanceof ProviderError) {
@@ -265,7 +305,11 @@ export async function collectCandidates(
     pagesDone += 1;
     stats.adsSeen = all.length;
     emit({ type: "lists-progress", pagesDone, adsSeen: all.length });
-    if (!res.hasMore) break;
+    endCursor = res.nextCursor;
+    // No cursor or no more pages: the walk ends here. Never loop on a
+    // missing cursor — that would re-fetch the same page forever.
+    if (!res.hasMore || res.nextCursor === undefined || res.nextCursor === null) break;
+    cursor = res.nextCursor;
   }
   emit({ type: "lists-done", adsSeen: all.length, stale: stats.stale });
 
@@ -331,7 +375,7 @@ export async function collectCandidates(
   // Big-hunt signal: the UI suggests narrowing; pipeline continues with top 100.
   if (priced.length > 100) emit({ type: "big-hunt", candidates: priced.length });
 
-  return { candidates: priced, stats };
+  return { candidates: priced, stats, endCursor };
 }
 
 export async function confirmCandidates(
@@ -416,10 +460,14 @@ export async function confirmCandidates(
 
 export async function runPipeline(
   def: HuntDefinition,
-  emit: (e: HuntEvent) => void
-): Promise<{ results: ScoredAd[]; stats: HuntStats }> {
-  const { candidates, stats } = await collectCandidates(def, { emit });
+  emit: (e: HuntEvent) => void,
+  opts: { startCursor?: unknown } = {}
+): Promise<{ results: ScoredAd[]; stats: HuntStats; endCursor?: unknown }> {
+  const { candidates, stats, endCursor } = await collectCandidates(def, {
+    emit,
+    startCursor: opts.startCursor,
+  });
   const results = await confirmCandidates(candidates, def, stats, emit);
   emit({ type: "done", results, stats });
-  return { results, stats };
+  return { results, stats, endCursor };
 }

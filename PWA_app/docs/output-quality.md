@@ -130,8 +130,8 @@
   `q`/`text` are ignored). The pipeline now sends `def.include` as the
   provider query; the cache key includes the query text. The list phase went
   from "freshest N of everything" to "ads matching the hunt". Live proof:
-  «آپارتمان نوساز سعادت آباد» → 520 query-scoped ads → 9 confirmed
-  (was: 0). Tests: `divarClient.test.ts` (query serialization, omission
+  «آپارتمان نوساز سعادت آباد» → query-scoped ads → 9 confirmed pre-#14
+  (53 after the pagination fix — the 9 came from ~26 unique page-0 ads). Tests: `divarClient.test.ts` (query serialization, omission
   when empty), pipeline keywords test.
 - Credit: the query-field shape was confirmed against the public docs of
   [mmdju/divar-mcp](https://github.com/mmdju/divar-mcp) (docs-only repo) —
@@ -160,6 +160,70 @@
 - **CURE (DONE 2026-10-06):** real-estate + transaction now selects Divar's
   leaf category at the provider. No answer → whole real-estate (never a
   silent half). Tests: pipeline leaf-selection (buy/rent/unset).
+
+## Flaw #14 — Pagination never advanced (bug-bounty #1, 2026-10-06)
+**Severity:** CRITICAL — the hunt's "20 pages ≈ 500 ads" was fiction.
+- `pipeline.ts` looped pages 0–19, but `searchLists` never sent any
+  pagination to Divar and never consumed `nextCursor`. Every request
+  returned page 0; nearDup collapsed the repeats. Verified live: page-1
+  request had 24/26 overlap with page 0.
+- **CURE (DONE 2026-10-06):** Divar honors top-level `pagination_data`
+  (probed live — inside `form_data.data` it is silently ignored). The
+  pipeline now threads the opaque cursor (`pagination.data`) page to page;
+  `page` is only a logical counter. The walk stops when the cursor runs out
+  (never loops on page 0). `collectCandidates` returns `endCursor`; the
+  deep-history phase resumes from it. Cache keys include a cursor hash so
+  different walks never share pages. Live proof: 6 pages → 144 unique ads
+  (was: ~26). Tests: cursor threading, stop-on-missing-cursor, deepen
+  resume, `pagination_data` serialization.
+
+## Flaw #15 — condition (نو/کارکرده) never enforced (bug-bounty #2, 2026-10-06)
+**Severity:** HIGH — the form asked, the engine ignored.
+- `def.condition` was parsed and stored but never used (transaction was
+  fixed in flaw #13 for real-estate leaves).
+- **CURE (DONE 2026-10-06):** `conditionPass` in the description phase
+  rejects ONLY on explicit contradiction (condition=new + «کارکرده»/«دست
+  دوم»/«استوک» in title+description, or vice versa with «آکبند»/«نو»).
+  An ad stating no condition passes (unknown ≠ dropped). Token-level
+  matching so «نوساز» never trips the «نو» cue. Tests: new/used/any +
+  the نوساز-vs-نو guard.
+
+## Flaw #16 — Stream had no ownership check (bug-bounty #3, 2026-10-06)
+**Severity:** HIGH (security).
+- `GET /api/hunts/[id]/stream` ran anyone's hunt with just the run id
+  (a timestamp + 8 random chars — not a secret).
+- **CURE (DONE 2026-10-06):** run ids are now `crypto.randomUUID()`
+  (unguessable capabilities for guest runs); the stream and deepen routes
+  403 when a signed-in user's run is opened by someone else
+  (`canOpenRun`). Tests: `runs.test.ts`.
+
+## Flaw #17 — A run could be re-executed for quota/refund abuse (bug-bounty #4, 2026-10-06)
+**Severity:** HIGH (security/abuse).
+- No run state: every GET on the stream re-ran the pipeline, and the
+  zero-result refund block executed on every completion — one run, many
+  refunds.
+- **CURE (DONE 2026-10-06):** `HuntRun` has a lifecycle
+  (created → running → done|failed) with an atomic synchronous claim —
+  exactly one execution per run. A second GET while running ATTACHES to
+  the live broadcast (refresh-safe); after completion the event log is
+  replayed. Pipeline, kamin baseline advance, and refund each run exactly
+  once (`finalized` flag). Tests: `runs.test.ts` (single-claim,
+  ownership).
+
+## Flaw #18 — Quota race: read-check-PATCH (bug-bounty #5, 2026-10-06)
+**Severity:** HIGH (business logic).
+- Two concurrent `consumeHunt` calls could both pass the limit check and
+  consume one unit — the code itself documented the race.
+- **CURE (DONE 2026-10-06):** `supabase/m6-quota-atomic.sql` —
+  `consume_hunt_unit` / `consume_guest_hunt` / `refund_hunt_unit` /
+  `refund_guest_hunt` RPCs: single-statement check-and-increment with a
+  row lock (`FOR UPDATE`). The 85% notification PATCH is conditional
+  (`notified_85=eq.false`) so racers can't double-fire. The app prefers
+  the RPC path and falls back to the legacy path with a loud warning when
+  the migration hasn't been run yet. **navid must run
+  `supabase/m6-quota-atomic.sql` in the SQL Editor.** Tests: quota.test.ts
+  (atomic allow/deny/notify, guest limit, RPC-call assertions; the fake
+  PostgREST now simulates the RPCs).
 
 ## Standing invariants (never weaken)
 

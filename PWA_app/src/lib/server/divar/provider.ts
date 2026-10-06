@@ -18,8 +18,17 @@ export interface ListingQuery {
   keywords: string[];
   /** e.g. { transaction: "rent" } — provider-level filters when available. */
   attributes?: Record<string, string>;
-  /** 0-based page. The executor caps list pages per hunt (pipeline §3). */
+  /**
+   * 0-based logical page (cache key + progress only). Real pagination is
+   * cursor-based: pass the previous response's nextCursor here.
+   */
   page: number;
+  /**
+   * Opaque cursor from the previous page's response (Divar's
+   * pagination.data). Sent as top-level `pagination_data` — without it
+   * every request returns page 0 (finding #1, bug-bounty 2026-10-06).
+   */
+  cursor?: unknown;
 }
 
 export interface ListingSummary {
