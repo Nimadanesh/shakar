@@ -22,6 +22,15 @@ import { ProviderError, type ProviderErrorClass } from "./provider";
  * UA/fingerprint spoofing, CAPTCHA bypass. Those are abuse-evasion, they
  * don't survive contact with a real abuse team, and they create new risk.
  * The protection is: small footprint + shared cache + graceful degrade.
+ *
+ * QUALITY INVARIANT (never weaken): coalescing and caching DEDUPLICATE
+ * identical upstream work — every caller receives the COMPLETE response.
+ * We never sample, truncate pages, skip details, or silently drop a failed
+ * fetch to save time. An ad that exists on Divar must reach the pipeline;
+ * a failed detail fetch is "unknown", never a silent drop (M4 enforces
+ * this). Latency is spent on UX (honest loading states), never taken
+ * from result quality. A fast hunt that misses ads loses the user; a
+ * slow hunt that finds them keeps them.
  */
 
 export type RequestKind = "list" | "detail" | "meta";
@@ -164,10 +173,27 @@ let cooldownUntil = 0;
 let circuitOpenUntil = 0;
 let consecutive429 = 0;
 
+// In-flight request coalescing: identical requests that arrive while one
+// is already running ATTACH to it instead of queueing a duplicate.
+// 50 users asking for the same list at the same second = 1 upstream
+// request, and all 50 receive the identical complete response.
+// Quality-neutral by construction: this removes duplicate WORK, never
+// duplicate RESULTS. Different bodies (e.g. pagination cursors) are
+// different keys and are never merged.
+const inFlight = new Map<string, Promise<unknown>>();
+
+function requestKey(url: string, opts: { method: string; body?: unknown }): string {
+  return `${opts.method}:${url}:${opts.body !== undefined ? JSON.stringify(opts.body) : ""}`;
+}
+
 export function divarFetch(
   url: string,
   opts: { method: "GET" | "POST"; body?: unknown; kind: RequestKind }
 ): Promise<unknown> {
+  const key = requestKey(url, opts);
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+
   const run = async (): Promise<unknown> => {
     const now = Date.now();
     // A ban/restriction is a normal state: fail fast, recover on the timer.
@@ -210,5 +236,12 @@ export function divarFetch(
   const p = chain.then(run, run);
   // Keep the chain alive even if this request fails.
   chain = p.catch(() => undefined);
+  // Register for coalescing; release when settled (success or failure —
+  // a failed request must not poison later identical requests).
+  inFlight.set(key, p);
+  const release = () => {
+    if (inFlight.get(key) === p) inFlight.delete(key);
+  };
+  p.then(release, release);
   return p;
 }

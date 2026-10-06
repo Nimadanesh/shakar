@@ -317,3 +317,42 @@ describe("anti-footprint hardening", () => {
     expect(h.consecutiveFailures).toBe(1);
   });
 });
+
+describe("in-flight coalescing (quality-neutral)", () => {
+  it("3 simultaneous identical requests = 1 network call, same complete response", async () => {
+    const calls = mockFetch(() => okJson(listJson()));
+    const { divarFetch } = await import("./throttle");
+    const url = "https://api.divar.ir/v8/postlist/w/search";
+    const args = { method: "POST" as const, body: { city_ids: ["1"] }, kind: "list" as const };
+    const [a, b, c] = await Promise.all([
+      divarFetch(url, args),
+      divarFetch(url, args),
+      divarFetch(url, args),
+    ]);
+    expect(calls).toHaveLength(1);
+    // Identical response object — nothing sampled, nothing truncated.
+    expect(a).toBe(b);
+    expect(b).toBe(c);
+  });
+
+  it("never merges different request bodies (pagination stays separate)", async () => {
+    const calls = mockFetch(() => okJson(listJson()));
+    const { divarFetch } = await import("./throttle");
+    const url = "https://api.divar.ir/v8/postlist/w/search";
+    await Promise.all([
+      divarFetch(url, { method: "POST", body: { page: 1 }, kind: "list" }),
+      divarFetch(url, { method: "POST", body: { page: 2 }, kind: "list" }),
+    ]);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("releases the slot after settlement — later calls fetch fresh", async () => {
+    const calls = mockFetch(() => okJson(listJson()));
+    const { divarFetch } = await import("./throttle");
+    const url = "https://api.divar.ir/v8/postlist/w/search";
+    const args = { method: "POST" as const, body: { x: 1 }, kind: "list" as const };
+    await divarFetch(url, args);
+    await divarFetch(url, args);
+    expect(calls).toHaveLength(2);
+  });
+});
