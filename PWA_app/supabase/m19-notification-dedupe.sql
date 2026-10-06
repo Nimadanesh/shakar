@@ -11,6 +11,11 @@
 --
 -- Idempotent: safe to re-run.
 
+-- M5 may have been partially applied (production had missing tables);
+-- ensure the columns exist before indexing.
+alter table notifications add column if not exists related_kamin_id uuid;
+alter table notifications add column if not exists check_run_id uuid;
+
 -- The index from m5 is non-unique; replace it with a unique one.
 drop index if exists notifications_kamin_run_idx;
 create unique index if not exists notifications_kamin_check_uidx
