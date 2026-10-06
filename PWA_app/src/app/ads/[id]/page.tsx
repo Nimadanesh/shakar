@@ -47,6 +47,7 @@ export default async function AdDetailPage({
   if (!ad) notFound();
 
   const city = first(query.city) ?? "all";
+  const cond = first(query.cond);
   const ctx: SearchContext = {
     query: first(query.q) ?? "",
     includeKeywords: asArray(query.inc),
@@ -58,6 +59,7 @@ export default async function AdDetailPage({
     priceMax: num(query.max),
     hasImage: query.img === "1",
     transaction: "",
+    condition: cond === "new" || cond === "used" || cond === "any" ? cond : "",
   };
 
   // Back restores the context the hunter came from: the hunt's triage,

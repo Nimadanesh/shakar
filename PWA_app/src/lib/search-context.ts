@@ -12,6 +12,11 @@ export interface ContextBase {
   hasImage: boolean;
   /** Real-estate transaction type chosen by the user. "" = unresolved. */
   transaction: "" | "rent" | "buy";
+  /**
+   * Goods condition chosen by the user. "" = unresolved, "any" = the user
+   * explicitly doesn't care (a real answer: the engine must not filter).
+   */
+  condition: "" | "new" | "used" | "any";
 }
 
 export const EMPTY_CONTEXT_BASE: ContextBase = {
@@ -23,6 +28,7 @@ export const EMPTY_CONTEXT_BASE: ContextBase = {
   exclude: [],
   hasImage: false,
   transaction: "",
+  condition: "",
 };
 
 /**
@@ -104,6 +110,20 @@ export function buildEffectiveContext(
     transaction = base.transaction;
   }
 
+  // Condition: same freshest-signal rule. "any" is an explicit answer —
+  // the engine must treat it as "don't filter", never as unresolved.
+  let condition: ContextBase["condition"] = "";
+  const inferredCond = inferred("condition");
+  if (inferredCond && (inferredCond.value === "new" || inferredCond.value === "used")) {
+    condition = inferredCond.value;
+  } else if (
+    base.condition === "new" ||
+    base.condition === "used" ||
+    base.condition === "any"
+  ) {
+    condition = base.condition;
+  }
+
   return {
     query,
     includeKeywords: include,
@@ -115,5 +135,6 @@ export function buildEffectiveContext(
     priceMax,
     hasImage: base.hasImage,
     transaction,
+    condition,
   };
 }

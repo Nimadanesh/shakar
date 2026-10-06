@@ -38,9 +38,9 @@ const KNOWN_CITIES: Array<{ id: string; names: string[] }> = [
  * positive is no longer negligible. Persian words are space-separated
  * (ZWNJ stays inside a word), so (^|\s)…(\s|$) is the right boundary.
  */
+/** City-name check — a thin wrapper over the shared word-boundary helper. */
 function mentionsCity(normalized: string, name: string): boolean {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(^|\\s)${escaped}(\\s|$)`).test(normalized);
+  return includesWord(normalized, name);
 }
 
 const UNIT_MULTIPLIER: Array<{ unit: string; factor: number }> = [
@@ -59,6 +59,22 @@ const PREFERENCE_CUES = ["ترجیحاً", "ترجیحا", "کاش", "ای کا�
  *  normalized query; «اجاره» also matches «اجاره‌ای». */
 const RENT_WORDS = ["اجاره", "رهن"];
 const BUY_WORDS = ["خرید", "فروش", "معاوضه"];
+
+/** Words that answer the goods «condition» dimension (نو / کارکرده). */
+const CONDITION_NEW_WORDS = ["نو", "آکبند", "صفر"];
+const CONDITION_USED_WORDS = ["کارکرده", "دست دوم", "دست‌دوم"];
+
+/**
+ * Word-boundary substring check for Persian text. Plain includes() would
+ * match «نو» inside «نوع» and «رشت» inside «درشت» — with ~30 cities and
+ * short condition words in play, that class of false positive is no
+ * longer negligible. Persian words are space-separated (ZWNJ stays inside
+ * a word), so (^|\s)…(\s|$) is the right boundary.
+ */
+export function includesWord(normalized: string, word: string): boolean {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|\\s)${escaped}(\\s|$)`).test(normalized);
+}
 
 /** Real-estate mentions that make the transaction type (rent/buy) a
  *  required disambiguation when no transaction word is present. */
@@ -91,6 +107,73 @@ export function detectTransaction(raw: string): TransactionType | null {
 export function mentionsRealEstate(raw: string): boolean {
   const normalized = normalizePersian(raw);
   return REAL_ESTATE_WORDS.some((w) => normalized.includes(w));
+}
+
+export type ConditionType = "new" | "used";
+
+/**
+ * «آیفون نو» → "new", «مبل کارکرده» / «گوشی دست دوم» → "used", else null.
+ * Used-words are checked first: they are long and unambiguous, while «نو»
+ * and «صفر» are short. Every match is word-boundary («نوع» ≠ «نو»).
+ */
+export function detectCondition(raw: string): ConditionType | null {
+  const normalized = normalizePersian(raw);
+  if (CONDITION_USED_WORDS.some((w) => includesWord(normalized, w))) return "used";
+  if (CONDITION_NEW_WORDS.some((w) => includesWord(normalized, w))) return "new";
+  return null;
+}
+
+/** Head-word hints for the required-dimensions engine. Explicit category
+ *  picker wins; these only fire when the user never touched it. */
+const VEHICLE_HINT_WORDS = [
+  "ماشین", "خودرو", "وانت", "تیپ", "پراید", "پژو", "سمند", "دنا", "تیبا",
+  "کوییک", "شاهین", "ساینا", "رانا", "تویوتا", "هیوندای", "نیسان", "کامیون",
+];
+const MOBILE_HINT_WORDS = [
+  "گوشی", "موبایل", "آیفون", "سامسونگ", "شیائومی", "هواوی", "تبلت",
+  "لپتاپ", "لپ‌تاپ", "کامپیوتر", "رایانه", "مانیتور", "کنسول", "هوشمند",
+  "مودم", "پرینتر", "دوربین", "عکاسی", "اسپیکر", "هدفون", "هندزفری",
+  "شارژر", "پاوربانک",
+];
+const HOME_HINT_WORDS = [
+  "مبل", "مبلمان", "یخچال", "فریزر", "تلویزیون", "لباسشویی", "ظرفشویی",
+  "کولر", "فرش", "قالی", "موکت", "پرده", "تخت", "تختخواب", "کمد", "دراور",
+  "صندلی", "جاروبرقی", "بخارشوی", "اتو", "آباژور", "لوستر", "آینه",
+];
+const MUSIC_HINT_WORDS = [
+  "پیانو", "گیتار", "ویولن", "سنتور", "سهتار", "دف", "تنبک", "درام",
+  "ساز", "آکوستیک",
+];
+const PERSONAL_HINT_WORDS = [
+  "مانتو", "پالتو", "بارانی", "کاپشن", "شلوار", "پیراهن", "تیشرت",
+  "کفش", "کتونی", "بوت", "صندل", "کیف", "کوله", "چمدان", "عینک",
+  "ساعت", "طلا", "جواهر", "انگشتر", "گردنبند", "دستبند", "عطر", "ادکلن",
+  "لباس",
+];
+
+export type TextCategory =
+  | "real-estate"
+  | "vehicles"
+  | "mobile"
+  | "home"
+  | "music"
+  | "personal";
+
+/**
+ * Best-guess category from free text for the required-dimensions engine.
+ * Real estate first (preserves the #4 transaction behavior), then goods.
+ * Null when nothing matches — the engine stays silent rather than guess.
+ */
+export function detectCategoryFromText(raw: string): TextCategory | null {
+  const normalized = normalizePersian(raw);
+  const hits = (words: string[]) => words.some((w) => includesWord(normalized, w));
+  if (mentionsRealEstate(raw)) return "real-estate";
+  if (hits(VEHICLE_HINT_WORDS)) return "vehicles";
+  if (hits(MOBILE_HINT_WORDS)) return "mobile";
+  if (hits(HOME_HINT_WORDS)) return "home";
+  if (hits(MUSIC_HINT_WORDS)) return "music";
+  if (hits(PERSONAL_HINT_WORDS)) return "personal";
+  return null;
 }
 
 function faToEnDigits(input: string): string {
@@ -193,6 +276,18 @@ export function interpretQuery(raw: string): Interpretation {
       kind: "transaction",
       value: transaction,
       display: transaction === "rent" ? "اجاره" : "خرید",
+      source: "inferred",
+      applied: true,
+    });
+  }
+
+  const condition = detectCondition(raw);
+  if (condition) {
+    pushUnique(applied, {
+      id: `condition:${condition}`,
+      kind: "condition",
+      value: condition,
+      display: condition === "new" ? "نو" : "کارکرده",
       source: "inferred",
       applied: true,
     });

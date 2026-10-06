@@ -2,10 +2,11 @@ import type { ContextBase } from "@/lib/search-context";
 
 /**
  * Shared URL serialization for hunt intent (deep links, refine-from-hunt).
- * Pure functions — the single source of truth for ?q=&inc=&exc=&cat=&city=&min=&max=&img=&tx=.
+ * Pure functions — the single source of truth for ?q=&inc=&exc=&cat=&city=&min=&max=&img=&tx=&cond=.
  */
 export function readParams(params: URLSearchParams): { query: string; base: ContextBase } {
   const tx = params.get("tx");
+  const cond = params.get("cond");
   return {
     query: params.get("q") ?? "",
     base: {
@@ -17,6 +18,7 @@ export function readParams(params: URLSearchParams): { query: string; base: Cont
       exclude: params.getAll("exc"),
       hasImage: params.get("img") === "1",
       transaction: tx === "rent" || tx === "buy" ? tx : "",
+      condition: cond === "new" || cond === "used" || cond === "any" ? cond : "",
     },
   };
 }
@@ -33,6 +35,8 @@ export function writeParams(query: string, base: ContextBase): string {
   if (base.hasImage) params.set("img", "1");
   if (base.transaction === "rent" || base.transaction === "buy")
     params.set("tx", base.transaction);
+  if (base.condition === "new" || base.condition === "used" || base.condition === "any")
+    params.set("cond", base.condition);
   const serialized = params.toString();
   return serialized === "" ? "/" : `/?${serialized}`;
 }

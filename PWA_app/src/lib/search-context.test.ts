@@ -98,3 +98,39 @@ describe("buildEffectiveContext", () => {
     expect(ctx.cityScope).toBeNull();
   });
 });
+
+describe("condition in buildEffectiveContext", () => {
+  it("takes condition from the query text", () => {
+    const q = "آیفون نو";
+    const ctx = buildEffectiveContext(q, EMPTY_CONTEXT_BASE, interpretQuery(q), new Set());
+    expect(ctx.condition).toBe("new");
+  });
+
+  it("lets the text override a picked chip (freshest signal)", () => {
+    const q = "آیفون نو";
+    const ctx = buildEffectiveContext(
+      q,
+      { ...EMPTY_CONTEXT_BASE, condition: "used" },
+      interpretQuery(q),
+      new Set()
+    );
+    expect(ctx.condition).toBe("new");
+  });
+
+  it("passes an explicit «any» through as a real answer", () => {
+    const q = "۲۰۶ تیپ ۲";
+    const ctx = buildEffectiveContext(
+      q,
+      { ...EMPTY_CONTEXT_BASE, condition: "any" },
+      interpretQuery(q),
+      new Set()
+    );
+    expect(ctx.condition).toBe("any");
+  });
+
+  it("stays empty when nothing says it", () => {
+    const q = "۲۰۶ تیپ ۲";
+    const ctx = buildEffectiveContext(q, EMPTY_CONTEXT_BASE, interpretQuery(q), new Set());
+    expect(ctx.condition).toBe("");
+  });
+});

@@ -130,3 +130,54 @@ describe("detectTransaction", () => {
     expect(detectTransaction("پیانو")).toBeNull();
   });
 });
+
+describe("detectCondition", () => {
+  it("detects new from نو / آکبند / صفر", async () => {
+    const { detectCondition } = await import("@/lib/interpret");
+    expect(detectCondition("آیفون نو")).toBe("new");
+    expect(detectCondition("گوشی آکبند")).toBe("new");
+    expect(detectCondition("پراید صفر")).toBe("new");
+  });
+
+  it("detects used from کارکرده / دست دوم", async () => {
+    const { detectCondition } = await import("@/lib/interpret");
+    expect(detectCondition("مبل کارکرده")).toBe("used");
+    expect(detectCondition("گوشی دست دوم")).toBe("used");
+    expect(detectCondition("یخچال دست‌دوم")).toBe("used");
+  });
+
+  it("is word-boundary safe: نوع is not نو", async () => {
+    const { detectCondition } = await import("@/lib/interpret");
+    expect(detectCondition("هر نوع مبل")).toBeNull();
+    expect(detectCondition("۲۰۶")).toBeNull();
+  });
+
+  it("emits a condition constraint in interpretQuery", () => {
+    const { applied } = interpretQuery("آیفون نو");
+    const c = applied.find((x) => x.kind === "condition");
+    expect(c?.value).toBe("new");
+    expect(c?.display).toBe("نو");
+  });
+});
+
+describe("detectCategoryFromText", () => {
+  it("hints goods categories from head words", async () => {
+    const { detectCategoryFromText } = await import("@/lib/interpret");
+    expect(detectCategoryFromText("۲۰۶ تیپ ۲")).toBe("vehicles");
+    expect(detectCategoryFromText("آیفون ۱۳")).toBe("mobile");
+    expect(detectCategoryFromText("مبل راحتی")).toBe("home");
+    expect(detectCategoryFromText("پیانو")).toBe("music");
+    expect(detectCategoryFromText("مانتو")).toBe("personal");
+  });
+
+  it("keeps real estate first (preserves #4 behavior)", async () => {
+    const { detectCategoryFromText } = await import("@/lib/interpret");
+    expect(detectCategoryFromText("خونه و ماشین")).toBe("real-estate");
+    expect(detectCategoryFromText("خونه ۵۰ متری")).toBe("real-estate");
+  });
+
+  it("returns null when nothing matches — never guesses", async () => {
+    const { detectCategoryFromText } = await import("@/lib/interpret");
+    expect(detectCategoryFromText("چیز عجیب")).toBeNull();
+  });
+});

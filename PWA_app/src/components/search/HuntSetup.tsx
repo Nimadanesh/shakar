@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Camera, Music } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { WhatField } from "@/components/search/WhatField";
 import { TypoNudge, TYPO_PAUSE_MS } from "@/components/search/TypoNudge";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { TransactionChips } from "@/components/search/TransactionChips";
+import { DimensionChips } from "@/components/search/DimensionChips";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { RecentHunts } from "@/components/search/RecentHunts";
 import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
@@ -19,7 +20,12 @@ import {
   categoryLabel,
   cityLabel,
 } from "@/data/taxonomy";
-import { detectTransaction, interpretQuery, mentionsRealEstate } from "@/lib/interpret";
+import { interpretQuery } from "@/lib/interpret";
+import {
+  getDimensionStatuses,
+  isDimensionsBlocking,
+  type DimensionId,
+} from "@/lib/dimensions";
 import { getRememberedCity, rememberCity } from "@/lib/city-memory";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
@@ -125,31 +131,49 @@ export function HuntSetup() {
    * asset; the user lands on its canonical triage URL. `firing` covers
    * the real navigation transition — no artificial delay.
    *
-   * A real-estate hunt with an unresolved transaction type never fires:
-   * guessing would waste quota and searching both would double the cost.
-   * Instead the transaction chips flash — resolving them is free.
+   * A hunt with an unresolved REQUIRED dimension never fires: guessing
+   * would waste quota (and for rent/buy, searching both would double the
+   * cost). Instead the dimension block flashes — resolving it is one tap,
+   * zero quota.
    */
   const [firing, setFiring] = useState(false);
-  const txSectionRef = useRef<HTMLDivElement | null>(null);
-  const [txFlash, setTxFlash] = useState(false);
+  const dimsSectionRef = useRef<HTMLDivElement | null>(null);
+  const [dimsFlash, setDimsFlash] = useState(false);
 
-  /** Real-estate + no transaction anywhere → the chips must be resolved. */
-  const tx = useMemo(() => {
-    const t = query.trim();
-    if (t === "") return { show: false, blocking: false };
-    const fromText = detectTransaction(t);
-    const isRE = base.category === "real-estate" || mentionsRealEstate(t);
-    const show = isRE && !fromText;
-    return { show, blocking: show && base.transaction === "" };
-  }, [query, base.category, base.transaction]);
+  /**
+   * Required dimensions (registry): visible when the category needs them
+   * and no input text already answers them. They stay visible after a
+   * chip pick so the user can change their mind; the hunt is blocked
+   * while any of them is unresolved.
+   */
+  const dimStatuses = useMemo(
+    () =>
+      getDimensionStatuses({
+        query: query.trim(),
+        include: base.include,
+        exclude: base.exclude,
+        category: base.category,
+        values: { transaction: base.transaction, condition: base.condition },
+      }),
+    [query, base.include, base.exclude, base.category, base.transaction, base.condition]
+  );
+  const dimsBlocking = isDimensionsBlocking(dimStatuses);
+
+  function setDimensionValue(id: DimensionId, value: string) {
+    setBase((b) =>
+      id === "transaction"
+        ? { ...b, transaction: value as ContextBase["transaction"] }
+        : { ...b, condition: value as ContextBase["condition"] }
+    );
+  }
 
   function fireHunt() {
     const trimmed = query.trim();
     if (trimmed === "" || firing) return;
-    if (tx.blocking) {
-      txSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      setTxFlash(true);
-      window.setTimeout(() => setTxFlash(false), 1400);
+    if (dimsBlocking) {
+      dimsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setDimsFlash(true);
+      window.setTimeout(() => setDimsFlash(false), 1400);
       return;
     }
     setFiring(true);
@@ -359,13 +383,23 @@ export function HuntSetup() {
             />
           </div>
 
-          {tx.show && (
-            <TransactionChips
-              value={base.transaction}
-              onSelect={(v) => setBase((b) => ({ ...b, transaction: v }))}
-              flash={txFlash}
-              sectionRef={txSectionRef}
-            />
+          {dimStatuses.length > 0 && (
+            <div
+              ref={dimsSectionRef}
+              className={cn(
+                "flex scroll-mt-24 flex-col gap-2 rounded-lg border p-3 transition-colors",
+                dimsFlash ? "border-ring" : "border-border"
+              )}
+            >
+              {dimStatuses.map(({ def, value }) => (
+                <DimensionChips
+                  key={def.id}
+                  def={def}
+                  value={value}
+                  onSelect={(v) => setDimensionValue(def.id, v)}
+                />
+              ))}
+            </div>
           )}
 
           {hasInferred && (

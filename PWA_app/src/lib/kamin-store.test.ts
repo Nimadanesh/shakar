@@ -39,6 +39,7 @@ const goodCtx = {
   priceMax: 400000000,
   hasImage: false,
   transaction: "",
+  condition: "",
 };
 
 describe("kamin ctx validation", () => {

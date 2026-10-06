@@ -43,6 +43,10 @@ function normalize(raw: unknown): SavedHunt | null {
         : [],
       hasImage: b.hasImage === true,
       transaction: b.transaction === "rent" || b.transaction === "buy" ? b.transaction : "",
+      condition:
+        b.condition === "new" || b.condition === "used" || b.condition === "any"
+          ? b.condition
+          : "",
     },
     ts: typeof v.ts === "number" ? v.ts : Date.now(),
   };
