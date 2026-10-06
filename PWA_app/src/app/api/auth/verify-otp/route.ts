@@ -90,14 +90,26 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  if (record.attempts >= record.maxAttempts) {
+  // Finding #6: count the attempt FIRST, through the atomic
+  // increment_otp_attempts RPC (one UPDATE = the linearization point).
+  // The old code checked attempts >= max BEFORE incrementing, so
+  // concurrent verifies could all read the same count and all slip
+  // through. Deny when attempts EXCEEDS maxAttempts: exactly 5 verifies
+  // stay allowed — identical user-visible semantics, minus the race.
+  const counted = await store.incrementAttempts(record.id);
+  if (!counted) {
+    return NextResponse.json(
+      { ok: false, error: { code: "EXPIRED_CODE", message: "کد منقضی شده؛ کد جدید بگیر." } },
+      { status: 400 }
+    );
+  }
+  if (counted.attempts > counted.maxAttempts) {
     return NextResponse.json(
       { ok: false, error: { code: "RATE_LIMITED", message: "تلاش زیاد؛ کد جدید بگیر." } },
       { status: 429 }
     );
   }
   if (!safeEqual(await hashCode(code), record.codeHash)) {
-    await store.incrementAttempts(record.id);
     return NextResponse.json(
       { ok: false, error: { code: "INVALID_CODE", message: "کد اشتباه است." } },
       { status: 400 }

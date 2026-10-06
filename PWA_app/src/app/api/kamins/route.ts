@@ -76,8 +76,10 @@ export async function POST(req: Request) {
     typeof b.name === "string" && b.name.trim() !== ""
       ? b.name.trim().slice(0, 60)
       : def.query.slice(0, 60);
+  // Uncapped by design: the kamin_seen_ads baseline table is unbounded
+  // (round-2 #8). The old .slice(0, 500) silently dropped baseline ids.
   const seenIds = Array.isArray(b.seenIds)
-    ? b.seenIds.filter((x): x is string => typeof x === "string").slice(0, 500)
+    ? b.seenIds.filter((x): x is string => typeof x === "string")
     : [];
 
   if (!supabaseConfigured()) {

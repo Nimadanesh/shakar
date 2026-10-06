@@ -1,0 +1,292 @@
+/**
+ * Finding #9 — DB backend for hunt runs (finding #9, bug-bounty 2026-10-06).
+ * Mocks ONLY the DB boundary (@/lib/supabase-server) with an in-memory
+ * PostgREST fake; exercises the REAL runs module: real claim SQL-shape,
+ * real conditional updates, real event log ordering.
+ */
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/supabase-server", () => ({
+  supabaseConfigured: vi.fn(),
+  supabaseServer: vi.fn(),
+}));
+
+import { supabaseConfigured, supabaseServer } from "@/lib/supabase-server";
+import {
+  appendRunEvent,
+  canOpenRun,
+  claimIdempotency,
+  claimRunForExecution,
+  claimTuning,
+  createRun,
+  finalizeRun,
+  getRun,
+  getRunStatus,
+  readRunEvents,
+  releaseIdempotency,
+  setRunStartCursor,
+} from "./runs";
+
+const mockConfigured = vi.mocked(supabaseConfigured);
+const mockServer = vi.mocked(supabaseServer);
+
+const DEF = {
+  query: "گوشی",
+  include: ["گوشی"],
+  exclude: [],
+  city: "tehran",
+  category: "mobile",
+  priceMin: "",
+  priceMax: "",
+  transaction: "" as const,
+  condition: "" as const,
+};
+
+const QUOTA = {
+  kind: "guest" as const,
+  mode: "real" as const,
+  userId: null,
+  deviceId: "d1",
+  charged: true,
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+interface FakeDb {
+  runs: Map<string, Record<string, unknown>>;
+  keys: Map<string, { run_id: string; at: string }>;
+  events: Array<{ id: number; run_id: string; type: string; payload: unknown }>;
+  nextEventId: number;
+  rest: ReturnType<typeof vi.fn>;
+}
+
+/** Minimal PostgREST fake implementing exactly the query shapes runs.ts uses. */
+function makeFakeDb(): FakeDb {
+  const db: Omit<FakeDb, "rest"> = {
+    runs: new Map(),
+    keys: new Map(),
+    events: [],
+    nextEventId: 1,
+  };
+  const conflict = (): never => {
+    const e = new Error("duplicate key value violates unique constraint") as Error & {
+      status: number;
+    };
+    e.status = 409;
+    throw e;
+  };
+  const parse = (path: string): [string, URLSearchParams] => {
+    const [table, qs] = path.split("?");
+    return [table, new URLSearchParams(qs ?? "")];
+  };
+  const eq = (p: URLSearchParams, col: string): string | null => {
+    const v = p.get(col);
+    return v && v.startsWith("eq.") ? decodeURIComponent(v.slice(3)) : null;
+  };
+  const rest = vi.fn(async (method: string, path: string, body?: unknown) => {
+    const [table, params] = parse(path);
+    const b = (body ?? {}) as Record<string, unknown>;
+
+    if (table === "hunt_runs" && method === "GET" && params.get("limit") === "0") return [];
+    if (table === "hunt_idem_keys" && method === "POST") {
+      const key = b.key as string;
+      if (db.keys.has(key)) conflict();
+      db.keys.set(key, { run_id: b.run_id as string, at: new Date().toISOString() });
+      return [];
+    }
+    if (table === "hunt_idem_keys" && method === "GET") {
+      const row = db.keys.get(eq(params, "key") ?? "");
+      return row ? [{ run_id: row.run_id, at: row.at }] : [];
+    }
+    if (table === "hunt_idem_keys" && method === "DELETE") {
+      const key = eq(params, "key") ?? "";
+      const atRaw = params.get("at");
+      const row = db.keys.get(key);
+      if (row && atRaw) {
+        const op = atRaw.slice(0, 3);
+        const val = decodeURIComponent(atRaw.slice(3));
+        const match = op === "eq." ? row.at === val : op === "lt." ? row.at < val : false;
+        if (match) db.keys.delete(key);
+      } else if (row) {
+        db.keys.delete(key);
+      }
+      return [];
+    }
+    if (table === "hunt_runs" && method === "POST") {
+      const now = new Date().toISOString();
+      db.runs.set(b.id as string, { ...b, created_at: now, updated_at: now });
+      return [];
+    }
+    if (table === "hunt_runs" && method === "GET") {
+      const row = db.runs.get(eq(params, "id") ?? "");
+      if (!row) return [];
+      const out: Record<string, unknown> = {};
+      for (const c of (params.get("select") ?? "").split(",")) out[c] = row[c];
+      return [out];
+    }
+    if (table === "hunt_runs" && method === "PATCH") {
+      const row = db.runs.get(eq(params, "id") ?? "");
+      if (!row) return [];
+      const statusEq = eq(params, "status");
+      if (statusEq !== null && row.status !== statusEq) return [];
+      Object.assign(row, b, { updated_at: new Date().toISOString() });
+      return [{ id: row.id }];
+    }
+    if (table === "hunt_run_events" && method === "POST") {
+      db.events.push({
+        id: db.nextEventId++,
+        run_id: b.run_id as string,
+        type: b.type as string,
+        payload: b.payload,
+      });
+      return [];
+    }
+    if (table === "hunt_run_events" && method === "GET") {
+      const runId = eq(params, "run_id");
+      const gtRaw = params.get("id");
+      const after = gtRaw?.startsWith("gt.") ? Number(gtRaw.slice(3)) : 0;
+      return db.events
+        .filter((e) => e.run_id === runId && e.id > after)
+        .sort((a, z) => a.id - z.id)
+        .map((e) => ({ id: e.id, type: e.type, payload: e.payload }));
+    }
+    throw new Error(`fake: unhandled ${method} ${path}`);
+  });
+  return { ...db, rest };
+}
+
+let fake: FakeDb;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockConfigured.mockReturnValue(true);
+  fake = makeFakeDb();
+  mockServer.mockReturnValue(fake as never);
+  // Shrink the loser-poll windows for fast tests (prod keeps the defaults).
+  claimTuning.pollMs = 5;
+  claimTuning.rounds = 40;
+  claimTuning.staleMs = 60_000;
+});
+
+describe("idempotency across instances (shared DB)", () => {
+  it("two sequential claims for one key → same runId, second not fresh", async () => {
+    const c1 = await claimIdempotency("k-seq");
+    expect(c1.fresh).toBe(true);
+    // "Instance A" creates the run.
+    await createRun(DEF, null, QUOTA, "k-seq", undefined, c1.runId);
+    // "Instance B" sees the same key.
+    const c2 = await claimIdempotency("k-seq");
+    expect(c2.fresh).toBe(false);
+    expect(c2.runId).toBe(c1.runId);
+  });
+
+  it("10 concurrent claims → exactly one fresh winner, all agree on its id", async () => {
+    const claims = await Promise.all(
+      Array.from({ length: 10 }, () => claimIdempotency("k-race"))
+    );
+    const fresh = claims.filter((c) => c.fresh);
+    expect(fresh).toHaveLength(1);
+    const winner = fresh[0].runId;
+    for (const c of claims) expect(c.runId).toBe(winner);
+    expect(fake.keys.get("k-race")?.run_id).toBe(winner);
+  });
+
+  it("loser polls, sees the winner's run appear, and dedupes", async () => {
+    const c1 = await claimIdempotency("k-poll");
+    expect(c1.fresh).toBe(true);
+    const loser = claimIdempotency("k-poll");
+    await sleep(30);
+    // Winner's quota+createRun land while the loser is polling.
+    await createRun(DEF, null, QUOTA, "k-poll", undefined, c1.runId);
+    const c2 = await loser;
+    expect(c2.fresh).toBe(false);
+    expect(c2.runId).toBe(c1.runId);
+  });
+
+  it("winner quota-denied (key released) → next claim is fresh", async () => {
+    const c1 = await claimIdempotency("k-deny");
+    expect(c1.fresh).toBe(true);
+    await releaseIdempotency("k-deny");
+    const c2 = await claimIdempotency("k-deny");
+    expect(c2.fresh).toBe(true);
+    expect(c2.runId).not.toBe(c1.runId);
+  });
+
+  it("stale claim (winner crashed before createRun) is reclaimed fresh", async () => {
+    fake.keys.set("k-stale", {
+      run_id: "dead-beef",
+      at: new Date(Date.now() - 10 * 60_000).toISOString(),
+    });
+    const c = await claimIdempotency("k-stale");
+    expect(c.fresh).toBe(true);
+    expect(c.runId).not.toBe("dead-beef");
+    expect(fake.keys.get("k-stale")?.run_id).toBe(c.runId);
+  });
+});
+
+describe("conditional execution + finalization (exactly one winner)", () => {
+  it("two instances racing claimRunForExecution → exactly one owner", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    const viewA = await getRun(run.id);
+    const viewB = await getRun(run.id);
+    const [a, b] = await Promise.all([
+      claimRunForExecution(viewA!),
+      claimRunForExecution(viewB!),
+    ]);
+    expect([a, b].filter(Boolean)).toHaveLength(1);
+    expect(await getRunStatus(run.id)).toBe("running");
+  });
+
+  it("finalizeRun: exactly one closer; end cursor persisted", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    await claimRunForExecution((await getRun(run.id))!);
+    const [w1, w2] = await Promise.all([
+      finalizeRun(run.id, "done", { page: 20 }),
+      finalizeRun(run.id, "done", { page: 20 }),
+    ]);
+    expect([w1, w2].filter(Boolean)).toHaveLength(1);
+    const reread = await getRun(run.id);
+    expect(reread?.status).toBe("done");
+    expect(reread?.endCursor).toEqual({ page: 20 });
+  });
+});
+
+describe("event log", () => {
+  it("persists and replays events in id order, with afterId filtering", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    await appendRunEvent(run.id, { type: "started", query: "گوشی" });
+    await appendRunEvent(run.id, {
+      type: "done",
+      results: [],
+      stats: {
+        adsSeen: 1, titleRejected: 0, dupsCollapsed: 0, candidates: 0,
+        detailsChecked: 0, confirmed: 0, stale: false, nearMiss: 0,
+      },
+    });
+    const all = await readRunEvents(run.id, 0);
+    expect(all.map((e) => e.event.type)).toEqual(["started", "done"]);
+    expect(all[1].id).toBeGreaterThan(all[0].id);
+    const tail = await readRunEvents(run.id, all[0].id);
+    expect(tail).toHaveLength(1);
+    expect(tail[0].event.type).toBe("done");
+  });
+});
+
+describe("run rows", () => {
+  it("ownership comes from the DB row; deepen cursor round-trips", async () => {
+    const run = await createRun(DEF, "u1", { ...QUOTA, userId: "u1" });
+    const fetched = (await getRun(run.id))!;
+    expect(canOpenRun(fetched, "u1")).toBe(true);
+    expect(canOpenRun(fetched, "u2")).toBe(false);
+    expect(fetched.quota.charged).toBe(true);
+    await setRunStartCursor(fetched, { page: 20 });
+    expect((await getRun(run.id))?.startCursor).toEqual({ page: 20 });
+  });
+
+  it("unknown ids → undefined", async () => {
+    expect(await getRun("00000000-0000-4000-8000-000000000000")).toBeUndefined();
+    expect(await getRunStatus("00000000-0000-4000-8000-000000000000")).toBeNull();
+  });
+});

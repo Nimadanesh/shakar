@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { canOpenRun, createRun, getRun } from "@/lib/server/hunt/runs";
+import {
+  canOpenRun,
+  createRun,
+  getRun,
+  setRunStartCursor,
+} from "@/lib/server/hunt/runs";
 import { getSessionUserId } from "@/lib/server/auth";
 
 /**
@@ -9,14 +14,15 @@ import { getSessionUserId } from "@/lib/server/auth";
  * user explicitly chose the longer wait.
  *
  * The deep walk resumes from the first phase's endCursor (finding #1) —
- * deepening a still-running or failed hunt is rejected.
+ * deepening a still-running or failed hunt is rejected. The resume cursor
+ * is persisted on the deep run (finding #9) so any instance can stream it.
  */
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const run = getRun(id);
+  const run = await getRun(id);
   if (!run) {
     return NextResponse.json({ ok: false, error: "run-not-found" }, { status: 404 });
   }
@@ -38,11 +44,13 @@ export async function POST(
       { status: 409 }
     );
   }
-  const deep = createRun(
+  const deep = await createRun(
     { ...run.def, deepHistory: true },
     run.userId,
     { ...run.quota, charged: false }
   );
-  deep.startCursor = run.endCursor;
+  // The deep run's stream resumes from the first phase's cursor
+  // (memory: live object; DB: persisted row — see setRunStartCursor).
+  await setRunStartCursor(deep, run.endCursor);
   return NextResponse.json({ ok: true, data: { runId: deep.id } }, { status: 202 });
 }

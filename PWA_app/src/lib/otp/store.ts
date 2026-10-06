@@ -16,6 +16,27 @@ export interface OtpRecord {
   createdAt: number;
 }
 
+/**
+ * Post-increment attempt count. The increment itself is the atomic
+ * operation (single UPDATE via the increment_otp_attempts RPC); the
+ * returned count is authoritative — never re-read-then-decide.
+ */
+export interface AttemptCount {
+  attempts: number;
+  maxAttempts: number;
+}
+
+export interface ClaimSendInput {
+  mobile: string;
+  codeHash: string;
+  expiresAt: number;
+  maxAttempts: number;
+  /** Max sends allowed inside the window (product constant). */
+  limit: number;
+  /** Window length in seconds. */
+  windowSecs: number;
+}
+
 export interface OtpStore {
   create(input: {
     mobile: string;
@@ -24,11 +45,18 @@ export interface OtpStore {
     maxAttempts: number;
   }): Promise<OtpRecord>;
   latestActive(mobile: string, now: number): Promise<OtpRecord | null>;
-  incrementAttempts(id: string): Promise<OtpRecord | null>;
+  incrementAttempts(id: string): Promise<AttemptCount | null>;
   consume(id: string, now: number): Promise<void>;
   /** Removes a record entirely (used when the SMS send itself failed). */
   remove(id: string): Promise<void>;
   sentSince(mobile: string, since: number): Promise<number>;
+  /**
+   * Atomically claims one send slot for the mobile: counts recent sends
+   * and inserts the new verification row ONLY when under the limit.
+   * Returns the new row id, or null when the mobile is over its limit.
+   * (Finding #10: replaces the racy sentSince()+create() pair.)
+   */
+  claimSend(input: ClaimSendInput): Promise<{ id: string } | null>;
 }
 
 export async function hashCode(code: string): Promise<string> {
@@ -88,11 +116,11 @@ export class MemoryOtpStore implements OtpStore {
     return best;
   }
 
-  async incrementAttempts(id: string): Promise<OtpRecord | null> {
+  async incrementAttempts(id: string): Promise<AttemptCount | null> {
     const r = this.rows.get(id);
     if (!r) return null;
     r.attempts += 1;
-    return r;
+    return { attempts: r.attempts, maxAttempts: r.maxAttempts };
   }
 
   async consume(id: string, now: number): Promise<void> {
@@ -110,6 +138,19 @@ export class MemoryOtpStore implements OtpStore {
       if (r.mobile === mobile && r.createdAt >= since) n++;
     }
     return n;
+  }
+
+  async claimSend(input: ClaimSendInput): Promise<{ id: string } | null> {
+    // Single-threaded dev store: count-then-insert cannot interleave.
+    const now = Date.now();
+    const since = now - input.windowSecs * 1000;
+    let n = 0;
+    for (const r of this.rows.values()) {
+      if (r.mobile === input.mobile && r.createdAt >= since) n++;
+    }
+    if (n >= input.limit) return null;
+    const rec = await this.create(input);
+    return { id: rec.id };
   }
 }
 
@@ -137,6 +178,19 @@ function toRecord(row: SbRow): OtpRecord {
     consumedAt: row.consumed_at ? Date.parse(row.consumed_at) : null,
     createdAt: Date.parse(row.created_at),
   };
+}
+
+/**
+ * The RPC functions may not be installed yet (navid runs the migration
+ * manually). A 404 from PostgREST means "function missing" → fall back.
+ * Same duck-typing as quota.ts.
+ */
+function isMissingRpc(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    (e as { status?: unknown }).status === 404
+  );
 }
 
 export class SupabaseOtpStore implements OtpStore {
@@ -172,18 +226,41 @@ export class SupabaseOtpStore implements OtpStore {
     return rows.length > 0 ? toRecord(rows[0]) : null;
   }
 
-  async incrementAttempts(id: string): Promise<OtpRecord | null> {
-    const current = await this.rest<SbRow[]>(
-      "GET",
-      `/otp_verifications?id=eq.${encodeURIComponent(id)}&select=id,attempts,mobile,code_hash,expires_at,max_attempts,consumed_at,created_at&limit=1`
-    );
-    if (current.length === 0) return null;
-    const rows = await this.rest<SbRow[]>(
-      "PATCH",
-      `/otp_verifications?id=eq.${encodeURIComponent(id)}`,
-      { attempts: current[0].attempts + 1 }
-    );
-    return rows.length > 0 ? toRecord(rows[0]) : null;
+  /**
+   * Finding #6: the increment is ONE UPDATE statement
+   * (increment_otp_attempts RPC) — the linearization point. Two racing
+   * verifies can no longer read the same count and both write count+1.
+   * Falls back to the legacy racy GET+PATCH with a loud warning when the
+   * m8 migration hasn't been run yet.
+   */
+  async incrementAttempts(id: string): Promise<AttemptCount | null> {
+    try {
+      const rows = await this.rest<Array<{ attempts: number; max_attempts: number }>>(
+        "POST",
+        "/rpc/increment_otp_attempts",
+        { p_id: id }
+      );
+      if (rows.length === 0) return null;
+      return { attempts: rows[0].attempts, maxAttempts: rows[0].max_attempts };
+    } catch (e) {
+      if (!isMissingRpc(e)) throw e;
+      console.warn(
+        "[otp] increment_otp_attempts RPC missing — legacy racy GET+PATCH. " +
+          "Run supabase/m8-otp-atomic.sql."
+      );
+      const current = await this.rest<SbRow[]>(
+        "GET",
+        `/otp_verifications?id=eq.${encodeURIComponent(id)}&select=id,attempts,max_attempts&limit=1`
+      );
+      if (current.length === 0) return null;
+      const rows = await this.rest<SbRow[]>(
+        "PATCH",
+        `/otp_verifications?id=eq.${encodeURIComponent(id)}`,
+        { attempts: current[0].attempts + 1 }
+      );
+      if (rows.length === 0) return null;
+      return { attempts: rows[0].attempts, maxAttempts: rows[0].max_attempts };
+    }
   }
 
   async consume(id: string, now: number): Promise<void> {
@@ -203,5 +280,40 @@ export class SupabaseOtpStore implements OtpStore {
         `&created_at=gte.${encodeURIComponent(new Date(since).toISOString())}&select=id`
     );
     return rows.length;
+  }
+
+  /**
+   * Finding #10b: count-and-insert in ONE statement (claim_otp_send RPC).
+   * Two racing sends cannot both see "4 < 5" and both insert. Returns the
+   * new row id, or null when the mobile is over its limit. Falls back to
+   * the legacy racy pair with a loud warning when m8 isn't installed yet.
+   */
+  async claimSend(input: ClaimSendInput): Promise<{ id: string } | null> {
+    try {
+      const rows = await this.rest<Array<{ id: string }>>(
+        "POST",
+        "/rpc/claim_otp_send",
+        {
+          p_mobile: input.mobile,
+          p_code_hash: input.codeHash,
+          p_expires_at: new Date(input.expiresAt).toISOString(),
+          p_max_attempts: input.maxAttempts,
+          p_limit: input.limit,
+          p_window_secs: input.windowSecs,
+        }
+      );
+      return rows.length > 0 ? { id: rows[0].id } : null;
+    } catch (e) {
+      if (!isMissingRpc(e)) throw e;
+      console.warn(
+        "[otp] claim_otp_send RPC missing — legacy racy sentSince+create. " +
+          "Run supabase/m8-otp-atomic.sql."
+      );
+      if ((await this.sentSince(input.mobile, Date.now() - input.windowSecs * 1000)) >= input.limit) {
+        return null;
+      }
+      const rec = await this.create(input);
+      return { id: rec.id };
+    }
   }
 }

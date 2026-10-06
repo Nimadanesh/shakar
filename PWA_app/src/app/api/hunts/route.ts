@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getOtpConfig } from "@/lib/otp/config";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/otp/session";
-import { claimIdempotency, createRun } from "@/lib/server/hunt/runs";
+import { claimIdempotency, createRun, releaseIdempotency } from "@/lib/server/hunt/runs";
 import { consumeHunt } from "@/lib/server/quota";
 import { supabaseServer } from "@/lib/supabase-server";
 import { resolveHuntDefinition } from "@/lib/server/hunt/definition";
@@ -43,19 +43,26 @@ export async function POST(req: Request) {
   }
 
   // Idempotency: a retried tap returns the original run, never a new hunt.
+  // The claim pre-generates the run id; createRun MUST use it so the key
+  // and the row agree (finding #9).
   const rawKey = (body as Record<string, unknown>).idempotencyKey;
   const idempotencyKey = typeof rawKey === "string" && rawKey !== "" ? rawKey : null;
+  let claimedRunId: string | undefined;
   if (idempotencyKey) {
-    const claim = claimIdempotency(idempotencyKey);
+    const claim = await claimIdempotency(idempotencyKey);
     if (!claim.fresh) {
       return NextResponse.json({ ok: true, data: { runId: claim.runId, deduped: true } }, { status: 202 });
     }
+    claimedRunId = claim.runId;
   }
 
   // Quota gate.
   const deviceId = req.headers.get("x-device-id")?.trim() || "unknown";
   const quota = await consumeHunt({ userId, deviceId });
   if (!quota.allowed) {
+    // The key was claimed but no hunt will run — release it so a later tap
+    // can claim fresh. No quota was consumed, so nothing is lost.
+    if (idempotencyKey) await releaseIdempotency(idempotencyKey);
     const status = quota.reason === "suspended" ? 403 : 402;
     return NextResponse.json(
       { ok: false, error: quota.reason, message: quota.message },
@@ -63,13 +70,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const run = createRun(def, userId, {
+  const run = await createRun(def, userId, {
     kind: quota.kind,
     mode: quota.mode,
     userId: quota.userId,
     deviceId,
     charged: true,
-  }, idempotencyKey ?? undefined);
+  }, idempotencyKey ?? undefined, undefined, claimedRunId);
 
   // Cross-device profile: log the firing for the 14-day chart
   // (supabase/m7-hunt-events.sql). Best-effort — quota was already

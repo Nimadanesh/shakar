@@ -16,13 +16,20 @@ import { kaminPushBody, kaminPushTitle } from "./copy";
  *
  * A kamin is the hunt pipeline on a tier cadence, with:
  *  - canonical_key dedupe (one kamin per search meaning, per user);
- *  - seen_ids baseline — only genuinely-new ids are confirmed;
+ *  - kamin_seen_ads baseline — only genuinely-new ids are confirmed.
+ *    The baseline is UNBOUNDED (one row per (kamin, ad)): the old
+ *    500-id cap on kamins.seen_ids caused long-lived kamins to forget
+ *    old ads, which resurfaced as false "new" matches (round-2 #8);
  *  - details fetched ONLY for new ids (never re-fetched for known ads);
  *  - since-LAST-SUCCESS windows (output-quality.md flaw #6): a failed or
  *    cooldown-interrupted check never moves last_success_at, so the next
  *    run catches the missed window up instead of skipping it;
  *  - first successful check after arming is a SILENT baseline — we never
  *    push-notify for ads that predate the kamin.
+ *
+ * Arming is atomic via the try_arm_kamin RPC (round-2 #7): the slot
+ * check + insert happen in one transaction, serialized per user — two
+ * concurrent arms on a 1-slot tier can no longer both slip through.
  *
  * Invariants (never weaken):
  *  - failed detail fetch = "unknown", never a silent drop (pipeline);
@@ -48,7 +55,6 @@ export interface KaminRow {
   canonical_key: string;
   status: "active" | "sleeping";
   cadence: string;
-  seen_ids: string[];
   last_checked_at: string | null;
   last_success_at: string | null;
   new_match_count: number;
@@ -104,12 +110,6 @@ export function cadenceMs(cadence: string): number {
 export function pageBudgetForElapsed(elapsedMs: number): number {
   const pages = 2 + Math.floor(Math.max(0, elapsedMs) / (30 * 60 * 1000));
   return Math.min(20, Math.max(2, pages));
-}
-
-/** Baseline cap: seen_ids never grows unbounded. */
-const MAX_SEEN_IDS = 500;
-function capIds(ids: string[]): string[] {
-  return ids.slice(-MAX_SEEN_IDS);
 }
 
 /**
@@ -178,9 +178,135 @@ export async function armKamin(
   }
 ): Promise<{ kamin: KaminPublic; created: boolean }> {
   const key = kaminCanonicalKey(opts.definition);
+  const cadence = opts.tier ? (TIER_CADENCE[opts.tier] ?? "daily") : "daily";
+  // No subscription → armed SLEEPING (guest-conversion funnel: «کمینت
+  // آماده‌ست — با اشتراک بیدار می‌شه»). Never consumes a slot it has no tier for.
+  const status = opts.tier ? "active" : "sleeping";
+  const slots = opts.tier ? (TIER_KAMIN_SLOTS[opts.tier] ?? 1) : 0;
+
+  // Fast path: an ACTIVE kamin with this canonical key is returned as-is.
+  // (Also enforced by the DB unique constraint — the RPC re-checks, so the
+  // GET→RPC gap can't double-arm.)
   const existing = await sb.rest<KaminRow[]>(
     "GET",
     `kamins?user_id=eq.${enc(opts.userId)}&canonical_key=eq.${enc(key)}&select=*&limit=1`
+  );
+  if (existing[0]?.status === "active") {
+    return { kamin: toPublic(existing[0]), created: false };
+  }
+
+  // Atomic path (finding #7): slot check + insert (or slot-checked wake of
+  // a sleeping kamin with the same key) in one transaction, serialized
+  // per user. Two concurrent arms on a 1-slot tier can no longer both
+  // slip through.
+  const armed = await rpcTryArmKamin(sb, {
+    userId: opts.userId,
+    name: opts.name.slice(0, 60),
+    definition: opts.definition,
+    canonicalKey: key,
+    status,
+    cadence,
+    slots,
+    seenIds: opts.seenIds,
+  });
+  if (armed) {
+    if (armed.kaminId) {
+      const rows = await sb.rest<KaminRow[]>(
+        "GET",
+        `kamins?id=eq.${enc(armed.kaminId)}&select=*&limit=1`
+      );
+      return { kamin: toPublic(rows[0]), created: armed.created };
+    }
+    throw new KaminError(
+      "slots-full",
+      "به سقف کمین‌هات رسیدی — برای کمین جدید، یکی رو حذف کن."
+    );
+  }
+
+  // Legacy path (m9 not run yet): racy GET→POST, loud warn (round-1 pattern).
+  console.warn(
+    "[kamin] try_arm_kamin RPC missing — legacy racy arm. Run supabase/m9-kamin-atomic.sql."
+  );
+  return legacyArmKamin(sb, { ...opts, key, status, cadence, slots });
+}
+
+interface ArmAttempt {
+  kaminId: string | null;
+  created: boolean;
+}
+
+/**
+ * Atomic arm via try_arm_kamin (finding #7). Returns null when the RPC is
+ * not installed (404) — the caller falls back to the legacy path.
+ * Zero rows (kaminId null) = the tier's slots are full.
+ */
+async function rpcTryArmKamin(
+  sb: Sb,
+  args: {
+    userId: string;
+    name: string;
+    definition: HuntDefinition;
+    canonicalKey: string;
+    status: "active" | "sleeping";
+    cadence: string;
+    slots: number;
+    seenIds: string[];
+  }
+): Promise<ArmAttempt | null> {
+  try {
+    const rows = await sb.rest<Array<{ kamin_id: string | null; created: boolean }>>(
+      "POST",
+      "/rpc/try_arm_kamin",
+      {
+        p_user_id: args.userId,
+        p_name: args.name,
+        p_definition: args.definition,
+        p_canonical_key: args.canonicalKey,
+        p_status: args.status,
+        p_cadence: args.cadence,
+        p_slots: args.slots,
+        p_seen_ids: args.seenIds,
+      }
+    );
+    const row = rows[0];
+    if (!row || !row.kamin_id) return { kaminId: null, created: false };
+    return { kaminId: row.kamin_id, created: row.created };
+  } catch (e) {
+    if (isNotFound(e)) return null;
+    throw e;
+  }
+}
+
+/** 404 from PostgREST = missing table/function (migration not run yet). */
+function isNotFound(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    (e as { status?: unknown }).status === 404
+  );
+}
+
+/**
+ * Pre-m9 arm path: GET count → POST. Racy by construction (finding #7) —
+ * kept only until the migration runs, then never taken.
+ */
+async function legacyArmKamin(
+  sb: Sb,
+  opts: {
+    userId: string;
+    name: string;
+    definition: HuntDefinition;
+    seenIds: string[];
+    tier: string | null;
+    key: string;
+    status: "active" | "sleeping";
+    cadence: string;
+    slots: number;
+  }
+): Promise<{ kamin: KaminPublic; created: boolean }> {
+  const existing = await sb.rest<KaminRow[]>(
+    "GET",
+    `kamins?user_id=eq.${enc(opts.userId)}&canonical_key=eq.${enc(opts.key)}&select=*&limit=1`
   );
   if (existing[0]) {
     const k = existing[0];
@@ -196,17 +322,12 @@ export async function armKamin(
     return { kamin: toPublic(k), created: false };
   }
 
-  const cadence = opts.tier ? (TIER_CADENCE[opts.tier] ?? "daily") : "daily";
-  // No subscription → armed SLEEPING (guest-conversion funnel: «کمینت
-  // آماده‌ست — با اشتراک بیدار می‌شه»). Never consumes a slot it has no tier for.
-  const status = opts.tier ? "active" : "sleeping";
-  if (opts.tier) {
-    const slots = TIER_KAMIN_SLOTS[opts.tier] ?? 1;
+  if (opts.status === "active") {
     const active = await sb.rest<Array<{ id: string }>>(
       "GET",
       `kamins?user_id=eq.${enc(opts.userId)}&status=eq.active&select=id`
     );
-    if (active.length >= slots) {
+    if (active.length >= opts.slots) {
       throw new KaminError(
         "slots-full",
         "به سقف کمین‌هات رسیدی — برای کمین جدید، یکی رو حذف کن."
@@ -218,10 +339,12 @@ export async function armKamin(
     user_id: opts.userId,
     name: opts.name.slice(0, 60),
     definition: opts.definition,
-    canonical_key: key,
-    status,
-    cadence,
-    seen_ids: capIds(opts.seenIds),
+    canonical_key: opts.key,
+    status: opts.status,
+    cadence: opts.cadence,
+    // Uncapped: the 500-id cap was the bug (#8). Pre-m9 the column still
+    // exists, so the legacy write keeps working until the migration drops it.
+    seen_ids: opts.seenIds,
   });
   return { kamin: toPublic(rows[0]), created: true };
 }
@@ -247,6 +370,70 @@ export async function wakeKaminsForUser(sb: Sb, userId: string): Promise<void> {
 }
 
 /**
+ * Seen baseline (finding #8). The kamin_seen_ads table is UNBOUNDED — an
+ * ad is "new" iff it has no row, forever. Pre-m9 (table missing → 404),
+ * falls back to the kamins.seen_ids column with a loud warn.
+ */
+async function readSeenSet(
+  sb: Sb,
+  kaminId: string
+): Promise<{ seen: Set<string>; legacy: boolean }> {
+  try {
+    const rows = await sb.rest<Array<{ source_ad_id: string }>>(
+      "GET",
+      `kamin_seen_ads?kamin_id=eq.${enc(kaminId)}&select=source_ad_id`
+    );
+    return { seen: new Set(rows.map((r) => r.source_ad_id)), legacy: false };
+  } catch (e) {
+    if (!isNotFound(e)) throw e;
+    console.warn(
+      "[kamin] kamin_seen_ads missing — legacy seen_ids column. Run supabase/m9-kamin-atomic.sql."
+    );
+    const rows = await sb.rest<Array<{ seen_ids: string[] }>>(
+      "GET",
+      `kamins?id=eq.${enc(kaminId)}&select=seen_ids&limit=1`
+    );
+    return { seen: new Set(rows[0]?.seen_ids ?? []), legacy: true };
+  }
+}
+
+/**
+ * Record ids as seen. Union-only: the baseline never shrinks. Pre-m9,
+ * unions into the seen_ids column (uncapped — the cap was the bug).
+ */
+async function writeSeenIds(
+  sb: Sb,
+  kaminId: string,
+  ids: string[],
+  legacy: boolean
+): Promise<void> {
+  if (ids.length === 0) return;
+  if (!legacy) {
+    try {
+      await sb.rest("POST", "/rpc/kamin_mark_seen", {
+        p_kamin_id: kaminId,
+        p_source_ad_ids: ids,
+      });
+      return;
+    } catch (e) {
+      if (!isNotFound(e)) throw e;
+      console.warn(
+        "[kamin] kamin_mark_seen RPC missing — legacy seen_ids PATCH. Run supabase/m9-kamin-atomic.sql."
+      );
+    }
+  }
+  const rows = await sb.rest<Array<{ seen_ids: string[] }>>(
+    "GET",
+    `kamins?id=eq.${enc(kaminId)}&select=seen_ids&limit=1`
+  );
+  const seen = new Set(rows[0]?.seen_ids ?? []);
+  for (const id of ids) seen.add(id);
+  await sb.rest("PATCH", `kamins?id=eq.${enc(kaminId)}`, {
+    seen_ids: [...seen],
+  });
+}
+
+/**
  * Advance the seen baseline with ids the user was actually shown (explicit
  * «دیدن نتایج» run). Union-only: the baseline never shrinks, and a failed
  * search never swallows "new" matches.
@@ -259,15 +446,17 @@ export async function advanceKaminBaseline(
 ): Promise<void> {
   if (!sb || ids.length === 0) return;
   try {
-    const rows = await sb.rest<KaminRow[]>(
+    // Ownership check (as before): only the kamin's owner moves its baseline.
+    const own = await sb.rest<Array<{ id: string }>>(
       "GET",
-      `kamins?id=eq.${enc(kaminId)}&user_id=eq.${enc(userId)}&select=seen_ids&limit=1`
+      `kamins?id=eq.${enc(kaminId)}&user_id=eq.${enc(userId)}&select=id&limit=1`
     );
-    const seen = new Set(rows[0]?.seen_ids ?? []);
-    for (const id of ids) seen.add(id);
-    await sb.rest("PATCH", `kamins?id=eq.${enc(kaminId)}`, {
-      seen_ids: capIds([...seen]),
-    });
+    if (own.length === 0) {
+      console.warn("[kamin] baseline advance: kamin not owned by user, skipping");
+      return;
+    }
+    const { legacy } = await readSeenSet(sb, kaminId);
+    await writeSeenIds(sb, kaminId, ids, legacy);
   } catch (e) {
     console.warn("[kamin] baseline advance failed:", (e as Error).message);
   }
@@ -326,8 +515,9 @@ export interface KaminCheckResult {
 }
 
 /**
- * One kamin check: collect recent candidates → diff against seen_ids →
- * confirm ONLY the new ids → notify + push on genuinely-new matches.
+ * One kamin check: collect recent candidates → diff against the seen
+ * baseline → confirm ONLY the new ids → notify + push on genuinely-new
+ * matches.
  */
 export async function checkKamin(
   deps: EngineDeps,
@@ -357,15 +547,18 @@ export async function checkKamin(
     const maxPages = pageBudgetForElapsed(elapsed);
     const { candidates } = await deps.collect(kamin.definition, maxPages);
 
+    // The baseline lives in kamin_seen_ads (unbounded) — or the legacy
+    // seen_ids column pre-m9. Read once per check; writes union into it.
+    const { seen, legacy } = await readSeenSet(sb, kamin.id);
+
     // First successful check after arming = SILENT baseline. We never
     // push-notify for ads that predate the kamin.
     if (!kamin.last_success_at) {
-      const baselineIds = capIds([
-        ...kamin.seen_ids,
-        ...candidates.map((c) => c.sourceAdId),
-      ]);
+      const baselineNew = candidates
+        .map((c) => c.sourceAdId)
+        .filter((id) => !seen.has(id));
+      await writeSeenIds(sb, kamin.id, baselineNew, legacy);
       await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
-        seen_ids: baselineIds,
         last_checked_at: nowIso,
         last_success_at: nowIso,
         new_match_count: 0,
@@ -380,14 +573,13 @@ export async function checkKamin(
       return { kaminId: kamin.id, status: "baseline", newCount: 0, checkRunId };
     }
 
-    const seen = new Set(kamin.seen_ids);
     const fresh = candidates.filter((c) => !seen.has(c.sourceAdId));
     const results = await deps.confirm(fresh, kamin.definition);
     const newIds = results.map((r) => r.sourceAdId);
     const newCount = newIds.length;
 
+    await writeSeenIds(sb, kamin.id, newIds, legacy);
     await sb.rest("PATCH", `kamins?id=eq.${enc(kamin.id)}`, {
-      seen_ids: capIds([...seen, ...newIds]),
       last_checked_at: nowIso,
       last_success_at: nowIso,
       new_match_count: newCount,

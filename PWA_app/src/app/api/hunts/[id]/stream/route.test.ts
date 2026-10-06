@@ -62,7 +62,7 @@ beforeEach(() => {
 
 describe("stream route (live handler, mocked session+pipeline)", () => {
   it("403s when a signed-in user opens someone else's run — pipeline never runs", async () => {
-    const run = createRun(DEF, "user-1", {
+    const run = await createRun(DEF, "user-1", {
       kind: "standard",
       mode: "real",
       userId: "user-1",
@@ -76,7 +76,7 @@ describe("stream route (live handler, mocked session+pipeline)", () => {
   });
 
   it("lets the owner run; a second GET attaches instead of re-executing", async () => {
-    const run = createRun(DEF, "user-1", {
+    const run = await createRun(DEF, "user-1", {
       kind: "standard",
       mode: "real",
       userId: "user-1",
@@ -103,7 +103,7 @@ describe("stream route (live handler, mocked session+pipeline)", () => {
   });
 
   it("replays the log after completion without re-running", async () => {
-    const run = createRun(DEF, null, {
+    const run = await createRun(DEF, null, {
       kind: "guest",
       mode: "real",
       userId: null,

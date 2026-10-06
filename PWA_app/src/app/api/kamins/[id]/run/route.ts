@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/server/auth";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase-server";
 import { toHuntDefinition } from "@/lib/server/hunt/definition";
-import { claimIdempotency, createRun } from "@/lib/server/hunt/runs";
+import { claimIdempotency, createRun, releaseIdempotency } from "@/lib/server/hunt/runs";
 import { consumeHunt } from "@/lib/server/quota";
 import type { KaminRow } from "@/lib/server/kamin/engine";
 
@@ -43,19 +43,23 @@ export async function POST(
 
   const rawKey = req.headers.get("Idempotency-Key");
   const idempotencyKey = rawKey && rawKey !== "" ? rawKey : null;
+  let claimedRunId: string | undefined;
   if (idempotencyKey) {
-    const claim = claimIdempotency(idempotencyKey);
+    const claim = await claimIdempotency(idempotencyKey);
     if (!claim.fresh) {
       return NextResponse.json(
         { ok: true, data: { runId: claim.runId, deduped: true } },
         { status: 202 }
       );
     }
+    claimedRunId = claim.runId;
   }
 
   const deviceId = req.headers.get("x-device-id")?.trim() || "unknown";
   const quota = await consumeHunt({ userId, deviceId });
   if (!quota.allowed) {
+    // Claimed key, no hunt — release so a later tap can claim fresh.
+    if (idempotencyKey) await releaseIdempotency(idempotencyKey);
     const status = quota.reason === "suspended" ? 403 : 402;
     return NextResponse.json(
       { ok: false, error: quota.reason, message: quota.message },
@@ -63,7 +67,7 @@ export async function POST(
     );
   }
 
-  const run = createRun(
+  const run = await createRun(
     def,
     userId,
     {
@@ -74,7 +78,8 @@ export async function POST(
       charged: true,
     },
     idempotencyKey ?? undefined,
-    kamin.id
+    kamin.id,
+    claimedRunId
   );
   return NextResponse.json(
     { ok: true, data: { runId: run.id, remaining: quota.remaining } },

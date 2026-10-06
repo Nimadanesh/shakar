@@ -10,17 +10,58 @@ import { supabaseServer, type SupabaseServer } from "@/lib/supabase-server";
 
 let memoryStore: MemoryOtpStore | null = null;
 
-/** In-memory per-IP send buckets (single-instance MVP; Railway runs one). */
+/** In-memory per-IP send buckets: legacy fallback only (single-instance). */
 const ipHits = new Map<string, number[]>();
 const IP_WINDOW_MS = 3600_000;
+const IP_WINDOW_SECS = 3600;
 const IP_MAX_PER_HOUR = 20;
 
-export function ipSendAllowed(ip: string, now: number): boolean {
+function ipSendAllowedMemory(ip: string, now: number): boolean {
   const hits = (ipHits.get(ip) ?? []).filter((t) => now - t < IP_WINDOW_MS);
   if (hits.length >= IP_MAX_PER_HOUR) return false;
   hits.push(now);
   ipHits.set(ip, hits);
   return true;
+}
+
+/**
+ * Finding #10a: the IP send limit used to live in the Map above —
+ * invisible to every other instance. Now it's one atomic statement
+ * (check_otp_ip_limit RPC) against a shared table, so N instances share
+ * one budget. Falls back to the in-memory check with a loud warning
+ * when the m8 migration hasn't been run yet.
+ */
+export async function ipSendAllowed(
+  sb: SupabaseServer | null,
+  ip: string
+): Promise<boolean> {
+  if (sb) {
+    try {
+      const rows = await sb.rest<Array<{ allowed: boolean }>>(
+        "POST",
+        "/rpc/check_otp_ip_limit",
+        { p_ip: ip, p_limit: IP_MAX_PER_HOUR, p_window_secs: IP_WINDOW_SECS }
+      );
+      if (rows.length === 0) {
+        throw new Error("check_otp_ip_limit returned no rows");
+      }
+      return rows[0].allowed;
+    } catch (e) {
+      if (
+        typeof e === "object" &&
+        e !== null &&
+        (e as { status?: unknown }).status === 404
+      ) {
+        console.warn(
+          "[otp] check_otp_ip_limit RPC missing — in-memory IP limit " +
+            "(single-instance only). Run supabase/m8-otp-atomic.sql."
+        );
+      } else {
+        throw e;
+      }
+    }
+  }
+  return ipSendAllowedMemory(ip, Date.now());
 }
 
 export interface OtpBackend {

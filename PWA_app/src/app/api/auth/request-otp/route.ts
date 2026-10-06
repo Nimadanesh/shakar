@@ -28,7 +28,7 @@ function notConfigured() {
  * a missing piece returns NOT_CONFIGURED, never a fake "sent".
  */
 export async function POST(req: Request) {
-  const { config, provider, store } = getOtpBackend();
+  const { config, provider, store, sb } = getOtpBackend();
   if (config.isProd && !config.ready) {
     console.error("[otp] request-otp not configured:", config.missing.join(", "));
     return notConfigured();
@@ -53,18 +53,11 @@ export async function POST(req: Request) {
   }
 
   const now = Date.now();
-  if (!ipSendAllowed(clientIp(req), now)) {
+  // Finding #10a: cross-instance IP budget (atomic RPC; in-memory
+  // fallback only when the m8 migration hasn't run yet).
+  if (!(await ipSendAllowed(sb, clientIp(req)))) {
     return NextResponse.json(
       { ok: false, error: { code: "RATE_LIMITED", message: "درخواست زیاد است؛ کمی بعد دوباره تلاش کن." } },
-      { status: 429 }
-    );
-  }
-  if ((await store.sentSince(mobile, now - 3600_000)) >= MAX_SENDS_PER_HOUR) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: { code: "RATE_LIMITED", message: "سقف ارسال کد برای این شماره پر شده؛ یک ساعت دیگر تلاش کن." },
-      },
       { status: 429 }
     );
   }
@@ -84,20 +77,36 @@ export async function POST(req: Request) {
     );
   }
 
+  // Finding #10b: claimSend counts recent sends AND inserts the row in
+  // one statement — two racing sends cannot both slip under the limit.
+  // (The old sentSince()+create() pair is gone; the mobile-limit check now
+  // runs after the cooldown check, which is inherent to the atomic claim:
+  // claiming first would trip the cooldown on its own fresh row.)
   const code = randomCode();
-  const record = await store.create({
+  const claimed = await store.claimSend({
     mobile,
     codeHash: await hashCode(code),
     expiresAt: now + CODE_TTL_MS,
     maxAttempts: MAX_ATTEMPTS,
+    limit: MAX_SENDS_PER_HOUR,
+    windowSecs: 3600,
   });
+  if (!claimed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: { code: "RATE_LIMITED", message: "سقف ارسال کد برای این شماره پر شده؛ یک ساعت دیگر تلاش کن." },
+      },
+      { status: 429 }
+    );
+  }
 
   try {
     await provider.sendCode(mobile, code);
   } catch (err) {
     // Our fault, not the user's: drop the record so the retry isn't punished
     // by the cooldown or the hourly count.
-    await store.remove(record.id).catch(() => {});
+    await store.remove(claimed.id).catch(() => {});
     console.error("[otp] send failed:", err instanceof Error ? err.message : String(err));
     const retryable = err instanceof OtpProviderError && err.retryable;
     return NextResponse.json(

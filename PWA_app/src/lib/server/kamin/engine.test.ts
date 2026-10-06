@@ -11,6 +11,7 @@ import {
   type EngineDeps,
   type KaminRow,
   type PushPayload,
+  type Sb,
 } from "./engine";
 import type {
   Candidate,
@@ -18,20 +19,120 @@ import type {
   ScoredAd,
 } from "@/lib/server/hunt/pipeline";
 
+/** 404 shaped like the real SupabaseError (round-1 pattern). */
+function notFound(what: string): never {
+  const e = new Error(`${what} missing`);
+  (e as unknown as { status: number }).status = 404;
+  throw e;
+}
+
+/**
+ * Models try_arm_kamin's SQL semantics: ONE synchronous block = the
+ * advisory-lock-serialized transaction. True DB concurrency cannot run
+ * in a JS fake (the event loop serializes synchronous blocks); the
+ * single-transaction atomicity itself is verified on PGlite. What this
+ * DOES prove: the app delegates check+insert to one RPC call, and honors
+ * zero-rows → slots-full.
+ */
+function rpcTryArmKamin(
+  tables: Record<string, Array<Record<string, unknown>>>,
+  body: Record<string, unknown>,
+  idSeq: { n: number }
+): Array<{ kamin_id: string; created: boolean }> {
+  const p = body as {
+    p_user_id: string;
+    p_name: string;
+    p_definition: unknown;
+    p_canonical_key: string;
+    p_status: string;
+    p_cadence: string;
+    p_slots: number;
+    p_seen_ids: string[];
+  };
+  const kamins = tables.kamins;
+  const seen = (tables.kamin_seen_ads ??= []);
+  const existing = kamins.find(
+    (r) => r.user_id === p.p_user_id && r.canonical_key === p.p_canonical_key
+  );
+  if (existing) {
+    if (existing.status === "active") return [{ kamin_id: existing.id as string, created: false }];
+    const active = kamins.filter(
+      (r) => r.user_id === p.p_user_id && r.status === "active"
+    ).length;
+    if (active >= p.p_slots) return [];
+    existing.status = "active";
+    existing.name = p.p_name;
+    existing.definition = p.p_definition;
+    return [{ kamin_id: existing.id as string, created: false }];
+  }
+  if (p.p_status === "active") {
+    const active = kamins.filter(
+      (r) => r.user_id === p.p_user_id && r.status === "active"
+    ).length;
+    if (active >= p.p_slots) return [];
+  }
+  const id = `k-rpc-${++idSeq.n}`;
+  kamins.push({
+    id,
+    user_id: p.p_user_id,
+    name: p.p_name,
+    definition: p.p_definition,
+    canonical_key: p.p_canonical_key,
+    status: p.p_status,
+    cadence: p.p_cadence,
+    new_match_count: 0,
+    armed_at: new Date().toISOString(),
+    last_checked_at: null,
+    last_success_at: null,
+  });
+  for (const sid of p.p_seen_ids ?? []) {
+    if (!seen.some((r) => r.kamin_id === id && r.source_ad_id === sid)) {
+      seen.push({ kamin_id: id, source_ad_id: sid, seen_at: new Date().toISOString() });
+    }
+  }
+  return [{ kamin_id: id, created: true }];
+}
+
+/** Models kamin_mark_seen: single-statement insert, duplicates ignored. */
+function rpcKaminMarkSeen(
+  tables: Record<string, Array<Record<string, unknown>>>,
+  body: Record<string, unknown>
+): null {
+  const p = body as { p_kamin_id: string; p_source_ad_ids: string[] };
+  const seen = (tables.kamin_seen_ads ??= []);
+  for (const sid of p.p_source_ad_ids ?? []) {
+    if (!seen.some((r) => r.kamin_id === p.p_kamin_id && r.source_ad_id === sid)) {
+      seen.push({ kamin_id: p.p_kamin_id, source_ad_id: sid, seen_at: new Date().toISOString() });
+    }
+  }
+  return null;
+}
+
 /** Tiny in-memory PostgREST fake (eq filters, limit, POST/PATCH/DELETE). */
-function fakeSb(seed: Record<string, Array<Record<string, unknown>>> = {}) {
+function fakeSb(
+  seed: Record<string, Array<Record<string, unknown>>> = {},
+  opts: { rpc?: boolean } = {}
+) {
+  const { rpc = true } = opts;
   const tables: Record<string, Array<Record<string, unknown>>> = JSON.parse(
     JSON.stringify(seed)
   );
   const calls: Array<{ method: string; path: string }> = [];
+  const idSeq = { n: 0 };
   const rest = vi.fn(async (method: string, path: string, body?: unknown) => {
     calls.push({ method, path });
     const qIdx = path.indexOf("?");
     const table = qIdx === -1 ? path : path.slice(0, qIdx);
+    if (table === "/rpc/try_arm_kamin") {
+      if (!rpc) return notFound("rpc try_arm_kamin");
+      return rpcTryArmKamin(tables, body as Record<string, unknown>, idSeq);
+    }
+    if (table === "/rpc/kamin_mark_seen") {
+      if (!rpc) return notFound("rpc kamin_mark_seen");
+      return rpcKaminMarkSeen(tables, body as Record<string, unknown>);
+    }
     if (!(table in tables)) {
-      const e = new Error(`table ${table} missing`);
-      (e as unknown as { status: number }).status = 404;
-      throw e;
+      return notFound(`table ${table}`);
     }
     const params = new URLSearchParams(qIdx === -1 ? "" : path.slice(qIdx + 1));
     const filters: Array<[string, string]> = [];
@@ -96,13 +197,21 @@ function kaminRow(over: Partial<KaminRow> = {}): KaminRow {
     canonical_key: kaminCanonicalKey(DEF),
     status: "active",
     cadence: "hourly",
-    seen_ids: [],
     last_checked_at: null,
     last_success_at: null,
     new_match_count: 0,
     armed_at: "2026-10-06T10:00:00.000Z",
     ...over,
   };
+}
+
+/** Seed the unbounded seen baseline (kamin_seen_ads) for kamin k1. */
+function seenSeed(ids: string[]): Array<Record<string, unknown>> {
+  return ids.map((source_ad_id, i) => ({
+    kamin_id: "k1",
+    source_ad_id,
+    seen_at: new Date(NOW - (ids.length - i) * 1000).toISOString(),
+  }));
 }
 
 function cand(id: string): Candidate {
@@ -216,7 +325,12 @@ describe("armKamin", () => {
   });
 
   it("enforces tier slots", async () => {
-    const sb = fakeSb({ kamins: [kaminRow() as unknown as Record<string, unknown>], notifications: [], kamin_runs: [] });
+    const sb = fakeSb({
+      kamins: [kaminRow() as unknown as Record<string, unknown>],
+      kamin_seen_ads: [],
+      notifications: [],
+      kamin_runs: [],
+    });
     const { deps } = testDeps(sb);
     const other: HuntDefinition = { ...DEF, query: "گیتار" };
     await expect(
@@ -243,6 +357,138 @@ describe("armKamin", () => {
     expect(created).toBe(true);
     expect(kamin.status).toBe("sleeping");
   });
+
+  it("seeds the seen baseline into kamin_seen_ads (unbounded)", async () => {
+    const sb = fakeSb({ kamins: [], kamin_seen_ads: [], notifications: [], kamin_runs: [] });
+    const { deps } = testDeps(sb);
+    const { kamin } = await armKamin(deps.sb!, {
+      userId: "u1",
+      name: "پیانو",
+      definition: DEF,
+      seenIds: ["s1", "s2", "s3"],
+      tier: "herfei",
+    });
+    const rows = (
+      sb.tables.kamin_seen_ads as Array<Record<string, unknown>>
+    ).filter((r) => r.kamin_id === kamin.id);
+    expect(rows.map((r) => r.source_ad_id).sort()).toEqual(["s1", "s2", "s3"]);
+  });
+});
+
+describe("armKamin — slot race (finding #7)", () => {
+  const guitarDef: HuntDefinition = { ...DEF, query: "گیتار" };
+  const drumDef: HuntDefinition = { ...DEF, query: "درامز" };
+
+  function arm(sb: ReturnType<typeof fakeSb>, def: HuntDefinition) {
+    return armKamin({ rest: sb.rest } as Sb, {
+      userId: "u1",
+      name: def.query,
+      definition: def,
+      seenIds: [],
+      tier: "paye", // 1 slot
+    });
+  }
+
+  it("two concurrent arms on a 1-slot tier → exactly one kamin, other gets slots-full", async () => {
+    const sb = fakeSb({ kamins: [], kamin_seen_ads: [], notifications: [], kamin_runs: [] });
+    // Different definitions: the canonical dedupe must NOT save this —
+    // only the atomic slot check can.
+    const results = await Promise.allSettled([arm(sb, guitarDef), arm(sb, drumDef)]);
+    const ok = results.find((r) => r.status === "fulfilled");
+    const bad = results.find((r) => r.status === "rejected");
+    expect(ok?.status).toBe("fulfilled");
+    expect(bad?.status).toBe("rejected");
+    if (ok?.status !== "fulfilled" || bad?.status !== "rejected") {
+      throw new Error("unreachable: expected one fulfilled and one rejected");
+    }
+    expect(ok.value.created).toBe(true);
+    expect(bad.reason).toBeInstanceOf(KaminError);
+    expect((bad.reason as KaminError).code).toBe("slots-full");
+    expect(sb.tables.kamins).toHaveLength(1);
+  });
+
+  it("the slot check lives in the RPC: no separate count GET before insert", async () => {
+    const sb = fakeSb({ kamins: [], kamin_seen_ads: [], notifications: [], kamin_runs: [] });
+    await arm(sb, guitarDef);
+    const paths = sb.calls.map((c) => `${c.method} ${c.path}`);
+    expect(paths).toContain("POST /rpc/try_arm_kamin");
+    // The old racy pattern (GET active count → client-side check → POST).
+    expect(paths.some((p) => p.includes("status=eq.active"))).toBe(false);
+  });
+
+  it("waking a sleeping kamin is denied when slots are full", async () => {
+    const activeKamin = kaminRow({ id: "k-active" });
+    const sleepingKamin = kaminRow({
+      id: "k-sleeping",
+      status: "sleeping",
+      canonical_key: kaminCanonicalKey(guitarDef),
+      definition: guitarDef,
+    });
+    const sb = fakeSb({
+      kamins: [
+        activeKamin as unknown as Record<string, unknown>,
+        sleepingKamin as unknown as Record<string, unknown>,
+      ],
+      kamin_seen_ads: [],
+      notifications: [],
+      kamin_runs: [],
+    });
+    // Re-arming the sleeping kamin's definition would wake it — but the
+    // single paye slot is taken.
+    await expect(arm(sb, guitarDef)).rejects.toMatchObject({ code: "slots-full" });
+    const row = sb.tables.kamins.find((r) => r.id === "k-sleeping") as unknown as KaminRow;
+    expect(row.status).toBe("sleeping");
+    expect(sb.tables.kamins).toHaveLength(2);
+  });
+
+  it("waking a sleeping kamin succeeds when a slot is free", async () => {
+    const sleepingKamin = kaminRow({
+      id: "k-sleeping",
+      status: "sleeping",
+      canonical_key: kaminCanonicalKey(guitarDef),
+      definition: guitarDef,
+    });
+    const sb = fakeSb({
+      kamins: [sleepingKamin as unknown as Record<string, unknown>],
+      kamin_seen_ads: [],
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { kamin, created } = await arm(sb, guitarDef);
+    expect(created).toBe(false);
+    expect(kamin.id).toBe("k-sleeping");
+    expect(kamin.status).toBe("active");
+    expect(sb.tables.kamins).toHaveLength(1);
+  });
+
+  it("legacy fallback (RPC missing): old GET→POST path with uncapped baseline", async () => {
+    const sb = fakeSb(
+      { kamins: [], notifications: [], kamin_runs: [] },
+      { rpc: false }
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { kamin, created } = await armKamin({ rest: sb.rest } as Sb, {
+        userId: "u1",
+        name: "پیانو",
+        definition: DEF,
+        seenIds: ["s1"],
+        tier: "herfei",
+      });
+      expect(created).toBe(true);
+      // The fake POST doesn't mint ids (the DB default does) — the row
+      // itself is the assertion.
+      expect(sb.tables.kamins).toHaveLength(1);
+      expect(kamin.name).toBe("پیانو");
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("try_arm_kamin RPC missing")
+      );
+      const row = sb.tables.kamins[0] as unknown as Record<string, unknown>;
+      expect(row.seen_ids).toEqual(["s1"]);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
 
 describe("checkKamin", () => {
@@ -250,6 +496,7 @@ describe("checkKamin", () => {
     const k = kaminRow(); // last_success_at null
     const sb = fakeSb({
       kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: [],
       notifications: [],
       kamin_runs: [],
     });
@@ -259,19 +506,22 @@ describe("checkKamin", () => {
     expect(r.newCount).toBe(0);
     expect(pushed).toHaveLength(0);
     expect(sb.tables.notifications).toHaveLength(0);
+    const seenIds = (
+      sb.tables.kamin_seen_ads as Array<Record<string, unknown>>
+    ).map((row) => row.source_ad_id);
+    expect(seenIds.sort()).toEqual(["a", "b"]);
     const row = sb.tables.kamins[0] as unknown as KaminRow;
-    expect(row.seen_ids).toEqual(expect.arrayContaining(["a", "b"]));
     expect(row.last_success_at).not.toBeNull();
   });
 
-  it("diffs against seen_ids and confirms ONLY new ids", async () => {
+  it("diffs against the seen baseline and confirms ONLY new ids", async () => {
     const k = kaminRow({
-      seen_ids: ["a"],
       last_success_at: "2026-10-06T11:00:00.000Z",
       last_checked_at: "2026-10-06T11:00:00.000Z",
     });
     const sb = fakeSb({
       kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(["a"]),
       notifications: [],
       kamin_runs: [],
     });
@@ -297,21 +547,24 @@ describe("checkKamin", () => {
       url: "/saved?tab=fresh",
       tag: "kamin-k1",
     });
-    // baseline advanced, success window moved
+    // baseline advanced in the table (unbounded), success window moved
+    const seenIds = (
+      sb.tables.kamin_seen_ads as Array<Record<string, unknown>>
+    ).map((row) => row.source_ad_id);
+    expect(seenIds).toEqual(expect.arrayContaining(["a", "b", "c"]));
     const row = sb.tables.kamins[0] as unknown as KaminRow;
-    expect(row.seen_ids).toEqual(expect.arrayContaining(["a", "b", "c"]));
     expect(row.last_success_at).toBe(new Date(NOW).toISOString());
     expect(row.new_match_count).toBe(2);
   });
 
   it("a failed check never moves the baseline (flaw #6)", async () => {
     const k = kaminRow({
-      seen_ids: ["a"],
       last_success_at: "2026-10-06T09:00:00.000Z",
       last_checked_at: "2026-10-06T09:00:00.000Z",
     });
     const sb = fakeSb({
       kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(["a"]),
       notifications: [],
       kamin_runs: [],
     });
@@ -321,7 +574,10 @@ describe("checkKamin", () => {
     const row = sb.tables.kamins[0] as unknown as KaminRow;
     // last_success_at untouched → next run catches up since last SUCCESS
     expect(row.last_success_at).toBe("2026-10-06T09:00:00.000Z");
-    expect(row.seen_ids).toEqual(["a"]);
+    const seenIds = (
+      sb.tables.kamin_seen_ads as Array<Record<string, unknown>>
+    ).map((row) => row.source_ad_id);
+    expect(seenIds).toEqual(["a"]);
     expect(pushed).toHaveLength(0);
     expect(sb.tables.notifications).toHaveLength(0);
     const run = sb.tables.kamin_runs[0] as unknown as Record<string, unknown>;
@@ -330,12 +586,12 @@ describe("checkKamin", () => {
 
   it("no new matches → silent, baseline still advances the window", async () => {
     const k = kaminRow({
-      seen_ids: ["a", "b"],
       last_success_at: "2026-10-06T11:00:00.000Z",
       last_checked_at: "2026-10-06T11:00:00.000Z",
     });
     const sb = fakeSb({
       kamins: [k as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(["a", "b"]),
       notifications: [],
       kamin_runs: [],
     });
@@ -344,6 +600,90 @@ describe("checkKamin", () => {
     expect(r.status).toBe("completed");
     expect(r.newCount).toBe(0);
     expect(pushed).toHaveLength(0);
+    expect(sb.tables.notifications).toHaveLength(0);
+  });
+
+  it("legacy fallback (table missing): checkKamin uses the seen_ids column", async () => {
+    const k = {
+      ...kaminRow({
+        last_success_at: "2026-10-06T11:00:00.000Z",
+        last_checked_at: "2026-10-06T11:00:00.000Z",
+      }),
+      seen_ids: ["a"],
+    };
+    const sb = fakeSb(
+      {
+        kamins: [k as unknown as Record<string, unknown>],
+        notifications: [],
+        kamin_runs: [],
+      },
+      { rpc: false }
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { deps, confirmedBatches } = testDeps(sb, {
+        candidates: [cand("a"), cand("b")],
+      });
+      const r = await checkKamin(deps, k as unknown as KaminRow);
+      expect(r.status).toBe("completed");
+      expect(r.newCount).toBe(1);
+      expect(confirmedBatches).toEqual([["b"]]);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("kamin_seen_ads missing")
+      );
+      const row = sb.tables.kamins[0] as unknown as Record<string, unknown>;
+      expect(row.seen_ids).toEqual(expect.arrayContaining(["a", "b"]));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
+
+describe("seen baseline — unbounded (finding #8)", () => {
+  function longLivedKamin() {
+    return kaminRow({
+      last_success_at: "2026-10-06T11:00:00.000Z",
+      last_checked_at: "2026-10-06T11:00:00.000Z",
+    });
+  }
+
+  it("an ad seen 600 checks ago is NOT 'new' when it resurfaces", async () => {
+    // The exact false-new the 500-id cap produced: with the cap, ad-0 ..
+    // ad-99 would have been evicted and re-confirmed as "new".
+    const oldIds = Array.from({ length: 600 }, (_, i) => `ad-${i}`);
+    const sb = fakeSb({
+      kamins: [longLivedKamin() as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(oldIds),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps, pushed, confirmedBatches } = testDeps(sb, {
+      candidates: [cand("ad-0"), cand("ad-599"), cand("ad-new")],
+    });
+    const r = await checkKamin(deps, longLivedKamin());
+    expect(r.status).toBe("completed");
+    expect(r.newCount).toBe(1);
+    // details fetched ONLY for the genuinely-new ad — never for ad-0/ad-599
+    expect(confirmedBatches).toEqual([["ad-new"]]);
+    expect(pushed).toHaveLength(1);
+    expect(sb.tables.notifications).toHaveLength(1);
+  });
+
+  it("1000 seen ads → all 1000 still known (no cap anywhere)", async () => {
+    const oldIds = Array.from({ length: 1000 }, (_, i) => `ad-${i}`);
+    const sb = fakeSb({
+      kamins: [longLivedKamin() as unknown as Record<string, unknown>],
+      kamin_seen_ads: seenSeed(oldIds),
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps, confirmedBatches } = testDeps(sb, {
+      candidates: [cand("ad-0"), cand("ad-999")],
+    });
+    const r = await checkKamin(deps, longLivedKamin());
+    expect(r.status).toBe("completed");
+    expect(r.newCount).toBe(0);
+    expect(confirmedBatches).toEqual([[]]);
     expect(sb.tables.notifications).toHaveLength(0);
   });
 });
@@ -367,6 +707,7 @@ describe("tickDueKamins", () => {
         fresh as unknown as Record<string, unknown>,
         sleeping as unknown as Record<string, unknown>,
       ],
+      kamin_seen_ads: [],
       notifications: [],
       kamin_runs: [],
     });
