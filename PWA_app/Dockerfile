@@ -17,11 +17,10 @@ WORKDIR /app
 # Copy package-related files first to leverage Docker's caching mechanism
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
 
-# Install project dependencies with frozen lockfile for reproducible builds
-RUN --mount=type=cache,target=/root/.npm \
-  --mount=type=cache,target=/usr/local/share/.cache/yarn \
-  --mount=type=cache,target=/root/.local/share/pnpm/store \
-  if [ -f package-lock.json ]; then \
+# Install project dependencies with frozen lockfile for reproducible builds.
+# NOTE: no BuildKit --mount caches here — Railway's Dockerfile validator
+# rejects mount syntax, and correctness beats build speed for this image.
+RUN if [ -f package-lock.json ]; then \
   npm ci --no-audit --no-fund; \
   elif [ -f yarn.lock ]; then \
   corepack enable yarn && yarn install --frozen-lockfile --production=false; \
