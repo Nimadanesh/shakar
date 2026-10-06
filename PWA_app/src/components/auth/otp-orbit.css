@@ -126,7 +126,14 @@
   border-radius: 9999px;
   background: var(--text-muted);
   translate: -50% -50%;
-  transition: background-color 0.24s ease;
+  opacity: 0;
+  transition:
+    opacity 0.3s ease,
+    background-color 0.24s ease;
+}
+
+.otp-orbit.is-live .otp-hub {
+  opacity: 1;
 }
 
 /* ---------- verdict (functional color only) ---------- */
