@@ -6,9 +6,11 @@
  * Divar retrieval is literal, so «نورکیر» never matches «نورگیر» ads.
  *
  * Strategy (all client-side, zero quota cost):
- *  1. `suggestTypoFix(word)` — keyboard-aware single-edit suggestions
- *     against a compact lexicon of common Persian words. Only fires when
- *     the typed word is NOT a known word but a 1-edit neighbor IS.
+ *  1. `suggestTypoFix(word)` — keyboard-aware edit suggestions against a
+ *     compact lexicon of common Persian words. Only fires when the typed
+ *     word is NOT a known word but a near neighbor IS. Ranked: keyboard-
+ *     adjacent substitution > transposition > deletion > insertion >
+ *     double insertion (the lazy-truncation case, e.g. «پین» → «پیانو»).
  *  2. The hunt form shows a one-tap «منظورت X بود؟» nudge (pre-search).
  *  3. The M3 decision-model prompt gets a typo-tolerance instruction
  *     (free — same per-search call) as the safety net.
@@ -17,6 +19,8 @@
  * auto-replace); words with digits/latin (model numbers like «U3», «206»),
  * short words (<3 chars) and known words never trigger.
  */
+
+import { normalizePersian } from "@/lib/normalizePersian";
 
 /** ISIRI-2901 Persian keyboard adjacency (including diagonals). */
 const ADJACENCY: Record<string, readonly string[]> = {
@@ -177,11 +181,36 @@ function* insertions(word: string): Generator<string> {
   }
 }
 
+/** True when every char of `needle` appears in `haystack` in order. */
+function isSubsequence(needle: string, haystack: string): boolean {
+  const n = [...needle];
+  let j = 0;
+  for (const ch of haystack) {
+    if (j < n.length && ch === n[j]) j++;
+  }
+  return j === n.length;
+}
+
+/**
+ * Double insertion — the lazy-truncation case («پین» → «پیانو»). Two missing
+ * chars, but no candidate explosion: a subsequence check against the
+ * lexicon, bounded to words exactly 2 chars longer. Deliberately the last
+ * tier, so true 1-edit typos always win.
+ */
+function* doubleInsertions(word: string): Generator<string> {
+  const targetLen = word.length + 2;
+  for (const candidate of LEXICON_WORDS) {
+    if (candidate.length !== targetLen) continue;
+    if (isSubsequence(word, candidate)) yield candidate;
+  }
+}
+
 /**
  * Suggest a correction for a possibly-misspelled Persian word.
  * Returns the suggested word, or null when the word looks fine
  * (known word, too short, or contains digits/latin like model numbers).
- * Ranked: keyboard-adjacent substitution > transposition > deletion > insertion.
+ * Ranked: keyboard-adjacent substitution > transposition > deletion >
+ * insertion > double insertion (truncation, e.g. «پین» → «پیانو»).
  */
 export function suggestTypoFix(raw: string): string | null {
   const word = lookupForm(raw);
@@ -193,6 +222,7 @@ export function suggestTypoFix(raw: string): string | null {
     firstHit(transpositions(word)) ??
     firstHit(deletions(word)) ??
     firstHit(insertions(word)) ??
+    firstHit(doubleInsertions(word)) ??
     null
   );
 }
@@ -203,4 +233,30 @@ export function isKnownWord(raw: string): boolean {
   if (word.length < 3) return true;
   if (/[a-zA-Z0-9۰-۹٠-٩]/.test(word)) return true;
   return LEXICON.has(word);
+}
+
+/**
+ * One-tap typo fix: replace the first occurrence of the offending token in
+ * a free-text field with the suggested correction. Token comparison is
+ * normalized (script variants, ZWNJ), so the typed form is found even when
+ * it differs cosmetically from the suggestion's lookup form.
+ */
+export function applyTypoFixToText(
+  text: string,
+  originalToken: string,
+  fixed: string
+): string {
+  const norm = (t: string) => normalizePersian(t).replace(/‌/g, "");
+  const target = norm(originalToken);
+  let replaced = false;
+  return text
+    .split(/(\s+)/)
+    .map((part) => {
+      if (!replaced && !/^\s+$/.test(part) && norm(part) === target) {
+        replaced = true;
+        return fixed;
+      }
+      return part;
+    })
+    .join("");
 }

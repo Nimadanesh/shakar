@@ -32,16 +32,34 @@ function findTypoHit(query: string): TypoHit | null {
 }
 
 /**
- * One-tap typo correction, shown under the «چی؟» field while typing.
- * Fires only when a typed word is unknown but a 1-edit neighbor is a known
- * word (e.g. «نورکیر» → «نورگیر»). Dismissible per word, never
- * auto-applies, and costs zero quota — it runs before the hunt fires.
+ * A dismissal stands only while its word is still part of the query text.
+ * Clearing the field (or moving to another word) gives the nudge a fresh
+ * chance — a dismissal must never silence a word for the whole session.
+ * That was the real "sometimes it works, sometimes it doesn't" bug.
+ */
+export function isTypoDismissed(
+  query: string,
+  dismissedWord: string | null,
+  hitWord: string | null
+): boolean {
+  return (
+    dismissedWord !== null &&
+    hitWord === dismissedWord &&
+    norm(query).includes(dismissedWord)
+  );
+}
+
+/**
+ * One-tap typo correction, shown under a hunt text field while typing.
+ * Fires only when a typed word is unknown but a near neighbor is a known
+ * word (e.g. «نورکیر» → «نورگیر», «پین» → «پیانو»). Dismissible per word,
+ * never auto-applies, and costs zero quota — it runs before the hunt fires.
  */
 export function TypoNudge({ query, onApplyFix }: TypoNudgeProps) {
   const [dismissedWord, setDismissedWord] = useState<string | null>(null);
 
   const hit = findTypoHit(query);
-  if (!hit || dismissedWord === hit.word) return null;
+  if (!hit || isTypoDismissed(query, dismissedWord, hit.word)) return null;
 
   return (
     <div

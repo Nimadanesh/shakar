@@ -20,7 +20,7 @@ import {
 } from "@/data/taxonomy";
 import { detectTransaction, interpretQuery, mentionsRealEstate } from "@/lib/interpret";
 import { getRememberedCity, rememberCity } from "@/lib/city-memory";
-import { normalizePersian } from "@/lib/normalizePersian";
+import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
@@ -156,21 +156,7 @@ export function HuntSetup() {
 
   /** One-tap typo fix from the TypoNudge: replace the offending token. */
   function applyTypoFix(originalToken: string, fixed: string) {
-    const norm = (t: string) => normalizePersian(t).replace(/‌/g, "");
-    const target = norm(originalToken);
-    let replaced = false;
-    setQuery((q) =>
-      q
-        .split(/(\s+)/)
-        .map((part) => {
-          if (!replaced && !/^\s+$/.test(part) && norm(part) === target) {
-            replaced = true;
-            return fixed;
-          }
-          return part;
-        })
-        .join("")
-    );
+    setQuery((q) => applyTypoFixToText(q, originalToken, fixed));
   }
 
   /** Suggested hunt: fill the WHAT field for review. Never auto-fires. */

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyTypoFixToText,
   isKnownWord,
   keyboardNeighbors,
   suggestTypoFix,
 } from "./persianTypos";
+import { isTypoDismissed } from "@/components/search/TypoNudge";
 
 describe("keyboardNeighbors", () => {
   it("knows گ and ک are adjacent (navid's نورگیر → نورکیر case)", () => {
@@ -46,6 +48,23 @@ describe("suggestTypoFix", () => {
   it("returns null when nothing is within one edit", () => {
     expect(suggestTypoFix("ققققق")).toBeNull();
   });
+
+  it("fixes lazy truncation via double insertion: پین → پیانو", () => {
+    // navid's flakiness report: «پین» is 2 edits from «پیانو», so the old
+    // 1-edit-only engine never suggested it. The truncation tier does.
+    expect(suggestTypoFix("پین")).toBe("پیانو");
+    expect(suggestTypoFix("آپارتما")).toBe("آپارتمان");
+  });
+
+  it("keeps 1-edit typos ahead of truncation candidates", () => {
+    // «خون» is 1 insertion from «خونه» — that must win, not a longer word.
+    expect(suggestTypoFix("خون")).toBe("خونه");
+  });
+
+  it("does not force a truncation match when the length guard excludes it", () => {
+    // «موبایل» is 6 chars; «مبل» + 2 = 5, so it can never match.
+    expect(suggestTypoFix("مبل")).toBeNull();
+  });
 });
 
 describe("isKnownWord", () => {
@@ -57,5 +76,35 @@ describe("isKnownWord", () => {
 
   it("rejects a typo", () => {
     expect(isKnownWord("نورکیر")).toBe(false);
+  });
+});
+
+describe("applyTypoFixToText", () => {
+  it("replaces the first matching token only", () => {
+    expect(applyTypoFixToText("پین یاماها پین", "پین", "پیانو")).toBe(
+      "پیانو یاماها پین"
+    );
+  });
+
+  it("matches despite script variants", () => {
+    expect(applyTypoFixToText("نوركیر تهران", "نورکیر", "نورگیر")).toBe(
+      "نورگیر تهران"
+    );
+  });
+});
+
+describe("isTypoDismissed", () => {
+  it("stands while the dismissed word is still in the query", () => {
+    expect(isTypoDismissed("پین یاماها", "پین", "پین")).toBe(true);
+  });
+
+  it("resets once the query no longer contains the word (fresh chance)", () => {
+    // navid's bug: a dismissal silenced the word for the whole session.
+    expect(isTypoDismissed("", "پین", null)).toBe(false);
+    expect(isTypoDismissed("خون", "پین", "خون")).toBe(false);
+  });
+
+  it("does not suppress a different suspicious word", () => {
+    expect(isTypoDismissed("خون پین", "پین", "خون")).toBe(false);
   });
 });

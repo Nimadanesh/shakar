@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Check, Plus, X } from "lucide-react";
+import { TypoNudge } from "@/components/search/TypoNudge";
+import { applyTypoFixToText } from "@/lib/persianTypos";
 
 export interface InferredChip {
   id: string;
@@ -134,6 +136,14 @@ export function SpecChips({
           <Plus size={16} aria-hidden="true" />
         </button>
       </div>
+      {/* Typo tolerance for the add-row too: typos happen in filters as
+          well as in «چی؟». One tap fixes the draft; Enter still adds it. */}
+      <TypoNudge
+        query={draft}
+        onApplyFix={(originalToken, fixed) =>
+          setDraft((d) => applyTypoFixToText(d, originalToken, fixed))
+        }
+      />
       </div>
     </section>
   );
