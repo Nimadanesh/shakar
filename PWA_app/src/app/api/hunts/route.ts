@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { getOtpConfig } from "@/lib/otp/config";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/otp/session";
 import { claimIdempotency, createRun, releaseIdempotency } from "@/lib/server/hunt/runs";
-import { consumeHunt } from "@/lib/server/quota";
+import { clientIp, consumeHunt } from "@/lib/server/quota";
 import { supabaseServer } from "@/lib/supabase-server";
 import { resolveHuntDefinition } from "@/lib/server/hunt/definition";
 
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
   // Quota gate.
   const deviceId = req.headers.get("x-device-id")?.trim() || "unknown";
-  const quota = await consumeHunt({ userId, deviceId });
+  const quota = await consumeHunt({ userId, deviceId, ip: clientIp(req) });
   if (!quota.allowed) {
     // The key was claimed but no hunt will run — release it so a later tap
     // can claim fresh. No quota was consumed, so nothing is lost.

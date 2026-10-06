@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  advanceKaminBaseline,
   armKamin,
   cadenceMs,
   checkKamin,
@@ -109,12 +110,59 @@ function rpcKaminMarkSeen(
   return null;
 }
 
+/**
+ * Models claim_due_kamins' SQL semantics: ONE synchronous block = the
+ * single-statement atomic claim (FOR UPDATE SKIP LOCKED). True DB
+ * concurrency cannot run in a JS fake (the event loop serializes
+ * synchronous blocks); the statement-level atomicity itself is verified
+ * live. What this DOES prove: the app delegates due-selection to one RPC
+ * call, a second overlapping claim sees zero rows, and the lease lets a
+ * stale claim become claimable again. Cadence intervals mirror the
+ * migration's CASE (which mirrors the engine's CADENCE_MS).
+ */
+const CLAIM_CADENCE_MS: Record<string, number> = {
+  "5min": 5 * 60 * 1000,
+  "15min": 15 * 60 * 1000,
+  "30min": 30 * 60 * 1000,
+  hourly: 60 * 60 * 1000,
+  daily: 24 * 60 * 60 * 1000,
+};
+
+function rpcClaimDueKamins(
+  tables: Record<string, Array<Record<string, unknown>>>,
+  body: Record<string, unknown>
+): Array<Record<string, unknown>> {
+  const leaseMs = (body as { p_lease_secs: number }).p_lease_secs * 1000;
+  const nowMs = NOW;
+  const claimed: Array<Record<string, unknown>> = [];
+  for (const r of tables.kamins) {
+    if (r.status !== "active") continue;
+    const interval =
+      CLAIM_CADENCE_MS[r.cadence as string] ?? CLAIM_CADENCE_MS.daily;
+    const lastChecked = r.last_checked_at
+      ? Date.parse(r.last_checked_at as string)
+      : null;
+    if (lastChecked !== null && nowMs - lastChecked < interval) continue;
+    const claimedAt = r.claimed_at ? Date.parse(r.claimed_at as string) : null;
+    if (claimedAt !== null && nowMs - claimedAt < leaseMs) continue;
+    // Atomic claim: stamp inside the same synchronous block.
+    r.claimed_at = new Date(nowMs).toISOString();
+    claimed.push({ ...r });
+  }
+  claimed.sort((a, b) => {
+    const x = a.last_checked_at ? Date.parse(a.last_checked_at as string) : -Infinity;
+    const y = b.last_checked_at ? Date.parse(b.last_checked_at as string) : -Infinity;
+    return x - y;
+  });
+  return claimed;
+}
+
 /** Tiny in-memory PostgREST fake (eq filters, limit, POST/PATCH/DELETE). */
 function fakeSb(
   seed: Record<string, Array<Record<string, unknown>>> = {},
-  opts: { rpc?: boolean } = {}
+  opts: { rpc?: boolean; claimRpc?: boolean } = {}
 ) {
-  const { rpc = true } = opts;
+  const { rpc = true, claimRpc = true } = opts;
   const tables: Record<string, Array<Record<string, unknown>>> = JSON.parse(
     JSON.stringify(seed)
   );
@@ -131,6 +179,10 @@ function fakeSb(
     if (table === "/rpc/kamin_mark_seen") {
       if (!rpc) return notFound("rpc kamin_mark_seen");
       return rpcKaminMarkSeen(tables, body as Record<string, unknown>);
+    }
+    if (table === "/rpc/claim_due_kamins") {
+      if (!claimRpc) return notFound("rpc claim_due_kamins");
+      return rpcClaimDueKamins(tables, body as Record<string, unknown>);
     }
     if (!(table in tables)) {
       return notFound(`table ${table}`);
@@ -492,6 +544,62 @@ describe("armKamin — slot race (finding #7)", () => {
   });
 });
 
+describe("legacyArmKamin — sleeping re-arm slot check (finding #11)", () => {
+  const guitarDef: HuntDefinition = { ...DEF, query: "گیتار" };
+
+  /** Sleeping kamin with DEF's canonical key; active kamin with another. */
+  function seed(activeCount: 1 | 0) {
+    const rows: Array<Record<string, unknown>> = [
+      kaminRow({ id: "k2", status: "sleeping" }) as unknown as Record<string, unknown>,
+    ];
+    if (activeCount === 1) {
+      rows.push(
+        kaminRow({
+          id: "k1",
+          definition: guitarDef,
+          canonical_key: kaminCanonicalKey(guitarDef),
+        }) as unknown as Record<string, unknown>
+      );
+    }
+    // rpc: false forces the legacy path (m9 not installed → RPC 404s).
+    return fakeSb(
+      { kamins: rows, kamin_seen_ads: [], notifications: [], kamin_runs: [] },
+      { rpc: false }
+    );
+  }
+
+  function rearm(sb: ReturnType<typeof fakeSb>) {
+    const { deps } = testDeps(sb);
+    return armKamin(deps.sb!, {
+      userId: "u1",
+      name: "پیانو",
+      definition: DEF,
+      seenIds: [],
+      tier: "paye", // 1 slot
+    });
+  }
+
+  it("re-arming a sleeping kamin on a full tier → slots-full (no bypass)", async () => {
+    const sb = seed(1);
+    const err = await rearm(sb).catch((e) => e);
+    expect(err).toBeInstanceOf(KaminError);
+    expect((err as KaminError).code).toBe("slots-full");
+    // The sleeping kamin stays sleeping — nothing was woken.
+    const k2 = (sb.tables.kamins as Array<Record<string, unknown>>).find(
+      (r) => r.id === "k2"
+    );
+    expect(k2?.status).toBe("sleeping");
+  });
+
+  it("re-arming a sleeping kamin with a free slot → wakes it", async () => {
+    const sb = seed(0);
+    const { kamin, created } = await rearm(sb);
+    expect(created).toBe(false);
+    expect(kamin.id).toBe("k2");
+    expect(kamin.status).toBe("active");
+  });
+});
+
 describe("wakeKaminsForUser — hard slot limit (navid 2026-10-06)", () => {
   function sleeping(id: string, createdAt: string): Record<string, unknown> {
     return {
@@ -760,6 +868,34 @@ describe("seen baseline — unbounded (finding #8)", () => {
   });
 });
 
+describe("baseline union is race-free (finding #14)", () => {
+  it("concurrent advanceKaminBaseline calls lose no ids", async () => {
+    // The lost-update in #14 needs a read-modify-write (GET → merge →
+    // PATCH). The real kamin_mark_seen is a single INSERT ... ON CONFLICT
+    // DO NOTHING (m9) — no read, so concurrent writers commute and the
+    // union is always complete. The fake models exactly that: one
+    // synchronous union block per call.
+    const sb = fakeSb({
+      kamins: [kaminRow({ id: "k1" }) as unknown as Record<string, unknown>],
+      kamin_seen_ads: [],
+      notifications: [],
+      kamin_runs: [],
+    });
+    const sets = Array.from({ length: 10 }, (_, i) =>
+      Array.from({ length: 5 }, (_, j) => `w${i}-ad-${j}`)
+    );
+    await Promise.all(
+      sets.map((ids) =>
+        advanceKaminBaseline({ rest: sb.rest } as Sb, "k1", "u1", ids)
+      )
+    );
+    const rows = sb.tables.kamin_seen_ads as Array<Record<string, unknown>>;
+    const got = new Set(rows.map((r) => r.source_ad_id as string));
+    expect(got).toEqual(new Set(sets.flat()));
+    expect(got.size).toBe(50);
+  });
+});
+
 describe("tickDueKamins", () => {
   it("only runs due kamins", async () => {
     const due = kaminRow({
@@ -795,5 +931,102 @@ describe("tickDueKamins", () => {
     const { deps } = testDeps(null);
     const summary = await tickDueKamins(deps);
     expect(summary.mode).toBe("permissive-dev");
+  });
+
+  it("two overlapping ticks execute a due kamin exactly once (finding #13)", async () => {
+    const due = kaminRow({
+      id: "k1",
+      last_checked_at: "2026-10-06T10:00:00.000Z", // 2h ago, hourly → due
+      last_success_at: "2026-10-06T10:00:00.000Z",
+    });
+    const sb = fakeSb({
+      kamins: [due as unknown as Record<string, unknown>],
+      kamin_seen_ads: [],
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps } = testDeps(sb, { candidates: [cand("z")] });
+    // Overlapping ticks: the second claim must see zero rows (the first
+    // tick's claim stamped claimed_at inside one atomic RPC statement).
+    const [s1, s2] = await Promise.all([tickDueKamins(deps), tickDueKamins(deps)]);
+    expect(s1.due + s2.due).toBe(1);
+    // checkKamin executed exactly once: one run row, one notification.
+    expect(sb.tables.kamin_runs).toHaveLength(1);
+    expect(
+      (sb.tables.notifications as Array<Record<string, unknown>>).filter(
+        (n) => n.related_kamin_id === "k1"
+      )
+    ).toHaveLength(1);
+  });
+
+  it("a kamin claimed beyond the lease is claimable again", async () => {
+    const stale = {
+      ...kaminRow({
+        id: "k1",
+        last_checked_at: "2026-10-06T10:00:00.000Z", // due
+        last_success_at: "2026-10-06T10:00:00.000Z",
+      }),
+      claimed_at: new Date(NOW - 601_000).toISOString(), // lease (600s) expired
+    };
+    const sb = fakeSb({
+      kamins: [stale as unknown as Record<string, unknown>],
+      kamin_seen_ads: [],
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps } = testDeps(sb, { candidates: [cand("z")] });
+    const summary = await tickDueKamins(deps);
+    expect(summary).toMatchObject({ mode: "real", due: 1 });
+  });
+
+  it("a recently claimed kamin is not re-claimed", async () => {
+    const fresh = {
+      ...kaminRow({
+        id: "k1",
+        last_checked_at: "2026-10-06T10:00:00.000Z", // due by cadence...
+        last_success_at: "2026-10-06T10:00:00.000Z",
+      }),
+      claimed_at: new Date(NOW - 60_000).toISOString(), // ...but lease held
+    };
+    const sb = fakeSb({
+      kamins: [fresh as unknown as Record<string, unknown>],
+      kamin_seen_ads: [],
+      notifications: [],
+      kamin_runs: [],
+    });
+    const { deps } = testDeps(sb, { candidates: [cand("z")] });
+    const summary = await tickDueKamins(deps);
+    expect(summary).toMatchObject({ mode: "real", due: 0, completed: 0 });
+    expect(sb.tables.kamin_runs).toHaveLength(0);
+  });
+
+  it("RPC missing (404) → loud warn + legacy GET+filter path", async () => {
+    const due = kaminRow({
+      id: "k1",
+      last_checked_at: "2026-10-06T10:00:00.000Z",
+      last_success_at: "2026-10-06T10:00:00.000Z",
+    });
+    const sb = fakeSb(
+      {
+        kamins: [due as unknown as Record<string, unknown>],
+        kamin_seen_ads: [],
+        notifications: [],
+        kamin_runs: [],
+      },
+      { claimRpc: false }
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { deps } = testDeps(sb, { candidates: [cand("z")] });
+      const summary = await tickDueKamins(deps);
+      expect(summary).toMatchObject({ mode: "real", due: 1 });
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("claim_due_kamins RPC missing")
+      );
+      // Legacy path still runs the due kamin.
+      expect(sb.tables.kamin_runs).toHaveLength(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

@@ -67,6 +67,12 @@ export interface HuntRun {
   endCursor?: unknown;
   /** Cursor to resume from (set by the deepen route). */
   startCursor?: unknown;
+  /**
+   * Parent run id when this run is a deep-history second phase
+   * (finding #12: one deepen per hunt — the deepened_from unique index
+   * makes a second deepen fail atomically).
+   */
+  deepenedFrom?: string;
   /** The completion path (kamin baseline + refund) has run exactly once. */
   finalized: boolean;
   /** Resolved when the pipeline finishes, success or failure. Memory backend only. */
@@ -129,6 +135,13 @@ const RUN_TTL_MS = 30 * 60 * 1000;
 
 const idemKeys = new Map<string, { runId: string; at: number }>();
 const IDEM_TTL_MS = 24 * 3600 * 1000;
+
+/**
+ * Parents already deepened (finding #12). Memory-backend check-and-set
+ * for the one-deepen-per-hunt rule — the DB backend enforces the same
+ * via the deepened_from partial unique index (23505 on race).
+ */
+const deepenedParents = new Set<string>();
 
 /**
  * Unguessable run ids (finding #3): guest runs have no session, so the id
@@ -305,6 +318,34 @@ async function claimIdemDb(sb: SupabaseServer, key: string): Promise<IdemClaim> 
 // Run CRUD
 // ---------------------------------------------------------------------------
 
+/**
+ * Thrown by createRun's memory backend when deepenedFrom was already
+ * claimed (finding #12: one deepen per hunt). The DB backend surfaces
+ * the same condition as the deepened_from partial unique violation
+ * (23505); isDeepenConflict() matches both shapes.
+ */
+export class DeepenConflictError extends Error {
+  constructor(parentId: string) {
+    super(`[runs] already deepened: ${parentId}`);
+    this.name = "DeepenConflictError";
+  }
+}
+
+/**
+ * True when the error is a double-deepen conflict: the memory backend's
+ * DeepenConflictError, or the DB backend's deepened_from unique
+ * violation (PostgREST 409 carrying code 23505).
+ */
+export function isDeepenConflict(e: unknown): boolean {
+  if (e instanceof DeepenConflictError) return true;
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    (e as { status?: unknown }).status === 409 &&
+    String((e as { message?: unknown }).message ?? "").includes("23505")
+  );
+}
+
 interface HuntRunRow {
   id: string;
   owner_user_id: string | null;
@@ -315,11 +356,12 @@ interface HuntRunRow {
   status: string;
   start_cursor: unknown;
   end_cursor: unknown;
+  deepened_from: string | null;
   created_at: string;
 }
 
 const RUN_COLUMNS =
-  "id,owner_user_id,owner_device_id,definition,quota,kamin_id,status,start_cursor,end_cursor,created_at";
+  "id,owner_user_id,owner_device_id,definition,quota,kamin_id,status,start_cursor,end_cursor,deepened_from,created_at";
 
 function rowToRun(row: HuntRunRow): HuntRun {
   const q = (row.quota ?? {}) as Record<string, unknown>;
@@ -341,6 +383,7 @@ function rowToRun(row: HuntRunRow): HuntRun {
     ...freshRunShell(),
     endCursor: (row.end_cursor ?? undefined) as unknown,
     startCursor: (row.start_cursor ?? undefined) as unknown,
+    deepenedFrom: row.deepened_from ?? undefined,
     finalized: terminal,
   };
 }
@@ -351,7 +394,8 @@ export async function createRun(
   quota: QuotaReceipt,
   idempotencyKey?: string,
   kaminId?: string,
-  runId?: string
+  runId?: string,
+  deepenedFrom?: string
 ): Promise<HuntRun> {
   const b = await backend();
   const id = runId ?? makeId();
@@ -364,6 +408,13 @@ export async function createRun(
     for (const [k, v] of idemKeys) {
       if (now - v.at > IDEM_TTL_MS) idemKeys.delete(k);
     }
+    // One deepen per hunt: check-and-set is atomic here — JS runs this
+    // synchronously, so two racing deepens in one process can never both
+    // pass. (Cross-instance is the DB backend's unique index.)
+    if (deepenedFrom) {
+      if (deepenedParents.has(deepenedFrom)) throw new DeepenConflictError(deepenedFrom);
+      deepenedParents.add(deepenedFrom);
+    }
     const run: HuntRun = {
       id,
       def,
@@ -373,6 +424,7 @@ export async function createRun(
       kaminId,
       status: "created",
       ...freshRunShell(),
+      deepenedFrom,
       finalized: false,
     };
     runs.set(run.id, run);
@@ -382,6 +434,8 @@ export async function createRun(
   // DB path: the idempotency key was already claimed by claimIdempotency
   // (key → this exact run id). A crash between claim and this INSERT is
   // recovered by the loser's stale-claim path.
+  // deepened_from's partial unique index makes a second deepen of the
+  // same parent fail atomically (23505) — the route maps it to 400.
   await b.sb.rest("POST", "hunt_runs", {
     id,
     owner_user_id: userId,
@@ -396,6 +450,7 @@ export async function createRun(
     },
     kamin_id: kaminId ?? null,
     status: "created",
+    deepened_from: deepenedFrom ?? null,
   });
   const rows = await b.sb.rest<HuntRunRow[]>(
     "GET",
@@ -426,6 +481,21 @@ export async function getRun(id: string): Promise<HuntRun | undefined> {
   const run = rowToRun(row);
   if (Date.now() - run.createdAt > RUN_TTL_MS) return undefined;
   return run;
+}
+
+/**
+ * Has this run already been deepened? Friendly pre-check for the deepen
+ * route — the atomic backstop is the deepened_from partial unique index
+ * (DB) / the deepenedParents check-and-set (memory).
+ */
+export async function hasDeepChild(parentId: string): Promise<boolean> {
+  const b = await backend();
+  if (b.kind === "memory") return deepenedParents.has(parentId);
+  const rows = await b.sb.rest<Array<{ id: string }>>(
+    "GET",
+    `hunt_runs?deepened_from=eq.${encodeURIComponent(parentId)}&select=id&limit=1`
+  );
+  return rows.length > 0;
 }
 
 /**

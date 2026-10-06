@@ -19,9 +19,12 @@ import {
   claimRunForExecution,
   claimTuning,
   createRun,
+  DeepenConflictError,
   finalizeRun,
   getRun,
   getRunStatus,
+  hasDeepChild,
+  isDeepenConflict,
   readRunEvents,
   releaseIdempotency,
   setRunStartCursor,
@@ -59,6 +62,8 @@ interface FakeDb {
   keys: Map<string, { run_id: string; at: string }>;
   events: Array<{ id: number; run_id: string; type: string; payload: unknown }>;
   nextEventId: number;
+  /** Models the deepened_from partial unique index (finding #12). */
+  deepenedFrom: Set<string>;
   rest: ReturnType<typeof vi.fn>;
 }
 
@@ -69,11 +74,20 @@ function makeFakeDb(): FakeDb {
     keys: new Map(),
     events: [],
     nextEventId: 1,
+    deepenedFrom: new Set(),
   };
   const conflict = (): never => {
     const e = new Error("duplicate key value violates unique constraint") as Error & {
       status: number;
     };
+    e.status = 409;
+    throw e;
+  };
+  /** Shaped like the real SupabaseError for the deepened_from 23505. */
+  const deepenedConflict = (): never => {
+    const e = new Error(
+      'Supabase POST hunt_runs → 409: {"code":"23505","message":"duplicate key value violates unique constraint \\"hunt_runs_deepened_from_uidx\\""}'
+    ) as Error & { status: number };
     e.status = 409;
     throw e;
   };
@@ -116,10 +130,20 @@ function makeFakeDb(): FakeDb {
     }
     if (table === "hunt_runs" && method === "POST") {
       const now = new Date().toISOString();
+      const df = b.deepened_from as string | null | undefined;
+      if (df) {
+        if (db.deepenedFrom.has(df)) deepenedConflict();
+        db.deepenedFrom.add(df);
+      }
       db.runs.set(b.id as string, { ...b, created_at: now, updated_at: now });
       return [];
     }
     if (table === "hunt_runs" && method === "GET") {
+      const dfEq = eq(params, "deepened_from");
+      if (dfEq !== null) {
+        const hit = [...db.runs.values()].find((r) => r.deepened_from === dfEq);
+        return hit ? [{ id: hit.id }] : [];
+      }
       const row = db.runs.get(eq(params, "id") ?? "");
       if (!row) return [];
       const out: Record<string, unknown> = {};
@@ -288,5 +312,66 @@ describe("run rows", () => {
   it("unknown ids → undefined", async () => {
     expect(await getRun("00000000-0000-4000-8000-000000000000")).toBeUndefined();
     expect(await getRunStatus("00000000-0000-4000-8000-000000000000")).toBeNull();
+  });
+});
+
+describe("one deepen per hunt (finding #12)", () => {
+  it("deepenedFrom is persisted on the child row", async () => {
+    const parent = await createRun(DEF, null, QUOTA);
+    const child = await createRun(
+      { ...DEF, deepHistory: true },
+      null,
+      QUOTA,
+      undefined,
+      undefined,
+      undefined,
+      parent.id
+    );
+    expect(child.deepenedFrom).toBe(parent.id);
+    expect((await getRun(child.id))?.deepenedFrom).toBe(parent.id);
+  });
+
+  it("second createRun with the same deepenedFrom → 23505-shaped 409", async () => {
+    const parent = await createRun(DEF, null, QUOTA);
+    await createRun({ ...DEF }, null, QUOTA, undefined, undefined, undefined, parent.id);
+    const err = await createRun(
+      { ...DEF },
+      null,
+      QUOTA,
+      undefined,
+      undefined,
+      undefined,
+      parent.id
+    ).catch((e) => e);
+    expect(err).toMatchObject({ status: 409 });
+    expect(isDeepenConflict(err)).toBe(true);
+  });
+
+  it("two concurrent deepens of the same parent → exactly one child", async () => {
+    const parent = await createRun(DEF, null, QUOTA);
+    const deepen = () =>
+      createRun({ ...DEF }, null, QUOTA, undefined, undefined, undefined, parent.id);
+    const results = await Promise.allSettled([deepen(), deepen()]);
+    const ok = results.filter((r) => r.status === "fulfilled");
+    const bad = results.filter((r) => r.status === "rejected");
+    expect(ok).toHaveLength(1);
+    expect(bad).toHaveLength(1);
+    expect(isDeepenConflict((bad[0] as PromiseRejectedResult).reason)).toBe(true);
+  });
+
+  it("hasDeepChild: false before, true after the deepen", async () => {
+    const parent = await createRun(DEF, null, QUOTA);
+    expect(await hasDeepChild(parent.id)).toBe(false);
+    await createRun({ ...DEF }, null, QUOTA, undefined, undefined, undefined, parent.id);
+    expect(await hasDeepChild(parent.id)).toBe(true);
+    expect(await hasDeepChild("00000000-0000-4000-8000-000000000000")).toBe(false);
+  });
+
+  it("isDeepenConflict ignores other errors", async () => {
+    expect(isDeepenConflict(new Error("boom"))).toBe(false);
+    expect(isDeepenConflict({ status: 409, message: "no code here" })).toBe(false);
+    expect(isDeepenConflict({ status: 500, message: "23505" })).toBe(false);
+    expect(isDeepenConflict(null)).toBe(false);
+    expect(isDeepenConflict(new DeepenConflictError("p1"))).toBe(true);
   });
 });

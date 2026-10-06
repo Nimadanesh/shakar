@@ -308,6 +308,19 @@ async function legacyArmKamin(
   if (existing[0]) {
     const k = existing[0];
     if (k.status === "sleeping") {
+      // Waking consumes a slot — same rule as the RPC path (finding #7,
+      // #11). Without this check, re-arming a sleeping kamin on a full
+      // tier would bypass the entitlement entirely.
+      const active = await sb.rest<Array<{ id: string }>>(
+        "GET",
+        `kamins?user_id=eq.${enc(opts.userId)}&status=eq.active&select=id`
+      );
+      if (active.length >= opts.slots) {
+        throw new KaminError(
+          "slots-full",
+          "به سقف کمین‌هات رسیدی — کمین بیشتر می‌خوای؟ پلن بالاتر"
+        );
+      }
       // Re-arming a sleeping kamin wakes it (definition refresh included).
       const rows = await sb.rest<KaminRow[]>("PATCH", `kamins?id=eq.${enc(k.id)}`, {
         status: "active",
@@ -676,7 +689,56 @@ export async function tickDueKamins(deps: EngineDeps): Promise<TickSummary> {
     console.warn("[kamin] tick: permissive-dev (no Supabase)");
     return { mode: "permissive-dev", due: 0, completed: 0, failed: 0, newMatches: 0 };
   }
-  const rows = await deps.sb.rest<KaminRow[]>(
+  const due = await claimDueKamins(deps.sb);
+  if (due === null) {
+    // m12 not run yet: legacy racy GET+filter path, loud warn (round-1 pattern).
+    console.warn(
+      "[kamin] claim_due_kamins RPC missing — legacy racy tick. Run supabase/m12-kamin-claim.sql."
+    );
+    return legacyTickDue(deps.sb, deps);
+  }
+  let completed = 0;
+  let failed = 0;
+  let newMatches = 0;
+  for (const k of due) {
+    const r = await checkKamin(deps, k);
+    if (r.status === "failed") failed++;
+    else {
+      completed++;
+      newMatches += r.newCount;
+    }
+  }
+  return { mode: "real", due: due.length, completed, failed, newMatches };
+}
+
+/** Scheduler lease: a crashed tick's kamins become claimable again after this. */
+const CLAIM_LEASE_SECS = 600;
+
+/**
+ * Atomic scheduler claim (finding #13, m12). One statement claims every
+ * due kamin and stamps claimed_at — a concurrent tick's claim sees zero
+ * rows for the same kamin (FOR UPDATE SKIP LOCKED). Returns null when the
+ * RPC is not installed (404) — the caller falls back to the legacy path.
+ */
+async function claimDueKamins(sb: Sb): Promise<KaminRow[] | null> {
+  try {
+    const rows = await sb.rest<KaminRow[]>("POST", "/rpc/claim_due_kamins", {
+      p_lease_secs: CLAIM_LEASE_SECS,
+    });
+    return rows;
+  } catch (e) {
+    if (isNotFound(e)) return null;
+    throw e;
+  }
+}
+
+/**
+ * Pre-m12 tick path: GET all active + JS due-filter. Racy by construction
+ * (finding #13: overlapping ticks double-execute) — kept only until the
+ * migration runs, then never taken.
+ */
+async function legacyTickDue(sb: Sb, deps: EngineDeps): Promise<TickSummary> {
+  const rows = await sb.rest<KaminRow[]>(
     "GET",
     "kamins?status=eq.active&select=*"
   );

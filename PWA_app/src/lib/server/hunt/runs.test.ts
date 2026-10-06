@@ -5,7 +5,10 @@ import {
   claimIdempotency,
   claimRunForExecution,
   createRun,
+  DeepenConflictError,
   getRun,
+  hasDeepChild,
+  isDeepenConflict,
   releaseIdempotency,
 } from "./runs";
 
@@ -100,5 +103,50 @@ describe("idempotency, in-memory backend (finding #9 fallback)", () => {
     expect(fresh).toHaveLength(1);
     const winner = fresh[0].runId;
     for (const c of claims) expect(c.runId).toBe(winner);
+  });
+});
+
+describe("one deepen per hunt, memory backend (finding #12)", () => {
+  it("second createRun with the same deepenedFrom throws DeepenConflictError", async () => {
+    const parent = await createRun(DEF, null, QUOTA);
+    const child = await createRun(
+      { ...DEF },
+      null,
+      QUOTA,
+      undefined,
+      undefined,
+      undefined,
+      parent.id
+    );
+    expect(child.deepenedFrom).toBe(parent.id);
+    await expect(
+      createRun({ ...DEF }, null, QUOTA, undefined, undefined, undefined, parent.id)
+    ).rejects.toBeInstanceOf(DeepenConflictError);
+  });
+
+  it("two concurrent deepens → exactly one child (check-and-set)", async () => {
+    const parent = await createRun(DEF, null, QUOTA);
+    const deepen = () =>
+      createRun({ ...DEF }, null, QUOTA, undefined, undefined, undefined, parent.id);
+    const results = await Promise.allSettled([deepen(), deepen()]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const bad = results.filter((r) => r.status === "rejected");
+    expect(bad).toHaveLength(1);
+    expect(isDeepenConflict((bad[0] as PromiseRejectedResult).reason)).toBe(true);
+  });
+
+  it("hasDeepChild tracks the memory set", async () => {
+    const parent = await createRun(DEF, null, QUOTA);
+    expect(await hasDeepChild(parent.id)).toBe(false);
+    await createRun({ ...DEF }, null, QUOTA, undefined, undefined, undefined, parent.id);
+    expect(await hasDeepChild(parent.id)).toBe(true);
+  });
+
+  it("runs without deepenedFrom are unaffected", async () => {
+    const a = await createRun(DEF, null, QUOTA);
+    const b = await createRun(DEF, null, QUOTA);
+    expect(a.deepenedFrom).toBeUndefined();
+    expect(b.deepenedFrom).toBeUndefined();
+    expect(await hasDeepChild(a.id)).toBe(false);
   });
 });

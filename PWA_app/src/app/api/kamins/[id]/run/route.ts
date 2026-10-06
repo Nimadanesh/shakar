@@ -3,7 +3,7 @@ import { getSessionUserId } from "@/lib/server/auth";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase-server";
 import { toHuntDefinition } from "@/lib/server/hunt/definition";
 import { claimIdempotency, createRun, releaseIdempotency } from "@/lib/server/hunt/runs";
-import { consumeHunt } from "@/lib/server/quota";
+import { clientIp, consumeHunt } from "@/lib/server/quota";
 import type { KaminRow } from "@/lib/server/kamin/engine";
 
 /**
@@ -56,7 +56,7 @@ export async function POST(
   }
 
   const deviceId = req.headers.get("x-device-id")?.trim() || "unknown";
-  const quota = await consumeHunt({ userId, deviceId });
+  const quota = await consumeHunt({ userId, deviceId, ip: clientIp(req) });
   if (!quota.allowed) {
     // Claimed key, no hunt — release so a later tap can claim fresh.
     if (idempotencyKey) await releaseIdempotency(idempotencyKey);

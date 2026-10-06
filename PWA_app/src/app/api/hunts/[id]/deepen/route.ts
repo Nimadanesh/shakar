@@ -3,6 +3,8 @@ import {
   canOpenRun,
   createRun,
   getRun,
+  hasDeepChild,
+  isDeepenConflict,
   setRunStartCursor,
 } from "@/lib/server/hunt/runs";
 import { getSessionUserId } from "@/lib/server/auth";
@@ -38,17 +40,37 @@ export async function POST(
   if (run.def.deepHistory === true) {
     return NextResponse.json({ ok: false, error: "already-deep" }, { status: 400 });
   }
+  // Finding #12: one deepen per hunt. The parent is never marked by the
+  // deep run's own def — a second deepen of the same parent must fail
+  // even though the parent's def.deepHistory stays false.
+  if (await hasDeepChild(id)) {
+    return NextResponse.json({ ok: false, error: "already-deepened" }, { status: 400 });
+  }
   if (run.status !== "done") {
     return NextResponse.json(
       { ok: false, error: "hunt-not-finished" },
       { status: 409 }
     );
   }
-  const deep = await createRun(
-    { ...run.def, deepHistory: true },
-    run.userId,
-    { ...run.quota, charged: false }
-  );
+  let deep;
+  try {
+    deep = await createRun(
+      { ...run.def, deepHistory: true },
+      run.userId,
+      { ...run.quota, charged: false },
+      undefined,
+      undefined,
+      undefined,
+      id
+    );
+  } catch (e) {
+    // Concurrent-race path: both deepens passed the pre-check, the
+    // deepened_from unique index let exactly one insert win (23505).
+    if (isDeepenConflict(e)) {
+      return NextResponse.json({ ok: false, error: "already-deepened" }, { status: 400 });
+    }
+    throw e;
+  }
   // The deep run's stream resumes from the first phase's cursor
   // (memory: live object; DB: persisted row — see setRunStartCursor).
   await setRunStartCursor(deep, run.endCursor);

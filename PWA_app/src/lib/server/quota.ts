@@ -137,6 +137,8 @@ async function fire85Notification(sb: Sb, userId: string, remaining: number): Pr
 export async function consumeHunt(opts: {
   userId: string | null;
   deviceId: string;
+  /** Client IP for the guest velocity cap (finding #15). Null when unknown. */
+  ip?: string | null;
 }): Promise<QuotaDecision> {
   const sb = supabaseConfigured() ? supabaseServer() : null;
   if (!sb || !(await tablesExist(sb))) {
@@ -150,9 +152,12 @@ export async function consumeHunt(opts: {
     if (tierHunts !== null) {
       return consumeStandard(sb, opts.userId, tierHunts);
     }
-    // Registered but unsubscribed → guest pool (documented above).
+    // Registered but unsubscribed → guest pool, but keyed by user_id
+    // (finding #15): x-device-id is a client claim and trivially
+    // rotated; the account id is not.
+    return consumeGuest(sb, opts.userId, opts.ip ?? null);
   }
-  return consumeGuest(sb, opts.deviceId);
+  return consumeGuest(sb, opts.deviceId, opts.ip ?? null);
 }
 
 /**
@@ -288,10 +293,65 @@ async function rpcConsumeGuest(
   }
 }
 
-async function consumeGuest(sb: Sb, deviceId: string): Promise<QuotaDecision> {
-  const d = encodeURIComponent(deviceId);
+/** Best-effort client IP for the guest velocity cap (finding #15).
+ *  Behind Railway/Vercel the real IP is the first x-forwarded-for entry. */
+export function clientIp(req: Request): string | null {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) {
+    const first = fwd.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  const real = req.headers.get("x-real-ip")?.trim();
+  return real || null;
+}
 
-  const atomic = await rpcConsumeGuest(sb, deviceId);
+/** Free-hunt IP velocity cap (finding #15): even rotating device ids,
+ *  one IP can't mint unlimited free hunts. Generous by design. */
+const GUEST_IP_DAILY_LIMIT = 20;
+const GUEST_IP_WINDOW_SECS = 24 * 60 * 60;
+
+async function checkGuestIpLimit(sb: Sb, ip: string): Promise<boolean> {
+  try {
+    const rows = await sb.rest<Array<{ allowed: boolean }>>(
+      "POST",
+      "/rpc/check_guest_ip_limit",
+      { p_ip: ip, p_limit: GUEST_IP_DAILY_LIMIT, p_window_secs: GUEST_IP_WINDOW_SECS }
+    );
+    return rows[0]?.allowed !== false;
+  } catch (e) {
+    if (isMissingRpc(e)) {
+      console.warn(
+        "[quota] check_guest_ip_limit RPC missing — IP velocity cap off. " +
+          "Run supabase/m14-guest-ip-limit.sql."
+      );
+      return true; // fail-open: the device quota still applies
+    }
+    throw e;
+  }
+}
+
+async function consumeGuest(
+  sb: Sb,
+  key: string,
+  ip: string | null
+): Promise<QuotaDecision> {
+  const d = encodeURIComponent(key);
+
+  // IP velocity cap first (finding #15): rotating device ids from one
+  // IP still hits this. Checked before consuming so denied requests
+  // don't burn the device grant.
+  if (ip) {
+    const ipAllowed = await checkGuestIpLimit(sb, ip);
+    if (!ipAllowed) {
+      return {
+        allowed: false,
+        reason: "guest-exhausted",
+        message: "شکارهای رایگان امروز تموم شد — فردا دوباره امتحان کن.",
+      };
+    }
+  }
+
+  const atomic = await rpcConsumeGuest(sb, key);
   if (atomic) {
     if (!atomic.allowed) {
       return {
@@ -314,15 +374,17 @@ async function consumeGuest(sb: Sb, deviceId: string): Promise<QuotaDecision> {
     "[quota] consume_guest_hunt RPC missing — legacy racy read-check-PATCH. " +
       "Run supabase/m6-quota-atomic.sql."
   );
-  // Live devices schema: id uuid PK (no device_id column).
+  // Live devices schema: id uuid PK (no device_id column). `key` is the
+  // device id for true guests, or the account id for registered-but-
+  // unsubscribed users (finding #15) — both are uuids.
   let rows = await sb.rest<Array<{ free_hunts_used: number; free_hunts_granted: number }>>(
     "GET",
     `devices?id=eq.${d}&select=free_hunts_used,free_hunts_granted`
   );
   if (rows.length === 0) {
     await sb.rest("POST", "devices", {
-      id: deviceId,
-      fingerprint_hash: deviceId,
+      id: key,
+      fingerprint_hash: key,
       free_hunts_used: 0,
       free_hunts_granted: GUEST_FREE_HUNTS,
     });

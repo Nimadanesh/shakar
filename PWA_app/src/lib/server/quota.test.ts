@@ -67,6 +67,14 @@ function fakeDb(
       if (row) row.free_hunts_used = Math.max(0, (row.free_hunts_used as number) - 1);
       return null;
     }
+    if (path === "/rpc/check_guest_ip_limit") {
+      // Models the fixed-window atomicity: count-then-insert in one block.
+      const { p_ip: ip, p_limit: limit } = body as { p_ip: string; p_limit: number };
+      const hits = (tables.guest_ip_hits ??= []).filter((r) => r.ip === ip);
+      const allowed = hits.length + 1 <= limit;
+      (tables.guest_ip_hits ??= []).push({ ip, hit_at: new Date().toISOString() });
+      return [{ allowed }];
+    }
     return missing(`rpc ${path}`);
   };
 
@@ -251,6 +259,47 @@ describe("consumeHunt", () => {
     mockServer.mockReturnValue({ rest: db.rest } as never);
     const d = await consumeHunt({ userId: "u9", deviceId: "d9" });
     expect(d).toMatchObject({ allowed: true, kind: "guest", remaining: 2 });
+  });
+
+  it("finding #15: registered-unsubscribed is keyed by user_id, not device_id", async () => {
+    mockConfigured.mockReturnValue(true);
+    const db = fakeDb({ quota_counters: [], devices: [] }, { rpc: true });
+    mockServer.mockReturnValue({ rest: db.rest } as never);
+    // Same account, rotating device ids → still ONE guest pool.
+    await consumeHunt({ userId: "u10", deviceId: "d-a" });
+    await consumeHunt({ userId: "u10", deviceId: "d-b" });
+    await consumeHunt({ userId: "u10", deviceId: "d-c" });
+    const d4 = await consumeHunt({ userId: "u10", deviceId: "d-d" });
+    expect(d4.allowed).toBe(false);
+    if (!d4.allowed) expect(d4.reason).toBe("guest-exhausted");
+    // The pool row is keyed by the account, not any device id.
+    expect(db.tables.devices).toHaveLength(1);
+    expect(db.tables.devices[0].id).toBe("u10");
+  });
+
+  it("finding #15: IP velocity cap stops device-id rotation", async () => {
+    mockConfigured.mockReturnValue(true);
+    const db = fakeDb({ quota_counters: [], devices: [] }, { rpc: true });
+    mockServer.mockReturnValue({ rest: db.rest } as never);
+    const ip = "203.0.113.7";
+    // 20 fresh device ids from one IP → all allowed (generous cap).
+    for (let i = 0; i < 20; i++) {
+      const d = await consumeHunt({ userId: null, deviceId: `rot-${i}`, ip });
+      expect(d.allowed).toBe(true);
+    }
+    // 21st → IP cap denies, even with a fresh device id.
+    const denied = await consumeHunt({ userId: null, deviceId: "rot-20", ip });
+    expect(denied.allowed).toBe(false);
+    if (!denied.allowed) expect(denied.reason).toBe("guest-exhausted");
+  });
+
+  it("finding #15: IP cap fail-open when the RPC is missing", async () => {
+    mockConfigured.mockReturnValue(true);
+    const db = fakeDb({ quota_counters: [], devices: [] }, { rpc: false });
+    mockServer.mockReturnValue({ rest: db.rest } as never);
+    // Legacy path: no IP RPC → still consumes via the device row.
+    const d = await consumeHunt({ userId: null, deviceId: "dg2", ip: "203.0.113.8" });
+    expect(d.allowed).toBe(true);
   });
 });
 

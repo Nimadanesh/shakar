@@ -37,6 +37,19 @@ function event(hoursAgo: number): { fired_at: string } {
   return { fired_at: new Date(Date.now() - hoursAgo * 3_600_000).toISOString() };
 }
 
+/**
+ * An event timestamped in the MIDDLE of the oldest daily bucket (index 0),
+ * robust to the time of day the test runs: bucket 0 spans
+ * [startOfToday - 13d, startOfToday - 12d), so its midpoint is
+ * startOfToday - 12.5d regardless of the current hour.
+ */
+function eventInOldestBucket(): { fired_at: string } {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const mid = startOfToday.getTime() - 12.5 * 24 * 3_600_000;
+  return { fired_at: new Date(mid).toISOString() };
+}
+
 /** Minimal PostgREST fake: table reads keyed by path prefix. */
 function fakeSb(tables: Record<string, unknown[]>, failEvents = false) {
   return {
@@ -77,8 +90,8 @@ describe("subscribed user", () => {
     mockTierKey.mockResolvedValue("herfei");
     mockServer.mockReturnValue(fakeSb({
       quota_counters: [{ hunts_used: 5 }],
-      // 3 hunts today, 1 yesterday, 1 thirteen days ago (edge of window).
-      hunt_events: [event(1), event(2), event(3), event(26), event(13 * 24 - 1)],
+      // 3 hunts today, 1 yesterday, 1 in the oldest bucket (edge of window).
+      hunt_events: [event(1), event(2), event(3), event(26), eventInOldestBucket()],
       kamins: [{ id: "k1" }, { id: "k2" }],
     }) as never);
 
