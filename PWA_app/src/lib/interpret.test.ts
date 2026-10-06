@@ -64,4 +64,49 @@ describe("interpretQuery", () => {
     const { applied } = interpretQuery("پژو ۲۰۶");
     expect(applied).toEqual([]);
   });
+
+  it("detects rent transaction from اجاره‌ای", () => {
+    const { applied } = interpretQuery("خونه اجاره‌ای تهران");
+    const tx = applied.find((c) => c.kind === "transaction");
+    expect(tx?.value).toBe("rent");
+    expect(tx?.display).toBe("اجاره");
+  });
+
+  it("detects buy transaction from فروش", () => {
+    const { applied } = interpretQuery("آپارتمان فروشی سعادت‌آباد");
+    expect(applied.find((c) => c.kind === "transaction")?.value).toBe("buy");
+  });
+
+  it("detects رهن as rent", () => {
+    const { applied } = interpretQuery("آپارتمان رهن کامل");
+    expect(applied.find((c) => c.kind === "transaction")?.value).toBe("rent");
+  });
+
+  it("leaves transaction absent when no transaction word is present", () => {
+    const { applied } = interpretQuery("خونه ۵۰ متری تهران");
+    expect(applied.some((c) => c.kind === "transaction")).toBe(false);
+  });
+});
+
+describe("mentionsRealEstate", () => {
+  it("spots real-estate mentions", async () => {
+    const { mentionsRealEstate } = await import("@/lib/interpret");
+    expect(mentionsRealEstate("خونه ۵۰ متری تهران")).toBe(true);
+    expect(mentionsRealEstate("آپارتمان نوساز")).toBe(true);
+    expect(mentionsRealEstate("ویلا شمال")).toBe(true);
+  });
+
+  it("rejects non-real-estate queries", async () => {
+    const { mentionsRealEstate } = await import("@/lib/interpret");
+    expect(mentionsRealEstate("پیانو آکوستیک")).toBe(false);
+    expect(mentionsRealEstate("گوشی آیفون")).toBe(false);
+  });
+});
+
+describe("detectTransaction", () => {
+  it("returns null without transaction words", async () => {
+    const { detectTransaction } = await import("@/lib/interpret");
+    expect(detectTransaction("خونه ۵۰ متری")).toBeNull();
+    expect(detectTransaction("پیانو")).toBeNull();
+  });
 });

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Camera, Music } from "lucide-react";
 import { WhatField } from "@/components/search/WhatField";
+import { TypoNudge } from "@/components/search/TypoNudge";
+import { TransactionChips } from "@/components/search/TransactionChips";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { RecentHunts } from "@/components/search/RecentHunts";
 import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
@@ -16,7 +18,8 @@ import {
   categoryLabel,
   cityLabel,
 } from "@/data/taxonomy";
-import { interpretQuery } from "@/lib/interpret";
+import { detectTransaction, interpretQuery, mentionsRealEstate } from "@/lib/interpret";
+import { normalizePersian } from "@/lib/normalizePersian";
 import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
@@ -106,15 +109,57 @@ export function HuntSetup() {
    * THE single hunt event. The curated form becomes a persistent hunt
    * asset; the user lands on its canonical triage URL. `firing` covers
    * the real navigation transition — no artificial delay.
+   *
+   * A real-estate hunt with an unresolved transaction type never fires:
+   * guessing would waste quota and searching both would double the cost.
+   * Instead the transaction chips flash — resolving them is free.
    */
   const [firing, setFiring] = useState(false);
+  const txSectionRef = useRef<HTMLDivElement | null>(null);
+  const [txFlash, setTxFlash] = useState(false);
+
+  /** Real-estate + no transaction anywhere → the chips must be resolved. */
+  const tx = useMemo(() => {
+    const t = query.trim();
+    if (t === "") return { show: false, blocking: false };
+    const fromText = detectTransaction(t);
+    const isRE = base.category === "real-estate" || mentionsRealEstate(t);
+    const show = isRE && !fromText;
+    return { show, blocking: show && base.transaction === "" };
+  }, [query, base.category, base.transaction]);
+
   function fireHunt() {
     const trimmed = query.trim();
     if (trimmed === "" || firing) return;
+    if (tx.blocking) {
+      txSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTxFlash(true);
+      window.setTimeout(() => setTxFlash(false), 1400);
+      return;
+    }
     setFiring(true);
     const record = recordHunt(trimmed, base, dismissed);
     if (record) router.push(`/hunt/${record.id}`);
     else setFiring(false);
+  }
+
+  /** One-tap typo fix from the TypoNudge: replace the offending token. */
+  function applyTypoFix(originalToken: string, fixed: string) {
+    const norm = (t: string) => normalizePersian(t).replace(/‌/g, "");
+    const target = norm(originalToken);
+    let replaced = false;
+    setQuery((q) =>
+      q
+        .split(/(\s+)/)
+        .map((part) => {
+          if (!replaced && !/^\s+$/.test(part) && norm(part) === target) {
+            replaced = true;
+            return fixed;
+          }
+          return part;
+        })
+        .join("")
+    );
   }
 
   /** Suggested hunt: fill the WHAT field for review. Never auto-fires. */
@@ -211,6 +256,7 @@ export function HuntSetup() {
   return (
     <div className="flex flex-col gap-4">
       <WhatField ref={inputRef} value={query} onChange={setQuery} />
+      {hasIntent && <TypoNudge query={query} onApplyFix={applyTypoFix} />}
 
       {query.trim() === "" ? (
         <div className="flex flex-col gap-5">
@@ -305,6 +351,15 @@ export function HuntSetup() {
               onOpen={() => setPriceOpen(true)}
             />
           </div>
+
+          {tx.show && (
+            <TransactionChips
+              value={base.transaction}
+              onSelect={(v) => setBase((b) => ({ ...b, transaction: v }))}
+              flash={txFlash}
+              sectionRef={txSectionRef}
+            />
+          )}
 
           {hasInferred && (
             <p className="-mt-2 text-xs leading-5 text-muted-foreground">

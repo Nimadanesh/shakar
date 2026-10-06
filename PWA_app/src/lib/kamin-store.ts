@@ -74,6 +74,7 @@ function normalizeCtx(
     priceMin: numOrNull(v.priceMin),
     priceMax: numOrNull(v.priceMax),
     hasImage: v.hasImage === true,
+    transaction: v.transaction === "rent" || v.transaction === "buy" ? v.transaction : "",
   };
 }
 
@@ -187,5 +188,6 @@ export function kaminCtxToBase(ctx: SearchContext): ContextBase {
     include: [...ctx.includeKeywords],
     exclude: [...ctx.excludeKeywords],
     hasImage: ctx.hasImage,
+    transaction: ctx.transaction,
   };
 }

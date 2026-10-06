@@ -11,6 +11,8 @@ export interface SearchContext {
   priceMin: number | null;
   priceMax: number | null;
   hasImage: boolean;
+  /** Real-estate transaction type. "" = unknown / not applicable. */
+  transaction: "" | "rent" | "buy";
 }
 
 export const EMPTY_SEARCH_CONTEXT: SearchContext = {
@@ -22,6 +24,7 @@ export const EMPTY_SEARCH_CONTEXT: SearchContext = {
   priceMin: null,
   priceMax: null,
   hasImage: false,
+  transaction: "",
 };
 
 export type ConstraintKind =
@@ -31,6 +34,7 @@ export type ConstraintKind =
   | "priceMin"
   | "priceMax"
   | "category"
+  | "transaction"
   | "preference";
 
 export interface InterpretedConstraint {

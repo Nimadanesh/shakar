@@ -22,6 +22,44 @@ const NEGATION_VERBS = ["نمی‌خوام", "نمیخوام", "نمی‌خوا�
 const EXCLUDE_PREFIXES = ["بدون", "به‌جز", "بجز", "غیر از", "غیراز"];
 const PREFERENCE_CUES = ["ترجیحاً", "ترجیحا", "کاش", "ای کاش"];
 
+/** Words that pin a real-estate hunt to rent vs buy. Checked on the
+ *  normalized query; «اجاره» also matches «اجاره‌ای». */
+const RENT_WORDS = ["اجاره", "رهن"];
+const BUY_WORDS = ["خرید", "فروش", "معاوضه"];
+
+/** Real-estate mentions that make the transaction type (rent/buy) a
+ *  required disambiguation when no transaction word is present. */
+const REAL_ESTATE_WORDS = [
+  "خونه",
+  "خانه",
+  "آپارتمان",
+  "ویل",
+  "زمین",
+  "مغازه",
+  "دفتر",
+  "سوئیت",
+  "پنت",
+  "ملک",
+  "برج",
+  "کلنگی",
+];
+
+export type TransactionType = "rent" | "buy";
+
+/** «خونه اجاره‌ای» → "rent", «آپارتمان فروشی» → "buy", else null. */
+export function detectTransaction(raw: string): TransactionType | null {
+  const normalized = normalizePersian(raw);
+  if (RENT_WORDS.some((w) => normalized.includes(w))) return "rent";
+  if (BUY_WORDS.some((w) => normalized.includes(w))) return "buy";
+  return null;
+}
+
+/** True when the query talks about real estate (خونه، آپارتمان، …). */
+export function mentionsRealEstate(raw: string): boolean {
+  const normalized = normalizePersian(raw);
+  return REAL_ESTATE_WORDS.some((w) => normalized.includes(w));
+}
+
 function faToEnDigits(input: string): string {
   return input
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
@@ -115,8 +153,19 @@ export function interpretQuery(raw: string): Interpretation {
     }
   }
 
-  const max = findPriceBound(normalized, "max");
-  if (max) {
+  const transaction = detectTransaction(raw);
+  if (transaction) {
+    pushUnique(applied, {
+      id: `transaction:${transaction}`,
+      kind: "transaction",
+      value: transaction,
+      display: transaction === "rent" ? "اجاره" : "خرید",
+      source: "inferred",
+      applied: true,
+    });
+  }
+
+  const max = findPriceBound(normalized, "max");  if (max) {
     pushUnique(applied, {
       id: `priceMax:${max.value}`,
       kind: "priceMax",

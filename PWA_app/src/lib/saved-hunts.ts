@@ -42,6 +42,7 @@ function normalize(raw: unknown): SavedHunt | null {
         ? b.exclude.filter((t): t is string => typeof t === "string")
         : [],
       hasImage: b.hasImage === true,
+      transaction: b.transaction === "rent" || b.transaction === "buy" ? b.transaction : "",
     },
     ts: typeof v.ts === "number" ? v.ts : Date.now(),
   };

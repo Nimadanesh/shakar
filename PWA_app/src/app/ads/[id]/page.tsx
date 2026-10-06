@@ -54,6 +54,7 @@ export default async function AdDetailPage({
     priceMin: num(query.min),
     priceMax: num(query.max),
     hasImage: query.img === "1",
+    transaction: "",
   };
 
   // Back restores the context the hunter came from: the hunt's triage,
