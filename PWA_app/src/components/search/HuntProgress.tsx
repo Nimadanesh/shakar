@@ -295,8 +295,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
             </div>
           </div>
         </div>
-          </div>
-        </div>
 
         {/* Current status — STABLE GEOMETRY.
             The container has a fixed min-height so changing text never
