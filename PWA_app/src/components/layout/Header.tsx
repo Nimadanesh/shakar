@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, User, Wallet } from "lucide-react";
 import { PlanSheet } from "@/components/plan/PlanSheet";
@@ -36,14 +36,24 @@ function NotificationButton({ onClick }: { onClick: () => void }) {
   // invalidation events (markKaminSeen / armKamin / disarmKamin), so the
   // old pathname-triggered recompute is unnecessary.
   const { value: kamins } = useHydratedStore("kamins", listKamins);
-  let unread = 0;
+  // Server notifications unread count (M5B).
+  const [serverUnread, setServerUnread] = useState(0);
+  useEffect(() => {
+    fetch("/api/notifications?unread=true&limit=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.ok) setServerUnread(d.data.unreadCount ?? 0);
+      })
+      .catch(() => {});
+  }, []);
+  let unread = serverUnread;
   try {
-    unread = (kamins ?? []).reduce(
+    unread += (kamins ?? []).reduce(
       (sum, k) => sum + kaminNewIds(k, SEARCH_FIXTURES).length,
       0
     );
   } catch {
-    unread = 0;
+    // keep serverUnread
   }
 
   return (
@@ -90,7 +100,7 @@ export function Header() {
             >
               <Wallet size={20} aria-hidden="true" />
             </button>
-            <NotificationButton onClick={() => router.push("/saved")} />
+            <NotificationButton onClick={() => router.push("/notifications")} />
           </div>
         </div>
       </header>
