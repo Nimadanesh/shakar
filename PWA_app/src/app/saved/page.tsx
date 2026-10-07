@@ -18,6 +18,11 @@ import {
   markKaminSeen,
   type KaminRecord,
 } from "@/lib/kamin-store";
+import {
+  listKaminsServer,
+  disarmKaminServer,
+  type ServerKamin,
+} from "@/lib/kamin-client";
 import { recordHunt } from "@/lib/hunt-store";
 import { runSearch } from "@/lib/search";
 import { SEARCH_FIXTURES } from "@/data/search-fixtures";
@@ -125,6 +130,43 @@ function KaminCard({
   );
 }
 
+/**
+ * Server kamin card (M5B). Simpler than the local KaminCard: the server
+ * already computed new_match_count, and the definition is a HuntDefinition
+ * (we show the query text, not the full SearchContext breakdown).
+ */
+function ServerKaminCard({
+  kamin,
+  onDisarm,
+}: {
+  kamin: ServerKamin;
+  onDisarm: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-5 text-foreground">
+          «{kamin.name}»
+        </p>
+        <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary">
+          {kamin.status === "sleeping" ? "خوابیده" : "فعال"}
+        </span>
+      </div>
+      <p className="text-[13px] text-muted-foreground">«{kamin.definition.query}»</p>
+      {kamin.new_match_count > 0 && (
+        <p className="text-[13px] font-medium text-primary">
+          {kamin.new_match_count.toLocaleString("fa-IR")} آگهی تازه
+        </p>
+      )}
+      <ConfirmButton
+        label="غیرفعال کردن"
+        confirmLabel="مطمئنی؟ برای تأیید دوباره بزن"
+        onConfirm={onDisarm}
+      />
+    </div>
+  );
+}
+
 type SavedTab = "fresh" | "kamins";
 
 function readTabParam(): SavedTab {
@@ -148,6 +190,11 @@ export default function SavedPage() {
     ready,
     refresh,
   } = useHydratedStore<KaminRecord[]>("kamins", listKamins);
+  // Server kamins (M5B): fetched on mount, null = not logged in / offline.
+  const [serverKamins, setServerKamins] = useState<ServerKamin[] | null>(null);
+  useEffect(() => {
+    listKaminsServer().then(setServerKamins);
+  }, []);
   const kaminList = kamins ?? [];
   const [tab, setTab] = useState<SavedTab>("fresh");
 
@@ -267,6 +314,18 @@ export default function SavedPage() {
         />
       ) : (
         <ul className="flex flex-col gap-3">
+          {/* Server kamins (M5B) — shown first when logged in. */}
+          {(serverKamins ?? []).map((kamin) => (
+            <li key={`srv-${kamin.id}`}>
+              <ServerKaminCard
+                kamin={kamin}
+                onDisarm={async () => {
+                  const ok = await disarmKaminServer(kamin.id);
+                  if (ok) setServerKamins((s) => (s ?? []).filter((k) => k.id !== kamin.id));
+                }}
+              />
+            </li>
+          ))}
           {quietKamins.map((kamin) => (
             <li key={kamin.id}>
               <KaminCard

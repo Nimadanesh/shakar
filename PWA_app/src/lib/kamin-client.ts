@@ -80,3 +80,55 @@ export function armErrorMessage(error: string | undefined): string | null {
       return "خطایی رخ داد.";
   }
 }
+
+export interface ServerKamin {
+  id: string;
+  name: string;
+  status: "active" | "sleeping";
+  cadence: string;
+  new_match_count: number;
+  last_checked_at: string | null;
+  armed_at: string;
+  definition: {
+    query: string;
+    include?: string[];
+    exclude?: string[];
+    city?: string;
+    category?: string;
+    priceMin?: number | null;
+    priceMax?: number | null;
+  };
+}
+
+/**
+ * List kamins from the server. Returns null on auth failure or network
+ * error (caller falls back to local).
+ */
+export async function listKaminsServer(): Promise<ServerKamin[] | null> {
+  try {
+    const res = await fetch("/api/kamins", { method: "GET" });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      ok: boolean;
+      data?: { kamins: ServerKamin[] };
+    };
+    if (!data.ok || !data.data) return null;
+    return data.data.kamins;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Disarm (delete) a kamin on the server. Returns true on success.
+ */
+export async function disarmKaminServer(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/kamins/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
