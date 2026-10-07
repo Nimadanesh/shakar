@@ -70,7 +70,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [deepening, setDeepening] = useState(false);
   const [traceOpen, setTraceOpen] = useState(true);
   const [stopped, setStopped] = useState(false);
-  const [showSticky, setShowSticky] = useState(false);
   const [showTop, setShowTop] = useState(false);
   const esRef = useRef<EventSource | null>(null);
   const lineId = useRef(0);
@@ -85,7 +84,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
-      setShowSticky(y > 240);
       setShowTop(y > 600);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -235,16 +233,11 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
 
   return (
     <div className="mx-auto max-w-xl px-3 pb-6 pt-4">
-      {/* Sticky status bar — fixed below the app header on scroll so the
-          user never loses context. Header is 68px (pt-3=12 + h-14=56),
-          so this sits at top-[68px] without overlapping. */}
-      <div
-        aria-hidden={!showSticky}
-        className={`fixed inset-x-0 top-[68px] z-30 border-b border-zinc-200 bg-white/90 px-3 py-2 backdrop-blur transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
-          showSticky ? "translate-y-0" : "pointer-events-none -translate-y-full"
-        }`}
-      >
-        <p className="mx-auto w-full max-w-xl min-w-[160px] text-center text-[13px] text-zinc-600 dark:text-zinc-400">
+      {/* Sticky status bar — sticky (not fixed) so it participates in layout
+          and never desyncs during streaming reflows. Sits below the 68px
+          app header. Negative margin compensates parent px-3 for full width. */}
+      <div className="sticky top-[68px] z-30 -mx-3 border-b border-zinc-200 bg-white/90 px-3 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
+        <p className="mx-auto w-full max-w-xl text-center text-[13px] text-zinc-600 dark:text-zinc-400">
           {!done
             ? `در حال بررسی ${stats ? `${fa(results.length)}/${fa(stats.adsSeen)}` : "..."}`
             : `${fa(results.length)} نتیجه`}
