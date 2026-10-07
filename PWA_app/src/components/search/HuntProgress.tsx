@@ -244,7 +244,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           showSticky ? "translate-y-0" : "pointer-events-none -translate-y-full"
         }`}
       >
-        <p className="mx-auto max-w-xl text-center text-[13px] tabular-nums text-zinc-600 dark:text-zinc-400">
+        <p className="mx-auto w-full max-w-xl min-w-[160px] text-center text-[13px] text-zinc-600 dark:text-zinc-400">
           {!done
             ? `در حال بررسی ${stats ? `${fa(results.length)}/${fa(stats.adsSeen)}` : "..."}`
             : `${fa(results.length)} نتیجه`}
@@ -276,13 +276,13 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
 
         {/* Collapsible trace — starts open, staggers in, auto-collapses
             before results stream (visual 6, Thinking pattern).
-            Fixed layout: tabular-nums + full width so numbers don't shift. */}
+            Fixed layout: full width so numbers don't shift. */}
         <div className="mt-2">
           <button
             type="button"
             aria-expanded={traceOpen}
             onClick={() => setTraceOpen((o) => !o)}
-            className="flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-[12px] tabular-nums text-zinc-500 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            className="flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-[12px] text-zinc-500 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
           >
             <svg
               width="12"
@@ -372,19 +372,19 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
 
             {/* Funnel breakdown — where did the ads go? */}
             <div className="mt-3 space-y-1 text-[13px] text-zinc-600 dark:text-zinc-400">
-              <p className="tabular-nums">{fa(stats.adsSeen)} آگهی رو بررسی کردم.</p>
+              <p>{fa(stats.adsSeen)} آگهی رو بررسی کردم.</p>
               {stats.titleRejected > 0 && (
-                <p className="tabular-nums">
+                <p>
                   {fa(stats.titleRejected)} تا سر تیتر رد شدن.
                 </p>
               )}
               {stats.candidates > 0 && (
-                <p className="tabular-nums">
+                <p>
                   {fa(stats.candidates)} تا کاندید بودن ولی توضیحاتشون به قیدها نخورد.
                 </p>
               )}
               {stats.nearMiss > 0 && (
-                <p className="tabular-nums">
+                <p>
                   {fa(stats.nearMiss)} تا خیلی نزدیک بودن — یه قیدشون کم داشت.
                 </p>
               )}
@@ -442,7 +442,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
       {results.length > 0 && (
         <div
           aria-hidden
-          className="fixed bottom-24 left-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-[11px] font-medium tabular-nums text-zinc-600 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90 dark:text-zinc-400"
+          className="fixed bottom-24 left-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-[11px] font-medium text-zinc-600 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90 dark:text-zinc-400"
         >
           {fa(results.length)}
           {stats ? `/${fa(stats.adsSeen)}` : ""}
