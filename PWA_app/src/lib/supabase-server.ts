@@ -42,8 +42,14 @@ export function supabaseServer(): SupabaseServer | null {
   ): Promise<T> {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);
+    // P0 fix 2026-10-07: callers are inconsistent — some pass "/table",
+    // most pass "table". Without normalization the latter built
+    // ".../rest/v1kamins" → empty 404, silently breaking quota, kamins,
+    // notifications, devices, hunt_runs and M6 tables in production
+    // (masked by graceful fallbacks — the app "worked but acted dumb").
+    const p = path.startsWith("/") ? path : `/${path}`;
     try {
-      const res = await fetch(`${base}${path}`, {
+      const res = await fetch(`${base}${p}`, {
         method,
         headers: {
           apikey: key as string,
