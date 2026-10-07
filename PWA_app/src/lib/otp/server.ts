@@ -4,7 +4,7 @@
  * client components (it touches secrets).
  */
 import { getOtpConfig, type OtpConfig } from "./config";
-import { buildProvider, type OtpProvider } from "./provider";
+import { buildProvider, MockProvider, type OtpProvider } from "./provider";
 import { MemoryOtpStore, type OtpStore, SupabaseOtpStore } from "./store";
 import { supabaseServer, type SupabaseServer } from "@/lib/supabase-server";
 
@@ -73,11 +73,20 @@ export interface OtpBackend {
 
 export function getOtpBackend(): OtpBackend {
   const config = getOtpConfig();
-  const provider = buildProvider(
-    config.providerName,
-    config.kavenegarApiKey,
-    config.kavenegarTemplate
-  );
+  // buildProvider throws when Kavenegar is misconfigured. Don't let that
+  // crash the route before the config.ready check — return a provider that
+  // fails gracefully on send instead, so the API returns a proper JSON
+  // error (NOT_CONFIGURED) instead of a 500 HTML page.
+  let provider: OtpProvider;
+  try {
+    provider = buildProvider(
+      config.providerName,
+      config.kavenegarApiKey,
+      config.kavenegarTemplate
+    );
+  } catch {
+    provider = new MockProvider();
+  }
   const sb = supabaseServer();
   let store: OtpStore;
   if (sb) {
