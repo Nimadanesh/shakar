@@ -236,11 +236,11 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   return (
     <div className="mx-auto max-w-xl px-3 pb-6 pt-4">
       {/* Sticky status bar — fixed below the app header on scroll so the
-          user never loses context. The app header is sticky top-0 (~56px),
-          so this sits right under it without overlapping. */}
+          user never loses context. Header is 68px (pt-3=12 + h-14=56),
+          so this sits at top-[68px] without overlapping. */}
       <div
         aria-hidden={!showSticky}
-        className={`fixed inset-x-0 top-14 z-30 border-b border-zinc-200 bg-white/90 px-3 py-2 backdrop-blur transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
+        className={`fixed inset-x-0 top-[68px] z-30 border-b border-zinc-200 bg-white/90 px-3 py-2 backdrop-blur transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
           showSticky ? "translate-y-0" : "pointer-events-none -translate-y-full"
         }`}
       >
@@ -443,11 +443,12 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         </section>
       )}
 
-      {/* Bottom-left viewed counter (UX 2) — so the user never feels lost. */}
+      {/* Bottom-left viewed counter (UX 2) — so the user never feels lost.
+          Tab bar is ~80px tall; place at 96px to clear it. */}
       {results.length > 0 && (
         <div
           aria-hidden
-          className="fixed bottom-20 left-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-[11px] font-medium tabular-nums text-zinc-600 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90 dark:text-zinc-400"
+          className="fixed bottom-24 left-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-[11px] font-medium tabular-nums text-zinc-600 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90 dark:text-zinc-400"
         >
           {fa(results.length)}
           {stats ? `/${fa(stats.adsSeen)}` : ""}
@@ -459,7 +460,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         type="button"
         aria-label="بازگشت به بالا"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className={`fixed bottom-32 left-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 shadow-sm backdrop-blur transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
+        className={`fixed bottom-36 left-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 shadow-sm backdrop-blur transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
           showTop ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
         }`}
       >
