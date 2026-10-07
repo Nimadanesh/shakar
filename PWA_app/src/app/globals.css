@@ -256,6 +256,9 @@
   }
   html {
     @apply font-sans;
+    /* Reserve the scrollbar gutter so streamed results cannot change the
+       content width and make the hunt surface appear to zoom/re-center. */
+    scrollbar-gutter: stable;
   }
 }
 
