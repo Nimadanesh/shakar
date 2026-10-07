@@ -258,27 +258,70 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           <p className="mt-1 text-[13px] text-zinc-500">«{query}»</p>
         )}
 
-        {/* Collapsible trace — starts open, staggers in, auto-collapses
-            before results stream (visual 6, Thinking pattern).
-            Fixed layout: full width so numbers don't shift. */}
+        {/* Agent-style live details:
+            - while hunting, only the latest trace line is shown;
+            - each new line gently replaces the previous one;
+            - the full trace list is hidden unless the user explicitly opens Details;
+            - the list is an overlay, so opening it never changes page layout. */}
         <div className="relative mt-2">
-          <button type="button" aria-expanded={traceOpen} onClick={() => setTraceOpen((o) => !o)}
-            className="relative z-20 flex w-full min-h-7 items-center gap-1.5 rounded-md py-1 pl-1 pr-0 text-[12px] text-zinc-500 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-transform duration-300" style={{ transform: traceOpen ? "rotate(180deg)" : "rotate(0)" }}>
+          <button
+            type="button"
+            aria-expanded={traceOpen}
+            onClick={() => setTraceOpen((o) => !o)}
+            className="relative z-20 flex w-full min-h-7 items-center gap-1.5 rounded-md py-1 pl-1 pr-0 text-[12px] text-zinc-500 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="shrink-0 transition-transform duration-300"
+              style={{ transform: traceOpen ? "rotate(180deg)" : "rotate(0)" }}
+            >
               <path d="M6 9l6 6 6-6" />
             </svg>
-            <span className="min-w-0 flex-1 truncate text-start">{lastTrace ?? "جزئیات"}</span>
+            <span className="min-w-0 flex-1 truncate text-start">جزئیات</span>
           </button>
-          {/* Overlay: trace changes and open/close never participate in page layout. */}
-          <div aria-hidden={!traceOpen}
-            className={"absolute inset-x-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-zinc-200 bg-white/95 shadow-lg backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 " + (traceOpen ? "visible max-h-52 opacity-100" : "pointer-events-none invisible max-h-0 opacity-0")}
-            style={{ transition: "max-height 220ms cubic-bezier(0.23,1,0.32,1), opacity 160ms ease" }}>
+
+          <div
+            aria-live="polite"
+            className="mt-1 min-h-7 overflow-hidden"
+          >
+            <p
+              key={lastTrace ?? "empty"}
+              className="min-h-7 truncate text-[12px] text-zinc-500 animate-[fade-up_240ms_cubic-bezier(0.23,1,0.32,1)] dark:text-zinc-400"
+            >
+              {lastTrace ?? "در حال آماده‌سازی..."}
+            </p>
+          </div>
+
+          <div
+            aria-hidden={!traceOpen}
+            className={
+              "absolute inset-x-0 top-[calc(100%+1.75rem)] z-50 overflow-hidden rounded-xl border border-zinc-200 bg-white/95 shadow-lg backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 " +
+              (traceOpen
+                ? "visible max-h-52 opacity-100"
+                : "pointer-events-none invisible max-h-0 opacity-0")
+            }
+            style={{
+              transition:
+                "max-height 220ms cubic-bezier(0.23,1,0.32,1), opacity 160ms ease",
+            }}
+          >
             <div className="max-h-52 overflow-y-auto overscroll-contain px-3 py-2">
               <ul className="space-y-1">
-                {trace.map((l, i) => (
-                  <li key={l.id} className="flex items-start gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"
-                    style={{ animation: "fade-up 300ms cubic-bezier(0.23,1,0.32,1) both", animationDelay: `${i * 90}ms` }}>
-                    <span aria-hidden className="mt-0.5 shrink-0">{l.done ? "✓" : "…"}</span>
+                {trace.map((l) => (
+                  <li
+                    key={l.id}
+                    className="flex items-start gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"
+                  >
+                    <span aria-hidden className="mt-0.5 shrink-0">
+                      {l.done ? "✓" : "…"}
+                    </span>
                     <span className="min-w-0 flex-1 break-words">{l.text}</span>
                   </li>
                 ))}
@@ -317,7 +360,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
               : "pointer-events-none -translate-y-2 opacity-0"
           }`}
         >
-          <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-3">
+          <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-3 pr-3">
             <div className="min-w-0">
               <p className="truncate text-[13px] font-medium text-zinc-800 dark:text-zinc-200">
                 {results.length > 0
