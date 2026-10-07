@@ -315,6 +315,17 @@
   }
 }
 
+@keyframes dot-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
 @layer utilities {
   /* Soft Dark entrance: 240ms rise; stagger via inline animation-delay (60ms steps). */
   .animate-rise {
