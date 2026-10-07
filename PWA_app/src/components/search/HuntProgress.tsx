@@ -65,7 +65,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [current, setCurrent] = useState<string>("شکار شروع شد — دارم برات می‌گردم.");
   const [results, setResults] = useState<ScoredAd[]>([]);
   const [stats, setStats] = useState<HuntStats | null>(null);
-  const [detailProgress, setDetailProgress] = useState({ checked: 0, total: 0 });
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deepening, setDeepening] = useState(false);
@@ -183,7 +182,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
             return true;
           });
           if (fresh.length > 0) setResults((r) => [...r, ...fresh]);
-          setDetailProgress({ checked: e.checked, total: e.total });
           pushTrace(`${fa(e.checked)} از ${fa(e.total)} بررسی شد.`, true);
           setCurrent(
             fresh.length > 0
@@ -197,7 +195,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         }
         case "done":
           setStats(e.stats);
-          setDetailProgress({ checked: e.stats.adsSeen, total: e.stats.adsSeen });
           // Merge any stragglers, keep ranked order from the server.
           setResults(e.results);
           setDone(true);
