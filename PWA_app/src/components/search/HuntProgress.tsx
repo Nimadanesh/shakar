@@ -72,6 +72,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [traceOpen, setTraceOpen] = useState(true);
   const [stopped, setStopped] = useState(false);
   const [showTop, setShowTop] = useState(false);
+  const [showScrollInfo, setShowScrollInfo] = useState(false);
   const esRef = useRef<EventSource | null>(null);
   const lineId = useRef(0);
   const seenResults = useRef(new Set<string>());
@@ -85,6 +86,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
+      setShowScrollInfo(y > 120);
       setShowTop(y > 600);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -235,18 +237,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const lastTrace = trace.length > 0 ? trace[trace.length - 1].text : null;
 
   return (
-    <div className="mx-auto w-full max-w-xl min-w-0 overflow-x-clip px-3 pb-6 pt-4">
-      {/* Sticky status bar — sticky (not fixed) so it participates in layout
-          and never desyncs during streaming reflows. Sits below the 68px
-          app header. Negative margin compensates parent px-3 for full width. */}
-      <div className="sticky top-[68px] z-30 -mx-3 border-b border-zinc-200 bg-white/90 px-3 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
-        <p className="mx-auto w-full max-w-xl text-center text-[13px] text-zinc-600 dark:text-zinc-400">
-          {!done
-            ? `در حال بررسی ${stats ? `${fa(results.length)}/${fa(stats.adsSeen)}` : "..."}`
-            : `${fa(results.length)} نتیجه`}
-        </p>
-      </div>
-
+    <div className="mx-auto w-full max-w-xl min-w-0 overflow-x-clip px-3 pb-6 pt-0">
       {/* Thinking trace — no background, tighter spacing (visual 1+2). */}
       <section aria-live="polite" className="px-1">
         <div className="flex items-center gap-2">
@@ -275,11 +266,11 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
             Fixed layout: full width so numbers don't shift. */}
         <div className="relative mt-2">
           <button type="button" aria-expanded={traceOpen} onClick={() => setTraceOpen((o) => !o)}
-            className="relative z-20 flex w-full min-h-7 items-center gap-1.5 rounded-md px-1 py-1 text-[12px] text-zinc-500 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900">
+            className="relative z-20 flex w-full min-h-7 items-center gap-1.5 rounded-md py-1 pl-1 pr-0 text-[12px] text-zinc-500 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-transform duration-300" style={{ transform: traceOpen ? "rotate(180deg)" : "rotate(0)" }}>
               <path d="M6 9l6 6 6-6" />
             </svg>
-            <span className="min-w-0 flex-1 truncate text-start">{traceOpen ? "بستن جزئیات" : lastTrace ?? "جزئیات"}</span>
+            <span className="min-w-0 flex-1 truncate text-start">{lastTrace ?? "جزئیات"}</span>
           </button>
           {/* Overlay: trace changes and open/close never participate in page layout. */}
           <div aria-hidden={!traceOpen}
@@ -316,23 +307,31 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           )}
         </div>
 
-        {/* Live hunt meter — fixed geometry so progress feels alive without moving the page. */}
-        {!stopped && (detailProgress.total > 0 || !done) && (
-          <div className="mt-3 min-h-[2.75rem] rounded-lg border border-zinc-200/80 bg-zinc-50/70 px-3 py-2 dark:border-zinc-800/80 dark:bg-zinc-900/40">
-            <div className="flex items-center justify-between gap-3 text-[11px] text-zinc-500">
-              <span>{done ? "بررسی کامل شد" : "در حال بررسی دقیق"}</span>
-              <span className="tabular-nums">
-                {detailProgress.total > 0
-                  ? fa(Math.min(detailProgress.checked, detailProgress.total)) + " / " + fa(detailProgress.total)
-                  : "در حال آماده‌سازی"}
-              </span>
-            </div>
-            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-              <div className="h-full rounded-full bg-zinc-900 transition-[width] duration-500 ease-out dark:bg-zinc-100" style={{ width: detailProgress.total > 0 ? Math.min(100, (detailProgress.checked / detailProgress.total) * 100) + "%" : "8%" }} />
+      </section>
+
+      {/* Completion summary: appears only after the user starts scrolling.
+          Fixed under the app header so it never changes document flow. */}
+      {done && stats !== null && (
+        <div
+          aria-live="polite"
+          className={`fixed left-0 right-0 top-[68px] z-20 border-b border-zinc-200/90 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-md transition-all duration-200 dark:border-zinc-800/90 dark:bg-zinc-950/95 ${
+            showScrollInfo
+              ? "translate-y-0 opacity-100"
+              : "pointer-events-none -translate-y-2 opacity-0"
+          }`}
+        >
+          <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-medium text-zinc-800 dark:text-zinc-200">
+                {results.length > 0
+                  ? `${fa(results.length)} نتیجه دقیق از ${fa(stats.adsSeen)} آگهی`
+                  : `از ${fa(stats.adsSeen)} آگهی، مورد دقیقی پیدا نشد`}
+              </p>
+              <p className="truncate text-[11px] text-zinc-500">«{query}»</p>
             </div>
           </div>
-        )}
-      </section>
+        </div>
+      )}
 
       {/* Streaming confirmed results */}
       {results.length > 0 && (
