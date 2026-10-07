@@ -68,7 +68,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deepening, setDeepening] = useState(false);
-  const [traceOpen, setTraceOpen] = useState(true);
+  const [traceOpen, setTraceOpen] = useState(false);
   const [stopped, setStopped] = useState(false);
   const [showTop, setShowTop] = useState(false);
   const [showScrollInfo, setShowScrollInfo] = useState(false);
@@ -91,15 +91,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // Auto-collapse the trace right before the first results stream in —
-  // the user can reopen it anytime.
-  useEffect(() => {
-    if (results.length > 0 && traceOpen) {
-      const t = setTimeout(() => setTraceOpen(false), 800);
-      return () => clearTimeout(t);
-    }
-  }, [results.length]);
 
   async function goDeep() {
     if (deepening) return;
