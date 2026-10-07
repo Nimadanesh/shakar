@@ -266,13 +266,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         {/* AI shimmer on the hunt title (visual 4). */}
         {!done && !stopped ? (
           <p
-            className="mt-1 bg-clip-text text-[13px] text-transparent"
-            style={{
-              backgroundImage:
-                "linear-gradient(90deg, var(--color-zinc-500) 35%, var(--color-zinc-900) 50%, var(--color-zinc-500) 65%)",
-              backgroundSize: "200% 100%",
-              animation: "shimmer-text 1.8s linear infinite",
-            }}
+            className="mt-1 animate-pulse text-[13px] text-zinc-500"
           >
             «{query}»
           </p>
@@ -335,10 +329,13 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           </div>
         </div>
 
-        {/* Current status — single line + stop button (visual 7). */}
-        {!done && !stopped && (
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="min-w-0 flex-1 truncate text-sm">{current}</p>
+        {/* Current status — STABLE GEOMETRY.
+            The container has a fixed min-height so changing text never
+            resizes the layout. Same structure in all states; only the
+            stop button visibility changes. */}
+        <div className="mt-2 flex min-h-[2rem] items-center justify-between gap-2">
+          <p className="min-w-0 flex-1 truncate text-sm">{current}</p>
+          {!done && !stopped && (
             <button
               type="button"
               onClick={handleStop}
@@ -346,11 +343,8 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
             >
               توقف
             </button>
-          </div>
-        )}
-        {(done || stopped) && stats !== null && (
-          <p className="mt-2 text-sm">{current}</p>
-        )}
+          )}
+        </div>
       </section>
 
       {/* Streaming confirmed results */}
