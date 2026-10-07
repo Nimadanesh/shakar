@@ -64,9 +64,27 @@ export function sessionCookieHeader(token: string, opts: SessionCookieOptions): 
   return parts.join("; ");
 }
 
-/** Set-Cookie value that clears the session cookie. */
-export function clearSessionCookieHeader(): string {
-  return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+/**
+ * Set-Cookie value that clears the session cookie.
+ *
+ * MUST mirror the Secure attribute of the original Set-Cookie: browsers
+ * will not let a non-Secure Set-Cookie overwrite or delete a cookie that
+ * was set with Secure (the deletion is stored as a separate cookie entry
+ * and the original survives). In production the session cookie is Secure,
+ * so logout must clear with Secure too — otherwise the user is "logged
+ * out" in the UI but the server still sees the valid cookie on the next
+ * request and they are instantly logged back in.
+ */
+export function clearSessionCookieHeader(secure: boolean): string {
+  const parts = [
+    `${SESSION_COOKIE}=`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Max-Age=0",
+  ];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
 }
 
 export function sessionTtlSeconds(): number {

@@ -47,7 +47,15 @@ describe("session cookie headers", () => {
     expect(dev).not.toContain("Secure");
   });
 
-  it("clears the cookie", () => {
-    expect(clearSessionCookieHeader()).toContain("Max-Age=0");
+  it("clears the cookie and mirrors the Secure attribute of the login cookie", () => {
+    // Production login sets Secure — the clear must too, or browsers keep
+    // the original Secure cookie and logout silently fails.
+    const prodClear = clearSessionCookieHeader(true);
+    expect(prodClear).toContain("Max-Age=0");
+    expect(prodClear).toContain("shekaar_session=");
+    expect(prodClear).toContain("Secure");
+    const devClear = clearSessionCookieHeader(false);
+    expect(devClear).toContain("Max-Age=0");
+    expect(devClear).not.toContain("Secure");
   });
 });
