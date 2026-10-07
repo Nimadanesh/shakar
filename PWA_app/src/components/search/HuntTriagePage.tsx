@@ -19,6 +19,7 @@ import {
   type KaminRecord,
 } from "@/lib/kamin-store";
 import { armKaminServer, armErrorMessage } from "@/lib/kamin-client";
+import { ensurePushSubscription } from "@/lib/push-client";
 import { interpretQuery } from "@/lib/interpret";
 import { normalizePersian } from "@/lib/normalizePersian";
 import {
@@ -247,6 +248,13 @@ export function HuntTriagePage() {
     if (server.ok) {
       // Server armed (or deduped existing). Mirror locally for offline.
       armKamin(computed.ctx, record.query, seenIds);
+      // Explicit user action → ask for push permission so kamin alerts work.
+      // Fire-and-forget: push is a bonus, not a blocker.
+      ensurePushSubscription().then((state) => {
+        if (state !== "subscribed" && state !== "denied") {
+          console.info("[push] subscription state:", state);
+        }
+      });
     } else {
       const msg = armErrorMessage(server.error) ?? server.message;
       if (msg) {
