@@ -232,7 +232,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const lastTrace = trace.length > 0 ? trace[trace.length - 1].text : null;
 
   return (
-    <div className="mx-auto max-w-xl px-3 pb-6 pt-4">
+    <div className="mx-auto w-full max-w-xl min-w-0 overflow-x-clip px-3 pb-6 pt-4">
       {/* Sticky status bar — sticky (not fixed) so it participates in layout
           and never desyncs during streaming reflows. Sits below the 68px
           app header. Negative margin compensates parent px-3 for full width. */}
@@ -270,55 +270,31 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         {/* Collapsible trace — starts open, staggers in, auto-collapses
             before results stream (visual 6, Thinking pattern).
             Fixed layout: full width so numbers don't shift. */}
-        <div className="mt-2">
-          <button
-            type="button"
-            aria-expanded={traceOpen}
-            onClick={() => setTraceOpen((o) => !o)}
-            className="flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-[12px] text-zinc-500 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="transition-transform duration-300"
-              style={{ transform: traceOpen ? "rotate(180deg)" : "rotate(0)" }}
-            >
+        <div className="relative mt-2">
+          <button type="button" aria-expanded={traceOpen} onClick={() => setTraceOpen((o) => !o)}
+            className="relative z-20 flex w-full min-h-7 items-center gap-1.5 rounded-md px-1 py-1 text-[12px] text-zinc-500 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 transition-transform duration-300" style={{ transform: traceOpen ? "rotate(180deg)" : "rotate(0)" }}>
               <path d="M6 9l6 6 6-6" />
             </svg>
-            {traceOpen ? "بستن جزئیات" : lastTrace ?? "جزئیات"}
+            <span className="min-w-0 flex-1 truncate text-start">{traceOpen ? "بستن جزئیات" : lastTrace ?? "جزئیات"}</span>
           </button>
-          <div
-            className="grid transition-[grid-template-rows,opacity] duration-300"
-            style={{
-              gridTemplateRows: traceOpen ? "1fr" : "0fr",
-              opacity: traceOpen ? 1 : 0,
-            }}
-          >
-            <div className="overflow-hidden">
-              <ul className="space-y-1 py-1">
+          {/* Overlay: trace changes and open/close never participate in page layout. */}
+          <div aria-hidden={!traceOpen}
+            className={"absolute inset-x-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-zinc-200 bg-white/95 shadow-lg backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 " + (traceOpen ? "visible max-h-52 opacity-100" : "pointer-events-none invisible max-h-0 opacity-0")}
+            style={{ transition: "max-height 220ms cubic-bezier(0.23,1,0.32,1), opacity 160ms ease" }}>
+            <div className="max-h-52 overflow-y-auto overscroll-contain px-3 py-2">
+              <ul className="space-y-1">
                 {trace.map((l, i) => (
-                  <li
-                    key={l.id}
-                    className="flex items-start gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"
-                    style={{
-                      animation: "fade-up 300ms cubic-bezier(0.23,1,0.32,1) both",
-                      animationDelay: `${i * 90}ms`,
-                    }}
-                  >
-                    <span aria-hidden className="mt-0.5 shrink-0">
-                      {l.done ? "✓" : "…"}
-                    </span>
+                  <li key={l.id} className="flex items-start gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"
+                    style={{ animation: "fade-up 300ms cubic-bezier(0.23,1,0.32,1) both", animationDelay: `${i * 90}ms` }}>
+                    <span aria-hidden className="mt-0.5 shrink-0">{l.done ? "✓" : "…"}</span>
                     <span className="min-w-0 flex-1 break-words">{l.text}</span>
                   </li>
                 ))}
               </ul>
             </div>
+          </div>
+        </div>
           </div>
         </div>
 
