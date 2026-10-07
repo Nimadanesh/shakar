@@ -18,6 +18,7 @@ import {
   findKamin,
   type KaminRecord,
 } from "@/lib/kamin-store";
+import { armKaminServer, armErrorMessage } from "@/lib/kamin-client";
 import { interpretQuery } from "@/lib/interpret";
 import { normalizePersian } from "@/lib/normalizePersian";
 import {
@@ -238,13 +239,23 @@ export function HuntTriagePage() {
     );
   })();
 
-  function handleArmKamin() {
+  async function handleArmKamin() {
     if (!computed || computed === "error") return;
-    armKamin(
-      computed.ctx,
-      record.query,
-      computed.results.map((r) => r.ad.id)
-    );
+    const seenIds = computed.results.map((r) => r.ad.id);
+    // Try the server first (M5B). Fall back to local on network/dev issues.
+    const server = await armKaminServer(computed.ctx, record.query, seenIds);
+    if (server.ok) {
+      // Server armed (or deduped existing). Mirror locally for offline.
+      armKamin(computed.ctx, record.query, seenIds);
+    } else {
+      const msg = armErrorMessage(server.error) ?? server.message;
+      if (msg) {
+        // Honest user-facing message; still save locally so nothing is lost.
+        // TODO(M5B): surface msg in the dialog instead of console.
+        console.info("[kamin] server arm failed:", server.error, msg);
+      }
+      armKamin(computed.ctx, record.query, seenIds);
+    }
     setKaminTick((n) => n + 1);
     setRadarOpen(false);
   }
