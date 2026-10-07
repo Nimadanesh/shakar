@@ -234,12 +234,14 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const lastTrace = trace.length > 0 ? trace[trace.length - 1].text : null;
 
   return (
-    <div className="mx-auto max-w-xl px-3 pt-3">
-      {/* Sticky status bar — appears on scroll so the user never loses context. */}
+    <div className="mx-auto max-w-xl px-3 pb-6 pt-4">
+      {/* Sticky status bar — fixed below the app header on scroll so the
+          user never loses context. The app header is sticky top-0 (~56px),
+          so this sits right under it without overlapping. */}
       <div
         aria-hidden={!showSticky}
-        className={`fixed inset-x-0 top-0 z-40 border-b border-zinc-200 bg-white/90 px-3 py-2 backdrop-blur transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
-          showSticky ? "translate-y-0" : "-translate-y-full"
+        className={`fixed inset-x-0 top-14 z-30 border-b border-zinc-200 bg-white/90 px-3 py-2 backdrop-blur transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950/90 ${
+          showSticky ? "translate-y-0" : "pointer-events-none -translate-y-full"
         }`}
       >
         <p className="mx-auto max-w-xl text-center text-[13px] text-zinc-600 dark:text-zinc-400">
