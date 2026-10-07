@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 const WAVE = [90, 180, 270, 0, 90, 180, 90, 180, 270];
 const CYCLE_MS = 650;
 
-function LoaderGrid({ tone }: { tone: "default" | "on-primary" }) {
+export function LoaderGrid({ tone }: { tone: "default" | "on-primary" }) {
   return (
     <span
       aria-hidden="true"
