@@ -2,6 +2,7 @@
 
 import type { ContextBase } from "@/lib/search-context";
 import { getDeviceId } from "@/lib/device";
+import { setActiveHunt } from "@/lib/active-hunt";
 
 export interface FireHuntInput {
   query: string;
@@ -66,6 +67,9 @@ export async function fireRealHunt(input: FireHuntInput): Promise<FireHuntResult
   }
   const runId = json?.ok === true ? json.data?.runId : undefined;
   if (typeof runId === "string" && runId !== "") {
+    // Mark active so navigating away doesn't lose the hunt — the chip
+    // lets the user return to the live run (re-attach).
+    setActiveHunt(runId, trimmed);
     return { ok: true, runId };
   }
   return { ok: false, quotaError: null };

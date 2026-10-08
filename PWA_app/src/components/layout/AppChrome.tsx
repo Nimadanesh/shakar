@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { BottomTabBar } from "@/components/layout/BottomTabBar";
+import { ActiveHuntChip } from "@/components/search/ActiveHuntChip";
 
 /** Routes that own the full viewport (no header, no tab bar). */
 const CHROMELESS_PREFIXES = ["/onboarding", "/auth"];
@@ -31,6 +32,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
         {children}
       </div>
       <BottomTabBar />
+      <ActiveHuntChip />
     </>
   );
 }

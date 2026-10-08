@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
 import { fa, pickVariant } from "@/lib/hunt-copy";
 import { formatPriceToman } from "@/lib/prices";
+import { clearActiveHunt } from "@/lib/active-hunt";
 
 /**
  * HuntProgress — the "AI is hunting for you" experience (M4a).
@@ -72,6 +73,15 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [stopped, setStopped] = useState(false);
   const [showTop, setShowTop] = useState(false);
   const [showScrollInfo, setShowScrollInfo] = useState(false);
+  /**
+   * Load phase — the results-VIEW contract:
+   *  - "loading": checking the run's status;
+   *  - "live": run is active → open the SSE stream;
+   *  - "ready": run already done → results render directly, no stream,
+   *    no replayed "searching" theater, no re-fire;
+   *  - "expired": run not found → honest expired view.
+   */
+  const [loadState, setLoadState] = useState<"loading" | "live" | "ready" | "expired">("loading");
   const esRef = useRef<EventSource | null>(null);
   const lineId = useRef(0);
   const seenResults = useRef(new Set<string>());
@@ -119,6 +129,54 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   };
 
   useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/hunts/${encodeURIComponent(runId)}`)
+      .then(async (res) => {
+        if (cancelled) return;
+        if (res.status === 404) {
+          setLoadState("expired");
+          clearActiveHunt(runId);
+          return;
+        }
+        const json = (await res.json().catch(() => null)) as {
+          ok?: boolean;
+          data?: {
+            status?: string;
+            results?: ScoredAd[];
+            stats?: HuntStats;
+          };
+        } | null;
+        const data = json?.ok === true ? json.data : undefined;
+        if (data && (data.status === "done" || data.status === "failed")) {
+          const doneResults = Array.isArray(data.results) ? data.results : [];
+          setResults(doneResults);
+          if (data.stats) setStats(data.stats);
+          setDone(true);
+          pushTrace("تموم شد.", true);
+          setCurrent(
+            doneResults.length > 0
+              ? `${fa(doneResults.length)} شکار دقیق.`
+              : "چیزی که دقیقاً بخوره به مشخصاتت پیدا نکردم."
+          );
+          setLoadState("ready");
+          clearActiveHunt(runId);
+        } else {
+          setLoadState("live");
+        }
+      })
+      .catch(() => {
+        // Offline or fetch failed: fall through to the stream, which will
+        // surface its own honest error.
+        if (!cancelled) setLoadState("live");
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId]);
+
+  useEffect(() => {
+    if (loadState !== "live") return;
     const es = new EventSource(`/api/hunts/${encodeURIComponent(runId)}/stream`);
     esRef.current = es;
     const v = (stage: string, variants: string[]) => pickVariant(runId, stage, variants);
@@ -196,6 +254,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
               : "چیزی که دقیقاً بخوره به مشخصاتت پیدا نکردم."
           );
           es.close();
+          clearActiveHunt(runId);
           break;
         case "error":
           setError(
@@ -204,6 +263,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
               : "مشکلی پیش اومد — دوباره تلاش کن."
           );
           es.close();
+          clearActiveHunt(runId);
           break;
       }
     };
@@ -212,7 +272,42 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
       es.close();
     };
     return () => es.close();
-  }, [runId]);
+  }, [runId, loadState]);
+
+  if (loadState === "loading") {
+    return (
+      <div className="mx-auto w-full max-w-xl min-w-0 px-3 pb-6 pt-0" aria-busy="true" aria-label="در حال بارگذاری شکار">
+        <div aria-hidden="true" className="h-14 animate-pulse rounded-lg bg-secondary" />
+        <div aria-hidden="true" className="mt-4 space-y-3">
+          <div className="h-20 animate-pulse rounded-lg bg-secondary" />
+          <div className="h-20 animate-pulse rounded-lg bg-secondary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadState === "expired") {
+    return (
+      <div className="mx-auto w-full max-w-xl px-3 py-16 text-center">
+        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          این شکار منقضی شده یا پیدا نشد.
+        </p>
+        {query !== "" && (
+          <p className="mt-1 text-[13px] text-zinc-500">«{query}»</p>
+        )}
+        <p className="mx-auto mt-2 max-w-xs text-[13px] leading-6 text-zinc-500">
+          نتیجه‌های شکارها برای همیشه نگه داشته نمی‌شن — ولی تعریف شکارت رو داری.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push(query !== "" ? `/?q=${encodeURIComponent(query)}` : "/")}
+          className="mt-4 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          شکار دوباره
+        </button>
+      </div>
+    );
+  }
 
   if (error !== null) {
     return (
