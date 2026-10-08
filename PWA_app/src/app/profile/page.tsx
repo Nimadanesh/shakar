@@ -11,6 +11,7 @@ const PlanSheet = dynamic(
   { ssr: false }
 );
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
+import { HomeCityRow } from "@/components/settings/HomeCityRow";
 import { profileInitials, useProfile } from "@/hooks/useProfile";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { readFavoriteIds } from "@/hooks/useFavorites";
@@ -134,6 +135,7 @@ function IdentitySection() {
           {name.trim() !== "" ? "ویرایش نام" : "ثبت نام"}
         </button>
       )}
+      <HomeCityRow />
     </SectionCard>
   );
 }

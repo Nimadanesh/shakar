@@ -12,6 +12,7 @@ import { formatPriceToman } from "@/lib/prices";
 import { clearActiveHunt } from "@/lib/active-hunt";
 import { warmUsage } from "@/lib/usage";
 import { setTaskReturn } from "@/lib/task-return";
+import { HomeCityUpdateGate } from "@/components/search/HomeCityUpdateNudge";
 import { requireAuth } from "@/lib/auth";
 import { armKaminServer, disarmKaminServer } from "@/lib/kamin-client";
 import { ensurePushSubscription } from "@/lib/push-client";
@@ -673,6 +674,9 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
             </button>
           )}
         </div>
+        {/* Home-city nudge (navid 2026-10-08): the hunt ran somewhere other
+            than the home default — offer to update it. Inline and calm. */}
+        {done && <HomeCityUpdateGate definition={definition} />}
         {/* AI shimmer on the hunt title (visual 4). Hidden while the title
             is unknown — never render empty «». */}
         {displayQuery !== "" && (

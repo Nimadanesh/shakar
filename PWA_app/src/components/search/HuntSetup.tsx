@@ -26,7 +26,7 @@ import {
 } from "@/lib/dimensions";
 import { recordHunt } from "@/lib/hunt-store";
 import { fireRealHunt } from "@/lib/hunt-fire";
-import { getRememberedCity, rememberCity } from "@/lib/city-memory";
+import { getHomeCity } from "@/lib/home-city";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
@@ -82,17 +82,31 @@ export function HuntSetup() {
   // Pause detection for the typo nudge: it must never interrupt the word
   // being typed — only finished words (or a paused last word) get nudged.
   const settledQuery = useDebouncedValue(query, TYPO_PAUSE_MS);
-  // Smart city default: the user's standing preference (remembered from an
-  // explicit sheet pick) seeds the form, so the lazy user taps zero times.
-  // A city named in the query text still overrides it — flagged as inferred.
+  // Home city: the user's standing location (navid 2026-10-08, two-location
+  // model). It seeds the form; a per-hunt change NEVER rewrites it — hunting
+  // in another city once must not re-target all future hunts.
   const [base, setBase] = useState<ContextBase>(() => ({
     ...EMPTY_CONTEXT_BASE,
-    city: getRememberedCity() ?? "all",
+    city: getHomeCity() ?? "all",
   }));
-  // Whether the city was hand-picked for THIS hunt. A remembered default
-  // the user never touched renders with a «پیش‌فرض» marker (navid
-  // 2026-10-08) — a sticky silent city poisoned two of his hunts.
+  // Whether the city was hand-picked for THIS hunt. An untouched home-city
+  // default renders with a «پیش‌فرض» marker (navid 2026-10-08) — the default
+  // is never silent.
   const [cityTouched, setCityTouched] = useState(false);
+  // The first-run home-city prompt may set the home city while this form
+  // is already mounted — re-seed the untouched default so the visible row
+  // and the fired hunt agree.
+  useEffect(() => {
+    function onHomeCityChanged(e: Event) {
+      const cityId = (e as CustomEvent<string>).detail;
+      if (typeof cityId !== "string" || cityId === "") return;
+      setCityTouched(false);
+      setBase((b) => ({ ...b, city: cityId }));
+    }
+    window.addEventListener("shekaar:home-city-changed", onHomeCityChanged);
+    return () =>
+      window.removeEventListener("shekaar:home-city-changed", onHomeCityChanged);
+  }, []);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
@@ -543,8 +557,9 @@ export function HuntSetup() {
         onSelect={(value) => {
           setBase((b) => ({ ...b, city: value }));
           setCityTouched(true);
-          // An explicit pick becomes the standing preference for next time…
-          rememberCity(value);
+          // NOTE (navid 2026-10-08): a per-hunt city change does NOT touch
+          // the home city. The home city is set in the profile (or the
+          // first-run prompt) — hunting elsewhere once must not move it.
           // …and settles the conflict: a hand-picked city dismisses the
           // text's inference for this query (a new query re-infers fresh).
           const inferredId = inferred.city?.id;

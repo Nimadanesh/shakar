@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { HuntSetup } from "@/components/search/HuntSetup";
+import { HomeCityPrompt } from "@/components/search/HomeCityPrompt";
 
 export default function Home() {
   return (
@@ -7,6 +8,7 @@ export default function Home() {
       <Suspense>
         <HuntSetup />
       </Suspense>
+      <HomeCityPrompt />
     </main>
   );
 }

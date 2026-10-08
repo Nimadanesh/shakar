@@ -18,6 +18,13 @@ interface OptionSheetProps {
    */
   searchable?: boolean;
   searchPlaceholder?: string;
+  /**
+   * A calm explanatory line under the title (used by the first-run home
+   * city prompt — why we're asking).
+   */
+  subtitle?: string;
+  /** An optional action row pinned under the list (e.g. «فعلاً نه»). */
+  footer?: React.ReactNode;
 }
 
 /** Generic single-choice list picker in a bottom sheet. */
@@ -30,6 +37,8 @@ export function OptionSheet({
   onClose,
   searchable = false,
   searchPlaceholder = "جستجوی شهر…",
+  subtitle,
+  footer,
 }: OptionSheetProps) {
   const [query, setQuery] = useState("");
 
@@ -48,6 +57,11 @@ export function OptionSheet({
 
   return (
     <BottomSheet open={open} onClose={handleClose} label={title} title={title}>
+      {subtitle !== undefined && (
+        <p className="px-1 pb-3 text-[13px] leading-6 text-muted-foreground">
+          {subtitle}
+        </p>
+      )}
       {searchable && (
         <div className="sticky top-0 z-10 -mx-1 bg-card px-1 pb-2 pt-1">
           <div className="relative">
@@ -97,6 +111,9 @@ export function OptionSheet({
           </p>
         )}
       </div>
+      {footer !== undefined && (
+        <div className="border-t border-border px-1 pb-1 pt-3">{footer}</div>
+      )}
     </BottomSheet>
   );
 }
