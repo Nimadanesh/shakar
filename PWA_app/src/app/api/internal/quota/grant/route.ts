@@ -30,11 +30,13 @@ function isUuid(v: unknown): v is string {
 }
 
 export async function POST(req: Request) {
-  const secret = process.env.CRON_SECRET;
+  // trim(): pasted secrets often smuggle a trailing space/newline from the
+  // Railway variable editor — an invisible mismatch that 403s forever.
+  const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
     return NextResponse.json({ ok: false, error: "cron-not-configured" }, { status: 503 });
   }
-  if (req.headers.get("x-cron-secret") !== secret) {
+  if (req.headers.get("x-cron-secret")?.trim() !== secret) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
