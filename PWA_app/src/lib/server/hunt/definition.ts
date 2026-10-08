@@ -93,10 +93,15 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     }
   }
 
-  // 2. City from text when the picker didn't choose one.
+  // 2. City: the query text is the freshest signal. An explicit city word
+  // beats a stored/remembered picker value (navid 2026-10-08 — the piano
+  // hunt's row SHOWED تهران but the hunt searched تبریز because the
+  // remembered picker silently won). A dismissed inference never reaches
+  // `applied`, and an explicit picker choice dismisses the inference
+  // client-side — so a surviving conflict always resolves to the text.
   const cityC = applied.find((c) => c.kind === "city");
-  const city =
-    (def.city === "all" || def.city === "") && cityC ? cityC.value : def.city;
+  const city = cityC ? cityC.value : def.city;
+  const citySource = cityC ? ("text" as const) : ("picker" as const);
 
   // 3. Category from text when the picker didn't choose one. Explicit
   // picker wins. An unmapped text category ("personal") falls back to "all"
@@ -139,6 +144,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     include,
     exclude,
     city,
+    citySource,
     category,
     priceMin,
     priceMax,

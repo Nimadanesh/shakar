@@ -46,10 +46,28 @@ describe("resolveHuntDefinition — the «پیانو» incident (2026-10-06)", (
     expect(resolveHuntDefinition(body())!.city).toBe("tehran");
   });
 
-  it("keeps an explicit city over the text", () => {
-    expect(resolveHuntDefinition(body({ city: "isfahan" }))!.city).toBe(
-      "isfahan"
-    );
+  it("text city beats a stored/remembered picker value (navid 2026-10-08)", () => {
+    // The piano hunt DISPLAYED تهران but searched تبریز — the remembered
+    // picker silently won. The query text is the freshest signal.
+    const def = resolveHuntDefinition(body({ city: "tabriz" }))!;
+    expect(def.city).toBe("tehran");
+    expect(def.citySource).toBe("text");
+  });
+
+  it("a dismissed city inference keeps the picker value", () => {
+    const def = resolveHuntDefinition(
+      body({ city: "tabriz", dismissed: ["city:tehran"] })
+    )!;
+    expect(def.city).toBe("tabriz");
+    expect(def.citySource).toBe("picker");
+  });
+
+  it("records citySource picker when the text names no city", () => {
+    const def = resolveHuntDefinition(
+      body({ query: "پیانو U3", city: "tabriz" })
+    )!;
+    expect(def.city).toBe("tabriz");
+    expect(def.citySource).toBe("picker");
   });
 
   it("applies the text category when the picker is all (flaw #10)", () => {

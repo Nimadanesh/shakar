@@ -37,6 +37,13 @@ export interface HuntDefinition {
   exclude: string[];
   /** City slug ("tehran") or "all". */
   city: string;
+  /**
+   * Where the final city came from (navid 2026-10-08). "text" when a city
+   * word in the query overrode the picker/remembered value, "picker"
+   * otherwise. Persisted so a future "why did my hunt run in X?!" is
+   * answerable from the definition alone.
+   */
+  citySource?: "text" | "picker";
   /** App category key ("real-estate", "mobile", ...). */
   category: string;
   priceMin: string;

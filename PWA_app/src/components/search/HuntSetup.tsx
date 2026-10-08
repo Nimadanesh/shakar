@@ -89,6 +89,10 @@ export function HuntSetup() {
     ...EMPTY_CONTEXT_BASE,
     city: getRememberedCity() ?? "all",
   }));
+  // Whether the city was hand-picked for THIS hunt. A remembered default
+  // the user never touched renders with a «پیش‌فرض» marker (navid
+  // 2026-10-08) — a sticky silent city poisoned two of his hunts.
+  const [cityTouched, setCityTouched] = useState(false);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
@@ -211,8 +215,15 @@ export function HuntSetup() {
     // M4: fire a REAL server hunt via the shared helper. The API returns a
     // run id immediately; the pipeline streams progress over SSE on
     // /hunt/[runId].
+    //
+    // Fire-time merge (navid 2026-10-08): the city row SHOWED the dashed
+    // inferred city — the hunt must run where the UI said. The text wins
+    // unless dismissed (inferred.city is already null then). Without this
+    // the piano hunt displayed تهران but searched تبریز.
+    const fireBase =
+      inferred.city !== null ? { ...base, city: inferred.city.value } : base;
     try {
-      const result = await fireRealHunt({ query: trimmed, base, dismissed });
+      const result = await fireRealHunt({ query: trimmed, base: fireBase, dismissed });
       if (!result.ok) {
         if (result.quotaError) setQuotaError(result.quotaError);
         setFiring(false);
@@ -222,7 +233,9 @@ export function HuntSetup() {
       // locally (with the run id, so recents link to the REAL results)
       // so the profile's consumption section reflects reality.
       // (Every firing is a paid event, even if the stream is abandoned.)
-      recordHunt(trimmed, base, dismissed, result.runId);
+      // NOTE: record the MERGED base — history must show the city the hunt
+      // really ran in, not the untouched picker value.
+      recordHunt(trimmed, fireBase, dismissed, result.runId);
       // Quota changed on the server — drop the shared usage cache so the
       // button state re-reads fresh numbers on the next mount.
       invalidateUsage();
@@ -423,7 +436,18 @@ export function HuntSetup() {
             />
             <SpecRow
               label="شهر"
-              value={inferred.city ? inferred.city.display : cityLabel(base.city)}
+              value={
+                inferred.city ? (
+                  inferred.city.display
+                ) : !cityTouched && base.city !== "all" ? (
+                  <>
+                    {cityLabel(base.city)}
+                    <span className="text-[11px] text-muted-foreground/80"> · پیش‌فرض</span>
+                  </>
+                ) : (
+                  cityLabel(base.city)
+                )
+              }
               inferred={inferred.city !== null}
               onOpen={() => setCityOpen(true)}
             />
@@ -518,6 +542,7 @@ export function HuntSetup() {
         selected={base.city}
         onSelect={(value) => {
           setBase((b) => ({ ...b, city: value }));
+          setCityTouched(true);
           // An explicit pick becomes the standing preference for next time…
           rememberCity(value);
           // …and settles the conflict: a hand-picked city dismisses the
