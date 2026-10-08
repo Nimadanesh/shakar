@@ -9,6 +9,7 @@ import { WhyMatched } from "@/components/ads/WhyMatched";
 import { DescriptionEvidence } from "@/components/ads/DescriptionEvidence";
 import { divarProvider } from "@/lib/server/divar/divarClient";
 import { formatPriceToman } from "@/lib/prices";
+import { PriceToman } from "@/components/ui/PriceToman";
 import { cityScopeFor } from "@/lib/search-context";
 import type { SearchContext } from "@/types/search";
 
@@ -192,13 +193,13 @@ export default async function AdDetailPage({
 
       <AdDetailGallery images={ad.images} thumbnail={ad.thumbnail} title={ad.title} />
 
-      <div className="flex flex-col gap-1.5">
-        <h1 className="max-w-[92%] text-lg font-medium leading-7 text-foreground text-balance">{ad.title}</h1>
+      <div className="flex flex-col gap-1.5 pe-4">
+        <h1 className="text-lg font-medium leading-7 text-foreground text-balance">{ad.title}</h1>
         <p
           className="text-[17px] font-semibold leading-7 tabular-nums tracking-tight text-foreground"
           dir="auto"
         >
-          {ad.price !== null ? formatPriceToman(ad.price) : (ad.priceText ?? "توافقی")}
+          {ad.price !== null ? <PriceToman value={ad.price} /> : (ad.priceText ?? "توافقی")}
         </p>
         {ad.city !== "" && (
           <p className="text-[13px] leading-6 text-muted-foreground">{ad.city}</p>

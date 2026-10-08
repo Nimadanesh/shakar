@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Activity, BellRing, Clock3, Radar } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { SkeletonCard } from "@/components/ui/skeletons";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { categoryLabel, cityLabel } from "@/data/taxonomy";
 import { formatPriceCompact } from "@/lib/prices";
@@ -154,46 +153,81 @@ export function KaminDetailSheet({
             <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">تناوب بررسی</p>
           </div>
         </div>
-        {lastChecked && (
-          <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-            <Clock3 size={14} aria-hidden="true" />
-            آخرین بررسی: {lastChecked}
-          </p>
-        )}
+        {/* The last-checked line reserves its space while loading — it must
+            never pop the layout when the data arrives (navid 2026-10-08:
+            no page jumps, ever). */}
         {activity === undefined ? (
-          <div aria-busy="true" aria-label="در حال بارگذاری گزارش">
-            <SkeletonCard />
-          </div>
-        ) : activity === null || activity.degraded ? (
-          <p className="rounded-lg border border-border bg-secondary/40 px-3 py-2.5 text-[12px] leading-5 text-muted-foreground">
-            گزارش اجراها در دسترس نیست — ولی کمین فعاله و داره بررسی می‌کنه.
-          </p>
-        ) : activity.runs.length === 0 ? (
-          <p className="rounded-lg border border-border bg-secondary/40 px-3 py-2.5 text-[12px] leading-5 text-muted-foreground">
-            هنوز اولین بررسی انجام نشده — به‌زودی اینجا می‌بینی.
+          <p aria-hidden="true" className="flex items-center gap-1.5">
+            <span className="size-3.5 animate-pulse rounded-full bg-secondary" />
+            <span className="h-3 w-32 animate-pulse rounded-md bg-secondary" />
           </p>
         ) : (
-          <ul className="flex flex-col gap-1.5" aria-label="اجراهای اخیر">
-            {activity.runs.slice(0, 6).map((run) => (
-              <li
-                key={run.started_at}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
-              >
-                <span className="text-[12px] text-muted-foreground">
-                  {relativeTime(new Date(run.started_at).getTime())}
-                </span>
-                <span className="flex items-center gap-3">
-                  {run.new_count > 0 && (
-                    <span className="text-[12px] font-semibold text-emerald-600 dark:text-emerald-400">
-                      {faNum(run.new_count)} تازه
-                    </span>
-                  )}
-                  <RunDot status={run.status} />
-                </span>
-              </li>
-            ))}
-          </ul>
+          lastChecked && (
+            <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+              <Clock3 size={14} aria-hidden="true" />
+              آخرین بررسی: {lastChecked}
+            </p>
+          )
         )}
+        {/*
+          Fixed-height activity region (navid 2026-10-08): the sheet must
+          NEVER resize when the report loads. The region always occupies
+          4 run rows; the skeleton mirrors the rows 1:1, extra runs scroll
+          inside, and the empty/degraded messages are centered in the same
+          space. Every state, one size.
+        */}
+        <div
+          className="h-[172px] overflow-y-auto"
+          aria-busy={activity === undefined}
+          aria-label={activity === undefined ? "در حال بارگذاری گزارش" : undefined}
+        >
+          {activity === undefined ? (
+            <ul className="flex flex-col gap-1.5" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <li
+                  key={i}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+                >
+                  <span className="h-3 w-24 animate-pulse rounded-md bg-secondary" />
+                  <span className="h-3 w-16 animate-pulse rounded-md bg-secondary" />
+                </li>
+              ))}
+            </ul>
+          ) : activity === null || activity.degraded ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="rounded-lg border border-border bg-secondary/40 px-3 py-2.5 text-[12px] leading-5 text-muted-foreground">
+                گزارش اجراها در دسترس نیست — ولی کمین فعاله و داره بررسی می‌کنه.
+              </p>
+            </div>
+          ) : activity.runs.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="rounded-lg border border-border bg-secondary/40 px-3 py-2.5 text-[12px] leading-5 text-muted-foreground">
+                هنوز اولین بررسی انجام نشده — به‌زودی اینجا می‌بینی.
+              </p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-1.5" aria-label="اجراهای اخیر">
+              {activity.runs.slice(0, 6).map((run) => (
+                <li
+                  key={run.started_at}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+                >
+                  <span className="text-[12px] text-muted-foreground">
+                    {relativeTime(new Date(run.started_at).getTime())}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    {run.new_count > 0 && (
+                      <span className="text-[12px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        {faNum(run.new_count)} تازه
+                      </span>
+                    )}
+                    <RunDot status={run.status} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
 
       {/* What it's watching */}

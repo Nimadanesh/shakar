@@ -149,12 +149,20 @@ function PlanSection() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const localUsed = (hunts ?? []).filter((h) => h.ts >= monthStart).length;
-  // Server is the billing truth; local is only a stand-in while loading
-  // or when the server can't answer (permissive-dev).
-  const usedThisMonth = serverUsage?.usedThisMonth ?? localUsed;
-  const quota = serverUsage ? serverUsage.quotaTotal : HUNTS_PER_MONTH;
+  // ROOT FIX (navid 2026-10-08): the hook's contract is three-state —
+  // undefined = still loading, null = server unavailable, data = truth.
+  // The old code collapsed undefined into the local fallback, so the
+  // local count (which includes refunded hunts and misses server-side
+  // grants) flashed as a WRONG number before the server answered.
+  // While loading we render shimmer, never a guessed number.
+  const loading = serverUsage === undefined;
+  const usedThisMonth = loading ? null : (serverUsage?.usedThisMonth ?? localUsed);
+  const quota = loading ? null : serverUsage ? serverUsage.quotaTotal : HUNTS_PER_MONTH;
   const remaining =
-    serverUsage?.remaining ?? (quota === null ? null : Math.max(0, quota - usedThisMonth));
+    loading || usedThisMonth === null
+      ? null
+      : (serverUsage?.remaining ??
+        (quota === null ? null : Math.max(0, quota - usedThisMonth)));
   const fa = (n: number) => n.toLocaleString("fa-IR");
   // Guest grants aren't a monthly subscription — only subscribers get the
   // "ماهانه — N شکار" label. Everyone gets true remaining counts.
@@ -169,18 +177,24 @@ function PlanSection() {
     kaminSlots !== null && kaminActive !== null
       ? `${fa(kaminActive)} فعال از ${fa(kaminSlots)}`
       : "—";
+  const shimmer = (
+    <span
+      aria-hidden="true"
+      className="inline-block h-4 w-12 animate-pulse rounded-md bg-secondary align-middle"
+    />
+  );
 
   return (
     <SectionCard title="اشتراک">
-      <dl className="flex flex-col">
+      <dl className="flex flex-col" aria-busy={loading}>
         {[
-          ["اشتراک فعلی", planLabel],
-          ["شکارهای این ماه", fa(usedThisMonth)],
-          ["سهمیه باقی‌مانده", remaining === null ? "—" : fa(remaining)],
-          ["کمین‌ها", kaminLabel],
+          ["اشتراک فعلی", loading ? shimmer : planLabel],
+          ["شکارهای این ماه", loading || usedThisMonth === null ? shimmer : fa(usedThisMonth)],
+          ["سهمیه باقی‌مانده", loading || remaining === null ? (loading ? shimmer : "—") : fa(remaining)],
+          ["کمین‌ها", loading ? shimmer : kaminLabel],
         ].map(([label, value]) => (
           <div
-            key={label}
+            key={label as string}
             className="flex items-center justify-between gap-4 border-b border-border py-2.5 last:border-b-0"
           >
             <dt className="text-[13px] leading-5 text-muted-foreground">{label}</dt>

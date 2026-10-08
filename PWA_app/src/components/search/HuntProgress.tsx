@@ -8,8 +8,9 @@ import { useRouter } from "next/navigation";
 import { EyeOff, Heart, Repeat, Bookmark, Share2, Check } from "lucide-react";
 import type { HuntDefinition, HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
 import { fa, pickVariant } from "@/lib/hunt-copy";
-import { formatPriceToman } from "@/lib/prices";
+import { PriceToman } from "@/components/ui/PriceToman";
 import { clearActiveHunt } from "@/lib/active-hunt";
+
 import { warmUsage } from "@/lib/usage";
 import { setTaskReturn } from "@/lib/task-return";
 import { HomeCityUpdateGate } from "@/components/search/HomeCityUpdateNudge";
@@ -44,8 +45,48 @@ import { cn } from "@/lib/utils";
 
 import { LoaderGrid } from "@/components/ui/LoadingState";
 
+/**
+ * Clear the active-hunt record AND tell every mounted ActiveHuntChip
+ * (same tab) to hide immediately (navid 2026-10-08: the badge must go
+ * the moment the hunt completes — the old chip verified once on mount
+ * and then stuck forever).
+ */
+function clearActive(runId: string) {
+  clearActiveHunt(runId);
+  try {
+    window.dispatchEvent(
+      new CustomEvent<string>("shekaar:active-hunt-cleared", { detail: runId })
+    );
+  } catch {
+    // ignore — the 15s status poll is the backstop
+  }
+}
+
 function DotLoading() {
   return <LoaderGrid tone="default" />;
+}
+
+/**
+ * A hidden ad stays in place as a single muted line with an undo action
+ * (navid 2026-10-08): hiding must never make the card vanish into the
+ * void — the user sees where it went and can bring it back with one tap.
+ */
+function HiddenAdRow({ onUnhide }: { onUnhide: () => void }) {
+  return (
+    <div className="flex h-11 items-center justify-between gap-2 rounded-lg border border-dashed border-zinc-200 px-3 dark:border-zinc-800">
+      <span className="flex min-w-0 items-center gap-2 text-[12px] text-zinc-400 dark:text-zinc-500">
+        <EyeOff size={14} aria-hidden="true" className="shrink-0" />
+        <span className="truncate">این آگهی مخفی شد</span>
+      </span>
+      <button
+        type="button"
+        onClick={onUnhide}
+        className="shrink-0 rounded-full px-2 py-1 text-[12px] font-medium text-zinc-600 underline-offset-4 transition-colors hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+      >
+        برگردون
+      </button>
+    </div>
+  );
 }
 
 const ResultCard = memo(function ResultCard({
@@ -102,7 +143,7 @@ const ResultCard = memo(function ResultCard({
         className="block focus-visible:outline-2 focus-visible:outline-ring"
       >
         <div className="flex items-start justify-between gap-2">
-          <h3 className="min-w-0 flex-1 break-words text-sm font-medium leading-6">{ad.title}</h3>
+          <h3 className="min-w-0 flex-1 break-words pe-4 text-sm font-medium leading-6">{ad.title}</h3>
           <span className="flex shrink-0 flex-col items-end gap-1">
             <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[11px] text-white dark:bg-zinc-100 dark:text-zinc-900">
               تأیید شد
@@ -116,7 +157,7 @@ const ResultCard = memo(function ResultCard({
         </div>
         <div className="mt-1 flex items-center gap-2 text-[13px] text-zinc-500">
           <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-            {ad.price !== null ? formatPriceToman(ad.price) : (ad.priceText ?? "توافقی")}
+            {ad.price !== null ? <PriceToman value={ad.price} /> : (ad.priceText ?? "توافقی")}
           </span>
           {ad.city !== "" && <span>{ad.city}</span>}
         </div>
@@ -141,7 +182,7 @@ const ResultCard = memo(function ResultCard({
           )}
         >
           <Heart size={15} aria-hidden="true" fill={favorite ? "currentColor" : "none"} />
-          {favorite ? "در علاقه‌مندی‌ها" : "علاقه‌مندی"}
+          {favorite ? "پسندیدم" : "علاقه‌مندی"}
         </button>
         <button
           type="button"
@@ -218,7 +259,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [loopOpen, setLoopOpen] = useState(false);
   const [radarOpen, setRadarOpen] = useState(false);
   const [kaminId, setKaminId] = useState<string | null>(null);
-  const { hiddenIds, hide } = useHiddenAds();
+  const { hiddenIds, hide, unhide } = useHiddenAds();
   const [loadState, setLoadState] = useState<"loading" | "live" | "ready" | "expired">(
     () => (initialCached ? "ready" : "loading")
   );
@@ -243,6 +284,18 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
     esRef.current?.close();
     esRef.current = null;
     setStopped(true);
+  }
+
+  /**
+   * Continue after a stop (navid 2026-10-08): the server kept working —
+   * the unit was already paid, so "stop" only detached the UI. Re-attach
+   * to the live run; if it finished while detached, the replay lands on
+   * the results. Bumping resumeSeq re-runs the subscribe effect.
+   */
+  const [resumeSeq, setResumeSeq] = useState(0);
+  function handleContinue() {
+    setStopped(false);
+    setResumeSeq((s) => s + 1);
   }
 
   useEffect(() => {
@@ -418,7 +471,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         if (cancelled) return;
         if (res.status === 404) {
           setLoadState("expired");
-          clearActiveHunt(runId);
+          clearActive(runId);
           return;
         }
         const json = (await res.json().catch(() => null)) as {
@@ -457,7 +510,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
               : "چیزی که دقیقاً بخوره به مشخصاتت پیدا نکردم."
           );
           setLoadState("ready");
-          clearActiveHunt(runId);
+          clearActive(runId);
           // Cache the immutable results for instant back-navigation.
           setCachedResults(runId, {
             results: doneResults,
@@ -559,7 +612,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
               : "چیزی که دقیقاً بخوره به مشخصاتت پیدا نکردم."
           );
           es.close();
-          clearActiveHunt(runId);
+          clearActive(runId);
           // Cache the immutable results for instant back-navigation.
           setCachedResults(runId, {
             results: e.results,
@@ -575,7 +628,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
               : "مشکلی پیش اومد — دوباره تلاش کن."
           );
           es.close();
-          clearActiveHunt(runId);
+          clearActive(runId);
           break;
       }
     };
@@ -584,7 +637,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
       es.close();
     };
     return () => es.close();
-  }, [runId, loadState]);
+  }, [runId, loadState, resumeSeq]);
 
   if (loadState === "loading") {
     return (
@@ -774,6 +827,17 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
               توقف
             </button>
           )}
+          {/* After a stop the button becomes "continue" (navid 2026-10-08):
+              the server kept working, so this re-attaches to the live run. */}
+          {!done && stopped && (
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="shrink-0 rounded-full bg-zinc-900 px-4 py-1 text-[12px] font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            >
+              ادامه شکار
+            </button>
+          )}
         </div>
 
       </section>
@@ -806,21 +870,25 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
 
       {/* Streaming confirmed results — each card is tappable (detail),
           favoritable and hideable. */}
-      {visibleResults.length > 0 && (
+      {results.length > 0 && (
         <section className="mt-6">
           <h2 className="mb-3 text-sm font-medium text-zinc-500">
             {done ? `نتایج (${fa(visibleResults.length)})` : "تأییدشده‌ها — بقیه در راهن"}
           </h2>
           <div className="space-y-3">
-            {visibleResults.map((ad, i) => (
-              <ResultCard
-                key={ad.sourceAdId}
-                ad={ad}
-                index={i}
-                detailHref={detailHrefFor(ad)}
-                onHide={hide}
-              />
-            ))}
+            {results.map((ad, i) =>
+              hiddenIds.includes(ad.sourceAdId) ? (
+                <HiddenAdRow key={ad.sourceAdId} onUnhide={() => unhide(ad.sourceAdId)} />
+              ) : (
+                <ResultCard
+                  key={ad.sourceAdId}
+                  ad={ad}
+                  index={i}
+                  detailHref={detailHrefFor(ad)}
+                  onHide={hide}
+                />
+              )
+            )}
           </div>
         </section>
       )}
