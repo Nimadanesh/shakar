@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { getCachedResults, setCachedResults } from "@/lib/hunt-results-cache";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { EyeOff, Heart, Repeat } from "lucide-react";
+import { EyeOff, Heart, Repeat, Bookmark } from "lucide-react";
 import type { HuntDefinition, HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
 import { fa, pickVariant } from "@/lib/hunt-copy";
 import { formatPriceToman } from "@/lib/prices";
@@ -21,6 +21,7 @@ import { useTaskReturnRestore } from "@/hooks/useTaskReturnRestore";
 import { isAdSeen } from "@/lib/seen-ads";
 import { writeParams } from "@/lib/search-params";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { isHuntSaved, saveHunt, unsaveHunt } from "@/lib/saved-hunts";
 // Closed-by-default dialog: own chunk, never blocks first paint.
 const RadarDialog = dynamic(
   () => import("@/components/search/RadarDialog").then((m) => m.RadarDialog),
@@ -333,6 +334,33 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
 
   const visibleResults = results.filter((r) => !hiddenIds.includes(r.sourceAdId));
   const loopActionsAvailable = done && definition !== null;
+  /** Saved-hunt toggle (navid 2026-10-08): the bookmark next to the loop
+      icon. Local-first — guests keep it on this device, logged-in users
+      get the server mirror via saveHunt's write-through. */
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (loopActionsAvailable) setSaved(isHuntSaved(displayQuery));
+  }, [loopActionsAvailable, displayQuery]);
+  function toggleSave() {
+    if (definition === null || displayQuery === "") return;
+    if (saved) {
+      unsaveHunt(displayQuery);
+      setSaved(false);
+      return;
+    }
+    const base: ContextBase = {
+      category: definition.category,
+      city: definition.city,
+      priceMin: definition.priceMin,
+      priceMax: definition.priceMax,
+      include: [...definition.include],
+      exclude: [...definition.exclude],
+      hasImage: false,
+      transaction: definition.transaction,
+      condition: definition.condition,
+    };
+    setSaved(saveHunt(displayQuery, base) !== null);
+  }
 
   const pushTrace = (text: string, isDone: boolean) => {
     lineId.current += 1;
@@ -589,6 +617,23 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
               className="flex size-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
             >
               <Repeat size={17} aria-hidden="true" />
+            </button>
+          )}
+          {/* Save this hunt (navid 2026-10-08): one tap → Archive ›
+              ذخیره‌شده‌ها. Same hunt-level row as the loop icon. */}
+          {loopActionsAvailable && (
+            <button
+              type="button"
+              onClick={toggleSave}
+              aria-pressed={saved}
+              aria-label={saved ? "حذف از ذخیره‌ها" : "ذخیره‌ی این شکار"}
+              className={`flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                saved
+                  ? "border-zinc-900 text-primary dark:border-zinc-100"
+                  : "border-zinc-200 text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
+              }`}
+            >
+              <Bookmark size={17} aria-hidden="true" fill={saved ? "currentColor" : "none"} />
             </button>
           )}
         </div>
@@ -903,6 +948,17 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
             className="flex h-12 w-full items-center justify-center rounded-lg border border-zinc-300 text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
           >
             دقیق‌ترش کن
+          </button>
+          {/* Save this hunt — the same toggle as the bookmark icon up top,
+              labeled exactly like the Archive empty state teaches it. */}
+          <button
+            type="button"
+            onClick={toggleSave}
+            aria-pressed={saved}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-zinc-300 text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+          >
+            <Bookmark size={16} aria-hidden="true" fill={saved ? "currentColor" : "none"} />
+            {saved ? "حذف از ذخیره‌ها" : "ذخیره‌ی این شکار"}
           </button>
           {stats !== null && stats.adsSeen > 0 && (
             <button
