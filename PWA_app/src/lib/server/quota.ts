@@ -1,6 +1,7 @@
 import "server-only";
 
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase-server";
+import { expireCheck } from "@/lib/server/subscription/lifecycle";
 
 /**
  * M4b quota engine (blueprint §2 — transactional intent, §9 — guest hunts).
@@ -106,14 +107,18 @@ export async function activeTierHunts(sb: Sb, userId: string): Promise<number | 
   return TIER_HUNTS[tier] ?? null;
 }
 
-/** Active subscription's tier key (paye/herfei/…), or null when unsubscribed. */
+/** Active subscription's tier key (paye/herfei/…), or null when unsubscribed.
+ *
+ * Expiry-aware (M6 gap fix, navid 2026-10-08): a past-due cycle flips
+ * active → expired — and sleeps the kamins — right here, inside the quota
+ * decision. The old code only read `status`, so a lapsed subscription kept
+ * granting tier quota (and its kamins kept checking) until GET
+ * /api/subscription happened to run expireCheck. When the cycle is still
+ * valid this is a single read, same as before.
+ */
 export async function activeTierKey(sb: Sb, userId: string): Promise<string | null> {
   try {
-    const rows = await sb.rest<Array<{ tier: string; status: string }>>(
-      "GET",
-      `subscriptions?user_id=eq.${encodeURIComponent(userId)}&select=tier,status&limit=1`
-    );
-    const sub = rows[0];
+    const sub = await expireCheck(sb, userId);
     if (!sub || sub.status !== "active") return null;
     return sub.tier;
   } catch {

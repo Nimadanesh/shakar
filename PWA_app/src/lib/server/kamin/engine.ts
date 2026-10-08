@@ -388,8 +388,8 @@ export async function sleepKaminsForUser(sb: Sb, userId: string): Promise<void> 
  * Wakes sleeping kamins after (re)subscribe — but NEVER past the tier's
  * slot limit (navid 2026-10-06: hard limit, same as arm). The newest
  * sleeping kamins wake first (freshest intent); the rest stay sleeping.
- * Currently uncalled until the M5b subscription webhook lands — when it
- * does, it must pass the tier's TIER_KAMIN_SLOTS.
+ * Called from the subscription lifecycle (activate/renew) with the tier's
+ * TIER_KAMIN_SLOTS — never more than the slot limit may wake.
  */
 export async function wakeKaminsForUser(
   sb: Sb,

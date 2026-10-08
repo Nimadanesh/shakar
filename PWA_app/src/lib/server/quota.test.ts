@@ -6,7 +6,7 @@ vi.mock("@/lib/supabase-server", () => ({
 }));
 
 import { supabaseConfigured, supabaseServer } from "@/lib/supabase-server";
-import { consumeHunt, refundHunt } from "./quota";
+import { consumeHunt, refundHunt, activeTierKey } from "./quota";
 
 const mockConfigured = vi.mocked(supabaseConfigured);
 const mockServer = vi.mocked(supabaseServer);
@@ -446,5 +446,42 @@ describe("refundHunt", () => {
     // No hunts_used decrement on the warning path.
     expect(db.tables.quota_counters[0].hunts_used).toBe(10);
     expect(db.tables.quota_counters[0].warnings).toBe(2);
+  });
+});
+
+describe("activeTierKey — lazy expiry inside quota decisions", () => {
+  it("past-due active subscription: flips to expired, sleeps kamins, grants no tier", async () => {
+    const past = new Date(Date.now() - 3600_000).toISOString();
+    const db = fakeDb({
+      subscriptions: [
+        { id: "s1", user_id: "u9", tier: "herfei", status: "active", cycle_ends_at: past },
+      ],
+      kamins: [{ id: "k1", user_id: "u9", status: "active" }],
+    });
+    const tier = await activeTierKey({ rest: db.rest } as never, "u9");
+    // No tier quota for a lapsed subscription — the money bug this guards.
+    expect(tier).toBeNull();
+    expect(db.tables.subscriptions[0].status).toBe("expired");
+    expect(db.tables.kamins[0].status).toBe("sleeping");
+  });
+
+  it("valid active subscription: tier granted, nothing written", async () => {
+    const future = new Date(Date.now() + 3600_000).toISOString();
+    const db = fakeDb({
+      subscriptions: [
+        { id: "s2", user_id: "u8", tier: "vizhe", status: "active", cycle_ends_at: future },
+      ],
+      kamins: [],
+    });
+    const tier = await activeTierKey({ rest: db.rest } as never, "u8");
+    expect(tier).toBe("vizhe");
+    expect(db.tables.subscriptions[0].status).toBe("active");
+    expect(db.calls.filter((c) => c.method === "PATCH")).toHaveLength(0);
+  });
+
+  it("no subscription: null, no crash", async () => {
+    const db = fakeDb({ subscriptions: [], kamins: [] });
+    const tier = await activeTierKey({ rest: db.rest } as never, "u0");
+    expect(tier).toBeNull();
   });
 });
