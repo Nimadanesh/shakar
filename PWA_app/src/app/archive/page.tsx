@@ -11,6 +11,13 @@ import { SkeletonCard, SkeletonRow } from "@/components/ui/skeletons";
 import { IconConfirmButton } from "@/components/ui/IconConfirmButton";
 import { FavoriteAdsList } from "@/components/ads/FavoriteAdsList";
 import { useFavorites, readFavoriteRecords } from "@/hooks/useFavorites";
+import { SearchFab, SearchSheet } from "@/components/search/SearchSheet";
+import {
+  favoriteToSearchItem,
+  huntToSearchItem,
+  savedHuntToSearchItem,
+} from "@/components/search/search-builders";
+import type { SearchItem } from "@/components/search/search-items";
 import { readHunts, deleteHunt, recordHunt, type HuntRecord } from "@/lib/hunt-store";
 import { fireRealHunt } from "@/lib/hunt-fire";
 import {
@@ -43,8 +50,50 @@ export default function ArchivePage() {
   useEffect(() => {
     setFavoriteCount(readFavoriteRecords().length);
   }, []);
+  /** Cross-tab search (navid 2026-10-08). Favorite titles resolve on open. */
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [favTitles, setFavTitles] = useState<Map<string, { title: string; city: string | null }>>(new Map());
+  const [favTitlesLoading, setFavTitlesLoading] = useState(false);
+  const [favRecords, setFavRecords] = useState<ReturnType<typeof readFavoriteRecords>>([]);
 
-  // Session-cached: revisits render the known lists immediately instead of
+  useEffect(() => {
+    if (!searchOpen) return;
+    const records = readFavoriteRecords();
+    setFavRecords(records);
+    const missing = records.filter((r) => !favTitles.has(r.adId));
+    if (missing.length === 0) return;
+    let cancelled = false;
+    setFavTitlesLoading(true);
+    (async () => {
+      const next = new Map(favTitles);
+      await Promise.all(
+        missing.map(async (r) => {
+          try {
+            const res = await fetch(`/api/ads/${encodeURIComponent(r.sourceAdId)}`);
+            if (!res.ok) return;
+            const json = (await res.json()) as {
+              ok: boolean;
+              data?: { title?: string; city?: string };
+            };
+            if (json.ok && json.data?.title) {
+              next.set(r.adId, { title: json.data.title, city: json.data.city ?? null });
+            }
+          } catch {
+            // A favorite whose ad is gone simply isn't searchable.
+          }
+        })
+      );
+      if (!cancelled) {
+        setFavTitles(next);
+        setFavTitlesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchOpen]);
+
   // flashing skeletons → content on every navigation.
   const {
     value: hunts,
@@ -58,6 +107,36 @@ export default function ArchivePage() {
   } = useHydratedStore<SavedHunt[]>("saved-hunts", readSavedHunts);
   const huntList = hunts ?? [];
   const savedList = saved ?? [];
+
+  const searchItems: SearchItem[] = [
+    ...huntList.map(huntToSearchItem),
+    ...savedList.map(savedHuntToSearchItem),
+    ...favRecords
+      .filter((r) => favTitles.has(r.adId))
+      .map((r) => {
+        const t = favTitles.get(r.adId)!;
+        return favoriteToSearchItem(r.adId, t.title, t.city);
+      }),
+  ];
+
+  function handleSearchSelect(item: SearchItem) {
+    if (item.kind === "history") {
+      const hunt = huntList.find((h) => h.id === item.id);
+      if (hunt) router.push(`/hunt/${encodeURIComponent(hunt.runId ?? hunt.id)}`);
+      return;
+    }
+    if (item.kind === "saved-hunt") {
+      const s = savedList.find((x) => x.id === item.id);
+      if (s) handleRerun(s);
+      return;
+    }
+    if (item.kind === "favorite") {
+      const rec = favRecords.find((r) => r.adId === item.id);
+      if (rec) router.push(`/ads/${encodeURIComponent(rec.sourceAdId)}?from=archive`);
+    }
+  }
+
+  // Session-cached: revisits render the known lists immediately instead of
   const ready = huntsReady && savedReady;
   const [tab, setTab] = useState<ArchiveTab>("history");
 
@@ -211,6 +290,17 @@ export default function ArchivePage() {
           ))}
         </ul>
       )}
+      <SearchFab onOpen={() => setSearchOpen(true)} label="جستجو در آرشیو" />
+      <SearchSheet
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        title="جستجو در آرشیو"
+        items={searchItems}
+        loadingHint={
+          favTitlesLoading ? "در حال آماده‌سازی عنوان علاقه‌مندی‌ها…" : null
+        }
+        onSelect={handleSearchSelect}
+      />
     </main>
   );
 }

@@ -8,6 +8,13 @@ import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { SkeletonCard } from "@/components/ui/skeletons";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
+import { KaminDetailSheet } from "@/components/kamin/KaminDetailSheet";
+import { SearchFab, SearchSheet } from "@/components/search/SearchSheet";
+import {
+  kaminToSearchItem,
+  serverKaminToSearchItem,
+} from "@/components/search/search-builders";
+import type { SearchItem } from "@/components/search/search-items";
 import { categoryLabel, cityLabel } from "@/data/taxonomy";
 import { formatPriceCompact } from "@/lib/prices";
 import {
@@ -138,21 +145,33 @@ function ServerKaminCard({
   kamin,
   onViewResults,
   onDisarm,
+  onOpenDetail,
 }: {
   kamin: ServerKamin;
   onViewResults?: () => void;
   onDisarm: () => void;
+  onOpenDetail: () => void;
 }) {
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
-      <div className="flex items-start justify-between gap-2">
+      <button
+        type="button"
+        onClick={onOpenDetail}
+        aria-label={`جزئیات کمین ${kamin.name}`}
+        className="flex items-start justify-between gap-2 rounded-md text-right focus-visible:outline-2 focus-visible:outline-ring"
+      >
         <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-5 text-foreground">
           «{kamin.name}»
         </p>
-        <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary">
-          {kamin.status === "sleeping" ? "خوابیده" : "فعال"}
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="text-[11px] text-muted-foreground underline decoration-dotted underline-offset-4">
+            جزئیات و گزارش
+          </span>
+          <span className="rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary">
+            {kamin.status === "sleeping" ? "خوابیده" : "فعال"}
+          </span>
         </span>
-      </div>
+      </button>
       <p className="text-[13px] text-muted-foreground">«{kamin.definition.query}»</p>
       {kamin.new_match_count > 0 && (
         <p className="text-[13px] font-medium text-primary">
@@ -207,6 +226,27 @@ export default function SavedPage() {
   }, []);
   const kaminList = kamins ?? [];
   const [tab, setTab] = useState<SavedTab>("fresh");
+  /** Kamin detail sheet (navid 2026-10-08): tap a kamin → definition + work diary. */
+  const [detailKamin, setDetailKamin] = useState<ServerKamin | null>(null);
+  /** Cross-tab search (navid 2026-10-08). */
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchItems: SearchItem[] = [
+    ...(serverKamins ?? [])
+      .filter((k) => k.status === "active" && k.new_match_count > 0)
+      .map((k) => serverKaminToSearchItem(k, "fresh")),
+    ...(serverKamins ?? []).map((k) => serverKaminToSearchItem(k, "kamin")),
+    ...kaminList.map(kaminToSearchItem),
+  ];
+
+  function handleSearchSelect(item: SearchItem) {
+    if (item.kind === "fresh") {
+      const kamin = (serverKamins ?? []).find((k) => k.id === item.id);
+      if (kamin) handleViewServerResults(kamin);
+      return;
+    }
+    const server = (serverKamins ?? []).find((k) => k.id === item.id);
+    if (server) setDetailKamin(server);
+  }
 
   useEffect(() => {
     // Tab param is cheap and URL-driven; keep it outside the cache.
@@ -295,23 +335,14 @@ export default function SavedPage() {
         </div>
       ) : tab === "fresh" ? (
         serverFresh.length === 0 ? (
+          // The fresh tab is about fresh matches, not about kamins — one
+          // stable empty state, no kamin-count branch (that branch flashed
+          // "کمین فعالی نداری" → "چیز تازه‌ای نیست" while server kamins
+          // loaded). The no-kamins education lives on the کمین‌ها tab.
           <EmptyState
             icon={<BellRing size={28} aria-hidden="true" className="text-muted-foreground" />}
-            title={
-              (serverKamins ?? []).length + kaminList.length === 0
-                ? "کمین فعالی نداری"
-                : "چیز تازه‌ای نیست"
-            }
-            description={
-              (serverKamins ?? []).length + kaminList.length === 0
-                ? "برای شکاری که اجرا کردی کمین بذار؛ آگهی تازه که اومد اینجا می‌بینی."
-                : "کمین‌های فعالت زیر نظرن؛ آگهی جدید که بیاد اینجا می‌بینی."
-            }
-            primaryAction={
-              (serverKamins ?? []).length + kaminList.length === 0
-                ? { label: "شروع شکار", onClick: () => router.push("/") }
-                : undefined
-            }
+            title="چیز تازه‌ای نیست"
+            description="آگهی تازه‌ای که با کمین‌هات جور بشه اینجا میاد."
           />
         ) : (
           <ul className="flex flex-col gap-3">
@@ -324,6 +355,7 @@ export default function SavedPage() {
                     const ok = await disarmKaminServer(kamin.id);
                     if (ok) setServerKamins((s) => (s ?? []).filter((k) => k.id !== kamin.id));
                   }}
+                  onOpenDetail={() => setDetailKamin(kamin)}
                 />
               </li>
             ))}
@@ -360,6 +392,7 @@ export default function SavedPage() {
                   const ok = await disarmKaminServer(kamin.id);
                   if (ok) setServerKamins((s) => (s ?? []).filter((k) => k.id !== kamin.id));
                 }}
+                onOpenDetail={() => setDetailKamin(kamin)}
               />
             </li>
           ))}
@@ -375,6 +408,33 @@ export default function SavedPage() {
           ))}
         </ul>
       )}
+      <KaminDetailSheet
+        kamin={detailKamin}
+        open={detailKamin !== null}
+        onClose={() => setDetailKamin(null)}
+        onViewResults={
+          detailKamin && detailKamin.new_match_count > 0
+            ? () => {
+                const k = detailKamin;
+                setDetailKamin(null);
+                handleViewServerResults(k);
+              }
+            : undefined
+        }
+        onDisarm={async () => {
+          if (!detailKamin) return;
+          const ok = await disarmKaminServer(detailKamin.id);
+          if (ok) setServerKamins((s) => (s ?? []).filter((k) => k.id !== detailKamin.id));
+        }}
+      />
+      <SearchFab onOpen={() => setSearchOpen(true)} label="جستجو در شکار من" />
+      <SearchSheet
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        title="جستجو در شکار من"
+        items={searchItems}
+        onSelect={handleSearchSelect}
+      />
     </main>
   );
 }

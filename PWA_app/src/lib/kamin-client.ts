@@ -132,3 +132,38 @@ export async function disarmKaminServer(id: string): Promise<boolean> {
     return false;
   }
 }
+
+export interface KaminRun {
+  started_at: string;
+  completed_at: string | null;
+  status: "running" | "completed" | "failed" | "baseline";
+  pages_fetched: number;
+  candidates: number;
+  new_count: number;
+}
+
+export interface KaminActivity {
+  runs: KaminRun[];
+  totalRuns: number;
+  totalNew: number;
+  degraded: boolean;
+}
+
+/**
+ * The kamin's work diary for the detail sheet. Returns null when
+ * unreachable — the sheet then shows the definition without the diary,
+ * honestly.
+ */
+export async function fetchKaminActivity(id: string): Promise<KaminActivity | null> {
+  try {
+    const res = await fetch(`/api/kamins/${encodeURIComponent(id)}/activity`, {
+      method: "GET",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { ok: boolean; data?: KaminActivity };
+    if (!data.ok || !data.data) return null;
+    return data.data;
+  } catch {
+    return null;
+  }
+}
