@@ -19,6 +19,14 @@ create table if not exists favorites (
   unique (user_id, ad_token)
 );
 
+-- Defensive: if the table pre-existed without these columns (partial run),
+-- add them before the indexes reference them.
+alter table favorites add column if not exists user_id uuid;
+alter table favorites add column if not exists ad_token text;
+alter table favorites add column if not exists title text not null default '';
+alter table favorites add column if not exists city text;
+alter table favorites add column if not exists created_at timestamptz not null default now();
+
 create index if not exists favorites_user_id_created_idx
   on favorites (user_id, created_at desc);
 
@@ -32,6 +40,11 @@ create table if not exists saved_hunts (
   definition jsonb not null,
   created_at timestamptz not null default now()
 );
+
+alter table saved_hunts add column if not exists user_id uuid;
+alter table saved_hunts add column if not exists name text;
+alter table saved_hunts add column if not exists definition jsonb;
+alter table saved_hunts add column if not exists created_at timestamptz not null default now();
 
 create index if not exists saved_hunts_user_id_created_idx
   on saved_hunts (user_id, created_at desc);
