@@ -171,6 +171,11 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [definition, setDefinition] = useState<HuntDefinition | null>(
     () => initialCached?.definition ?? null
   );
+  /** The hunt's title for display: the run's own definition wins over the
+      caller-supplied prop (the /results/[runId] page passes ""). Never
+      render the «» line when the title is unknown — empty guillemets are
+      visual noise (navid 2026-10-08). */
+  const displayQuery = definition?.query ?? query;
   /** The loop: «شکار تموم شد، حالا چی؟» — sheet + bottom block share these. */
   const [loopOpen, setLoopOpen] = useState(false);
   const [radarOpen, setRadarOpen] = useState(false);
@@ -534,15 +539,15 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
           این شکار منقضی شده یا پیدا نشد.
         </p>
-        {query !== "" && (
-          <p className="mt-1 text-[13px] text-zinc-500">«{query}»</p>
+        {displayQuery !== "" && (
+          <p className="mt-1 text-[13px] text-zinc-500">«{displayQuery}»</p>
         )}
         <p className="mx-auto mt-2 max-w-xs text-[13px] leading-6 text-zinc-500">
           نتیجه‌های شکارها برای همیشه نگه داشته نمی‌شن — ولی تعریف شکارت رو داری.
         </p>
         <button
           type="button"
-          onClick={() => router.push(query !== "" ? `/?q=${encodeURIComponent(query)}` : "/")}
+          onClick={() => router.push(displayQuery !== "" ? `/?q=${encodeURIComponent(displayQuery)}` : "/")}
           className="mt-4 rounded-full bg-zinc-900 px-5 py-2.5 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
         >
           شکار دوباره
@@ -587,15 +592,14 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
             </button>
           )}
         </div>
-        {/* AI shimmer on the hunt title (visual 4). */}
-        {!done && !stopped ? (
+        {/* AI shimmer on the hunt title (visual 4). Hidden while the title
+            is unknown — never render empty «». */}
+        {displayQuery !== "" && (
           <p
-            className="mt-1 animate-pulse text-[13px] text-zinc-500"
+            className={`mt-1 text-[13px] text-zinc-500 ${!done && !stopped ? "animate-pulse" : ""}`}
           >
-            «{query}»
+            «{displayQuery}»
           </p>
-        ) : (
-          <p className="mt-1 text-[13px] text-zinc-500">«{query}»</p>
         )}
 
         {/* Agent-style live details:
@@ -707,7 +711,9 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
                   ? `${fa(results.length)} نتیجه دقیق از ${fa(stats.adsSeen)} آگهی`
                   : `از ${fa(stats.adsSeen)} آگهی، مورد دقیقی پیدا نشد`}
               </p>
-              <p className="truncate text-[11px] text-zinc-500">«{query}»</p>
+              {displayQuery !== "" && (
+                <p className="truncate text-[11px] text-zinc-500">«{displayQuery}»</p>
+              )}
             </div>
           </div>
         </div>
@@ -741,7 +747,9 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         <section className="mt-6 space-y-4">
           <div className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
             <h2 className="text-sm font-medium">چیزی که دقیقاً بخوره به مشخصاتت پیدا نکردم.</h2>
-            <p className="mt-1 text-[13px] text-zinc-500">«{query}»</p>
+            {displayQuery !== "" && (
+              <p className="mt-1 text-[13px] text-zinc-500">«{displayQuery}»</p>
+            )}
 
             {/* Funnel breakdown — where did the ads go? */}
             <div className="mt-3 space-y-1 text-[13px] text-zinc-600 dark:text-zinc-400">
