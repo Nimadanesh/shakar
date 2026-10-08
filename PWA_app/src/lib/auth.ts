@@ -148,6 +148,22 @@ export function storeSession(session: Session): void {
   } catch {
     // ignore
   }
+  notifySessionChange();
+}
+
+const SESSION_EVENT = "shakar:session-change";
+
+function notifySessionChange(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(SESSION_EVENT));
+  }
+}
+
+/** Subscribe to login/logout transitions (profile sync re-runs on change). */
+export function onSessionChange(fn: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(SESSION_EVENT, fn);
+  return () => window.removeEventListener(SESSION_EVENT, fn);
 }
 
 /**
@@ -179,6 +195,7 @@ export async function refreshSession(): Promise<Session | null> {
   } catch {
     // ignore
   }
+  notifySessionChange();
   return null;
 }
 
@@ -193,6 +210,7 @@ export async function signOut(): Promise<void> {
   } catch {
     // ignore — the mirror is already cleared
   }
+  notifySessionChange();
 }
 
 /* ------------------------------------------------------------------ */

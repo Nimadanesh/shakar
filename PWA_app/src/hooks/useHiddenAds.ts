@@ -1,8 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useHydratedStore } from "@/hooks/useHydratedStore";
+import { invalidateCached } from "@/lib/session-cache";
+import { syncHiddenAdToggle } from "@/hooks/useProfileSync";
 
 const STORAGE_KEY = "shakar:hidden-ads:v1";
+const CACHE_KEY = "hidden-ads";
 
 function readStored(): string[] {
   if (typeof window === "undefined") return [];
@@ -15,44 +19,48 @@ function readStored(): string[] {
   }
 }
 
+function writeStored(ids: string[]): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+  } catch {
+    // Storage unavailable: state still works for this session.
+  }
+}
+
 /**
- * Local-only hidden listings. Hiding removes the card from this browser's
- * result lists only; it never touches the source inventory.
+ * Hidden listings. Hiding removes the card from result lists; it never
+ * touches the source inventory.
+ *
+ * Cross-device (navid 2026-10-08): hides write through to the server
+ * profile when logged in (best-effort; local already won), and the
+ * profile sync merges the server set on login.
  */
 export function useHiddenAds() {
-  // Hydration-safe: the server can't see localStorage — first render
-  // (both sides) is empty; stored ids land after mount.
-  const [ids, setIds] = useState<string[]>([]);
+  const { value } = useHydratedStore<string[]>(CACHE_KEY, readStored);
+  const ids = value ?? [];
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration-safe init (see above)
-    setIds(readStored());
-  }, []);
+  const hide = useCallback(
+    (adId: string) => {
+      if (ids.includes(adId)) return;
+      const next = [...ids, adId];
+      writeStored(next);
+      // Write-through: mirror to the server profile when logged in.
+      syncHiddenAdToggle(adId, true);
+      // Mounted readers (every result list) re-read immediately.
+      invalidateCached(CACHE_KEY);
+    },
+    [ids]
+  );
 
-  const hide = useCallback((adId: string) => {
-    setIds((prev) => {
-      if (prev.includes(adId)) return prev;
-      const next = [...prev, adId];
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // Storage unavailable: state still works for this session.
-      }
-      return next;
-    });
-  }, []);
-
-  const unhide = useCallback((adId: string) => {
-    setIds((prev) => {
-      const next = prev.filter((id) => id !== adId);
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }, []);
+  const unhide = useCallback(
+    (adId: string) => {
+      if (!ids.includes(adId)) return;
+      writeStored(ids.filter((id) => id !== adId));
+      syncHiddenAdToggle(adId, false);
+      invalidateCached(CACHE_KEY);
+    },
+    [ids]
+  );
 
   const isHidden = useCallback((adId: string) => ids.includes(adId), [ids]);
 

@@ -8,7 +8,6 @@ interface HuntRunRow {
   status: string;
   created_at: string;
 }
-
 /**
  * GET /api/me/history — the logged-in user's hunt history, derived from
  * hunt_runs (owner_user_id). No new table: the runs already record who
@@ -34,6 +33,9 @@ export async function GET(): Promise<NextResponse> {
       query: typeof r.definition?.query === "string" ? r.definition.query : "",
       status: r.status,
       ts: new Date(r.created_at).getTime(),
+      // The full definition lets the client merge a normalize()-compatible
+      // record (base included) — without it merged history is dropped.
+      definition: r.definition,
     }));
     return NextResponse.json({ ok: true, data });
   } catch (e) {
