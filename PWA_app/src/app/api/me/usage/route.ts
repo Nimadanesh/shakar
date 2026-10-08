@@ -37,10 +37,14 @@ export async function GET(req: Request): Promise<NextResponse> {
       if (tierHunts !== null) {
         return NextResponse.json({ ok: true, data: await userUsage(sb, userId, tierHunts) });
       }
-      // Registered but unsubscribed → guest pool.
+      // Registered but unsubscribed → guest pool KEYED BY USER ID
+      // (matches consumeHunt's finding #15: the account id, not the
+      // device id, is the anti-rotation key). Reading the device pool
+      // here would show the wrong remaining count.
+      return NextResponse.json({ ok: true, data: await guestUsage(sb, userId, true) });
     }
     if (deviceId) {
-      return NextResponse.json({ ok: true, data: await guestUsage(sb, deviceId) });
+      return NextResponse.json({ ok: true, data: await guestUsage(sb, deviceId, false) });
     }
     return NextResponse.json({ ok: true, data: null });
   } catch (e) {
@@ -84,9 +88,11 @@ async function userUsage(
 
 async function guestUsage(
   sb: NonNullable<ReturnType<typeof supabaseServer>>,
-  deviceId: string
+  key: string,
+  /** True when key is a user id (registered-but-unsubscribed), false for a device id. */
+  isUserKey: boolean
 ): Promise<UsageData> {
-  const q = encodeURIComponent(deviceId);
+  const q = encodeURIComponent(key);
   const rows = await sb.rest<
     Array<{ free_hunts_used: number | null; free_hunts_granted: number | null }>
   >("GET", `devices?id=eq.${q}&select=free_hunts_used,free_hunts_granted&limit=1`);
@@ -97,7 +103,7 @@ async function guestUsage(
     usedThisMonth: used,
     quotaTotal: granted,
     remaining: Math.max(0, granted - used),
-    daily: await dailyCounts(sb, `device_id=eq.${q}`),
+    daily: await dailyCounts(sb, isUserKey ? `user_id=eq.${q}` : `device_id=eq.${q}`),
     kaminSlots: null,
     kaminActive: null,
   };
