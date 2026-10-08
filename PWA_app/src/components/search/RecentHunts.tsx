@@ -52,7 +52,7 @@ export function RecentHunts() {
           return (
           <li key={hunt.id}>
             <Link
-              href={`/hunt/${hunt.runId ?? hunt.id}`}
+              href={`/results/${hunt.runId ?? hunt.id}`}
               className="flex min-h-11 w-full items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2 text-start transition-colors hover:border-ring focus-visible:outline-2 focus-visible:outline-ring"
             >
               {isLive ? (

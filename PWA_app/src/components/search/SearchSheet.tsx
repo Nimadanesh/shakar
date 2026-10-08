@@ -74,11 +74,11 @@ export function SearchSheet({
             inputMode="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="مثلاً بی ام و تهران…"
+            placeholder="نام شکار یا شهر یا قید را بنویسید"
             aria-label="جستجو"
             autoComplete="off"
             enterKeyHint="search"
-            className="h-12 w-full rounded-xl border border-border bg-secondary/60 pe-10 ps-4 text-[16px] text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
+            className="h-12 w-full rounded-xl border border-border bg-secondary/60 pe-11 ps-11 text-[16px] text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
           />
           {query !== "" && (
             <button

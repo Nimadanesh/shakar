@@ -11,9 +11,10 @@ import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { KaminDetailSheet } from "@/components/kamin/KaminDetailSheet";
 import { SearchFab, SearchSheet } from "@/components/search/SearchSheet";
 import {
-  kaminToSearchItem,
+  buildLocalSearchItems,
   serverKaminToSearchItem,
 } from "@/components/search/search-builders";
+import { useFavoriteTitles } from "@/components/search/useFavoriteTitles";
 import type { SearchItem } from "@/components/search/search-items";
 import { categoryLabel, cityLabel } from "@/data/taxonomy";
 import { formatPriceCompact } from "@/lib/prices";
@@ -29,7 +30,9 @@ import {
   disarmKaminServer,
   type ServerKamin,
 } from "@/lib/kamin-client";
-import { recordHunt } from "@/lib/hunt-store";
+import { recordHunt, readHunts } from "@/lib/hunt-store";
+import { readSavedHunts } from "@/lib/saved-hunts";
+import { readFavoriteRecords } from "@/hooks/useFavorites";
 import { fireRealHunt } from "@/lib/hunt-fire";
 import { EMPTY_CONTEXT_BASE, type ContextBase } from "@/lib/search-context";
 import type { SearchContext } from "@/types/search";
@@ -228,20 +231,47 @@ export default function SavedPage() {
   const [tab, setTab] = useState<SavedTab>("fresh");
   /** Kamin detail sheet (navid 2026-10-08): tap a kamin → definition + work diary. */
   const [detailKamin, setDetailKamin] = useState<ServerKamin | null>(null);
-  /** Cross-tab search (navid 2026-10-08). */
+  /** Cross-tab search (navid 2026-10-08): unified — every hunt, every tab, both pages. */
   const [searchOpen, setSearchOpen] = useState(false);
+  const { favTitles } = useFavoriteTitles(searchOpen);
   const searchItems: SearchItem[] = [
     ...(serverKamins ?? [])
       .filter((k) => k.status === "active" && k.new_match_count > 0)
       .map((k) => serverKaminToSearchItem(k, "fresh")),
     ...(serverKamins ?? []).map((k) => serverKaminToSearchItem(k, "kamin")),
-    ...kaminList.map(kaminToSearchItem),
+    ...buildLocalSearchItems({
+      kamins: kaminList,
+      hunts: readHunts(),
+      savedHunts: readSavedHunts(),
+      favorites: readFavoriteRecords(),
+      favTitles,
+    }),
   ];
 
   function handleSearchSelect(item: SearchItem) {
     if (item.kind === "fresh") {
       const kamin = (serverKamins ?? []).find((k) => k.id === item.id);
       if (kamin) handleViewServerResults(kamin);
+      return;
+    }
+    if (item.kind === "history") {
+      const hunt = readHunts().find((h) => h.id === item.id);
+      if (hunt?.runId) router.push(`/results/${encodeURIComponent(hunt.runId)}?q=${encodeURIComponent(hunt.query)}`);
+      return;
+    }
+    if (item.kind === "saved-hunt") {
+      const saved = readSavedHunts().find((s) => s.id === item.id);
+      if (saved) {
+        // Re-fire the saved hunt definition.
+        fireRealHunt({ query: saved.query, base: saved.base, dismissed: new Set() }).then((r) => {
+          if (r.ok && r.runId) router.push(`/hunt/${encodeURIComponent(r.runId)}?q=${encodeURIComponent(saved.query)}`);
+        });
+      }
+      return;
+    }
+    if (item.kind === "favorite") {
+      const rec = readFavoriteRecords().find((r) => r.adId === item.id);
+      if (rec) router.push(`/ads/${encodeURIComponent(rec.sourceAdId)}?from=saved`);
       return;
     }
     const server = (serverKamins ?? []).find((k) => k.id === item.id);

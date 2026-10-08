@@ -32,6 +32,8 @@ import { getRememberedCity, rememberCity } from "@/lib/city-memory";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
+import { useServerUsage } from "@/lib/usage";
+import { PlanSheet } from "@/components/plan/PlanSheet";
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
 import { parsePriceInput, formatPriceCompact } from "@/lib/prices";
 import { EMPTY_CONTEXT_BASE, type ContextBase } from "@/lib/search-context";
@@ -139,6 +141,14 @@ export function HuntSetup() {
    */
   const [firing, setFiring] = useState(false);
   const [quotaError, setQuotaError] = useState<string | null>(null);
+  // Live quota: when the server says remaining === 0, the «شکار کن» button
+  // is disabled UP FRONT — the user never walks the whole flow just to be
+  // rejected at the end (navid 2026-10-08: quota-exhaustion is a UX killer).
+  // undefined (loading) / null (unavailable) → button stays enabled; only a
+  // certain zero disables.
+  const serverUsage = useServerUsage();
+  const quotaExhausted = serverUsage?.remaining === 0;
+  const [planOpen, setPlanOpen] = useState(false);
   const dimsSectionRef = useRef<HTMLDivElement | null>(null);
   const [dimsFlash, setDimsFlash] = useState(false);
 
@@ -432,15 +442,27 @@ export function HuntSetup() {
           <button
             type="button"
             onClick={fireHunt}
-            disabled={firing}
-            className="mt-1 flex h-13 min-h-13 items-center justify-center rounded-lg bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active disabled:cursor-wait"
+            disabled={firing || quotaExhausted}
+            aria-disabled={quotaExhausted}
+            className="mt-1 flex h-13 min-h-13 items-center justify-center rounded-lg bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active disabled:cursor-not-allowed disabled:opacity-40"
           >
             {firing ? (
               <LoadingState label="در حال شکار" showElapsed={false} tone="on-primary" />
+            ) : quotaExhausted ? (
+              "سهمیه‌ات تموم شده"
             ) : (
               "شکار کن"
             )}
           </button>
+          {quotaExhausted && (
+            <button
+              type="button"
+              onClick={() => setPlanOpen(true)}
+              className="flex h-11 items-center justify-center gap-2 rounded-lg border border-border text-[14px] font-medium text-foreground transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              شارژ پلن
+            </button>
+          )}
           {quotaError !== null && (
             <p role="alert" className="text-center text-[13px] text-destructive">
               {quotaError}
@@ -476,6 +498,8 @@ export function HuntSetup() {
         onClose={() => setCityOpen(false)}
         searchable
       />
+
+      <PlanSheet open={planOpen} onClose={() => setPlanOpen(false)} />
       <PriceSheet
         open={priceOpen}
         priceMin={

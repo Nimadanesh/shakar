@@ -4,12 +4,16 @@ import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { BottomTabBar } from "@/components/layout/BottomTabBar";
 import { ActiveHuntChip } from "@/components/search/ActiveHuntChip";
+import { useProfileSync } from "@/hooks/useProfileSync";
 
 /** Routes that own the full viewport (no header, no tab bar). */
 const CHROMELESS_PREFIXES = ["/onboarding", "/auth"];
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  // Profile sync: when logged in, pull server favorites/history/saved hunts
+  // and merge into the local stores (the profile IS the phone number).
+  useProfileSync();
   const chromeless = CHROMELESS_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );

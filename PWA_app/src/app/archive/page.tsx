@@ -15,9 +15,13 @@ import { SearchFab, SearchSheet } from "@/components/search/SearchSheet";
 import {
   favoriteToSearchItem,
   huntToSearchItem,
+  kaminToSearchItem,
   savedHuntToSearchItem,
+  serverKaminToSearchItem,
 } from "@/components/search/search-builders";
 import type { SearchItem } from "@/components/search/search-items";
+import { listKamins } from "@/lib/kamin-store";
+import { listKaminsServer, type ServerKamin } from "@/lib/kamin-client";
 import { readHunts, deleteHunt, recordHunt, type HuntRecord } from "@/lib/hunt-store";
 import { fireRealHunt } from "@/lib/hunt-fire";
 import {
@@ -107,10 +111,20 @@ export default function ArchivePage() {
   } = useHydratedStore<SavedHunt[]>("saved-hunts", readSavedHunts);
   const huntList = hunts ?? [];
   const savedList = saved ?? [];
+  // Server kamins so /archive search reaches the kamin tabs too (unified search).
+  const [serverKamins, setServerKamins] = useState<ServerKamin[] | null>(null);
+  useEffect(() => {
+    listKaminsServer().then(setServerKamins);
+  }, []);
 
   const searchItems: SearchItem[] = [
+    ...(serverKamins ?? [])
+      .filter((k) => k.status === "active" && k.new_match_count > 0)
+      .map((k) => serverKaminToSearchItem(k, "fresh")),
+    ...(serverKamins ?? []).map((k) => serverKaminToSearchItem(k, "kamin")),
     ...huntList.map(huntToSearchItem),
     ...savedList.map(savedHuntToSearchItem),
+    ...listKamins().map(kaminToSearchItem),
     ...favRecords
       .filter((r) => favTitles.has(r.adId))
       .map((r) => {
@@ -122,7 +136,7 @@ export default function ArchivePage() {
   function handleSearchSelect(item: SearchItem) {
     if (item.kind === "history") {
       const hunt = huntList.find((h) => h.id === item.id);
-      if (hunt) router.push(`/hunt/${encodeURIComponent(hunt.runId ?? hunt.id)}`);
+      if (hunt) router.push(`/results/${encodeURIComponent(hunt.runId ?? hunt.id)}`);
       return;
     }
     if (item.kind === "saved-hunt") {
@@ -133,6 +147,13 @@ export default function ArchivePage() {
     if (item.kind === "favorite") {
       const rec = favRecords.find((r) => r.adId === item.id);
       if (rec) router.push(`/ads/${encodeURIComponent(rec.sourceAdId)}?from=archive`);
+      return;
+    }
+    // Kamin results from unified search: deep-link to /saved where the
+    // kamin tabs and detail sheet live.
+    if (item.kind === "fresh" || item.kind === "kamin") {
+      router.push(`/saved?tab=kamins`);
+      return;
     }
   }
 
@@ -223,7 +244,7 @@ export default function ArchivePage() {
                 className="flex items-center gap-1 rounded-lg border border-border bg-card transition-colors hover:border-ring focus-within:border-ring"
               >
                 <Link
-                  href={`/hunt/${hunt.runId ?? hunt.id}`}
+                  href={`/results/${hunt.runId ?? hunt.id}`}
                   className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-start focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <History size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />

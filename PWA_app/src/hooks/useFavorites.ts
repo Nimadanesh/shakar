@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { invalidateCached } from "@/lib/session-cache";
+import { syncFavoriteToggle } from "@/hooks/useProfileSync";
 
 const STORAGE_KEY = "shakar:favorites:v1";
 const CACHE_KEY = "favorites";
@@ -96,10 +97,12 @@ export function useFavorites() {
 
   const toggle = useCallback(
     (adId: string) => {
-      const next = ids.includes(adId)
-        ? ids.filter((id) => id !== adId)
-        : [...ids, adId];
+      const isNowFavorite = !ids.includes(adId);
+      const next = isNowFavorite ? [...ids, adId] : ids.filter((id) => id !== adId);
       writeStored(next);
+      // Write-through: when logged in, mirror to the server profile so any
+      // device sees it (navid 2026-10-08). Best-effort; local already won.
+      syncFavoriteToggle(adId, isNowFavorite);
       // The invalidation event makes this hook (and every other mounted
       // favorites reader) re-read the just-written value immediately.
       invalidateCached(CACHE_KEY);

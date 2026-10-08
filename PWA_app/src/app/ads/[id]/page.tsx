@@ -53,7 +53,7 @@ export default async function AdDetailPage({
   const huntId = first(query.hunt);
   const backHref =
     huntId !== null
-      ? `/hunt/${huntId}`
+      ? `/results/${huntId}`
       : query.from === "saved"
         ? "/saved"
         : query.from === "archive"
@@ -63,25 +63,85 @@ export default async function AdDetailPage({
   const divarUrl = `https://divar.ir/v/${encodeURIComponent(id)}`;
 
   let detail: Awaited<ReturnType<typeof divarProvider.getDetail>> | null = null;
+  // Classify the failure so the UI can be honest: a deleted ad (404) is
+  // permanent; throttling/timeouts are transient and deserve a retry.
+  // (navid 2026-10-08: "جزئیات در دسترس نیست" for EVERY ad needs a root fix.)
+  let failureKind: "deleted" | "transient" | "unknown" = "unknown";
   try {
     detail = await divarProvider.getDetail(id);
-  } catch {
+  } catch (e) {
     detail = null;
+    const msg = e instanceof Error ? e.message : "";
+    const status =
+      typeof (e as { status?: unknown }).status === "number"
+        ? (e as { status: number }).status
+        : null;
+    if (status === 404 || /404/.test(msg)) {
+      failureKind = "deleted";
+    } else if (
+      status === 429 ||
+      status === 403 ||
+      (status !== null && status >= 500) ||
+      /timed out|timeout|rate-limited|upstream-down/i.test(msg)
+    ) {
+      failureKind = "transient";
+    }
+    console.warn(`[ads/detail] ${id} failed (${failureKind}):`, msg.slice(0, 120));
   }
 
   if (!detail) {
+    const isDeleted = failureKind === "deleted";
+    // Degraded view: the results list knew this ad's title/price/city.
+    // Show THAT instead of a dead page — the user tapped a real card.
+    const fallbackTitle = first(query.t);
+    const fallbackPrice = num(query.p);
+    const fallbackPriceText = first(query.pt);
+    const fallbackCity = first(query.c);
+    const hasFallback = fallbackTitle !== null;
     return (
       <main className="flex flex-1 flex-col gap-4 py-16 text-center">
-        <p className="text-sm font-medium text-foreground">جزئیات این آگهی در دسترس نیست.</p>
-        <p className="mx-auto max-w-xs text-[13px] leading-6 text-muted-foreground">
-          ممکن است آگهی حذف شده باشد یا ارتباط با دیوار برقرار نشد — چیزی حدس نمی‌زنیم.
-        </p>
+        {hasFallback ? (
+          <div className="mx-auto w-full max-w-xs rounded-lg border border-border bg-card p-4 text-start">
+            <p className="break-words text-sm font-medium leading-6 text-foreground">
+              {fallbackTitle}
+            </p>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {[fallbackPrice !== null ? formatPriceToman(fallbackPrice) : fallbackPriceText, fallbackCity]
+                .filter(Boolean)
+                .join(" • ")}
+            </p>
+            <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
+              {isDeleted
+                ? "این آگهی از دیوار حذف شده؛ جزئیات کامل در دسترس نیست."
+                : "جزئیات کامل فعلاً در دسترس نیست — چند لحظه دیگر دوباره تلاش کن."}
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-foreground">
+              {isDeleted ? "این آگهی حذف شده است." : "جزئیات این آگهی در دسترس نیست."}
+            </p>
+            <p className="mx-auto max-w-xs text-[13px] leading-6 text-muted-foreground">
+              {isDeleted
+                ? "به نظر می‌رسد آگهی از دیوار حذف شده — چیزی حدس نمی‌زنیم."
+                : "ممکن است دیوار موقتاً محدودمان کرده باشد یا ارتباط برقرار نشد — چند لحظه دیگر دوباره تلاش کن."}
+            </p>
+          </>
+        )}
         <div className="mx-auto flex w-full max-w-xs flex-col gap-2">
+          {!isDeleted && (
+            <a
+              href={`/ads/${encodeURIComponent(id)}${huntId !== null ? `?hunt=${encodeURIComponent(huntId)}` : ""}`}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-action-primary px-5 text-sm font-medium text-primary-foreground"
+            >
+              تلاش دوباره
+            </a>
+          )}
           <Link
             href={divarUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-action-primary px-5 text-sm font-medium text-primary-foreground"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border px-5 text-sm font-medium text-foreground"
           >
             <ExternalLink size={18} aria-hidden="true" />
             باز کردن آگهی اصلی در دیوار

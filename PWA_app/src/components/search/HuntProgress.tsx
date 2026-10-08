@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { getCachedResults, setCachedResults } from "@/lib/hunt-results-cache";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { EyeOff, Heart, Repeat } from "lucide-react";
@@ -134,11 +135,20 @@ interface TraceLine {
 
 export function HuntProgress({ runId, query }: { runId: string; query: string }) {
   const router = useRouter();
+  // Instant-first render: if the completed results are cached (back-nav),
+  // initialize directly into the ready state — not even one skeleton frame.
+  const initialCached = getCachedResults(runId);
   const [trace, setTrace] = useState<TraceLine[]>([]);
-  const [current, setCurrent] = useState<string>("شکار شروع شد — دارم برات می‌گردم.");
-  const [results, setResults] = useState<ScoredAd[]>([]);
-  const [stats, setStats] = useState<HuntStats | null>(null);
-  const [done, setDone] = useState(false);
+  const [current, setCurrent] = useState<string>(
+    initialCached
+      ? initialCached.results.length > 0
+        ? `${fa(initialCached.results.length)} شکار دقیق.`
+        : "چیزی که دقیقاً بخوره به مشخصاتت پیدا نکردم."
+      : "شکار شروع شد — دارم برات می‌گردم."
+  );
+  const [results, setResults] = useState<ScoredAd[]>(() => initialCached?.results ?? []);
+  const [stats, setStats] = useState<HuntStats | null>(() => initialCached?.stats ?? null);
+  const [done, setDone] = useState(() => initialCached !== null);
   const [error, setError] = useState<string | null>(null);
   const [deepening, setDeepening] = useState(false);
   const [traceOpen, setTraceOpen] = useState(false);
@@ -146,13 +156,17 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [showTop, setShowTop] = useState(false);
   const [showScrollInfo, setShowScrollInfo] = useState(false);
   /** The run's definition (from GET) — powers refine + kamin + detail evidence. */
-  const [definition, setDefinition] = useState<HuntDefinition | null>(null);
+  const [definition, setDefinition] = useState<HuntDefinition | null>(
+    () => initialCached?.definition ?? null
+  );
   /** The loop: «شکار تموم شد، حالا چی؟» — sheet + bottom block share these. */
   const [loopOpen, setLoopOpen] = useState(false);
   const [radarOpen, setRadarOpen] = useState(false);
   const [kaminId, setKaminId] = useState<string | null>(null);
   const { hiddenIds, hide } = useHiddenAds();
-  const [loadState, setLoadState] = useState<"loading" | "live" | "ready" | "expired">("loading");
+  const [loadState, setLoadState] = useState<"loading" | "live" | "ready" | "expired">(
+    () => (initialCached ? "ready" : "loading")
+  );
   // Task continuity: returning from an ad's detail or the auth gate
   // restores the exact scroll position of the results list. The restore
   // must not conclude "settled" while results are still loading —
@@ -280,6 +294,13 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
       if (definition.priceMin !== "") p.set("min", definition.priceMin);
       if (definition.priceMax !== "") p.set("max", definition.priceMax);
     }
+    // Degraded-view fallback (navid 2026-10-08): if the live detail fetch
+    // fails, the ad page can still render the list-known title/price/city
+    // instead of a dead page. Truncated to keep URLs sane.
+    if (ad.title !== "") p.set("t", ad.title.slice(0, 120));
+    if (ad.price !== null) p.set("p", String(ad.price));
+    else if (ad.priceText) p.set("pt", ad.priceText.slice(0, 40));
+    if (ad.city !== "") p.set("c", ad.city.slice(0, 40));
     return `/ads/${encodeURIComponent(ad.sourceAdId)}?${p.toString()}`;
   }
 
@@ -294,6 +315,10 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
 
   useEffect(() => {
     let cancelled = false;
+    // Background revalidation: the initial render may have come from the
+    // in-memory cache (instant back-nav). This fetch keeps it honest —
+    // a completed hunt's results are immutable, so it only confirms.
+    // When there was no cache, this is the primary load.
     fetch(`/api/hunts/${encodeURIComponent(runId)}`)
       .then(async (res) => {
         if (cancelled) return;
@@ -339,6 +364,13 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           );
           setLoadState("ready");
           clearActiveHunt(runId);
+          // Cache the immutable results for instant back-navigation.
+          setCachedResults(runId, {
+            results: doneResults,
+            stats: data.stats ?? null,
+            definition: data.definition ?? null,
+            query,
+          });
         } else {
           setLoadState("live");
         }
@@ -434,6 +466,13 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           );
           es.close();
           clearActiveHunt(runId);
+          // Cache the immutable results for instant back-navigation.
+          setCachedResults(runId, {
+            results: e.results,
+            stats: e.stats,
+            definition,
+            query,
+          });
           break;
         case "error":
           setError(

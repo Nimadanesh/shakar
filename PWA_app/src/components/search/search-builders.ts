@@ -135,3 +135,30 @@ export function favoriteToSearchItem(
     keywords: makeKeywords(title, city),
   };
 }
+
+/**
+ * All DEVICE-LOCAL items in one call: local kamins, hunt history, saved
+ * hunts, and favorites (with resolved titles). Both /saved and /archive
+ * include these, so search reaches every hunt from either page — the tab
+ * badge tells the user where each result lives (navid 2026-10-08).
+ *
+ * Server kamins (fresh + kamin tabs) are passed in — /saved fetches them for
+ * its tabs; /archive fetches them too so its search is equally complete.
+ */
+export function buildLocalSearchItems(opts: {
+  kamins: KaminRecord[];
+  hunts: HuntRecord[];
+  savedHunts: SavedHunt[];
+  favorites: Array<{ adId: string }>;
+  favTitles: Map<string, { title: string; city: string | null }>;
+}): SearchItem[] {
+  return [
+    ...opts.kamins.map(kaminToSearchItem),
+    ...opts.hunts.map(huntToSearchItem),
+    ...opts.savedHunts.map(savedHuntToSearchItem),
+    ...opts.favorites.map((f) => {
+      const t = opts.favTitles.get(f.adId);
+      return favoriteToSearchItem(f.adId, t?.title ?? "آگهی ذخیره‌شده", t?.city ?? null);
+    }),
+  ];
+}
