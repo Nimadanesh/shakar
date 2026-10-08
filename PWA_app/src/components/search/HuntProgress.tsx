@@ -152,9 +152,12 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [radarOpen, setRadarOpen] = useState(false);
   const [kaminId, setKaminId] = useState<string | null>(null);
   const { hiddenIds, hide } = useHiddenAds();
+  const [loadState, setLoadState] = useState<"loading" | "live" | "ready" | "expired">("loading");
   // Task continuity: returning from an ad's detail or the auth gate
-  // restores the exact scroll position of the results list.
-  useTaskReturnRestore(true);
+  // restores the exact scroll position of the results list. The restore
+  // must not conclude "settled" while results are still loading —
+  // on a slow network the skeleton is stable AND short for seconds.
+  useTaskReturnRestore(true, loadState === "ready" || loadState === "expired");
   /**
    * Load phase — the results-VIEW contract:
    *  - "loading": checking the run's status;
@@ -163,7 +166,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
    *    no replayed "searching" theater, no re-fire;
    *  - "expired": run not found → honest expired view.
    */
-  const [loadState, setLoadState] = useState<"loading" | "live" | "ready" | "expired">("loading");
   const esRef = useRef<EventSource | null>(null);
   const lineId = useRef(0);
   const seenResults = useRef(new Set<string>());

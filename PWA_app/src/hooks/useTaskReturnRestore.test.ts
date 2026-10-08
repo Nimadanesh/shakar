@@ -18,7 +18,7 @@ import {
   type RestoreProbe,
 } from "@/hooks/useTaskReturnRestore";
 
-const OPTS = { maxTries: 40, stableLimit: 5 };
+const OPTS = { maxTries: 40, stableLimit: 5, allowSettle: true };
 const FRESH: RestoreProbe = { tries: 0, stableTries: 0, lastHeight: 0 };
 
 function runSequence(
@@ -72,7 +72,7 @@ describe("nextRestoreProbe", () => {
 
   it("gives up at maxTries even if the page keeps growing", () => {
     const heights = Array.from({ length: 50 }, (_, i) => 1000 + i * 100);
-    const { doneAt } = runSequence(heights, { maxTries: 10, stableLimit: 5 });
+    const { doneAt } = runSequence(heights, { maxTries: 10, stableLimit: 5, allowSettle: true });
     expect(doneAt).toBe(9);
   });
 
@@ -84,6 +84,27 @@ describe("nextRestoreProbe", () => {
       1600, // growth resets
       1600, 1600, 1600, 1600, 1600, // 5 stable → done here
     ]);
+    expect(doneAt).toBe(9);
+  });
+
+  it("never concludes settled while content is still loading (slow-network bug)", () => {
+    // The 2026-10-08 production scenario: on a slow mobile network the
+    // results GET takes seconds; the skeleton is stable AND short the
+    // whole time. With allowSettle=false the retry must NOT give up.
+    const { doneAt } = runSequence(
+      [800, 800, 800, 800, 800, 800, 800, 800],
+      { maxTries: 40, stableLimit: 5, allowSettle: false }
+    );
+    expect(doneAt).toBeNull();
+  });
+
+  it("still gives up at maxTries while loading", () => {
+    const heights = Array.from({ length: 50 }, () => 800);
+    const { doneAt } = runSequence(heights, {
+      maxTries: 10,
+      stableLimit: 5,
+      allowSettle: false,
+    });
     expect(doneAt).toBe(9);
   });
 });

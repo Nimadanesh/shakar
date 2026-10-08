@@ -37,13 +37,18 @@ export interface RestoreReading {
 export function nextRestoreProbe(
   probe: RestoreProbe,
   reading: RestoreReading,
-  opts: { maxTries: number; stableLimit: number }
+  opts: { maxTries: number; stableLimit: number; allowSettle: boolean }
 ): { done: boolean; probe: RestoreProbe } {
   const tries = probe.tries + 1;
   if (reading.reached) return { done: true, probe };
   const stableTries =
     Math.abs(reading.height - probe.lastHeight) < 2 ? probe.stableTries + 1 : 0;
-  const settled = stableTries >= opts.stableLimit;
+  // "Settled" may only conclude "too short" once the page's content is
+  // actually done loading. On a slow mobile network the results GET can
+  // take seconds — during that window the skeleton is stable AND short,
+  // and concluding "settled" here was the 2026-10-08 production bug:
+  // the slot was cleared before the results ever rendered.
+  const settled = opts.allowSettle && stableTries >= opts.stableLimit;
   const done = tries >= opts.maxTries || (settled && reading.tooShort);
   return { done, probe: { tries, stableTries, lastHeight: reading.height } };
 }
@@ -67,8 +72,14 @@ const STABLE_LIMIT = 5; // height unchanged 5× in a row → content settled
  * clear-on-done, a repeated effect simply retries the same restore.
  * The 10-minute staleness guard + pathname match still prevent a fresh
  * visit from inheriting someone else's scroll.
+ *
+ * @param contentSettled — true once the page's content is done loading
+ *   (results rendered / expired view). While false, the retry never
+ *   concludes "too short": on a slow network the loading skeleton is
+ *   stable AND short for seconds, and settling there clears the slot
+ *   before the results arrive.
  */
-export function useTaskReturnRestore(enabled: boolean = true) {
+export function useTaskReturnRestore(enabled: boolean = true, contentSettled: boolean = true) {
   const pathname = usePathname();
 
   useEffect(() => {
@@ -94,6 +105,7 @@ export function useTaskReturnRestore(enabled: boolean = true) {
       const next = nextRestoreProbe(probe, reading, {
         maxTries: MAX_TRIES,
         stableLimit: STABLE_LIMIT,
+        allowSettle: contentSettled,
       });
       probe = next.probe;
       if (next.done) clearTaskReturn();
@@ -101,5 +113,5 @@ export function useTaskReturnRestore(enabled: boolean = true) {
     };
     let timer = window.setTimeout(attempt, 60);
     return () => window.clearTimeout(timer);
-  }, [enabled, pathname]);
+  }, [enabled, pathname, contentSettled]);
 }
