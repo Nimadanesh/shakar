@@ -8,7 +8,7 @@ import { WhatField } from "@/components/search/WhatField";
 import { TypoNudge, TYPO_PAUSE_MS } from "@/components/search/TypoNudge";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { DimensionChips } from "@/components/search/DimensionChips";
-import { LoadingState } from "@/components/ui/LoadingState";
+import { LoaderGrid, LoadingState } from "@/components/ui/LoadingState";
 import { RecentHunts } from "@/components/search/RecentHunts";
 import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
 import { SpecRow } from "@/components/search/SpecRow";
@@ -159,6 +159,13 @@ export function HuntSetup() {
   // certain zero disables.
   const serverUsage = useServerUsage();
   const quotaExhausted = serverUsage?.remaining === 0;
+  // While the quota state is UNKNOWN the button must not present as
+  // actionable — showing an enabled «شکار کن» that flips to disabled
+  // seconds later is a lie, and a quota-exhausted tap would burn a
+  // server round trip just to be rejected (navid 2026-10-08: big bug).
+  // The fetch is warmed in AppChrome/HuntProgress so this window is
+  // usually zero; when it isn't, the button waits honestly.
+  const quotaChecking = serverUsage === undefined;
   const [planOpen, setPlanOpen] = useState(false);
   const dimsSectionRef = useRef<HTMLDivElement | null>(null);
   const [dimsFlash, setDimsFlash] = useState(false);
@@ -456,14 +463,23 @@ export function HuntSetup() {
           <button
             type="button"
             onClick={fireHunt}
-            disabled={firing || quotaExhausted}
-            aria-disabled={quotaExhausted}
-            className="mt-1 flex h-13 min-h-13 items-center justify-center rounded-lg bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={firing || quotaExhausted || quotaChecking}
+            aria-disabled={quotaExhausted || quotaChecking}
+            aria-busy={quotaChecking}
+            className={
+              "mt-1 flex h-13 min-h-13 items-center justify-center rounded-lg bg-action-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active disabled:cursor-not-allowed " +
+              (quotaExhausted ? "disabled:opacity-40" : "disabled:opacity-70")
+            }
           >
             {firing ? (
               <LoadingState label="در حال شکار" showElapsed={false} tone="on-primary" />
             ) : quotaExhausted ? (
               "سهمیه‌ات تموم شده"
+            ) : quotaChecking ? (
+              <span className="flex items-center gap-2.5">
+                <LoaderGrid tone="on-primary" />
+                <span>شکار کن</span>
+              </span>
             ) : (
               "شکار کن"
             )}

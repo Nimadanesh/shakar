@@ -10,6 +10,7 @@ import type { HuntDefinition, HuntEvent, HuntStats, ScoredAd } from "@/lib/serve
 import { fa, pickVariant } from "@/lib/hunt-copy";
 import { formatPriceToman } from "@/lib/prices";
 import { clearActiveHunt } from "@/lib/active-hunt";
+import { warmUsage } from "@/lib/usage";
 import { setTaskReturn } from "@/lib/task-return";
 import { requireAuth } from "@/lib/auth";
 import { armKaminServer, disarmKaminServer } from "@/lib/kamin-client";
@@ -140,6 +141,12 @@ interface TraceLine {
 
 export function HuntProgress({ runId, query }: { runId: string; query: string }) {
   const router = useRouter();
+  // Quota warm: the loop's «دقیق‌ترش کن» lands on the home hunt form —
+  // warm the usage fetch while the hunter reads results so the «شکار کن»
+  // button there never flashes enabled for an exhausted quota.
+  useEffect(() => {
+    warmUsage();
+  }, []);
   // Instant-first render: if the completed results are cached (back-nav),
   // initialize directly into the ready state — not even one skeleton frame.
   const initialCached = getCachedResults(runId);

@@ -19,14 +19,19 @@ export interface UsageData {
 
 /**
  * Server usage numbers for the profile. Returns:
- *  - undefined while loading (caller shows its local numbers meanwhile),
- *  - null when the server can't provide them (caller falls back to local),
+ *  - undefined while the quota state is UNKNOWN (fetch in flight) —
+ *    callers must NOT render an actionable state from this; the «شکار کن»
+ *    button stays disabled with a loading indicator until the server
+ *    answers (navid 2026-10-08: the enabled-then-disabled flash is a bug).
+ *  - null when the server can't provide them (caller falls back to local;
+ *    the server POST stays authoritative at fire time),
  *  - UsageData when available (same on every device).
  *
  * The fetch is shared module-wide: HuntSetup, PlanSheet (mounted even when
  * closed), and Header all need the same numbers, so one request serves
  * every instance instead of N identical concurrent GETs. Cached for 30s;
- * call invalidateUsage() after an action that changes quota (firing a hunt).
+ * call invalidateUsage() after an action that changes quota (firing a hunt,
+ * login) and warmUsage() from pages the hunter passes through first.
  */
 let sharedFetch: Promise<UsageData | null> | null = null;
 let sharedAt = 0;
@@ -35,6 +40,16 @@ const SHARED_TTL_MS = 30_000;
 export function invalidateUsage(): void {
   sharedFetch = null;
   sharedAt = 0;
+}
+
+/**
+ * Warm the shared usage fetch without subscribing to it. Call from pages
+ * the hunter passes through BEFORE reaching a hunt form (AppChrome,
+ * HuntProgress) so the quota state is usually resolved by the time the
+ * «شکار کن» button renders — no enabled-then-disabled flash.
+ */
+export function warmUsage(): void {
+  void fetchUsageOnce();
 }
 
 function fetchUsageOnce(): Promise<UsageData | null> {

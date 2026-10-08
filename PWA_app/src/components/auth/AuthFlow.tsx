@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { OtpOrbit } from "./OtpOrbit";
 import { peekTaskReturn } from "@/lib/task-return";
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
+import { invalidateUsage } from "@/lib/usage";
 
 const RESEND_SECONDS = 60;
 
@@ -163,6 +164,9 @@ export function AuthFlow() {
               if (pendingSession.current) {
                 storeSession(pendingSession.current);
                 pendingSession.current = null;
+                // Identity changed (guest → user): the warmed quota belongs
+                // to the old identity — drop it so the next read is fresh.
+                invalidateUsage();
               }
               // Task continuity: apply the gated favorite BEFORE navigating,
               // so the target page renders it as already-liked. The task
