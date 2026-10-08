@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { getCachedResults, setCachedResults } from "@/lib/hunt-results-cache";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { EyeOff, Heart, Repeat, Bookmark } from "lucide-react";
+import { EyeOff, Heart, Repeat, Bookmark, Share2, Check } from "lucide-react";
 import type { HuntDefinition, HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
 import { fa, pickVariant } from "@/lib/hunt-copy";
 import { formatPriceToman } from "@/lib/prices";
@@ -63,6 +63,28 @@ const ResultCard = memo(function ResultCard({
   // Seen marker: evaluated on mount, so returning from the ad's detail
   // page (which marks it seen) shows "دیده شد" immediately.
   const [seen] = useState(() => isAdSeen(ad.sourceAdId));
+  // Per-ad share (navid 2026-10-08, spec B): the result card is where the
+  // user decides "this one" — sharing must not wait for the detail page.
+  // Shares the ad's own canonical URL, not the hunt page.
+  const [copied, setCopied] = useState(false);
+  async function handleShare() {
+    const url = `${window.location.origin}${detailHref}`;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: ad.title, url });
+      } catch {
+        // User dismissed the share sheet — not an error.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable — leave the button as-is.
+    }
+  }
   return (
     <article
       className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
@@ -128,6 +150,20 @@ const ResultCard = memo(function ResultCard({
         >
           <EyeOff size={15} aria-hidden="true" />
           مخفی کن
+        </button>
+        <button
+          type="button"
+          onClick={handleShare}
+          aria-label="اشتراک‌گذاری این آگهی"
+          aria-live="polite"
+          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-[12px] text-zinc-500 transition-colors hover:text-zinc-800 dark:hover:text-zinc-200"
+        >
+          {copied ? (
+            <Check size={15} aria-hidden="true" />
+          ) : (
+            <Share2 size={15} aria-hidden="true" />
+          )}
+          {copied ? "کپی شد" : "اشتراک‌گذاری"}
         </button>
       </div>
     </article>
