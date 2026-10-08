@@ -92,4 +92,14 @@ describe("GET /api/hunts/[id]", () => {
     expect(json.data.results[0].sourceAdId).toBe("tok1");
     expect(json.data.definition.query).toBe("گوشی");
   });
+
+  it("404s (never 500s) when the run backend throws — e.g. PostgREST 400 on a malformed id", async () => {
+    // Simulate the production failure: getRun throws instead of returning
+    // undefined. The route must degrade to the honest expired view.
+    const runs = await import("@/lib/server/hunt/runs");
+    const spy = vi.spyOn(runs, "getRun").mockRejectedValueOnce(new Error("Supabase GET hunt_runs → 400"));
+    const res = await get("probe-xyz");
+    expect(res.status).toBe(404);
+    spy.mockRestore();
+  });
 });

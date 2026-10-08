@@ -26,7 +26,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const run = await getRun(id);
+  let run;
+  try {
+    run = await getRun(id);
+  } catch (e) {
+    // A run we cannot read (DB down, malformed id for PostgREST, …) is
+    // indistinguishable from a run that doesn't exist. The honest
+    // response is the expired view with its rerun CTA — never a 500.
+    console.error("[hunts/get] getRun failed:", e instanceof Error ? e.message : e);
+    run = undefined;
+  }
   if (!run) {
     return NextResponse.json(
       { ok: false, error: { code: "NOT_FOUND", message: "این شکار پیدا نشد." } },
