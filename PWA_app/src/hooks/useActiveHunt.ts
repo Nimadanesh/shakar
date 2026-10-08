@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   clearActiveHunt,
   readActiveHunt,
@@ -9,17 +9,16 @@ import {
 
 /**
  * Verified active hunt (shared). Reads the session-scoped record and
- * confirms against the server once — a finished hunt never reports as
- * running. Used by ActiveHuntChip and RecentHunts so both agree on
- * which hunt is live.
+ * confirms against the server — a finished hunt never reports as running.
+ * Used by ActiveHuntChip so every page agrees on which hunt is live.
  *
- * Staying honest while visible (navid 2026-10-08): the old version
- * verified ONCE on mount and then never again, so a chip that appeared
- * after a refresh stayed forever — even after the hunt completed.
- * Now it (1) hides instantly on the same-tab completion event the run
- * page dispatches, and (2) re-checks the featherweight status endpoint
- * every 15s while visible, so completion on another page/tab also
- * clears it.
+ * Reactive by design (navid 2026-10-08): AppChrome never remounts on
+ * navigation, so a mount-once check missed every hunt fired after the
+ * first page load — the badge never appeared in the normal flow. Now
+ * the hook wakes the instant a hunt is fired (shekaar:active-hunt-set),
+ * re-reads the record every few seconds as a backstop, and clears the
+ * moment the hunt completes — via the run page's event on the same tab
+ * or the featherweight status poll on any other page.
  */
 const verifiedByRun = new Map<string, Promise<ActiveHunt | null>>();
 
@@ -45,7 +44,7 @@ function verifyActiveHunt(found: ActiveHunt): Promise<ActiveHunt | null> {
       return found;
     })
     .finally(() => {
-      // One-shot per run id: a later mount re-verifies (cheap — the run
+      // One-shot per run id: a later check re-verifies (cheap — the run
       // is either live or the record was cleared).
       if (verifiedByRun.get(found.runId) === p) verifiedByRun.delete(found.runId);
     });
@@ -67,32 +66,60 @@ async function pollStatus(runId: string): Promise<boolean> {
 
 export function useActiveHunt(): ActiveHunt | null {
   const [active, setActive] = useState<ActiveHunt | null>(null);
+  const activeRef = useRef<ActiveHunt | null>(null);
 
   useEffect(() => {
-    const found: ActiveHunt | null = readActiveHunt();
-    if (!found) return;
-    const run = found; // narrowed once — closures below see a non-null const
     let cancelled = false;
-    verifyActiveHunt(run).then((result) => {
-      if (!cancelled) setActive(result);
-    });
-    // Same-tab completion: the run page dispatches this on done/error.
+
+    function setTracked(next: ActiveHunt | null) {
+      activeRef.current = next;
+      if (!cancelled) setActive(next);
+    }
+
+    /** Re-read the record; verify only when it's a hunt we aren't showing. */
+    async function refresh() {
+      if (cancelled) return;
+      const found = readActiveHunt();
+      const prev = activeRef.current;
+      if (!found) {
+        if (prev !== null) setTracked(null);
+        return;
+      }
+      if (prev && prev.runId === found.runId) return; // already showing it
+      setTracked(await verifyActiveHunt(found));
+    }
+
+    /** While a hunt is shown, notice the moment it completes. */
+    async function repoll() {
+      if (cancelled) return;
+      const cur = activeRef.current;
+      if (!cur) return;
+      const stillRunning = await pollStatus(cur.runId);
+      if (!stillRunning && !cancelled) {
+        clearActiveHunt(cur.runId);
+        setTracked(null);
+      }
+    }
+
+    function onSet() {
+      void refresh();
+    }
     function onCleared(e: Event) {
       const id = (e as CustomEvent<string>).detail;
-      if (id === run.runId && !cancelled) setActive(null);
+      if (activeRef.current && activeRef.current.runId === id) setTracked(null);
     }
+
+    window.addEventListener("shekaar:active-hunt-set", onSet);
     window.addEventListener("shekaar:active-hunt-cleared", onCleared);
-    // Cross-page/tab completion: re-check while visible.
-    const timer = window.setInterval(async () => {
-      if (cancelled) return;
-      const stillRunning = await pollStatus(run.runId);
-      if (!stillRunning && !cancelled) {
-        clearActiveHunt(run.runId);
-        setActive(null);
-      }
-    }, 15_000);
+    const timer = window.setInterval(() => {
+      void refresh();
+      void repoll();
+    }, 5000);
+    void refresh();
+
     return () => {
       cancelled = true;
+      window.removeEventListener("shekaar:active-hunt-set", onSet);
       window.removeEventListener("shekaar:active-hunt-cleared", onCleared);
       window.clearInterval(timer);
     };

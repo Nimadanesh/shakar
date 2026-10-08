@@ -20,6 +20,9 @@ export function setActiveHunt(runId: string, query: string): void {
       ACTIVE_KEY,
       JSON.stringify({ runId, query, ts: Date.now() })
     );
+    // Wake every mounted ActiveHuntChip in this tab (navid 2026-10-08):
+    // AppChrome doesn't remount on navigation, so the chip must react.
+    window.dispatchEvent(new CustomEvent("shekaar:active-hunt-set"));
   } catch {
     // ignore
   }

@@ -1,20 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LoaderGrid } from "@/components/ui/LoadingState";
 import { useActiveHunt } from "@/hooks/useActiveHunt";
 
 /**
- * Sticky chip shown on every page while a hunt is running elsewhere.
- * Tapping returns to the live run (re-attach). Verifies against the
- * server once on mount — a finished hunt never shows as running.
+ * Sticky chip shown while a hunt is running and the user is elsewhere —
+ * "someone is working for you, no need to stay" (navid 2026-10-08).
+ * Tapping returns to the live run (re-attach). Hidden on the run's own
+ * page (redundant there) and the moment the hunt completes.
  */
 export function ActiveHuntChip() {
   const router = useRouter();
+  const pathname = usePathname();
   const active = useActiveHunt();
 
   if (!active) return null;
+  // On the run's own page the hunt is already in front of the user.
+  if (pathname === `/hunt/${active.runId}`) return null;
 
   return (
     <button

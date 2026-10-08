@@ -9,7 +9,6 @@ import { TypoNudge, TYPO_PAUSE_MS } from "@/components/search/TypoNudge";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { DimensionChips } from "@/components/search/DimensionChips";
 import { LoaderGrid, LoadingState } from "@/components/ui/LoadingState";
-import { RecentHunts } from "@/components/search/RecentHunts";
 import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
 import { SpecRow } from "@/components/search/SpecRow";
 import {
@@ -538,8 +537,6 @@ export function HuntSetup() {
           )}
         </div>
       )}
-
-      <RecentHunts />
 
       <OptionSheet
         open={categoryOpen}
