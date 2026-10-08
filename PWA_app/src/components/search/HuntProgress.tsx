@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { getCachedResults, setCachedResults } from "@/lib/hunt-results-cache";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,7 +20,11 @@ import { useTaskReturnRestore } from "@/hooks/useTaskReturnRestore";
 import { isAdSeen } from "@/lib/seen-ads";
 import { writeParams } from "@/lib/search-params";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { RadarDialog } from "@/components/search/RadarDialog";
+// Closed-by-default dialog: own chunk, never blocks first paint.
+const RadarDialog = dynamic(
+  () => import("@/components/search/RadarDialog").then((m) => m.RadarDialog),
+  { ssr: false }
+);
 import type { ContextBase } from "@/lib/search-context";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +45,7 @@ function DotLoading() {
   return <LoaderGrid tone="default" />;
 }
 
-function ResultCard({
+const ResultCard = memo(function ResultCard({
   ad,
   index,
   detailHref,
@@ -125,7 +130,7 @@ function ResultCard({
       </div>
     </article>
   );
-}
+});
 
 interface TraceLine {
   id: number;
@@ -280,8 +285,12 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
     setRadarOpen(false);
   }
 
-  /** Evidence query string for /ads/[token] — «چرا این آگهی؟» stays honest. */
-  function detailHrefFor(ad: ScoredAd): string {
+  /**
+   * Evidence query string for /ads/[token] — «چرا این آگهی؟» stays honest.
+   * The hunt-level params are identical for every card; build them once
+   * (memo) instead of rebuilding per card per render.
+   */
+  const detailBase = useMemo(() => {
     const p = new URLSearchParams();
     p.set("hunt", runId);
     const q = definition?.query ?? query;
@@ -294,14 +303,20 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
       if (definition.priceMin !== "") p.set("min", definition.priceMin);
       if (definition.priceMax !== "") p.set("max", definition.priceMax);
     }
+    return p.toString();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId, definition, query]);
+
+  function detailHrefFor(ad: ScoredAd): string {
     // Degraded-view fallback (navid 2026-10-08): if the live detail fetch
     // fails, the ad page can still render the list-known title/price/city
     // instead of a dead page. Truncated to keep URLs sane.
-    if (ad.title !== "") p.set("t", ad.title.slice(0, 120));
-    if (ad.price !== null) p.set("p", String(ad.price));
-    else if (ad.priceText) p.set("pt", ad.priceText.slice(0, 40));
-    if (ad.city !== "") p.set("c", ad.city.slice(0, 40));
-    return `/ads/${encodeURIComponent(ad.sourceAdId)}?${p.toString()}`;
+    let extra = "";
+    if (ad.title !== "") extra += `&t=${encodeURIComponent(ad.title.slice(0, 120))}`;
+    if (ad.price !== null) extra += `&p=${ad.price}`;
+    else if (ad.priceText) extra += `&pt=${encodeURIComponent(ad.priceText.slice(0, 40))}`;
+    if (ad.city !== "") extra += `&c=${encodeURIComponent(ad.city.slice(0, 40))}`;
+    return `/ads/${encodeURIComponent(ad.sourceAdId)}?${detailBase}${extra}`;
   }
 
   const visibleResults = results.filter((r) => !hiddenIds.includes(r.sourceAdId));
@@ -315,10 +330,12 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
 
   useEffect(() => {
     let cancelled = false;
-    // Background revalidation: the initial render may have come from the
-    // in-memory cache (instant back-nav). This fetch keeps it honest —
-    // a completed hunt's results are immutable, so it only confirms.
-    // When there was no cache, this is the primary load.
+    // Cache hit = a completed hunt whose results are IMMUTABLE (the cache
+    // only stores terminal runs). Re-downloading the full results JSON on
+    // every back-nav was pure waste on cellular — skip it entirely.
+    // (Initial state is already "ready" from the cache.)
+    // No cache → this fetch is the primary load.
+    if (initialCached) return;
     fetch(`/api/hunts/${encodeURIComponent(runId)}`)
       .then(async (res) => {
         if (cancelled) return;

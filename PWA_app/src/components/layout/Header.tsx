@@ -2,8 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Bell, User, Wallet } from "lucide-react";
-import { PlanSheet } from "@/components/plan/PlanSheet";
+import { getSession } from "@/lib/auth";
+// Closed-by-default sheet: split into its own chunk so it never blocks
+// the initial page paint.
+const PlanSheet = dynamic(
+  () => import("@/components/plan/PlanSheet").then((m) => m.PlanSheet),
+  { ssr: false }
+);
 import { profileInitials, useProfile } from "@/hooks/useProfile";
 
 function AvatarButton({ onClick }: { onClick: () => void }) {
@@ -42,6 +49,8 @@ function NotificationButton({ onClick }: { onClick: () => void }) {
   // gone. No invented numbers on the badge, ever.
   const [serverUnread, setServerUnread] = useState(0);
   useEffect(() => {
+    // Guests have no notifications — skip the request entirely.
+    if (!getSession()) return;
     fetch("/api/notifications?unread=true&limit=1")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {

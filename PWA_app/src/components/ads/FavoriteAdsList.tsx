@@ -9,16 +9,15 @@ import {
   readFavoriteRecords,
   type FavoriteRecord,
 } from "@/hooks/useFavorites";
+import {
+  resolveAdDetails,
+  type ResolvedAdDetail,
+} from "@/lib/ad-detail-cache";
 import type { FixtureAd } from "@/data/search-fixtures";
 
 interface ResolvedFavorite {
   record: FavoriteRecord;
-  title: string;
-  price: number | null;
-  priceText?: string;
-  city: string;
-  thumbnail: string | null;
-  failed: boolean;
+  detail: ResolvedAdDetail;
 }
 
 /**
@@ -47,45 +46,14 @@ export function FavoriteAdsList({ onUnfavorite }: { onUnfavorite: (adId: string)
     const missing = records.filter((r) => !resolved.has(r.adId));
     if (missing.length === 0) return;
     (async () => {
+      // Shared cache: if the search sheet (or another view) already resolved
+      // these ads, no new requests fire at all.
+      const details = await resolveAdDetails(missing.map((r) => r.sourceAdId));
       const next = new Map(resolved);
-      await Promise.all(
-        missing.map(async (r) => {
-          try {
-            const res = await fetch(`/api/ads/${encodeURIComponent(r.sourceAdId)}`);
-            if (!res.ok) throw new Error("unavailable");
-            const json = (await res.json()) as {
-              ok: boolean;
-              data?: {
-                title?: string;
-                price?: number | null;
-                priceText?: string;
-                city?: string;
-                images?: string[];
-              };
-            };
-            if (!json.ok || !json.data) throw new Error("unavailable");
-            const d = json.data;
-            next.set(r.adId, {
-              record: r,
-              title: d.title ?? "",
-              price: d.price ?? null,
-              priceText: d.priceText,
-              city: d.city ?? "",
-              thumbnail: d.images?.[0] ?? null,
-              failed: false,
-            });
-          } catch {
-            next.set(r.adId, {
-              record: r,
-              title: "",
-              price: null,
-              city: "",
-              thumbnail: null,
-              failed: true,
-            });
-          }
-        })
-      );
+      for (const r of missing) {
+        const d = details.get(r.sourceAdId);
+        if (d) next.set(r.adId, { record: r, detail: d });
+      }
       if (!cancelled) setResolved(next);
     })();
     return () => {
@@ -124,7 +92,7 @@ export function FavoriteAdsList({ onUnfavorite }: { onUnfavorite: (adId: string)
             </li>
           );
         }
-        if (res.failed) {
+        if (res.detail.failed) {
           return (
             <li
               key={r.adId}
@@ -149,17 +117,17 @@ export function FavoriteAdsList({ onUnfavorite }: { onUnfavorite: (adId: string)
         // Adapt the real ad to the row's shape (FixtureAd mirrors DivarAd).
         const ad: FixtureAd = {
           id: r.sourceAdId,
-          title: res.title,
+          title: res.detail.title,
           description: "",
-          price: res.price,
-          priceText: res.priceText,
-          city: res.city,
+          price: res.detail.price,
+          priceText: res.detail.priceText,
+          city: res.detail.city,
           cityId: "",
           neighborhood: "",
           category: "",
           categoryId: "all",
-          images: res.thumbnail ? [res.thumbnail] : [],
-          thumbnail: res.thumbnail ?? undefined,
+          images: res.detail.thumbnail ? [res.detail.thumbnail] : [],
+          thumbnail: res.detail.thumbnail ?? undefined,
           createdAt: new Date(r.savedAt).toISOString(),
         };
         return (

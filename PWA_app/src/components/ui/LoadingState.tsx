@@ -37,23 +37,23 @@ export function LoaderGrid({ tone }: { tone: "default" | "on-primary" }) {
   );
 }
 
-function formatElapsed(ds: number): string {
-  const fa = (n: string) =>
-    n.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]).replace(".", "٫");
-  const total = ds / 10;
-  if (total < 60) return `${fa(total.toFixed(1))} ثانیه`;
-  const minutes = Math.floor(total / 60);
-  return `${fa(String(minutes))} دقیقه و ${fa((total % 60).toFixed(0))} ثانیه`;
+function formatElapsed(sec: number): string {
+  const fa = (n: string) => n.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
+  if (sec < 60) return `${fa(String(sec))} ثانیه`;
+  const minutes = Math.floor(sec / 60);
+  return `${fa(String(minutes))} دقیقه و ${fa(String(sec % 60))} ثانیه`;
 }
 
 function useElapsed(active: boolean): string {
-  const [ds, setDs] = useState(0);
+  const [sec, setSec] = useState(0);
   useEffect(() => {
     if (!active) return;
-    const t = setInterval(() => setDs((d) => d + 1), 100);
+    // 1s tick, not 100ms: the old 10-renders/sec churned the whole subtree
+    // for the duration of a long hunt for 0.1s precision nobody needs.
+    const t = setInterval(() => setSec((s) => s + 1), 1000);
     return () => clearInterval(t);
   }, [active]);
-  return formatElapsed(ds);
+  return formatElapsed(sec);
 }
 
 export function LoadingState({

@@ -17,6 +17,7 @@ vi.mock("@/lib/server/auth", () => ({
 vi.mock("@/lib/server/quota", () => ({
   activeTierHunts: vi.fn(),
   activeTierKey: vi.fn(),
+  TIER_HUNTS: { paye: 20, herfei: 130, vizhe: 350, namayandegi: 1000, almas: 500 },
 }));
 
 import { supabaseConfigured, supabaseServer } from "@/lib/supabase-server";
@@ -206,7 +207,7 @@ describe("graceful degradation", () => {
 
   it("serves numbers with zeroed chart when hunt_events is missing (m7 pending)", async () => {
     mockSession.mockResolvedValue(UID);
-    mockTier.mockResolvedValue(130);
+    mockTierKey.mockResolvedValue("herfei");
     mockServer.mockReturnValue(fakeSb(
       { quota_counters: [{ hunts_used: 7 }] },
       true // hunt_events 404s

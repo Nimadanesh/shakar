@@ -22,27 +22,56 @@ export interface UsageData {
  *  - undefined while loading (caller shows its local numbers meanwhile),
  *  - null when the server can't provide them (caller falls back to local),
  *  - UsageData when available (same on every device).
+ *
+ * The fetch is shared module-wide: HuntSetup, PlanSheet (mounted even when
+ * closed), and Header all need the same numbers, so one request serves
+ * every instance instead of N identical concurrent GETs. Cached for 30s;
+ * call invalidateUsage() after an action that changes quota (firing a hunt).
  */
+let sharedFetch: Promise<UsageData | null> | null = null;
+let sharedAt = 0;
+const SHARED_TTL_MS = 30_000;
+
+export function invalidateUsage(): void {
+  sharedFetch = null;
+  sharedAt = 0;
+}
+
+function fetchUsageOnce(): Promise<UsageData | null> {
+  const now = Date.now();
+  if (sharedFetch && now - sharedAt < SHARED_TTL_MS) return sharedFetch;
+  sharedAt = now;
+  sharedFetch = (async () => {
+    try {
+      const res = await fetch("/api/me/usage", {
+        headers: { "X-Device-Id": getDeviceId() },
+      });
+      const json: unknown = await res.json().catch(() => null);
+      const data =
+        typeof json === "object" && json !== null && (json as { ok?: unknown }).ok === true
+          ? ((json as { data?: unknown }).data as UsageData | null)
+          : null;
+      return isUsageData(data) ? data : null;
+    } catch {
+      return null;
+    }
+  })();
+  // A rejection must never poison the cache for the rest of the session.
+  sharedFetch.catch(() => {
+    sharedFetch = null;
+    sharedAt = 0;
+  });
+  return sharedFetch;
+}
+
 export function useServerUsage(): UsageData | null | undefined {
   const [usage, setUsage] = useState<UsageData | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/me/usage", {
-          headers: { "X-Device-Id": getDeviceId() },
-        });
-        const json: unknown = await res.json().catch(() => null);
-        const data =
-          typeof json === "object" && json !== null && (json as { ok?: unknown }).ok === true
-            ? ((json as { data?: unknown }).data as UsageData | null)
-            : null;
-        if (!cancelled) setUsage(isUsageData(data) ? data : null);
-      } catch {
-        if (!cancelled) setUsage(null);
-      }
-    })();
+    fetchUsageOnce().then((data) => {
+      if (!cancelled) setUsage(data);
+    });
     return () => {
       cancelled = true;
     };

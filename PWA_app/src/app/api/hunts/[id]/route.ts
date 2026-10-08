@@ -81,7 +81,7 @@ export async function GET(
     }
   }
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     ok: true,
     data: {
       status: run.status,
@@ -90,4 +90,12 @@ export async function GET(
       ...(stats !== undefined ? { stats } : {}),
     },
   });
+  // Terminal runs are immutable — let the browser/proxy cache them instead
+  // of re-downloading ~100 ads on every visit.
+  if (run.status === "done" || run.status === "failed") {
+    res.headers.set("Cache-Control", "public, max-age=1800, immutable");
+  } else {
+    res.headers.set("Cache-Control", "no-store");
+  }
+  return res;
 }

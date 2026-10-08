@@ -40,7 +40,7 @@ function isMissingRpc(e: unknown): boolean {
 }
 
 // Locked tier quotas — shakar-lock-list.md / blueprint §1.3 (hunts/mo).
-const TIER_HUNTS: Record<string, number> = {
+export const TIER_HUNTS: Record<string, number> = {
   paye: 20,
   herfei: 130,
   vizhe: 350,

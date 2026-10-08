@@ -5,7 +5,6 @@ import {
   getRun,
   hasDeepChild,
   isDeepenConflict,
-  setRunStartCursor,
 } from "@/lib/server/hunt/runs";
 import { getSessionUserId } from "@/lib/server/auth";
 
@@ -24,15 +23,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const run = await getRun(id);
+  // Independent: the run read and the session check run together.
+  const [run, requester] = await Promise.all([
+    getRun(id),
+    getSessionUserId().catch(() => null),
+  ]);
   if (!run) {
     return NextResponse.json({ ok: false, error: "run-not-found" }, { status: 404 });
-  }
-  let requester: string | null = null;
-  try {
-    requester = await getSessionUserId();
-  } catch {
-    requester = null;
   }
   if (!canOpenRun(run, requester)) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
@@ -54,6 +51,8 @@ export async function POST(
   }
   let deep;
   try {
+    // The deep walk resumes from the first phase's endCursor (finding #1);
+    // the cursor is persisted at creation (no second PATCH round trip).
     deep = await createRun(
       { ...run.def, deepHistory: true },
       run.userId,
@@ -61,7 +60,8 @@ export async function POST(
       undefined,
       undefined,
       undefined,
-      id
+      id,
+      run.endCursor ?? undefined
     );
   } catch (e) {
     // Concurrent-race path: both deepens passed the pre-check, the
@@ -71,8 +71,5 @@ export async function POST(
     }
     throw e;
   }
-  // The deep run's stream resumes from the first phase's cursor
-  // (memory: live object; DB: persisted row — see setRunStartCursor).
-  await setRunStartCursor(deep, run.endCursor);
   return NextResponse.json({ ok: true, data: { runId: deep.id } }, { status: 202 });
 }

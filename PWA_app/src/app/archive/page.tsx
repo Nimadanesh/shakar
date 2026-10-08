@@ -7,6 +7,7 @@ import { Bookmark, ChevronLeft, History } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
+import { resolveAdDetails } from "@/lib/ad-detail-cache";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/skeletons";
 import { IconConfirmButton } from "@/components/ui/IconConfirmButton";
 import { FavoriteAdsList } from "@/components/ads/FavoriteAdsList";
@@ -69,24 +70,15 @@ export default function ArchivePage() {
     let cancelled = false;
     setFavTitlesLoading(true);
     (async () => {
+      // Shared ad-detail cache: no duplicate requests across views.
+      const details = await resolveAdDetails(missing.map((r) => r.sourceAdId));
       const next = new Map(favTitles);
-      await Promise.all(
-        missing.map(async (r) => {
-          try {
-            const res = await fetch(`/api/ads/${encodeURIComponent(r.sourceAdId)}`);
-            if (!res.ok) return;
-            const json = (await res.json()) as {
-              ok: boolean;
-              data?: { title?: string; city?: string };
-            };
-            if (json.ok && json.data?.title) {
-              next.set(r.adId, { title: json.data.title, city: json.data.city ?? null });
-            }
-          } catch {
-            // A favorite whose ad is gone simply isn't searchable.
-          }
-        })
-      );
+      for (const r of missing) {
+        const d = details.get(r.sourceAdId);
+        if (d && !d.failed && d.title !== "") {
+          next.set(r.adId, { title: d.title, city: d.city === "" ? null : d.city });
+        }
+      }
       if (!cancelled) {
         setFavTitles(next);
         setFavTitlesLoading(false);

@@ -48,6 +48,7 @@ export async function armKaminServer(
     if (!data.ok) {
       return { ok: false, error: data.error ?? "unknown", message: data.message };
     }
+    invalidateKaminsServerCache();
     return {
       ok: true,
       kamin: data.data?.kamin,
@@ -103,20 +104,43 @@ export interface ServerKamin {
 /**
  * List kamins from the server. Returns null on auth failure or network
  * error (caller falls back to local).
+ *
+ * Shared module-wide: /saved and /archive both fetch on every mount (tab
+ * switches remount), so one cached read serves both instead of N identical
+ * GETs. 30s TTL; invalidated by arm/disarm below.
  */
+let kaminsFetch: Promise<ServerKamin[] | null> | null = null;
+let kaminsFetchedAt = 0;
+const KAMINS_TTL_MS = 30_000;
+
+export function invalidateKaminsServerCache(): void {
+  kaminsFetch = null;
+  kaminsFetchedAt = 0;
+}
+
 export async function listKaminsServer(): Promise<ServerKamin[] | null> {
-  try {
-    const res = await fetch("/api/kamins", { method: "GET" });
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      ok: boolean;
-      data?: { kamins: ServerKamin[] };
-    };
-    if (!data.ok || !data.data) return null;
-    return data.data.kamins;
-  } catch {
-    return null;
-  }
+  const now = Date.now();
+  if (kaminsFetch && now - kaminsFetchedAt < KAMINS_TTL_MS) return kaminsFetch;
+  kaminsFetchedAt = now;
+  kaminsFetch = (async () => {
+    try {
+      const res = await fetch("/api/kamins", { method: "GET" });
+      if (!res.ok) return null;
+      const data = (await res.json()) as {
+        ok: boolean;
+        data?: { kamins: ServerKamin[] };
+      };
+      if (!data.ok || !data.data) return null;
+      return data.data.kamins;
+    } catch {
+      return null;
+    }
+  })();
+  kaminsFetch.catch(() => {
+    kaminsFetch = null;
+    kaminsFetchedAt = 0;
+  });
+  return kaminsFetch;
 }
 
 /**
@@ -127,6 +151,7 @@ export async function disarmKaminServer(id: string): Promise<boolean> {
     const res = await fetch(`/api/kamins/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
+    if (res.ok) invalidateKaminsServerCache();
     return res.ok;
   } catch {
     return false;

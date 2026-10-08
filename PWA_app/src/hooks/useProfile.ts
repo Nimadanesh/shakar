@@ -48,6 +48,25 @@ async function fetchServerName(): Promise<string> {
   return "";
 }
 
+// Shared module-wide: Header's avatar and the profile page mount separate
+// useProfile instances — one server read serves both, not two.
+let serverNameFetch: Promise<string> | null = null;
+function fetchServerNameShared(): Promise<string> {
+  if (!serverNameFetch) {
+    serverNameFetch = fetchServerName().then(
+      (name) => {
+        serverNameFetch = null; // one-shot: later mounts re-read
+        return name;
+      },
+      () => {
+        serverNameFetch = null;
+        return "";
+      }
+    );
+  }
+  return serverNameFetch;
+}
+
 async function pushServerName(name: string): Promise<void> {
   try {
     await fetch("/api/me/profile", {
@@ -103,7 +122,7 @@ export function useProfile() {
     let timer = 0;
     if (isLoggedIn) {
       (async () => {
-        const serverName = await fetchServerName();
+        const serverName = await fetchServerNameShared();
         if (cancelled) return;
         if (serverName !== "") {
           apply(serverName, true);

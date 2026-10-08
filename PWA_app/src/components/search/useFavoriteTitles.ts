@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { readFavoriteRecords } from "@/hooks/useFavorites";
+import { resolveAdDetails } from "@/lib/ad-detail-cache";
 
 export interface FavTitle {
   title: string;
@@ -11,8 +12,9 @@ export interface FavTitle {
 /**
  * Resolves favorite ad titles/cities when the search sheet opens, so
  * favorites are searchable by their real titles on BOTH /saved and /archive.
- * Titles cache in state for the session; a favorite whose ad is gone simply
- * isn't searchable by title.
+ * Backed by the shared ad-detail cache — if the favorites list (or the
+ * other page's search) already resolved an ad, no new request fires.
+ * A favorite whose ad is gone simply isn't searchable by title.
  */
 export function useFavoriteTitles(searchOpen: boolean) {
   const [favTitles, setFavTitles] = useState<Map<string, FavTitle>>(new Map());
@@ -26,24 +28,14 @@ export function useFavoriteTitles(searchOpen: boolean) {
     let cancelled = false;
     setLoading(true);
     (async () => {
+      const details = await resolveAdDetails(missing.map((r) => r.sourceAdId));
       const next = new Map(favTitles);
-      await Promise.all(
-        missing.map(async (r) => {
-          try {
-            const res = await fetch(`/api/ads/${encodeURIComponent(r.sourceAdId)}`);
-            if (!res.ok) return;
-            const json = (await res.json()) as {
-              ok: boolean;
-              data?: { title?: string; city?: string };
-            };
-            if (json.ok && json.data?.title) {
-              next.set(r.adId, { title: json.data.title, city: json.data.city ?? null });
-            }
-          } catch {
-            // A favorite whose ad is gone simply isn't searchable by title.
-          }
-        })
-      );
+      for (const r of missing) {
+        const d = details.get(r.sourceAdId);
+        if (d && !d.failed && d.title !== "") {
+          next.set(r.adId, { title: d.title, city: d.city === "" ? null : d.city });
+        }
+      }
       if (!cancelled) {
         setFavTitles(next);
         setLoading(false);

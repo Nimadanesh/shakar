@@ -93,8 +93,22 @@ export function useTaskReturnRestore(enabled: boolean = true, contentSettled: bo
     }
 
     let probe: RestoreProbe = { tries: 0, stableTries: 0, lastHeight: 0 };
+    let timer: number | undefined;
+    let cancelledByUser = false;
+
+    // If the user grabs the scroll themselves, the restore yields —
+    // yanking the position back every 300ms for up to ~12s while they
+    // fight it is the opposite of task continuity.
+    const onUserScroll = () => {
+      cancelledByUser = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+      clearTaskReturn();
+      window.removeEventListener("wheel", onUserScroll);
+      window.removeEventListener("touchmove", onUserScroll);
+    };
 
     const attempt = () => {
+      if (cancelledByUser) return;
       window.scrollTo(0, tr.scrollY);
       const reading: RestoreReading = {
         reached: window.scrollY >= tr.scrollY - 4,
@@ -108,10 +122,20 @@ export function useTaskReturnRestore(enabled: boolean = true, contentSettled: bo
         allowSettle: contentSettled,
       });
       probe = next.probe;
-      if (next.done) clearTaskReturn();
-      else timer = window.setTimeout(attempt, 300);
+      if (next.done) {
+        clearTaskReturn();
+        window.removeEventListener("wheel", onUserScroll);
+        window.removeEventListener("touchmove", onUserScroll);
+      } else timer = window.setTimeout(attempt, 300);
     };
-    let timer = window.setTimeout(attempt, 60);
-    return () => window.clearTimeout(timer);
+    // Passive listeners: detecting intent must never block the scroll.
+    window.addEventListener("wheel", onUserScroll, { passive: true });
+    window.addEventListener("touchmove", onUserScroll, { passive: true });
+    timer = window.setTimeout(attempt, 60);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("wheel", onUserScroll);
+      window.removeEventListener("touchmove", onUserScroll);
+    };
   }, [enabled, pathname, contentSettled]);
 }

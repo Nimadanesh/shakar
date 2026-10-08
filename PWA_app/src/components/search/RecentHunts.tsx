@@ -26,19 +26,16 @@ export function RecentHunts() {
   const activeHunt = useActiveHunt();
   const rows = (hunts ?? []).slice(0, MAX_ROWS);
 
+  // First paint per session: skeletons WITHOUT the section label — the
+  // label only appears once we know there's content. Showing "شکارهای اخیر"
+  // then collapsing it a frame later (zero-history users) was a visible
+  // flash on every first visit.
   if (!ready)
     return (
-      <section
-        aria-label="شکارهای اخیر"
-        aria-busy="true"
-        className="flex flex-col gap-2"
-      >
-        <p className="text-xs leading-5 text-muted-foreground">شکارهای اخیر</p>
-        <div className="flex flex-col gap-1.5">
-          <SkeletonRow />
-          <SkeletonRow />
-        </div>
-      </section>
+      <div aria-busy="true" className="flex flex-col gap-1.5" aria-label="در حال بارگذاری">
+        <SkeletonRow />
+        <SkeletonRow />
+      </div>
     );
   if (rows.length === 0) return null;
 

@@ -106,15 +106,34 @@ async function tablesExist(sb: SupabaseServer): Promise<boolean> {
   }
 }
 
+// The ?limit=0 probe costs one Supabase round trip per backend() call, and
+// backend() sits on every hunt operation (fire, stream events, deepen,
+// polls) — ~9-10 serial round trips before POST /api/hunts even returns
+// its 202. Cache the answer: a positive answer is stable (tables don't
+// disappear), a negative one is re-checked quickly so applying the
+// migration heals within seconds instead of pinning to memory until
+// the next process restart (the original no-cache concern).
+let probeCache: { ok: boolean; at: number } | null = null;
+const PROBE_TTL_OK_MS = 5 * 60 * 1000;
+const PROBE_TTL_MISS_MS = 15 * 1000;
+
+async function tablesExistCached(sb: SupabaseServer): Promise<boolean> {
+  const now = Date.now();
+  if (probeCache) {
+    const ttl = probeCache.ok ? PROBE_TTL_OK_MS : PROBE_TTL_MISS_MS;
+    if (now - probeCache.at < ttl) return probeCache.ok;
+  }
+  const ok = await tablesExist(sb);
+  probeCache = { ok, at: now };
+  return ok;
+}
+
 async function backend(): Promise<Backend> {
   const sb = supabaseConfigured() ? supabaseServer() : null;
   if (!sb) {
     return { kind: "memory" };
   }
-  // No caching: navid applies the migration AFTER the deploy, so a cached
-  // "missing" would pin the process to in-memory until the next restart.
-  // One cheap ?limit=0 probe per operation is the honest price.
-  if (!(await tablesExist(sb))) {
+  if (!(await tablesExistCached(sb))) {
     warnMissingTables();
     return { kind: "memory" };
   }
@@ -421,7 +440,9 @@ export async function createRun(
   idempotencyKey?: string,
   kaminId?: string,
   runId?: string,
-  deepenedFrom?: string
+  deepenedFrom?: string,
+  /** Persisted at creation so callers don't need a second PATCH round trip. */
+  startCursor?: unknown
 ): Promise<HuntRun> {
   const b = await backend();
   const id = runId ?? makeId();
@@ -455,6 +476,7 @@ export async function createRun(
       deepenedFrom,
       finalized: false,
     };
+    if (startCursor !== undefined) run.startCursor = startCursor;
     runs.set(run.id, run);
     if (idempotencyKey) idemKeys.set(idempotencyKey, { runId: run.id, at: now });
     return run;
@@ -479,6 +501,7 @@ export async function createRun(
     kamin_id: kaminId ?? null,
     status: "created",
     deepened_from: deepenedFrom ?? null,
+    start_cursor: startCursor ?? null,
   });
   const rows = await b.sb.rest<HuntRunRow[]>(
     "GET",

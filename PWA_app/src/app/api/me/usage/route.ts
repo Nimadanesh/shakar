@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/server/auth";
-import { activeTierHunts, activeTierKey } from "@/lib/server/quota";
+import { activeTierKey, TIER_HUNTS } from "@/lib/server/quota";
 import { supabaseConfigured, supabaseServer } from "@/lib/supabase-server";
 import { tierByKey } from "@/lib/tiers";
 import type { UsageData } from "@/lib/usage";
@@ -33,9 +33,13 @@ export async function GET(req: Request): Promise<NextResponse> {
     const deviceId = isUuid(rawDevice) ? rawDevice : null;
 
     if (userId) {
-      const tierHunts = await activeTierHunts(sb, userId);
-      if (tierHunts !== null) {
-        return NextResponse.json({ ok: true, data: await userUsage(sb, userId, tierHunts) });
+      // One subscriptions read: the tier key derives both the hunt quota
+      // and the kamin slots (previously activeTierHunts + userUsage each
+      // fired their own identical subscriptions GET).
+      const tierKey = await activeTierKey(sb, userId);
+      const tierHunts = tierKey ? (TIER_HUNTS[tierKey] ?? null) : null;
+      if (tierHunts !== null && tierKey) {
+        return NextResponse.json({ ok: true, data: await userUsage(sb, userId, tierKey, tierHunts) });
       }
       // Registered but unsubscribed → guest pool KEYED BY USER ID
       // (matches consumeHunt's finding #15: the account id, not the
@@ -56,33 +60,35 @@ export async function GET(req: Request): Promise<NextResponse> {
 async function userUsage(
   sb: NonNullable<ReturnType<typeof supabaseServer>>,
   userId: string,
+  tierKey: string,
   tierHunts: number
 ): Promise<UsageData> {
   const q = encodeURIComponent(userId);
-  const rows = await sb.rest<Array<{ hunts_used: number | null }>>(
-    "GET",
-    `quota_counters?user_id=eq.${q}&select=hunts_used&limit=1`
-  );
-  const used = Number(rows[0]?.hunts_used ?? 0);
-  const tier = tierByKey(await activeTierKey(sb, userId));
-  let kaminActive: number | null = null;
-  try {
-    const kamins = await sb.rest<Array<{ id: string }>>(
+  // All four reads are independent — fire them together instead of
+  // awaiting serially (was 4+ sequential Supabase round trips).
+  const [counterRows, kamins, daily] = await Promise.all([
+    sb.rest<Array<{ hunts_used: number | null }>>(
       "GET",
-      `kamins?user_id=eq.${q}&status=eq.active&select=id`
-    );
-    kaminActive = kamins.length;
-  } catch (e) {
-    console.warn("[usage] kamins read failed:", (e as Error).message);
-  }
+      `quota_counters?user_id=eq.${q}&select=hunts_used&limit=1`
+    ),
+    sb
+      .rest<Array<{ id: string }>>("GET", `kamins?user_id=eq.${q}&status=eq.active&select=id`)
+      .catch((e: Error) => {
+        console.warn("[usage] kamins read failed:", e.message);
+        return null;
+      }),
+    dailyCounts(sb, `user_id=eq.${q}`),
+  ]);
+  const used = Number(counterRows[0]?.hunts_used ?? 0);
+  const tier = tierByKey(tierKey);
   return {
     kind: "user",
     usedThisMonth: used,
     quotaTotal: tierHunts,
     remaining: Math.max(0, tierHunts - used),
-    daily: await dailyCounts(sb, `user_id=eq.${q}`),
+    daily,
     kaminSlots: tier?.kaminSlots ?? null,
-    kaminActive,
+    kaminActive: kamins ? kamins.length : null,
   };
 }
 

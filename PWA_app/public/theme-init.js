@@ -10,4 +10,16 @@
       d.classList.add("light");
     }
   } catch (e) {}
+  // Onboarding gate: runs before hydration so first-launch users never
+  // download, hydrate, and paint the full home bundle only to be bounced
+  // to /onboarding a moment later. Same scope as the HuntSetup effect
+  // (home only — deep links are untouched); the effect stays as fallback.
+  try {
+    if (
+      window.location.pathname === "/" &&
+      localStorage.getItem("shakar-onboarded") !== "1"
+    ) {
+      window.location.replace("/onboarding");
+    }
+  } catch (e) {}
 })();

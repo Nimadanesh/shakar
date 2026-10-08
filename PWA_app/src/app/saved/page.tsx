@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { BellRing } from "lucide-react";
+// Closed-by-default sheet: own chunk, never blocks first paint.
+const KaminDetailSheet = dynamic(
+  () => import("@/components/kamin/KaminDetailSheet").then((m) => m.KaminDetailSheet),
+  { ssr: false }
+);
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { SkeletonCard } from "@/components/ui/skeletons";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
-import { KaminDetailSheet } from "@/components/kamin/KaminDetailSheet";
 import { SearchFab, SearchSheet } from "@/components/search/SearchSheet";
 import {
   buildLocalSearchItems,

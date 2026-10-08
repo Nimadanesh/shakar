@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Check, Pencil, User, X } from "lucide-react";
 import { ThemeSwitch } from "@/components/settings/ThemeSwitch";
-import { PlanSheet } from "@/components/plan/PlanSheet";
+// Closed-by-default sheet: own chunk, never blocks first paint.
+const PlanSheet = dynamic(
+  () => import("@/components/plan/PlanSheet").then((m) => m.PlanSheet),
+  { ssr: false }
+);
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { profileInitials, useProfile } from "@/hooks/useProfile";
 import { useHydratedStore } from "@/hooks/useHydratedStore";

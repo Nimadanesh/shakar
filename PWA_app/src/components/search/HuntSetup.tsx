@@ -12,8 +12,6 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { RecentHunts } from "@/components/search/RecentHunts";
 import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
 import { SpecRow } from "@/components/search/SpecRow";
-import { OptionSheet } from "@/components/search/OptionSheet";
-import { PriceSheet } from "@/components/search/PriceSheet";
 import {
   CATEGORIES,
   CITIES,
@@ -32,8 +30,21 @@ import { getRememberedCity, rememberCity } from "@/lib/city-memory";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
-import { useServerUsage } from "@/lib/usage";
-import { PlanSheet } from "@/components/plan/PlanSheet";
+import dynamic from "next/dynamic";
+import { invalidateUsage, useServerUsage } from "@/lib/usage";
+// Closed-by-default sheets: each gets its own chunk — never block first paint.
+const PlanSheet = dynamic(
+  () => import("@/components/plan/PlanSheet").then((m) => m.PlanSheet),
+  { ssr: false }
+);
+const OptionSheet = dynamic(
+  () => import("@/components/search/OptionSheet").then((m) => m.OptionSheet),
+  { ssr: false }
+);
+const PriceSheet = dynamic(
+  () => import("@/components/search/PriceSheet").then((m) => m.PriceSheet),
+  { ssr: false }
+);
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
 import { parsePriceInput, formatPriceCompact } from "@/lib/prices";
 import { EMPTY_CONTEXT_BASE, type ContextBase } from "@/lib/search-context";
@@ -205,6 +216,9 @@ export function HuntSetup() {
       // so the profile's consumption section reflects reality.
       // (Every firing is a paid event, even if the stream is abandoned.)
       recordHunt(trimmed, base, dismissed, result.runId);
+      // Quota changed on the server — drop the shared usage cache so the
+      // button state re-reads fresh numbers on the next mount.
+      invalidateUsage();
       router.push(`/hunt/${encodeURIComponent(result.runId)}?q=${encodeURIComponent(trimmed)}`);
       return;
     } catch {
