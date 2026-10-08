@@ -60,6 +60,9 @@ export function SearchSheet({
       title={title}
       subtitle="هرچی تایپ کنی، زنده میاد"
       initialFocusRef={inputRef}
+      // Fixed height: filtering the results must not resize the sheet —
+      // a shrinking sheet that jumps downward while typing feels broken.
+      dialogClassName="h-[85dvh]"
     >
       <div className="sticky top-0 -mx-4 -mt-1 bg-card px-4 pb-2 pt-1">
         <div className="relative">

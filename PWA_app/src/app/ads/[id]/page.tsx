@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import { AdBackButton } from "@/components/ads/AdBackButton";
 import { FavoriteButton } from "@/components/ads/FavoriteButton";
 import { ShareButton } from "@/components/ads/ShareButton";
 import { AdDetailGallery } from "@/components/ads/AdDetailGallery";
@@ -146,13 +147,11 @@ export default async function AdDetailPage({
             <ExternalLink size={18} aria-hidden="true" />
             باز کردن آگهی اصلی در دیوار
           </Link>
-          <Link
-            href={backHref}
+          <AdBackButton
+            fallbackHref={backHref}
+            label="بازگشت به نتایج"
             className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-border px-5 text-sm font-medium text-foreground"
-          >
-            <ArrowRight size={16} aria-hidden="true" />
-            بازگشت به نتایج
-          </Link>
+          />
         </div>
       </main>
     );
@@ -183,13 +182,7 @@ export default async function AdDetailPage({
   return (
     <main className="flex flex-1 flex-col gap-6 py-4">
       <MarkSeen adId={id} />
-      <Link
-        href={backHref}
-        className="inline-flex w-fit items-center gap-1.5 rounded text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-      >
-        <ArrowRight size={16} aria-hidden="true" />
-        بازگشت به نتایج
-      </Link>
+      <AdBackButton fallbackHref={backHref} label="بازگشت به نتایج" />
 
       {ad.stale === true && (
         <p className="rounded-lg border border-border bg-secondary px-3 py-2 text-[12px] leading-5 text-muted-foreground">

@@ -13,6 +13,8 @@ interface BottomSheetProps {
   initialFocusRef?: React.RefObject<HTMLInputElement | null>;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** Extra classes for the dialog panel (e.g. a fixed height). */
+  dialogClassName?: string;
 }
 
 /**
@@ -29,6 +31,7 @@ export function BottomSheet({
   initialFocusRef,
   children,
   footer,
+  dialogClassName,
 }: BottomSheetProps) {
   useEffect(() => {
     if (!open) return;
@@ -54,7 +57,10 @@ export function BottomSheet({
         role="dialog"
         aria-modal="true"
         aria-label={typeof label === "string" ? label : undefined}
-        className="animate-rise relative flex max-h-[85dvh] w-full max-w-screen-sm flex-col gap-5 overflow-y-auto rounded-t-[24px] border border-border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:rounded-[24px] sm:p-5"
+        className={cn(
+          "animate-rise relative flex max-h-[85dvh] w-full max-w-screen-sm flex-col gap-5 overflow-y-auto rounded-t-[24px] border border-border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:rounded-[24px] sm:p-5",
+          dialogClassName
+        )}
       >
         <div className="mx-auto h-1 w-10 shrink-0 rounded-full bg-border" aria-hidden="true" />
         {(title || subtitle) && (

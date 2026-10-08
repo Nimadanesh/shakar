@@ -43,7 +43,9 @@ export default function HuntResultsPage({
           type="button"
           onClick={handleBack}
           aria-label="بازگشت"
-          className="mb-2 flex h-10 items-center gap-1.5 rounded-lg px-2 text-[14px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          // Aligned with the content below: no inline-start padding (the
+          // icon's edge lines up with the cards), inline-end kept.
+          className="mb-2 flex h-10 items-center gap-1.5 rounded-lg pe-2 ps-0 text-[14px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           <ArrowRight size={18} aria-hidden="true" />
           بازگشت
