@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase-server";
 import { expireCheck } from "@/lib/server/subscription/lifecycle";
+import { TIERS } from "@/lib/tiers";
 
 /**
  * M4b quota engine (blueprint §2 — transactional intent, §9 — guest hunts).
@@ -41,13 +42,11 @@ function isMissingRpc(e: unknown): boolean {
 }
 
 // Locked tier quotas — shakar-lock-list.md / blueprint §1.3 (hunts/mo).
-export const TIER_HUNTS: Record<string, number> = {
-  paye: 20,
-  herfei: 130,
-  vizhe: 350,
-  namayandegi: 1000,
-  almas: 500,
-};
+// Derived from @/lib/tiers (the client-safe single source of truth) so
+// server enforcement can never drift from the plans UI.
+export const TIER_HUNTS: Record<string, number> = Object.fromEntries(
+  TIERS.map((t) => [t.key, t.huntsPerMonth])
+);
 const GUEST_FREE_HUNTS = 3;
 
 export type QuotaMode = "real" | "permissive-dev";
