@@ -405,7 +405,7 @@ export async function wakeKaminsForUser(
   const sleeping = await sb.rest<Array<{ id: string }>>(
     "GET",
     `kamins?user_id=eq.${enc(userId)}&status=eq.sleeping` +
-      `&order=created_at.desc&limit=${free}&select=id`
+      `&order=armed_at.desc&limit=${free}&select=id`
   );
   for (const k of sleeping) {
     await sb.rest("PATCH", `kamins?id=eq.${enc(k.id)}`, { status: "active" });

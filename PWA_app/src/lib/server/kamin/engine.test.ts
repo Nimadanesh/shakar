@@ -606,7 +606,7 @@ describe("legacyArmKamin — sleeping re-arm slot check (finding #11)", () => {
 });
 
 describe("wakeKaminsForUser — hard slot limit (navid 2026-10-06)", () => {
-  function sleeping(id: string, createdAt: string): Record<string, unknown> {
+  function sleeping(id: string, armedAt: string): Record<string, unknown> {
     return {
       id,
       user_id: "u1",
@@ -615,7 +615,7 @@ describe("wakeKaminsForUser — hard slot limit (navid 2026-10-06)", () => {
       canonical_key: `key-${id}`,
       status: "sleeping",
       cadence: "daily",
-      created_at: createdAt,
+      armed_at: armedAt,
     };
   }
 
@@ -623,7 +623,8 @@ describe("wakeKaminsForUser — hard slot limit (navid 2026-10-06)", () => {
     const sb = fakeSb({
       kamins: [
         // Seeded newest-first: the fake ignores ORDER BY, so insertion
-        // order models the real `order=created_at.desc`.
+        // order models the real `order=armed_at.desc` (the kamins table
+        // has armed_at, not created_at — caught live 2026-10-08).
         sleeping("s-new", "2026-10-06T10:00:00Z"),
         sleeping("s-mid", "2026-10-05T10:00:00Z"),
         sleeping("s-old", "2026-10-04T10:00:00Z"),
@@ -638,7 +639,7 @@ describe("wakeKaminsForUser — hard slot limit (navid 2026-10-06)", () => {
     expect(byId).toEqual({ "s-new": "active", "s-mid": "sleeping", "s-old": "sleeping" });
     // The query asks for newest-first with a limit.
     const get = sb.calls.find((c) => c.path.includes("status=eq.sleeping"));
-    expect(get?.path).toContain("order=created_at.desc");
+    expect(get?.path).toContain("order=armed_at.desc");
     expect(get?.path).toContain("limit=1");
   });
 
@@ -654,7 +655,7 @@ describe("wakeKaminsForUser — hard slot limit (navid 2026-10-06)", () => {
           canonical_key: "key-a1",
           status: "active",
           cadence: "daily",
-          created_at: "2026-10-01T10:00:00Z",
+          armed_at: "2026-10-01T10:00:00Z",
         },
       ],
     });
