@@ -87,10 +87,12 @@ export function useProfile() {
     () => getCached<Profile>("profile") ?? { name: "" }
   );
   const [serverBacked, setServerBacked] = useState(false);
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    const loggedIn = getSession() !== null;
+    const isLoggedIn = getSession() !== null;
+    setLoggedIn(isLoggedIn);
     const apply = (name: string, backed: boolean) => {
       if (cancelled) return;
       const next = { name };
@@ -99,7 +101,7 @@ export function useProfile() {
       setServerBacked(backed);
     };
     let timer = 0;
-    if (loggedIn) {
+    if (isLoggedIn) {
       (async () => {
         const serverName = await fetchServerName();
         if (cancelled) return;
@@ -140,5 +142,5 @@ export function useProfile() {
     if (getSession() !== null) await pushServerName(trimmed);
   }, []);
 
-  return { name: profile.name, saveName, serverBacked };
+  return { name: profile.name, saveName, serverBacked, loggedIn };
 }

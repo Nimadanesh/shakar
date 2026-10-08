@@ -5,12 +5,9 @@ import { useRouter } from "next/navigation";
 import { Bell, User, Wallet } from "lucide-react";
 import { PlanSheet } from "@/components/plan/PlanSheet";
 import { profileInitials, useProfile } from "@/hooks/useProfile";
-import { useHydratedStore } from "@/hooks/useHydratedStore";
-import { listKamins, kaminNewIds } from "@/lib/kamin-store";
-import { SEARCH_FIXTURES } from "@/data/search-fixtures";
 
 function AvatarButton({ onClick }: { onClick: () => void }) {
-  const { name } = useProfile();
+  const { name, loggedIn } = useProfile();
   // Safe to compute during render: useProfile hydrates to "" on first render
   // (matching the server), so initials start empty everywhere.
   const initials = profileInitials(name);
@@ -18,25 +15,31 @@ function AvatarButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      aria-label="پروفایل"
-      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-transform focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.96]"
+      aria-label={loggedIn === false ? "ورود / پروفایل" : "پروفایل"}
+      className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-transform focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.96]"
     >
       {initials !== "" ? (
         <span className="text-[15px] font-semibold leading-5">{initials}</span>
       ) : (
         <User size={18} aria-hidden="true" />
       )}
+      {/* Guest nudge: a quiet dot — this is the proactive login entry.
+          Shown only once we KNOW the user is a guest (no flash for
+          logged-in users). */}
+      {loggedIn === false && (
+        <span
+          aria-hidden="true"
+          className="absolute -left-0.5 -top-0.5 size-3 rounded-full border-2 border-secondary bg-primary"
+        />
+      )}
     </button>
   );
 }
 
 function NotificationButton({ onClick }: { onClick: () => void }) {
-  // Session-cached: the known kamins render on the first paint of every
-  // navigation — no badge pop-in. Freshness comes from the cache
-  // invalidation events (markKaminSeen / armKamin / disarmKamin), so the
-  // old pathname-triggered recompute is unnecessary.
-  const { value: kamins } = useHydratedStore("kamins", listKamins);
-  // Server notifications unread count (M5B).
+  // Server notifications unread count (M5B) — the ONLY badge source.
+  // Local kamin "fresh" counts were fixture-derived fiction; they are
+  // gone. No invented numbers on the badge, ever.
   const [serverUnread, setServerUnread] = useState(0);
   useEffect(() => {
     fetch("/api/notifications?unread=true&limit=1")
@@ -46,15 +49,7 @@ function NotificationButton({ onClick }: { onClick: () => void }) {
       })
       .catch(() => {});
   }, []);
-  let unread = serverUnread;
-  try {
-    unread += (kamins ?? []).reduce(
-      (sum, k) => sum + kaminNewIds(k, SEARCH_FIXTURES).length,
-      0
-    );
-  } catch {
-    // keep serverUnread
-  }
+  const unread = serverUnread;
 
   return (
     <button

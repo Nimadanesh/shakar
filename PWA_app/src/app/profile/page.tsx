@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Pencil, User, X } from "lucide-react";
 import { ThemeSwitch } from "@/components/settings/ThemeSwitch";
 import { PlanSheet } from "@/components/plan/PlanSheet";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { profileInitials, useProfile } from "@/hooks/useProfile";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { readFavoriteIds } from "@/hooks/useFavorites";
@@ -249,14 +251,81 @@ function DataSection() {
 }
 
 /**
- * Account — sign out of the current session. Device-local data
- * (hunts, kamins, favorites) is untouched; only the session ends.
+ * Account — state-aware.
+ *  - Guest: the proactive signup path — what an account protects, one tap
+ *    to /auth. No fake "خروج از حساب" for someone who never signed in.
+ *  - Logged in: logout is a CHOICE — leave no trace on this device, or
+ *    keep the device's hunts. Either way the session ends and this
+ *    device stops receiving the account's push notifications
+ *    (borrowed-phone scenario).
  */
-function AccountSection() {
+function AccountSection({ loggedIn }: { loggedIn: boolean | null }) {
+  const router = useRouter();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [signedOut, setSignedOut] = useState(false);
 
-  async function handleSignOut() {
+  // Unknown yet (hydrating): render the card shell, no fake state.
+  if (loggedIn === null) {
+    return (
+      <SectionCard title="حساب کاربری">
+        <div aria-hidden="true" className="h-11 animate-pulse rounded-lg bg-secondary" />
+      </SectionCard>
+    );
+  }
+
+  if (!loggedIn) {
+    return (
+      <SectionCard title="حساب کاربری">
+        <p className="text-[13px] leading-6 text-muted-foreground">
+          هنوز حسابی نساخته‌ای. با حساب، کمین‌هات و شکارهات رو همه‌ی دستگاه‌هات داری —
+          پشت یه دیوار امن، نه فقط روی همین گوشی.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push("/auth")}
+          className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-action-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+        >
+          ورود / ساخت حساب
+        </button>
+        <p className="text-[12px] leading-5 text-muted-foreground">
+          با شماره موبایل و یه کد پیامکی — کمتر از یه دقیقه.
+        </p>
+      </SectionCard>
+    );
+  }
+
+  async function doSignOut(clearTrace: boolean) {
+    if (signingOut) return;
+    setSigningOut(true);
+    setSheetOpen(false);
+    // 1. Push cleanup BEFORE the session dies: after logout this device
+    //    must not receive the account's kamin notifications.
+    try {
+      const reg = await navigator.serviceWorker?.ready;
+      const sub = await reg?.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+      }
+    } catch {
+      // best effort — logout proceeds regardless
+    }
+    // 2. End the session (cookie + local mirror).
     await signOut();
+    // 3. Optional trace clear — device ACTIVITY only (hunts, kamins,
+    //    favorites, saved). The guest-quota device id (shekaar-device-id)
+    //    is deliberately NOT wiped: it's anti-abuse, not activity.
+    if (clearTrace) {
+      try {
+        for (const key of DATA_KEYS) window.localStorage.removeItem(key);
+      } catch {
+        // ignore
+      }
+    }
     setSignedOut(true);
     window.setTimeout(() => window.location.replace("/"), 900);
   }
@@ -269,15 +338,50 @@ function AccountSection() {
           خارج شدید — برمی‌گردیم به خانه…
         </p>
       ) : (
-        <ConfirmButton
-          label="خروج از حساب"
-          confirmLabel="مطمئنی؟ برای تأیید دوباره بزن"
-          onConfirm={handleSignOut}
-        />
+        <>
+          <button
+            type="button"
+            onClick={() => setSheetOpen(true)}
+            disabled={signingOut}
+            className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-border text-sm font-medium text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+          >
+            خروج از حساب
+          </button>
+          <p className="text-[12px] leading-5 text-muted-foreground">
+            کمین‌های حسابت روی سرور می‌مونن و کار می‌کنن؛ با ورود بعدی برمی‌گردن.
+          </p>
+        </>
       )}
-      <p className="text-[12px] leading-5 text-muted-foreground">
-        شکارها و علاقه‌مندی‌های این دستگاه می‌ماند.
-      </p>
+
+      <BottomSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        label="خروج از حساب"
+        title="از حسابت خارج می‌شم — با ردپا یا بی‌ردپا؟"
+      >
+        <div className="flex flex-col gap-2 px-1 pb-2">
+          <button
+            type="button"
+            onClick={() => void doSignOut(true)}
+            className="flex min-h-11 w-full flex-col items-start gap-0.5 rounded-lg border border-border px-4 py-3 text-start transition-colors hover:border-border-strong"
+          >
+            <span className="text-sm font-medium text-foreground">ردپام رو پاک کن</span>
+            <span className="text-[12px] leading-5 text-muted-foreground">
+              شکارها، کمین‌ها و علاقه‌مندی‌های این دستگاه هم پاک می‌شن. هیچ ردپایی نمی‌مونه.
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => void doSignOut(false)}
+            className="flex min-h-11 w-full flex-col items-start gap-0.5 rounded-lg border border-border px-4 py-3 text-start transition-colors hover:border-border-strong"
+          >
+            <span className="text-sm font-medium text-foreground">فقط خارج شو</span>
+            <span className="text-[12px] leading-5 text-muted-foreground">
+              شکارها و علاقه‌مندی‌های این دستگاه می‌مونن؛ فقط از حساب خارج می‌شم.
+            </span>
+          </button>
+        </div>
+      </BottomSheet>
     </SectionCard>
   );
 }
@@ -287,6 +391,7 @@ function AccountSection() {
  * auth lands; plan numbers are real; nothing is invented.
  */
 export default function ProfilePage() {
+  const { loggedIn } = useProfile();
   return (
     <main className="flex flex-1 flex-col gap-4 py-6">
       <IdentitySection />
@@ -295,7 +400,7 @@ export default function ProfilePage() {
         <ThemeSwitch />
       </SectionCard>
       <DataSection />
-      <AccountSection />
+      <AccountSection loggedIn={loggedIn} />
     </main>
   );
 }
