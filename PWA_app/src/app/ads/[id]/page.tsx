@@ -3,6 +3,7 @@ import { ArrowRight, ExternalLink } from "lucide-react";
 import { FavoriteButton } from "@/components/ads/FavoriteButton";
 import { ShareButton } from "@/components/ads/ShareButton";
 import { AdDetailGallery } from "@/components/ads/AdDetailGallery";
+import { MarkSeen } from "@/components/ads/MarkSeen";
 import { WhyMatched } from "@/components/ads/WhyMatched";
 import { DescriptionEvidence } from "@/components/ads/DescriptionEvidence";
 import { divarProvider } from "@/lib/server/divar/divarClient";
@@ -121,6 +122,7 @@ export default async function AdDetailPage({
 
   return (
     <main className="flex flex-1 flex-col gap-6 py-4">
+      <MarkSeen adId={id} />
       <Link
         href={backHref}
         className="inline-flex w-fit items-center gap-1.5 rounded text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
@@ -138,9 +140,9 @@ export default async function AdDetailPage({
       <AdDetailGallery images={ad.images} thumbnail={ad.thumbnail} title={ad.title} />
 
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-2xl font-semibold leading-9 text-foreground">{ad.title}</h1>
+        <h1 className="max-w-[92%] text-lg font-medium leading-7 text-foreground text-balance">{ad.title}</h1>
         <p
-          className="text-[22px] font-bold leading-8 tabular-nums tracking-tight text-foreground"
+          className="text-[17px] font-semibold leading-7 tabular-nums tracking-tight text-foreground"
           dir="auto"
         >
           {ad.price !== null ? formatPriceToman(ad.price) : (ad.priceText ?? "توافقی")}

@@ -132,6 +132,15 @@ export async function getBackendKind(): Promise<"db" | "memory"> {
 
 const runs = new Map<string, HuntRun>();
 const RUN_TTL_MS = 30 * 60 * 1000;
+/**
+ * DB-backed runs live much longer than memory ones. The 30-minute memory
+ * TTL exists to bound process memory; persisted runs cost ~100–200KB of
+ * Supabase storage each (revenue-proportional, since hunts are
+ * quota-limited), so 30 days is generous without unbounded growth.
+ * navid 2026-10-08: results must not vanish after minutes — that kills
+ * acquisition. 30 days >> his 5–7 day minimum.
+ */
+const RUN_TTL_MS_DB = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Execution lease for hunt_runs (finding #7, final round). If the owning
@@ -501,7 +510,8 @@ export async function getRun(id: string): Promise<HuntRun | undefined> {
   const row = rows[0];
   if (!row) return undefined;
   const run = rowToRun(row);
-  if (isTerminalStatus(run.status) && Date.now() - run.createdAt > RUN_TTL_MS) return undefined;
+  // DB runs: 30-day retention (see RUN_TTL_MS_DB). Memory runs: 30 min.
+  if (isTerminalStatus(run.status) && Date.now() - run.createdAt > RUN_TTL_MS_DB) return undefined;
   return run;
 }
 

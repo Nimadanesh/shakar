@@ -8,11 +8,14 @@ import type { HuntDefinition, HuntEvent, HuntStats, ScoredAd } from "@/lib/serve
 import { fa, pickVariant } from "@/lib/hunt-copy";
 import { formatPriceToman } from "@/lib/prices";
 import { clearActiveHunt } from "@/lib/active-hunt";
+import { setTaskReturn } from "@/lib/task-return";
 import { requireAuth } from "@/lib/auth";
 import { armKaminServer, disarmKaminServer } from "@/lib/kamin-client";
 import { ensurePushSubscription } from "@/lib/push-client";
 import { useGatedFavorites } from "@/hooks/useGatedFavorites";
 import { useHiddenAds } from "@/hooks/useHiddenAds";
+import { useTaskReturnRestore } from "@/hooks/useTaskReturnRestore";
+import { isAdSeen } from "@/lib/seen-ads";
 import { writeParams } from "@/lib/search-params";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RadarDialog } from "@/components/search/RadarDialog";
@@ -49,16 +52,35 @@ function ResultCard({
 }) {
   const { isFavorite, toggle } = useGatedFavorites();
   const favorite = isFavorite(ad.sourceAdId);
+  // Seen marker: evaluated on mount, so returning from the ad's detail
+  // page (which marks it seen) shows "دیده شد" immediately.
+  const [seen] = useState(() => isAdSeen(ad.sourceAdId));
   return (
     <article
       className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
       style={{ animationDelay: `${Math.min(index, 10) * 60}ms` }}
     >
-      <Link href={detailHref} className="block focus-visible:outline-2 focus-visible:outline-ring">
+      <Link
+        href={detailHref}
+        onClick={() =>
+          setTaskReturn({
+            url: window.location.pathname + window.location.search,
+            scrollY: window.scrollY,
+          })
+        }
+        className="block focus-visible:outline-2 focus-visible:outline-ring"
+      >
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 flex-1 break-words text-sm font-medium leading-6">{ad.title}</h3>
-          <span className="shrink-0 rounded-md bg-zinc-900 px-2 py-0.5 text-[11px] text-white dark:bg-zinc-100 dark:text-zinc-900">
-            تأیید شد
+          <span className="flex shrink-0 flex-col items-end gap-1">
+            <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[11px] text-white dark:bg-zinc-100 dark:text-zinc-900">
+              تأیید شد
+            </span>
+            {seen && (
+              <span className="rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                دیده شد
+              </span>
+            )}
           </span>
         </div>
         <div className="mt-1 flex items-center gap-2 text-[13px] text-zinc-500">
@@ -88,7 +110,7 @@ function ResultCard({
           )}
         >
           <Heart size={15} aria-hidden="true" fill={favorite ? "currentColor" : "none"} />
-          {favorite ? "ذخیره شده" : "علاقه‌مندی"}
+          {favorite ? "در علاقه‌مندی‌ها" : "علاقه‌مندی"}
         </button>
         <button
           type="button"
@@ -130,6 +152,9 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [radarOpen, setRadarOpen] = useState(false);
   const [kaminId, setKaminId] = useState<string | null>(null);
   const { hiddenIds, hide } = useHiddenAds();
+  // Task continuity: returning from an ad's detail or the auth gate
+  // restores the exact scroll position of the results list.
+  useTaskReturnRestore(true);
   /**
    * Load phase — the results-VIEW contract:
    *  - "loading": checking the run's status;
@@ -206,10 +231,13 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
     if (!definition) return;
     setLoopOpen(false);
     const base = definitionToBase(definition);
+    const here = window.location.pathname + window.location.search;
     if (
       !requireAuth(
         { type: "radar", query: definition.query, base, huntId: runId },
-        (url) => router.push(url)
+        (url) => router.push(url),
+        here,
+        { scrollY: window.scrollY }
       )
     )
       return;
@@ -288,7 +316,20 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           setResults(doneResults);
           if (data.stats) setStats(data.stats);
           setDone(true);
-          pushTrace("تموم شد.", true);
+          // The journey, not just "done": when the user opens جزئیات on a
+          // completed hunt, they see the work that was done — reconstructed
+          // honestly from the persisted stats (navid 2026-10-08).
+          const st = data.stats;
+          if (st) {
+            pushTrace(`${fa(st.adsSeen)} آگهی بررسی شد.`, true);
+            pushTrace(`${fa(st.detailsChecked)} جزئیات آگهی خوانده شد.`, true);
+          }
+          pushTrace(
+            doneResults.length > 0
+              ? `${fa(doneResults.length)} مورد دقیق تأیید شد.`
+              : "مورد دقیقی پیدا نشد.",
+            true
+          );
           setCurrent(
             doneResults.length > 0
               ? `${fa(doneResults.length)} شکار دقیق.`
@@ -536,7 +577,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           <div
             aria-hidden={!traceOpen}
             className={
-              "absolute inset-x-0 top-[calc(100%+1.75rem)] z-50 overflow-hidden rounded-xl border border-zinc-200 bg-white/95 shadow-lg backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 " +
+              "absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-xl border border-zinc-200 bg-white/95 shadow-lg backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 " +
               (traceOpen
                 ? "visible max-h-52 opacity-100"
                 : "pointer-events-none invisible max-h-0 opacity-0")

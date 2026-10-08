@@ -14,6 +14,8 @@ import {
 } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { OtpOrbit } from "./OtpOrbit";
+import { peekTaskReturn } from "@/lib/task-return";
+import { toggleFavoriteStored } from "@/hooks/useFavorites";
 
 const RESEND_SECONDS = 60;
 
@@ -162,6 +164,12 @@ export function AuthFlow() {
                 storeSession(pendingSession.current);
                 pendingSession.current = null;
               }
+              // Task continuity: apply the gated favorite BEFORE navigating,
+              // so the target page renders it as already-liked. The task
+              // return slot (page + scroll) is consumed by the target page
+              // itself for scroll restore.
+              const tr = peekTaskReturn();
+              if (tr?.pendingFavorite) toggleFavoriteStored(tr.pendingFavorite);
               router.replace(returnTo);
             }}
           />

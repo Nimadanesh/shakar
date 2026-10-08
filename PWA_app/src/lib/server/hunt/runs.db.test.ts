@@ -335,11 +335,22 @@ describe("TTL applies only to terminal runs (finding #8)", () => {
     expect(reread!.status).toBe("running");
   });
 
-  it("done run older than 30min is reaped by getRun", async () => {
+  it("done run older than 30min is still reachable via getRun (DB: 30-day retention)", async () => {
     const run = await createRun(DEF, null, QUOTA);
     await claimRunForExecution((await getRun(run.id))!);
     await finalizeRun(run.id, "done");
+    // Age the row 31 minutes — well within the 30-day DB retention.
     fake.runs.get(run.id)!.created_at = new Date(Date.now() - 31 * 60_000).toISOString();
+    const reread = await getRun(run.id);
+    expect(reread).toBeDefined();
+    expect(reread!.status).toBe("done");
+  });
+
+  it("done run older than 30 days is reaped by getRun", async () => {
+    const run = await createRun(DEF, null, QUOTA);
+    await claimRunForExecution((await getRun(run.id))!);
+    await finalizeRun(run.id, "done");
+    fake.runs.get(run.id)!.created_at = new Date(Date.now() - 31 * 24 * 60 * 60_000).toISOString();
     expect(await getRun(run.id)).toBeUndefined();
   });
 });

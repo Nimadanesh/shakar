@@ -18,6 +18,7 @@
  * The auth UI labels this clearly. Production builds never take this path.
  */
 import { normalizeCode, normalizeMobile } from "@/lib/otp/mobile";
+import { setTaskReturn } from "@/lib/task-return";
 
 export { normalizeCode, normalizeMobile };
 
@@ -244,10 +245,21 @@ export function takePendingAction(): PendingAction | null {
 export function requireAuth(
   action: PendingAction,
   navigate: (url: string) => void,
-  returnTo = "/"
+  returnTo = "/",
+  opts?: { scrollY?: number; pendingFavorite?: string }
 ): boolean {
   if (getSession()) return true;
   storePendingAction(action);
+  // Task continuity (navid 2026-10-08): the user is mid-task. Record where
+  // they are so auth returns them to the exact page + scroll — never a
+  // cold "/" that loses the hunt they were reviewing.
+  if (opts && returnTo !== "/") {
+    setTaskReturn({
+      url: returnTo,
+      scrollY: opts.scrollY ?? 0,
+      pendingFavorite: opts.pendingFavorite,
+    });
+  }
   const resume = encodeURIComponent(JSON.stringify(action));
   navigate(`/auth?resume=${resume}&returnTo=${encodeURIComponent(returnTo)}`);
   return false;

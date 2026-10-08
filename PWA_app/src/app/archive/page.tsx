@@ -3,15 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, ChevronLeft, Heart, History } from "lucide-react";
+import { Bookmark, ChevronLeft, History } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { SkeletonCard, SkeletonRow } from "@/components/ui/skeletons";
 import { IconConfirmButton } from "@/components/ui/IconConfirmButton";
-import { FavoriteRow } from "@/components/ads/FavoriteRow";
-import { useFavorites } from "@/hooks/useFavorites";
-import { SEARCH_FIXTURES } from "@/data/search-fixtures";
+import { FavoriteAdsList } from "@/components/ads/FavoriteAdsList";
+import { useFavorites, readFavoriteRecords } from "@/hooks/useFavorites";
 import { readHunts, deleteHunt, recordHunt, type HuntRecord } from "@/lib/hunt-store";
 import { fireRealHunt } from "@/lib/hunt-fire";
 import {
@@ -29,24 +28,6 @@ function readTabParam(): ArchiveTab {
   return tab === "favorites" || tab === "saved" ? tab : "history";
 }
 
-/** Single-tap toggle off — re-adding is one tap in detail, so no confirm. */
-function UnfavoriteButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick();
-      }}
-      aria-label="حذف از علاقه‌مندی‌ها"
-      className="me-1 flex size-9 shrink-0 items-center justify-center rounded-full text-danger transition-colors hover:bg-danger/10 focus-visible:outline-2 focus-visible:outline-ring"
-    >
-      <Heart size={16} fill="currentColor" aria-hidden="true" />
-    </button>
-  );
-}
-
 /**
  * آرشیو — the on-demand page: past hunts (returnable /hunt/[id] rows with
  * spec summary + delete), favorites (with row-level unfavorite), and saved
@@ -55,8 +36,13 @@ function UnfavoriteButton({ onClick }: { onClick: () => void }) {
  */
 export default function ArchivePage() {
   const router = useRouter();
-  const { isFavorite, toggle } = useFavorites();
-  const favoriteAds = SEARCH_FIXTURES.filter((ad) => isFavorite(ad.id));
+  const { toggle } = useFavorites();
+  // Favorites count comes from the records (real Divar ids), not fixtures.
+  // The list itself is resolved by <FavoriteAdsList/>.
+  const [favoriteCount, setFavoriteCount] = useState(0);
+  useEffect(() => {
+    setFavoriteCount(readFavoriteRecords().length);
+  }, []);
 
   // Session-cached: revisits render the known lists immediately instead of
   // flashing skeletons → content on every navigation.
@@ -116,7 +102,7 @@ export default function ArchivePage() {
         onChange={handleTabChange}
         tabs={[
           { id: "history", label: "تاریخچه", count: huntList.length },
-          { id: "favorites", label: "علاقه‌مندی‌ها", count: favoriteAds.length },
+          { id: "favorites", label: "علاقه‌مندی‌ها", count: favoriteCount },
           { id: "saved", label: "ذخیره‌شده‌ها", count: savedList.length },
         ]}
       />
@@ -181,25 +167,12 @@ export default function ArchivePage() {
           </ul>
         )
       ) : tab === "favorites" ? (
-        favoriteAds.length === 0 ? (
-          <EmptyState
-            icon={<Heart size={28} aria-hidden="true" className="text-muted-foreground" />}
-            title="هنوز آگهی‌ای به علاقه‌مندی‌ها اضافه نکرده‌ای"
-            description="روی آگهی‌های خوب بزن تا اینجا نگه‌شون داری."
-          />
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {favoriteAds.map((ad) => (
-              <li key={ad.id}>
-                <FavoriteRow
-                  ad={ad}
-                  from="archive"
-                  action={<UnfavoriteButton onClick={() => toggle(ad.id)} />}
-                />
-              </li>
-            ))}
-          </ul>
-        )
+        <FavoriteAdsList
+          onUnfavorite={(adId) => {
+            toggle(adId);
+            setFavoriteCount(readFavoriteRecords().length);
+          }}
+        />
       ) : savedList.length === 0 ? (
         <EmptyState
           icon={<Bookmark size={28} aria-hidden="true" className="text-muted-foreground" />}

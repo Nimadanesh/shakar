@@ -3,11 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderGrid } from "@/components/ui/LoadingState";
-import {
-  clearActiveHunt,
-  readActiveHunt,
-  type ActiveHunt,
-} from "@/lib/active-hunt";
+import { useActiveHunt } from "@/hooks/useActiveHunt";
 
 /**
  * Sticky chip shown on every page while a hunt is running elsewhere.
@@ -16,37 +12,7 @@ import {
  */
 export function ActiveHuntChip() {
   const router = useRouter();
-  const [active, setActive] = useState<ActiveHunt | null>(null);
-
-  useEffect(() => {
-    const found = readActiveHunt();
-    if (!found) return;
-    let cancelled = false;
-    fetch(`/api/hunts/${encodeURIComponent(found.runId)}`)
-      .then((res) => {
-        if (cancelled) return;
-        if (!res.ok) {
-          clearActiveHunt(found.runId);
-          return;
-        }
-        return res.json().then((json: unknown) => {
-          if (cancelled) return;
-          const status = (json as { data?: { status?: string } })?.data?.status;
-          if (status === "done" || status === "failed") {
-            clearActiveHunt(found.runId);
-          } else {
-            setActive(found);
-          }
-        });
-      })
-      .catch(() => {
-        // Offline: keep the chip; the run page will sort it out.
-        if (!cancelled) setActive(found);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const active = useActiveHunt();
 
   if (!active) return null;
 
