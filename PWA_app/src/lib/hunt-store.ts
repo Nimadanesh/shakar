@@ -33,6 +33,12 @@ export interface HuntRecord {
   quotaConsumed: number;
   /** Local hunts are always completed; the backend adds `processing`. */
   status: "completed";
+  /**
+   * Server run id (M4+). The real results live on the run — recents and
+   * archive link to /hunt/[runId], never to a re-derived fixture replay.
+   * Absent for pre-runId records (legacy).
+   */
+  runId?: string;
 }
 
 const STORAGE_KEY = "shakar:hunts:v1";
@@ -54,6 +60,7 @@ function normalize(raw: unknown): HuntRecord | null {
     interpretationVersion?: unknown;
     quotaConsumed?: unknown;
     status?: unknown;
+    runId?: unknown;
   };
   if (typeof v.query !== "string" || v.query.trim() === "") return null;
   if (typeof v.base !== "object" || v.base === null) return null;
@@ -73,6 +80,7 @@ function normalize(raw: unknown): HuntRecord | null {
         ? v.quotaConsumed
         : 1,
     status: "completed",
+    runId: typeof v.runId === "string" && v.runId !== "" ? v.runId : undefined,
   };
 }
 
@@ -119,7 +127,8 @@ function readAll(): HuntRecord[] {
 export function recordHunt(
   query: string,
   base: ContextBase,
-  dismissed: ReadonlySet<string> | string[] = []
+  dismissed: ReadonlySet<string> | string[] = [],
+  runId?: string
 ): HuntRecord | null {
   const trimmed = query.trim();
   if (trimmed === "") return null;
@@ -136,6 +145,7 @@ export function recordHunt(
     interpretationVersion: "v1",
     quotaConsumed: 1,
     status: "completed",
+    runId: typeof runId === "string" && runId !== "" ? runId : undefined,
   };
   const next = [record, ...readAll().filter((h) => h.query !== trimmed)].slice(0, MAX_HUNTS);
   persist(next);

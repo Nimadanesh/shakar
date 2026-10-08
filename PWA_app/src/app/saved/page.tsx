@@ -15,7 +15,6 @@ import {
   kaminCtxToBase,
   kaminNewIds,
   listKamins,
-  markKaminSeen,
   type KaminRecord,
 } from "@/lib/kamin-store";
 import {
@@ -24,8 +23,8 @@ import {
   type ServerKamin,
 } from "@/lib/kamin-client";
 import { recordHunt } from "@/lib/hunt-store";
-import { runSearch } from "@/lib/search";
-import { SEARCH_FIXTURES } from "@/data/search-fixtures";
+import { fireRealHunt } from "@/lib/hunt-fire";
+import { EMPTY_CONTEXT_BASE, type ContextBase } from "@/lib/search-context";
 import type { SearchContext } from "@/types/search";
 
 function priceRangeLabel(min: number | null, max: number | null): string | null {
@@ -137,9 +136,11 @@ function KaminCard({
  */
 function ServerKaminCard({
   kamin,
+  onViewResults,
   onDisarm,
 }: {
   kamin: ServerKamin;
+  onViewResults?: () => void;
   onDisarm: () => void;
 }) {
   return (
@@ -157,6 +158,15 @@ function ServerKaminCard({
         <p className="text-[13px] font-medium text-primary">
           {kamin.new_match_count.toLocaleString("fa-IR")} آگهی تازه
         </p>
+      )}
+      {onViewResults && (
+        <button
+          type="button"
+          onClick={onViewResults}
+          className="h-11 w-full rounded-lg bg-action-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-ring active:bg-action-primary-active"
+        >
+          دیدن نتایج
+        </button>
       )}
       <ConfirmButton
         label="غیرفعال کردن"
@@ -204,14 +214,34 @@ export default function SavedPage() {
     setTab(readTabParam());
   }, []);
 
-  const newCounts = new Map<string, number>();
-  for (const kamin of kaminList) {
-    newCounts.set(kamin.id, kaminNewIds(kamin, SEARCH_FIXTURES).length);
+  /**
+   * Fresh matches — REAL data only. Server kamins carry new_match_count
+   * computed by the kamin engine. Local kamins cannot know fresh matches
+   * without running the engine, so they are never "fresh" here: no
+   * fixture replay, no invented counts.
+   */
+  const serverFresh = (serverKamins ?? []).filter(
+    (k) => k.status === "active" && k.new_match_count > 0
+  );
+  const totalFresh = serverFresh.reduce((sum, k) => sum + k.new_match_count, 0);
+
+  /** View a server kamin's fresh matches: re-fire its definition as a real hunt. */
+  async function handleViewServerResults(kamin: ServerKamin) {
+    const d = kamin.definition;
+    const base: ContextBase = {
+      ...EMPTY_CONTEXT_BASE,
+      category: d.category ?? "all",
+      city: d.city ?? "all",
+      priceMin: d.priceMin != null ? String(d.priceMin) : "",
+      priceMax: d.priceMax != null ? String(d.priceMax) : "",
+      include: [...(d.include ?? [])],
+      exclude: [...(d.exclude ?? [])],
+    };
+    const result = await fireRealHunt({ query: kamin.name, base, dismissed: [] });
+    if (!result.ok) return;
+    recordHunt(kamin.name, base, [], result.runId);
+    router.push(`/hunt/${encodeURIComponent(result.runId)}?q=${encodeURIComponent(kamin.name)}`);
   }
-  const freshKamins = kaminList.filter((k) => (newCounts.get(k.id) ?? 0) > 0);
-  /** Quiet watchers — kamins already surfaced in تازه‌ها don't repeat here. */
-  const quietKamins = kaminList.filter((k) => (newCounts.get(k.id) ?? 0) === 0);
-  const totalFresh = freshKamins.reduce((sum, k) => sum + (newCounts.get(k.id) ?? 0), 0);
 
   function handleTabChange(next: string) {
     const nextTab: SavedTab = next === "kamins" ? "kamins" : "fresh";
@@ -227,23 +257,15 @@ export default function SavedPage() {
 
   /**
    * Inbox CTA: re-running is a new paid hunt — the cost label says so.
-   * Backend contract order: search must succeed and the hunt must be
-   * recorded BEFORE the kamin baseline moves. If the search fails (or no
-   * hunt is recorded), the baseline is untouched — "new matches" are never
-   * silently swallowed.
+   * Fires a REAL server hunt from the kamin's criteria and lands on the
+   * run's results. No fixture replay, ever.
    */
-  function handleViewResults(kamin: KaminRecord) {
-    let ids: string[];
-    try {
-      ids = runSearch(kamin.ctx, SEARCH_FIXTURES).results.map((r) => r.adId);
-    } catch {
-      return;
-    }
-    const record = recordHunt(kamin.name, kaminCtxToBase(kamin.ctx), []);
-    if (!record) return;
-    markKaminSeen(kamin.id, ids);
-    refresh();
-    router.push(`/hunt/${record.id}`);
+  async function handleViewResults(kamin: KaminRecord) {
+    const base = kaminCtxToBase(kamin.ctx);
+    const result = await fireRealHunt({ query: kamin.name, base, dismissed: [] });
+    if (!result.ok) return;
+    recordHunt(kamin.name, base, [], result.runId);
+    router.push(`/hunt/${encodeURIComponent(result.runId)}?q=${encodeURIComponent(kamin.name)}`);
   }
 
   return (
@@ -254,7 +276,11 @@ export default function SavedPage() {
         onChange={handleTabChange}
         tabs={[
           { id: "fresh", label: "تازه‌ها", count: totalFresh },
-          { id: "kamins", label: "کمین‌ها", count: quietKamins.length },
+          {
+            id: "kamins",
+            label: "کمین‌ها",
+            count: (serverKamins ?? []).length + kaminList.length,
+          },
         ]}
       />
 
@@ -268,48 +294,54 @@ export default function SavedPage() {
           <SkeletonCard />
         </div>
       ) : tab === "fresh" ? (
-        freshKamins.length === 0 ? (
+        serverFresh.length === 0 ? (
           <EmptyState
             icon={<BellRing size={28} aria-hidden="true" className="text-muted-foreground" />}
-            title={kaminList.length === 0 ? "کمین فعالی نداری" : "چیز تازه‌ای نیست"}
+            title={
+              (serverKamins ?? []).length + kaminList.length === 0
+                ? "کمین فعالی نداری"
+                : "چیز تازه‌ای نیست"
+            }
             description={
-              kaminList.length === 0
+              (serverKamins ?? []).length + kaminList.length === 0
                 ? "برای شکاری که اجرا کردی کمین بذار؛ آگهی تازه که اومد اینجا می‌بینی."
                 : "کمین‌های فعالت زیر نظرن؛ آگهی جدید که بیاد اینجا می‌بینی."
             }
             primaryAction={
-              kaminList.length === 0
+              (serverKamins ?? []).length + kaminList.length === 0
                 ? { label: "شروع شکار", onClick: () => router.push("/") }
                 : undefined
             }
           />
         ) : (
           <ul className="flex flex-col gap-3">
-            {freshKamins.map((kamin) => (
+            {serverFresh.map((kamin) => (
               <li key={kamin.id}>
-                <KaminCard
+                <ServerKaminCard
                   kamin={kamin}
-                  newCount={newCounts.get(kamin.id) ?? 0}
-                  onViewResults={() => handleViewResults(kamin)}
-                  onDisarm={() => handleDisarm(kamin.id)}
+                  onViewResults={() => handleViewServerResults(kamin)}
+                  onDisarm={async () => {
+                    const ok = await disarmKaminServer(kamin.id);
+                    if (ok) setServerKamins((s) => (s ?? []).filter((k) => k.id !== kamin.id));
+                  }}
                 />
               </li>
             ))}
           </ul>
         )
-      ) : quietKamins.length === 0 ? (
+      ) : (serverKamins ?? []).length + kaminList.length === 0 ? (
         <EmptyState
           icon={<BellRing size={28} aria-hidden="true" className="text-muted-foreground" />}
-          title={kaminList.length === 0 ? "کمین فعالی نداری" : "همه‌ی کمین‌ها تازه دارن"}
+          title="کمین فعالی نداری"
           description={
-            kaminList.length === 0
-              ? "برای شکاری که اجرا کردی کمین بذار؛ آگهی تازه که اومد تو تب تازه‌ها می‌بینی."
-              : "فعلاً کمین ساکتی نداری؛ نتیجه‌های تازه رو تو تب تازه‌ها ببین."
+            serverKamins === null
+              ? "وارد شو تا کمین‌هات رو همه‌ی دستگاه‌هات داشته باشی — یا همین‌جا شکار کن و کمین بذار."
+              : "برای شکاری که اجرا کردی کمین بذار؛ آگهی تازه که اومد تو تب تازه‌ها می‌بینی."
           }
           primaryAction={
-            kaminList.length === 0
-              ? { label: "شروع شکار", onClick: () => router.push("/") }
-              : undefined
+            serverKamins === null
+              ? { label: "ورود / ساخت حساب", onClick: () => router.push("/auth") }
+              : { label: "شروع شکار", onClick: () => router.push("/") }
           }
         />
       ) : (
@@ -319,6 +351,11 @@ export default function SavedPage() {
             <li key={`srv-${kamin.id}`}>
               <ServerKaminCard
                 kamin={kamin}
+                onViewResults={
+                  kamin.new_match_count > 0
+                    ? () => handleViewServerResults(kamin)
+                    : undefined
+                }
                 onDisarm={async () => {
                   const ok = await disarmKaminServer(kamin.id);
                   if (ok) setServerKamins((s) => (s ?? []).filter((k) => k.id !== kamin.id));
@@ -326,7 +363,7 @@ export default function SavedPage() {
               />
             </li>
           ))}
-          {quietKamins.map((kamin) => (
+          {kaminList.map((kamin) => (
             <li key={kamin.id}>
               <KaminCard
                 kamin={kamin}

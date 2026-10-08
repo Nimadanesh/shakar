@@ -13,6 +13,7 @@ import { FavoriteRow } from "@/components/ads/FavoriteRow";
 import { useFavorites } from "@/hooks/useFavorites";
 import { SEARCH_FIXTURES } from "@/data/search-fixtures";
 import { readHunts, deleteHunt, recordHunt, type HuntRecord } from "@/lib/hunt-store";
+import { fireRealHunt } from "@/lib/hunt-fire";
 import {
   readSavedHunts,
   deleteSavedHunt,
@@ -98,9 +99,13 @@ export default function ArchivePage() {
     refreshSaved();
   }
 
-  function handleRerun(s: SavedHunt) {
-    const rec = recordHunt(s.query, s.base);
-    if (rec) router.push(`/hunt/${rec.id}`);
+  async function handleRerun(s: SavedHunt) {
+    // Re-running is a new paid hunt — fire it for real, then land on the
+    // run's results. The quota cost is explicit in the hunt contract.
+    const result = await fireRealHunt({ query: s.query, base: s.base, dismissed: [] });
+    if (!result.ok) return;
+    recordHunt(s.query, s.base, [], result.runId);
+    router.push(`/hunt/${encodeURIComponent(result.runId)}?q=${encodeURIComponent(s.query)}`);
   }
 
   return (
@@ -153,7 +158,7 @@ export default function ArchivePage() {
                 className="flex items-center gap-1 rounded-lg border border-border bg-card transition-colors hover:border-ring focus-within:border-ring"
               >
                 <Link
-                  href={`/hunt/${hunt.id}`}
+                  href={`/hunt/${hunt.runId ?? hunt.id}`}
                   className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-start focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <History size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />

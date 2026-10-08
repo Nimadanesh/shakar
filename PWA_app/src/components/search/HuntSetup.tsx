@@ -26,8 +26,8 @@ import {
   isDimensionsBlocking,
   type DimensionId,
 } from "@/lib/dimensions";
-import { getDeviceId } from "@/lib/device";
 import { recordHunt } from "@/lib/hunt-store";
+import { fireRealHunt } from "@/lib/hunt-fire";
 import { getRememberedCity, rememberCity } from "@/lib/city-memory";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
@@ -180,59 +180,23 @@ export function HuntSetup() {
     }
     setFiring(true);
     setQuotaError(null);
-    // M4: fire a REAL server hunt. The API returns a run id immediately;
-    // the pipeline streams progress over SSE on /hunt/[runId].
+    // M4: fire a REAL server hunt via the shared helper. The API returns a
+    // run id immediately; the pipeline streams progress over SSE on
+    // /hunt/[runId].
     try {
-      const res = await fetch("/api/hunts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Device-Id": getDeviceId(),
-        },
-        body: JSON.stringify({
-          query: trimmed,
-          include: base.include,
-          exclude: base.exclude,
-          city: base.city,
-          category: base.category,
-          priceMin: base.priceMin,
-          priceMax: base.priceMax,
-          transaction: base.transaction,
-          condition: base.condition,
-          // Inferred readings the user dismissed — the server must not
-          // re-apply them (deterministic constraint ids).
-          dismissed: [...dismissed],
-          idempotencyKey:
-            typeof window !== "undefined" && window.crypto?.randomUUID
-              ? window.crypto.randomUUID()
-              : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        }),
-      });
-      const json = (await res.json().catch(() => null)) as {
-        ok?: boolean;
-        data?: { runId?: string };
-        message?: string;
-      } | null;
-      if (res.status === 402 || res.status === 403) {
-        // Quota exhausted / suspended — honest Persian copy from the API.
-        // Never any per-hunt pricing language.
-        setQuotaError(
-          typeof json?.message === "string" && json.message !== ""
-            ? json.message
-            : "سهمیه‌ات تموم شده."
-        );
+      const result = await fireRealHunt({ query: trimmed, base, dismissed });
+      if (!result.ok) {
+        if (result.quotaError) setQuotaError(result.quotaError);
         setFiring(false);
         return;
       }
-      const runId = json?.ok === true ? json.data?.runId : undefined;
-      if (typeof runId === "string" && runId !== "") {
-        // The server consumed one quota unit for this firing — record it
-        // locally so the profile's consumption section reflects reality.
-        // (Every firing is a paid event, even if the stream is abandoned.)
-        recordHunt(trimmed, base, dismissed);
-        router.push(`/hunt/${encodeURIComponent(runId)}?q=${encodeURIComponent(trimmed)}`);
-        return;
-      }
+      // The server consumed one quota unit for this firing — record it
+      // locally (with the run id, so recents link to the REAL results)
+      // so the profile's consumption section reflects reality.
+      // (Every firing is a paid event, even if the stream is abandoned.)
+      recordHunt(trimmed, base, dismissed, result.runId);
+      router.push(`/hunt/${encodeURIComponent(result.runId)}?q=${encodeURIComponent(trimmed)}`);
+      return;
     } catch {
       /* fall through to release the button */
     }
