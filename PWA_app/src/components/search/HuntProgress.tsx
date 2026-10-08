@@ -9,7 +9,7 @@ import { EyeOff, Heart, Repeat, Bookmark, Share2, Check } from "lucide-react";
 import type { HuntDefinition, HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
 import { fa, pickVariant } from "@/lib/hunt-copy";
 import { PriceToman } from "@/components/ui/PriceToman";
-import { clearActiveHunt } from "@/lib/active-hunt";
+import { clearActiveHunt, setActiveHunt } from "@/lib/active-hunt";
 
 import { warmUsage } from "@/lib/usage";
 import { setTaskReturn } from "@/lib/task-return";
@@ -284,6 +284,10 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
     esRef.current?.close();
     esRef.current = null;
     setStopped(true);
+    // A stopped hunt is NOT active (navid 2026-10-08): no badge, no
+    // re-activation on navigation — only «ادامه شکار» brings it back.
+    // The server run keeps its result for the resume.
+    clearActive(runId);
   }
 
   /**
@@ -296,6 +300,19 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   function handleContinue() {
     setStopped(false);
     setResumeSeq((s) => s + 1);
+    // Re-arm the badge ONLY if the run is still going (navid 2026-10-08):
+    // if it finished while detached, the replay lands on done and there
+    // must be no badge flash. The done handler clears via clearActive.
+    void (async () => {
+      try {
+        const res = await fetch(`/api/hunts/${encodeURIComponent(runId)}/status`);
+        const json: unknown = await res.json().catch(() => null);
+        const status = (json as { data?: { status?: string } })?.data?.status;
+        if (status !== "done" && status !== "failed") setActiveHunt(runId, query);
+      } catch {
+        // The replay will sort it out — no badge rather than a wrong one.
+      }
+    })();
   }
 
   useEffect(() => {

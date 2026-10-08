@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { BellRing } from "lucide-react";
+import { BellRing, History } from "lucide-react";
 // Closed-by-default sheet: own chunk, never blocks first paint.
 const KaminDetailSheet = dynamic(
   () => import("@/components/kamin/KaminDetailSheet").then((m) => m.KaminDetailSheet),
@@ -15,6 +15,7 @@ import { SkeletonCard } from "@/components/ui/skeletons";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { SearchFab, SearchSheet } from "@/components/search/SearchSheet";
+import { RecentHunts } from "@/components/search/RecentHunts";
 import {
   buildLocalSearchItems,
   serverKaminToSearchItem,
@@ -204,13 +205,12 @@ function ServerKaminCard({
   );
 }
 
-type SavedTab = "fresh" | "kamins";
+type SavedTab = "fresh" | "kamins" | "hunts";
 
 function readTabParam(): SavedTab {
   if (typeof window === "undefined") return "fresh";
-  return new URLSearchParams(window.location.search).get("tab") === "kamins"
-    ? "kamins"
-    : "fresh";
+  const t = new URLSearchParams(window.location.search).get("tab");
+  return t === "kamins" ? "kamins" : t === "hunts" ? "hunts" : "fresh";
 }
 
 /**
@@ -319,9 +319,11 @@ export default function SavedPage() {
   }
 
   function handleTabChange(next: string) {
-    const nextTab: SavedTab = next === "kamins" ? "kamins" : "fresh";
+    const nextTab: SavedTab =
+      next === "kamins" ? "kamins" : next === "hunts" ? "hunts" : "fresh";
     setTab(nextTab);
-    const url = nextTab === "fresh" ? "/saved" : "/saved?tab=kamins";
+    const url =
+      nextTab === "fresh" ? "/saved" : `/saved?tab=${nextTab}`;
     window.history.replaceState(null, "", url);
   }
 
@@ -356,6 +358,10 @@ export default function SavedPage() {
             label: "کمین‌ها",
             count: (serverKamins ?? []).length + kaminList.length,
           },
+          // Recent hunts live here now (navid 2026-10-08) — off the home
+          // form so the form stays short, on their own lazy tab so the
+          // other tabs pay nothing for it.
+          { id: "hunts", label: "شکارها" },
         ]}
       />
 
@@ -368,6 +374,17 @@ export default function SavedPage() {
           <SkeletonCard />
           <SkeletonCard />
         </div>
+      ) : tab === "hunts" ? (
+        <RecentHunts
+          empty={
+            <EmptyState
+              icon={<History size={28} aria-hidden="true" className="text-muted-foreground" />}
+              title="هنوز شکاری نزدی"
+              description="اولین شکارت رو بزن؛ اینجا نگهش می‌دارم تا با یه ضربه برگردی سرش."
+              primaryAction={{ label: "شروع شکار", onClick: () => router.push("/") }}
+            />
+          }
+        />
       ) : tab === "fresh" ? (
         serverFresh.length === 0 ? (
           // The fresh tab is about fresh matches, not about kamins — one
