@@ -112,10 +112,14 @@ function sectionText(json: DivarJson, sectionName: string, widgetType: string): 
   const primary = findWidget(sec, widgetType);
   const text = asString(primary?.text);
   if (text) return text;
+  // Divar's title widget carries the title in data.title (not data.text).
+  const primaryTitle = asString(asRecord(asRecord(primary)?.data)?.title);
+  if (primaryTitle) return primaryTitle;
   // Fallback: some ads use a different title widget — take the first text.
   if (!Array.isArray(sec.widgets)) return "";
   for (const w of sec.widgets) {
-    const t = asString(asRecord(asRecord(w)?.data)?.text);
+    const data = asRecord(asRecord(w)?.data);
+    const t = asString(data?.text) ?? asString(data?.title);
     if (t) return t;
   }
   return "";
@@ -157,10 +161,25 @@ function toDetail(token: string, json: DivarJson): ListingDetail {
   const imgSec = findSection(json, "IMAGE");
   const widgets = imgSec && Array.isArray(imgSec.widgets) ? imgSec.widgets : [];
   for (const w of widgets) {
-    const url = asString(asRecord(asRecord(w)?.data)?.image_url);
-    if (url) images.push(url);
+    const data = asRecord(asRecord(w)?.data);
+    // Single-image widget.
+    const url = asString(data?.image_url);
+    if (url) {
+      images.push(url);
+      continue;
+    }
+    // Carousel widget: data.items[].image.url
+    const items = data?.items;
+    if (Array.isArray(items)) {
+      for (const it of items) {
+        const u = asString(asRecord(asRecord(it)?.image)?.url);
+        if (u) images.push(u);
+      }
+    }
   }
-  const city = asString(json.city) ?? "";
+  // City arrives as an object { name, city_id, ... }, not a plain string.
+  const cityRec = asRecord(json.city);
+  const city = asString(cityRec?.name) ?? asString(json.city) ?? "";
   return {
     sourceAdId: token,
     title: sectionText(json, "TITLE", "LEGEND_TITLE_ROW"),
