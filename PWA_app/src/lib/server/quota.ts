@@ -59,6 +59,14 @@ export interface QuotaGrant {
   /** Null in permissive mode. */
   remaining: number | null;
   userId: string | null;
+  /**
+   * The pool the unit was consumed from — userId for subscribers AND for
+   * registered-but-unsubscribed (finding #15), deviceId for true guests.
+   * MUST be threaded to refundHunt: the kind field alone ("guest" for both
+   * unsubscribed cases) cannot distinguish them, and refunding the wrong
+   * pool burns the user's unit forever (money bug, navid 2026-10-08).
+   */
+  poolKey: string;
 }
 
 export interface QuotaDeny {
@@ -78,6 +86,7 @@ interface Sb {
 }
 
 let warnedMissing = false;
+let tablesKnownGood = false;
 function warnMissing(what: string) {
   if (!warnedMissing) {
     warnedMissing = true;
@@ -88,11 +97,16 @@ function warnMissing(what: string) {
 }
 
 async function tablesExist(sb: Sb): Promise<boolean> {
+  // Positive-only cache: the migrations don't un-run, so two probe
+  // round-trips per hunt fire is pure waste. A transient failure simply
+  // retries next time (never cached negative → never stuck fail-open).
+  if (tablesKnownGood) return true;
   try {
     await sb.rest("GET", "quota_counters?select=user_id&limit=0");
     // Live devices schema: id uuid PK (there is no device_id column —
     // checking for it silently disabled all quota enforcement in prod).
     await sb.rest("GET", "devices?select=id&limit=0");
+    tablesKnownGood = true;
     return true;
   } catch {
     return false;
@@ -147,7 +161,14 @@ export async function consumeHunt(opts: {
   const sb = supabaseConfigured() ? supabaseServer() : null;
   if (!sb || !(await tablesExist(sb))) {
     warnMissing(!sb ? "Supabase not configured" : "M4b tables missing");
-    return { allowed: true, mode: "permissive-dev", kind: "guest", remaining: null, userId: opts.userId };
+    return {
+      allowed: true,
+      mode: "permissive-dev",
+      kind: "guest",
+      remaining: null,
+      userId: opts.userId,
+      poolKey: opts.userId ?? opts.deviceId,
+    };
   }
 
   // Authenticated with an active subscription → tier quota.
@@ -225,6 +246,7 @@ async function consumeStandard(sb: Sb, userId: string, tierHunts: number): Promi
       kind: "standard",
       remaining: tierHunts - atomic.hunts_used,
       userId,
+      poolKey: userId,
     };
   }
 
@@ -263,10 +285,18 @@ async function consumeStandard(sb: Sb, userId: string, tierHunts: number): Promi
   await sb.rest("PATCH", `quota_counters?user_id=eq.${q}`, { hunts_used: newUsed });
 
   if (!row.notified_85 && newUsed >= Math.ceil(0.85 * tierHunts)) {
-    await sb.rest("PATCH", `quota_counters?user_id=eq.${q}`, { notified_85: true });
-    await fire85Notification(sb, userId, tierHunts - newUsed);
+    // Conditional PATCH (notified_85=eq.false) — racing legacy requests
+    // can't double-fire; only the winner notifies. Same as the atomic path.
+    const updated = await sb.rest<Array<unknown>>(
+      "PATCH",
+      `quota_counters?user_id=eq.${q}&notified_85=eq.false`,
+      { notified_85: true }
+    );
+    if (Array.isArray(updated) && updated.length > 0) {
+      await fire85Notification(sb, userId, tierHunts - newUsed);
+    }
   }
-  return { allowed: true, mode: "real", kind: "standard", remaining: tierHunts - newUsed, userId };
+  return { allowed: true, mode: "real", kind: "standard", remaining: tierHunts - newUsed, userId, poolKey: userId };
 }
 
 async function rpcConsumeGuest(
@@ -371,6 +401,7 @@ async function consumeGuest(
       kind: "guest",
       remaining: granted - atomic.free_hunts_used,
       userId: null,
+      poolKey: key,
     };
   }
 
@@ -410,6 +441,7 @@ async function consumeGuest(
     kind: "guest",
     remaining: granted - used - 1,
     userId: null,
+    poolKey: key,
   };
 }
 
@@ -429,21 +461,54 @@ export async function refundHunt(opts: {
   deviceId: string;
   kind: QuotaKind;
   mode: QuotaMode;
+  /**
+   * The pool the unit was consumed from (threaded from consumeHunt).
+   * Falls back to deviceId for runs recorded before poolKey existed —
+   * those predate the registered-unsubscribed keying anyway.
+   */
+  poolKey?: string | null;
 }): Promise<RefundResult> {
   if (opts.mode !== "real") return { refunded: false, note: "noop" };
   const sb = supabaseServer();
   if (!sb) return { refunded: false, note: "noop" };
 
   if (opts.kind === "guest" || !opts.userId) {
+    // THE pool key, not the device id: registered-but-unsubscribed users
+    // consume from a userId-keyed pool (finding #15) — refunding the
+    // deviceId pool instead burned their unit forever (money bug).
+    const poolKey = opts.poolKey ?? opts.deviceId;
+    try {
+      const rows = await sb.rest<Array<{ allowed: boolean; outcome: string }>>(
+        "POST",
+        "/rpc/claim_guest_refund_slot",
+        { p_device_id: poolKey, p_today: new Date().toISOString().slice(0, 10) }
+      );
+      const r = rows[0];
+      if (!r) return { refunded: false, note: "noop" };
+      if (r.outcome === "refund") return { refunded: true, note: "refunded" };
+      // 3+ zero-result refunds today: no refund (lock-list guest cap).
+      return { refunded: false, note: "no-refund-warning" };
+    } catch (e) {
+      if (!isMissingRpc(e)) {
+        // Honest: the refund did NOT happen — never claim it did.
+        console.warn("[quota] guest refund failed:", (e as Error).message);
+        return { refunded: false, note: "noop" };
+      }
+      console.warn(
+        "[quota] claim_guest_refund_slot RPC missing — legacy plain decrement. " +
+          "Run supabase/m24-guest-refund-ladder.sql."
+      );
+    }
     try {
       // Atomic decrement (never below zero); falls back to the legacy
       // read-modify-write when the RPC is not installed yet.
       await sb.rest("POST", "/rpc/refund_guest_hunt", {
-        p_device_id: opts.deviceId,
+        p_device_id: poolKey,
       });
+      return { refunded: true, note: "refunded" };
     } catch (e) {
       if (isMissingRpc(e)) {
-        const d = encodeURIComponent(opts.deviceId);
+        const d = encodeURIComponent(poolKey);
         try {
           const rows = await sb.rest<Array<{ free_hunts_used: number }>>(
             "GET",
@@ -453,14 +518,15 @@ export async function refundHunt(opts: {
           await sb.rest("PATCH", `devices?id=eq.${d}`, {
             free_hunts_used: Math.max(0, used - 1),
           });
+          return { refunded: true, note: "refunded" };
         } catch (inner) {
           console.warn("[quota] guest refund failed:", (inner as Error).message);
+          return { refunded: false, note: "noop" };
         }
-      } else {
-        console.warn("[quota] guest refund failed:", (e as Error).message);
       }
+      console.warn("[quota] guest refund failed:", (e as Error).message);
+      return { refunded: false, note: "noop" };
     }
-    return { refunded: true, note: "refunded" };
   }
 
   const q = encodeURIComponent(opts.userId);

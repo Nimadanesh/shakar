@@ -75,6 +75,7 @@ export async function POST(
       mode: quota.mode,
       userId: quota.userId,
       deviceId,
+      poolKey: quota.poolKey,
       charged: true,
     },
     idempotencyKey ?? undefined,

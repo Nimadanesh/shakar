@@ -57,6 +57,7 @@ const QUOTA = {
   mode: "real" as const,
   userId: null,
   deviceId: "d1",
+  poolKey: "d1",
   charged: false,
 };
 

@@ -92,6 +92,23 @@ function fakeDb(
       if (row) row.free_hunts_used = Math.max(0, (row.free_hunts_used as number) - 1);
       return null;
     }
+    if (path === "/rpc/claim_guest_refund_slot") {
+      // Models m24: advisory lock serializes per-pool; day rollover resets
+      // zero_refunds_today; ladder: <3 refund, else no-refund.
+      const { p_device_id: did, p_today: today } = body as { p_device_id: string; p_today: string };
+      const row = tables.devices.find((r) => r.id === did);
+      if (!row) return [{ allowed: false, outcome: "noop" }];
+      const refunds = row.refund_day === today ? ((row.zero_refunds_today as number) ?? 0) : 0;
+      if (refunds < 3) {
+        row.free_hunts_used = Math.max(0, (row.free_hunts_used as number) - 1);
+        row.zero_refunds_today = refunds + 1;
+        row.refund_day = today;
+        return [{ allowed: true, outcome: "refund" }];
+      }
+      row.zero_refunds_today = refunds + 1;
+      row.refund_day = today;
+      return [{ allowed: false, outcome: "no-refund" }];
+    }
     if (path === "/rpc/check_guest_ip_limit") {
       // Models the fixed m14: pg_advisory_xact_lock serializes per-IP, so
       // in JS (single-threaded) this is inherently atomic. The count
@@ -446,6 +463,102 @@ describe("refundHunt", () => {
     // No hunts_used decrement on the warning path.
     expect(db.tables.quota_counters[0].hunts_used).toBe(10);
     expect(db.tables.quota_counters[0].warnings).toBe(2);
+  });
+
+  // MONEY BUG (navid 2026-10-08 deep review): a registered-but-unsubscribed
+  // user consumes from a pool keyed by user_id (finding #15), but the old
+  // refundHunt always decremented the deviceId-keyed pool — the consumed
+  // unit was never given back. poolKey threads the truth through.
+  it("registered-unsubscribed: refund returns the unit to the userId pool, not the device pool", async () => {
+    mockConfigured.mockReturnValue(true);
+    const db = fakeDb(
+      {
+        quota_counters: [],
+        devices: [],
+        subscriptions: [], // no subscription → guest pool, keyed by user_id
+      },
+      { rpc: true }
+    );
+    mockServer.mockReturnValue({ rest: db.rest } as never);
+
+    const grant = await consumeHunt({ userId: "u8", deviceId: "d8" });
+    expect(grant).toMatchObject({ allowed: true, kind: "guest", poolKey: "u8" });
+    // The consume created a devices row keyed by the USER id.
+    const userPool = db.tables.devices.find((r) => r.id === "u8");
+    expect(userPool?.free_hunts_used).toBe(1);
+
+    const r = await refundHunt({
+      userId: "u8",
+      deviceId: "d8",
+      kind: "guest",
+      mode: "real",
+      poolKey: grant.allowed ? grant.poolKey : "d8",
+    });
+    expect(r).toMatchObject({ refunded: true, note: "refunded" });
+    expect(userPool?.free_hunts_used).toBe(0);
+    // No phantom row was created for the device id.
+    expect(db.tables.devices.find((r) => r.id === "d8")).toBeUndefined();
+  });
+
+  // HONESTY (navid 2026-10-08 deep review): the old code returned
+  // refunded:true even when the refund RPC failed with a real error —
+  // claiming a refund that never happened. Now it says noop.
+  it("guest refund: real RPC failure → noop, never a phantom refund", async () => {
+    mockConfigured.mockReturnValue(true);
+    const db = fakeDb(
+      {
+        quota_counters: [],
+        devices: [{ id: "dg2", free_hunts_used: 2, free_hunts_granted: 3 }],
+      },
+      { rpc: true }
+    );
+    const failing = vi.fn(async (method: string, path: string, body?: unknown) => {
+      if (path === "/rpc/claim_guest_refund_slot") {
+        const e = new Error("db exploded");
+        (e as unknown as { status: number }).status = 500;
+        throw e;
+      }
+      return db.rest(method, path, body);
+    });
+    mockServer.mockReturnValue({ rest: failing } as never);
+    const r = await refundHunt({ userId: null, deviceId: "dg2", kind: "guest", mode: "real", poolKey: "dg2" });
+    expect(r).toMatchObject({ refunded: false, note: "noop" });
+    // The counter is untouched — no phantom refund.
+    expect(db.tables.devices[0].free_hunts_used).toBe(2);
+  });
+
+  // ABUSE (navid 2026-10-08 deep review): guest zero-result refunds were
+  // unlimited — infinite free hunts at real API cost. m24 caps at 3/day.
+  it("guest refund ladder: 3 refunds/day, then no-refund", async () => {
+    mockConfigured.mockReturnValue(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const db = fakeDb(
+      {
+        quota_counters: [],
+        devices: [
+          {
+            id: "dg3",
+            free_hunts_used: 3,
+            free_hunts_granted: 3,
+            zero_refunds_today: 2,
+            refund_day: today,
+          },
+        ],
+      },
+      { rpc: true }
+    );
+    mockServer.mockReturnValue({ rest: db.rest } as never);
+    const opts = { userId: null, deviceId: "dg3", kind: "guest" as const, mode: "real" as const, poolKey: "dg3" };
+
+    const r1 = await refundHunt(opts);
+    expect(r1).toMatchObject({ refunded: true, note: "refunded" });
+    expect(db.tables.devices[0].free_hunts_used).toBe(2);
+
+    const r2 = await refundHunt(opts);
+    expect(r2).toMatchObject({ refunded: false, note: "no-refund-warning" });
+    // Cap hit: the counter is NOT decremented.
+    expect(db.tables.devices[0].free_hunts_used).toBe(2);
+    expect(db.tables.devices[0].zero_refunds_today).toBe(4);
   });
 });
 

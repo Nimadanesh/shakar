@@ -34,6 +34,12 @@ export interface QuotaReceipt {
   userId: string | null;
   deviceId: string;
   /**
+   * The pool the unit was consumed from (userId for subscribers and for
+   * registered-but-unsubscribed, deviceId for true guests). Threaded from
+   * consumeHunt — refundHunt MUST use this, not deviceId (money bug).
+   */
+  poolKey: string;
+  /**
    * False for the deep-history second phase: it's the SAME hunt continued,
    * no extra unit consumed — and therefore no refund on zero results.
    */
@@ -421,6 +427,9 @@ function rowToRun(row: HuntRunRow): HuntRun {
       mode: (q.mode ?? "permissive-dev") as QuotaMode,
       userId: (q.userId ?? null) as string | null,
       deviceId: typeof q.deviceId === "string" ? q.deviceId : "unknown",
+      // Old rows predate poolKey — fall back to the device id (the
+      // pre-finding-#15 behavior for true guests).
+      poolKey: typeof q.poolKey === "string" ? q.poolKey : (typeof q.deviceId === "string" ? q.deviceId : "unknown"),
       charged: q.charged !== false,
     },
     kaminId: row.kamin_id ?? undefined,
@@ -496,6 +505,7 @@ export async function createRun(
       mode: quota.mode,
       userId: quota.userId,
       deviceId: quota.deviceId,
+      poolKey: quota.poolKey,
       charged: quota.charged,
     },
     kamin_id: kaminId ?? null,
@@ -750,6 +760,7 @@ export async function runCompletionSideEffects(
         deviceId: run.quota.deviceId,
         kind: run.quota.kind,
         mode: run.quota.mode,
+        poolKey: run.quota.poolKey,
       });
     } catch {
       /* refund is best-effort; the hunt result matters more */

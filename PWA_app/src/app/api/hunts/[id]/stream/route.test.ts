@@ -76,6 +76,7 @@ describe("stream route (live handler, mocked session+pipeline)", () => {
       mode: "real",
       userId: "user-1",
       deviceId: "d",
+      poolKey: "user-1",
       charged: false,
     });
     mockSession.mockResolvedValue("user-2");
@@ -90,6 +91,7 @@ describe("stream route (live handler, mocked session+pipeline)", () => {
       mode: "real",
       userId: "user-1",
       deviceId: "d",
+      poolKey: "user-1",
       charged: false,
     });
     mockSession.mockResolvedValue("user-1");
@@ -117,6 +119,7 @@ describe("stream route (live handler, mocked session+pipeline)", () => {
       mode: "real",
       userId: null,
       deviceId: "d",
+      poolKey: "d",
       charged: false,
     });
     mockSession.mockResolvedValue(null);
@@ -139,6 +142,7 @@ describe("stream route (live handler, mocked session+pipeline)", () => {
       mode: "real",
       userId: "user-1",
       deviceId: "d",
+      poolKey: "user-1",
       charged: true,
     });
     mockSession.mockResolvedValue("user-1");
@@ -169,6 +173,7 @@ describe("stream route (live handler, mocked session+pipeline)", () => {
       mode: "real",
       userId: "user-1",
       deviceId: "d",
+      poolKey: "user-1",
       charged: true,
     });
     mockSession.mockResolvedValue("user-1");
