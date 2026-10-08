@@ -1,9 +1,9 @@
-import type { FixtureAd } from "@/data/search-fixtures";
 import { adSearchText, includesTerm, stripQuotes } from "@/lib/search";
 import type { SearchContext } from "@/types/search";
 
 interface WhyMatchedProps {
-  ad: FixtureAd;
+  /** Only title + description are read (via adSearchText) — works for any ad shape. */
+  ad: { title: string; description: string };
   ctx: SearchContext;
 }
 

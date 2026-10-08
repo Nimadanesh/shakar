@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { FavoriteButton } from "@/components/ads/FavoriteButton";
 import { ShareButton } from "@/components/ads/ShareButton";
 import { AdDetailGallery } from "@/components/ads/AdDetailGallery";
 import { WhyMatched } from "@/components/ads/WhyMatched";
 import { DescriptionEvidence } from "@/components/ads/DescriptionEvidence";
-import { SEARCH_FIXTURES } from "@/data/search-fixtures";
+import { divarProvider } from "@/lib/server/divar/divarClient";
 import { formatPriceToman } from "@/lib/prices";
 import { cityScopeFor } from "@/lib/search-context";
 import type { SearchContext } from "@/types/search";
@@ -31,8 +30,12 @@ function first(value: string | string[] | undefined): string | null {
  * Ad detail = the VERIFY step. Evidence-first layout: the hunter understands
  * relevance (gallery → facts → why it matched) before reading the full
  * seller description. The evidence context (hunt terms) arrives via the
- * triage link's query params; without it, the why-section stays hidden —
+ * results link's query params; without it, the why-section stays hidden —
  * evidence is never invented.
+ *
+ * Data is REAL: fetched live from Divar via the server provider (60-min
+ * cache). When the fetch fails, an honest "unavailable" view is shown —
+ * never fixture data, never invented content.
  */
 export default async function AdDetailPage({
   params,
@@ -43,9 +46,58 @@ export default async function AdDetailPage({
 }) {
   const { id } = await params;
   const query = await searchParams;
-  const ad = SEARCH_FIXTURES.find((item) => item.id === id);
-  if (!ad) notFound();
 
+  // Back restores the context the hunter came from: the hunt's results,
+  // the live inbox, the archive, or home as a last resort.
+  const huntId = first(query.hunt);
+  const backHref =
+    huntId !== null
+      ? `/hunt/${huntId}`
+      : query.from === "saved"
+        ? "/saved"
+        : query.from === "archive"
+          ? "/archive?tab=favorites"
+          : "/";
+
+  const divarUrl = `https://divar.ir/v/${encodeURIComponent(id)}`;
+
+  let detail: Awaited<ReturnType<typeof divarProvider.getDetail>> | null = null;
+  try {
+    detail = await divarProvider.getDetail(id);
+  } catch {
+    detail = null;
+  }
+
+  if (!detail) {
+    return (
+      <main className="flex flex-1 flex-col gap-4 py-16 text-center">
+        <p className="text-sm font-medium text-foreground">جزئیات این آگهی در دسترس نیست.</p>
+        <p className="mx-auto max-w-xs text-[13px] leading-6 text-muted-foreground">
+          ممکن است آگهی حذف شده باشد یا ارتباط با دیوار برقرار نشد — چیزی حدس نمی‌زنیم.
+        </p>
+        <div className="mx-auto flex w-full max-w-xs flex-col gap-2">
+          <Link
+            href={divarUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-action-primary px-5 text-sm font-medium text-primary-foreground"
+          >
+            <ExternalLink size={18} aria-hidden="true" />
+            باز کردن آگهی اصلی در دیوار
+          </Link>
+          <Link
+            href={backHref}
+            className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-border px-5 text-sm font-medium text-foreground"
+          >
+            <ArrowRight size={16} aria-hidden="true" />
+            بازگشت به نتایج
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  const ad = detail;
   const city = first(query.city) ?? "all";
   const cond = first(query.cond);
   const ctx: SearchContext = {
@@ -62,23 +114,9 @@ export default async function AdDetailPage({
     condition: cond === "new" || cond === "used" || cond === "any" ? cond : "",
   };
 
-  // Back restores the context the hunter came from: the hunt's triage,
-  // the live inbox, the archive, or home as a last resort.
-  const huntId = first(query.hunt);
-  const backHref =
-    huntId !== null
-      ? `/hunt/${huntId}`
-      : query.from === "saved"
-        ? "/saved"
-        : query.from === "archive"
-          ? "/archive?tab=favorites"
-          : "/";
-
   const infoRows: Array<[string, string | null]> = [
-    ["دسته‌بندی", ad.category],
-    ["شهر", ad.city],
-    ["محله", ad.neighborhood ?? null],
-    ["قدمت آگهی", ad.createdAt],
+    ["شهر", ad.city !== "" ? ad.city : null],
+    ["تاریخ ثبت", ad.postedAt ?? null],
   ];
 
   return (
@@ -91,6 +129,12 @@ export default async function AdDetailPage({
         بازگشت به نتایج
       </Link>
 
+      {ad.stale === true && (
+        <p className="rounded-lg border border-border bg-secondary px-3 py-2 text-[12px] leading-5 text-muted-foreground">
+          این جزئیات از حافظه‌ی موقت اومده و ممکن است قدیمی باشد — قیمت یا وضعیت آگهی را در صفحه‌ی اصلی دیوار چک کن.
+        </p>
+      )}
+
       <AdDetailGallery images={ad.images} thumbnail={ad.thumbnail} title={ad.title} />
 
       <div className="flex flex-col gap-1.5">
@@ -99,37 +143,30 @@ export default async function AdDetailPage({
           className="text-[22px] font-bold leading-8 tabular-nums tracking-tight text-foreground"
           dir="auto"
         >
-          {ad.price !== null ? formatPriceToman(ad.price) : "توافقی"}
+          {ad.price !== null ? formatPriceToman(ad.price) : (ad.priceText ?? "توافقی")}
         </p>
-        <p className="text-[13px] leading-6 text-muted-foreground">
-          {ad.city}
-          {ad.neighborhood ? `، ${ad.neighborhood}` : ""} • {ad.createdAt}
-        </p>
+        {ad.city !== "" && (
+          <p className="text-[13px] leading-6 text-muted-foreground">{ad.city}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-3">
         <div className="flex gap-3">
-          <FavoriteButton adId={ad.id} className="flex-1" />
+          <FavoriteButton adId={id} className="flex-1" />
           <ShareButton />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            title="آدرس اصلی در داده‌ی نمایشی موجود نیست"
-            className="flex h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-border px-5 text-sm font-medium text-disabled"
-          >
-            <ExternalLink size={18} aria-hidden="true" />
-            باز کردن آگهی اصلی
-          </button>
-          <p className="text-[12px] leading-5 text-muted-foreground">
-            آدرس اصلی در داده‌ی نمایشی موجود نیست.
-          </p>
-        </div>
+        <Link
+          href={divarUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border px-5 text-sm font-medium text-foreground transition-colors hover:border-border-strong"
+        >
+          <ExternalLink size={18} aria-hidden="true" />
+          باز کردن آگهی اصلی در دیوار
+        </Link>
       </div>
 
-      <WhyMatched ad={ad} ctx={ctx} />
+      <WhyMatched ad={{ title: ad.title, description: ad.description }} ctx={ctx} />
 
       <DescriptionEvidence description={ad.description} includeTerms={ctx.includeKeywords} />
 

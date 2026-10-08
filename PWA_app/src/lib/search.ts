@@ -10,7 +10,7 @@ import type {
   SuppressedAd,
 } from "@/types/search";
 
-export function adSearchText(ad: FixtureAd): string {
+export function adSearchText(ad: { title: string; description: string }): string {
   return normalizePersian(`${ad.title} ${ad.description}`);
 }
 

@@ -27,7 +27,7 @@ const DEF = {
   condition: "" as const,
 };
 
-const QUOTA = { kind: "guest", mode: "permissive-dev", userId: null, deviceId: "d1" } as const;
+const QUOTA = { kind: "guest", mode: "permissive-dev", userId: null, deviceId: "d1", charged: true } as const;
 
 function get(id: string) {
   return GET(new Request("http://x/"), { params: Promise.resolve({ id }) });

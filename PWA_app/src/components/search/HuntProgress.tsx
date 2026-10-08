@@ -1,11 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
+import { EyeOff, Heart, Repeat } from "lucide-react";
+import type { HuntDefinition, HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
 import { fa, pickVariant } from "@/lib/hunt-copy";
 import { formatPriceToman } from "@/lib/prices";
 import { clearActiveHunt } from "@/lib/active-hunt";
+import { requireAuth } from "@/lib/auth";
+import { armKaminServer, disarmKaminServer } from "@/lib/kamin-client";
+import { ensurePushSubscription } from "@/lib/push-client";
+import { useGatedFavorites } from "@/hooks/useGatedFavorites";
+import { useHiddenAds } from "@/hooks/useHiddenAds";
+import { writeParams } from "@/lib/search-params";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { RadarDialog } from "@/components/search/RadarDialog";
+import type { ContextBase } from "@/lib/search-context";
+import { cn } from "@/lib/utils";
 
 /**
  * HuntProgress — the "AI is hunting for you" experience (M4a).
@@ -24,32 +36,70 @@ function DotLoading() {
   return <LoaderGrid tone="default" />;
 }
 
-function ResultCard({ ad, index }: { ad: ScoredAd; index: number }) {
+function ResultCard({
+  ad,
+  index,
+  detailHref,
+  onHide,
+}: {
+  ad: ScoredAd;
+  index: number;
+  detailHref: string;
+  onHide: (adId: string) => void;
+}) {
+  const { isFavorite, toggle } = useGatedFavorites();
+  const favorite = isFavorite(ad.sourceAdId);
   return (
     <article
       className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
       style={{ animationDelay: `${Math.min(index, 10) * 60}ms` }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 flex-1 break-words text-sm font-medium leading-6">{ad.title}</h3>
-        <span className="shrink-0 rounded-md bg-zinc-900 px-2 py-0.5 text-[11px] text-white dark:bg-zinc-100 dark:text-zinc-900">
-          تأیید شد
-        </span>
+      <Link href={detailHref} className="block focus-visible:outline-2 focus-visible:outline-ring">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="min-w-0 flex-1 break-words text-sm font-medium leading-6">{ad.title}</h3>
+          <span className="shrink-0 rounded-md bg-zinc-900 px-2 py-0.5 text-[11px] text-white dark:bg-zinc-100 dark:text-zinc-900">
+            تأیید شد
+          </span>
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-[13px] text-zinc-500">
+          <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+            {ad.price !== null ? formatPriceToman(ad.price) : (ad.priceText ?? "توافقی")}
+          </span>
+          {ad.city !== "" && <span>{ad.city}</span>}
+        </div>
+        {ad.evidence.length > 0 && (
+          <p className="mt-1 break-words text-xs text-zinc-500">
+            چون: {ad.evidence.map((e) => `«${e}»`).join("، ")}
+          </p>
+        )}
+        {ad.detailUnknown === true && (
+          <p className="mt-1 text-xs text-zinc-500">جزئیات کامل خوانده نشد</p>
+        )}
+      </Link>
+      <div className="mt-2 flex items-center gap-2 border-t border-zinc-100 pt-2 dark:border-zinc-800/60">
+        <button
+          type="button"
+          onClick={() => toggle(ad.sourceAdId)}
+          aria-label={favorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
+          aria-pressed={favorite}
+          className={cn(
+            "flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-[12px] transition-colors",
+            favorite ? "text-primary" : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+          )}
+        >
+          <Heart size={15} aria-hidden="true" fill={favorite ? "currentColor" : "none"} />
+          {favorite ? "ذخیره شده" : "علاقه‌مندی"}
+        </button>
+        <button
+          type="button"
+          onClick={() => onHide(ad.sourceAdId)}
+          aria-label="مخفی کردن این آگهی"
+          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-[12px] text-zinc-500 transition-colors hover:text-zinc-800 dark:hover:text-zinc-200"
+        >
+          <EyeOff size={15} aria-hidden="true" />
+          مخفی کن
+        </button>
       </div>
-      <div className="mt-1 flex items-center gap-2 text-[13px] text-zinc-500">
-        <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-          {formatPriceToman(ad.price)}
-        </span>
-        {ad.city !== "" && <span>{ad.city}</span>}
-      </div>
-      {ad.evidence.length > 0 && (
-        <p className="mt-1 break-words text-xs text-zinc-500">
-          چون: {ad.evidence.map((e) => `«${e}»`).join("، ")}
-        </p>
-      )}
-      {ad.detailUnknown === true && (
-        <p className="mt-1 text-xs text-zinc-500">جزئیات کامل خوانده نشد</p>
-      )}
     </article>
   );
 }
@@ -73,6 +123,13 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [stopped, setStopped] = useState(false);
   const [showTop, setShowTop] = useState(false);
   const [showScrollInfo, setShowScrollInfo] = useState(false);
+  /** The run's definition (from GET) — powers refine + kamin + detail evidence. */
+  const [definition, setDefinition] = useState<HuntDefinition | null>(null);
+  /** The loop: «شکار تموم شد، حالا چی؟» — sheet + bottom block share these. */
+  const [loopOpen, setLoopOpen] = useState(false);
+  const [radarOpen, setRadarOpen] = useState(false);
+  const [kaminId, setKaminId] = useState<string | null>(null);
+  const { hiddenIds, hide } = useHiddenAds();
   /**
    * Load phase — the results-VIEW contract:
    *  - "loading": checking the run's status;
@@ -122,6 +179,83 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
     setDeepening(false);
   }
 
+  /** HuntDefinition → editable ContextBase (refine + auth-resume). */
+  function definitionToBase(def: HuntDefinition): ContextBase {
+    return {
+      category: def.category,
+      city: def.city,
+      priceMin: def.priceMin,
+      priceMax: def.priceMax,
+      include: [...def.include],
+      exclude: [...def.exclude],
+      hasImage: false,
+      transaction: def.transaction,
+      condition: def.condition,
+    };
+  }
+
+  /** The loop, action 1: refine — restore the exact intent on Home for editing. */
+  function handleRefine() {
+    if (!definition) return;
+    setLoopOpen(false);
+    router.push(`/${writeParams(definition.query, definitionToBase(definition))}&setup=1`);
+  }
+
+  /** The loop, action 2: kamin — the hunt becomes a watcher. Auth-gated. */
+  function handleOpenKamin() {
+    if (!definition) return;
+    setLoopOpen(false);
+    const base = definitionToBase(definition);
+    if (
+      !requireAuth(
+        { type: "radar", query: definition.query, base, huntId: runId },
+        (url) => router.push(url)
+      )
+    )
+      return;
+    setRadarOpen(true);
+  }
+
+  async function handleArmKamin() {
+    if (!definition) return;
+    const seenIds = results.map((r) => r.sourceAdId);
+    const res = await armKaminServer(definition, definition.query, seenIds);
+    if (res.ok) {
+      if (res.kamin) setKaminId(res.kamin.id);
+      else setKaminId("existing");
+      ensurePushSubscription();
+    }
+    setRadarOpen(false);
+  }
+
+  async function handleDisarmKamin() {
+    if (kaminId && kaminId !== "existing") {
+      await disarmKaminServer(kaminId);
+    }
+    setKaminId(null);
+    setRadarOpen(false);
+  }
+
+  /** Evidence query string for /ads/[token] — «چرا این آگهی؟» stays honest. */
+  function detailHrefFor(ad: ScoredAd): string {
+    const p = new URLSearchParams();
+    p.set("hunt", runId);
+    const q = definition?.query ?? query;
+    if (q !== "") p.set("q", q);
+    if (definition) {
+      for (const t of definition.include) p.append("inc", t);
+      for (const t of definition.exclude) p.append("exc", t);
+      if (definition.category !== "all") p.set("cat", definition.category);
+      if (definition.city !== "all") p.set("city", definition.city);
+      if (definition.priceMin !== "") p.set("min", definition.priceMin);
+      if (definition.priceMax !== "") p.set("max", definition.priceMax);
+    }
+    return `/ads/${encodeURIComponent(ad.sourceAdId)}?${p.toString()}`;
+  }
+
+  const visibleResults = results.filter((r) => !hiddenIds.includes(r.sourceAdId));
+  const loopActionsAvailable = done && definition !== null;
+
   const pushTrace = (text: string, isDone: boolean) => {
     lineId.current += 1;
     const id = lineId.current;
@@ -144,9 +278,11 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
             status?: string;
             results?: ScoredAd[];
             stats?: HuntStats;
+            definition?: HuntDefinition;
           };
         } | null;
         const data = json?.ok === true ? json.data : undefined;
+        if (data?.definition) setDefinition(data.definition);
         if (data && (data.status === "done" || data.status === "failed")) {
           const doneResults = Array.isArray(data.results) ? data.results : [];
           setResults(doneResults);
@@ -329,9 +465,21 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           ) : (
             <span aria-hidden className="h-2 w-2 rounded-full bg-zinc-900 dark:bg-zinc-100" />
           )}
-          <p className="text-sm font-medium">
+          <p className="min-w-0 flex-1 text-sm font-medium">
             {stopped ? "شکار متوقف شد" : done ? "شکار تموم شد" : "در حال شکار"}
           </p>
+          {/* The loop, always in reach: the same «قدم بعدی» actions as the
+              bottom block, behind one icon — no 100-item scroll needed. */}
+          {loopActionsAvailable && (
+            <button
+              type="button"
+              onClick={() => setLoopOpen(true)}
+              aria-label="قدم بعدی — ادامه‌ی شکار"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
+            >
+              <Repeat size={17} aria-hidden="true" />
+            </button>
+          )}
         </div>
         {/* AI shimmer on the hunt title (visual 4). */}
         {!done && !stopped ? (
@@ -459,15 +607,22 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         </div>
       )}
 
-      {/* Streaming confirmed results */}
-      {results.length > 0 && (
+      {/* Streaming confirmed results — each card is tappable (detail),
+          favoritable and hideable. */}
+      {visibleResults.length > 0 && (
         <section className="mt-6">
           <h2 className="mb-3 text-sm font-medium text-zinc-500">
-            {done ? `نتایج (${fa(results.length)})` : "تأییدشده‌ها — بقیه در راهن"}
+            {done ? `نتایج (${fa(visibleResults.length)})` : "تأییدشده‌ها — بقیه در راهن"}
           </h2>
           <div className="space-y-3">
-            {results.map((ad, i) => (
-              <ResultCard key={ad.sourceAdId} ad={ad} index={i} />
+            {visibleResults.map((ad, i) => (
+              <ResultCard
+                key={ad.sourceAdId}
+                ad={ad}
+                index={i}
+                detailHref={detailHrefFor(ad)}
+                onHide={hide}
+              />
             ))}
           </div>
         </section>
@@ -534,18 +689,43 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         </section>
       )}
 
-      {/* Deep history opt-in — only when there ARE results (empty state has its own). */}
-      {done && stats !== null && stats.adsSeen > 0 && results.length > 0 && (
+      {/* The loop — «شکار تموم شد، حالا چی؟» Full block at the end of
+          results; the same actions live behind the loop icon up top. */}
+      {loopActionsAvailable && stats !== null && (
         <section className="mt-6 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-          <p className="text-sm">این‌ها از آگهی‌های چند روز اخیر بودن.</p>
-          <button
-            type="button"
-            onClick={goDeep}
-            disabled={deepening}
-            className="mt-2 rounded-full bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-          >
-            {deepening ? "دارم آماده می‌کنم..." : "می‌خوای برم سراغ قدیمی‌ترها؟"}
-          </button>
+          <h2 className="text-sm font-medium">قدم بعدی</h2>
+          <p className="mt-1 text-[13px] leading-6 text-zinc-500">
+            شکارِ امروز تموم شد — حالا می‌تونی ادامه‌ش بدی:
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={handleOpenKamin}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              <Repeat size={16} aria-hidden="true" />
+              کمینش کن — آگهی تازه که اومد خبرم کن
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleRefine}
+                className="flex h-11 flex-1 items-center justify-center rounded-lg border border-zinc-300 text-sm text-zinc-700 transition-colors hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600"
+              >
+                دقیق‌ترش کن
+              </button>
+              {stats.adsSeen > 0 && (
+                <button
+                  type="button"
+                  onClick={goDeep}
+                  disabled={deepening}
+                  className="flex h-11 flex-1 items-center justify-center rounded-lg border border-zinc-300 text-sm text-zinc-700 transition-colors hover:border-zinc-400 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600"
+                >
+                  {deepening ? "دارم آماده می‌کنم..." : "آگهی‌های قدیمی‌تر"}
+                </button>
+              )}
+            </div>
+          </div>
         </section>
       )}
 
@@ -584,6 +764,65 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           <path d="M12 19V5M5 12l7-7 7 7" />
         </svg>
       </button>
+
+      {/* The loop as a sheet — the same «قدم بعدی» actions as the bottom
+          block, one tap away from the top of the results. */}
+      <BottomSheet
+        open={loopOpen}
+        onClose={() => setLoopOpen(false)}
+        label="قدم بعدی"
+        title="شکار تموم شد — حالا چی؟"
+        subtitle="ادامه‌ی همین شکار، بدون اینکه از اول شروع کنی."
+      >
+        <div className="flex flex-col gap-2 px-1 pb-2">
+          <button
+            type="button"
+            onClick={handleOpenKamin}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            <Repeat size={16} aria-hidden="true" />
+            کمینش کن — آگهی تازه که اومد خبرم کن
+          </button>
+          <button
+            type="button"
+            onClick={handleRefine}
+            className="flex h-12 w-full items-center justify-center rounded-lg border border-zinc-300 text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+          >
+            دقیق‌ترش کن
+          </button>
+          {stats !== null && stats.adsSeen > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setLoopOpen(false);
+                goDeep();
+              }}
+              disabled={deepening}
+              className="flex h-12 w-full items-center justify-center rounded-lg border border-zinc-300 text-sm text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+            >
+              {deepening ? "دارم آماده می‌کنم..." : "برم سراغ آگهی‌های قدیمی‌تر"}
+            </button>
+          )}
+        </div>
+      </BottomSheet>
+
+      <RadarDialog
+        open={radarOpen}
+        armed={kaminId !== null}
+        huntName={definition?.query ?? query}
+        constraintCount={
+          definition
+            ? definition.include.length +
+              definition.exclude.length +
+              (definition.city !== "all" ? 1 : 0) +
+              (definition.category !== "all" ? 1 : 0) +
+              (definition.priceMin !== "" || definition.priceMax !== "" ? 1 : 0)
+            : 0
+        }
+        onArm={handleArmKamin}
+        onDisarm={handleDisarmKamin}
+        onClose={() => setRadarOpen(false)}
+      />
     </div>
   );
 }
