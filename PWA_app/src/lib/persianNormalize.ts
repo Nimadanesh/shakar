@@ -215,16 +215,44 @@ export function expandSynonyms(term: string, category?: string): string[] {
   return [...new Set(concepts.flatMap((concept) => concept.aliases.map(synonymKey)))];
 }
 
+/** True if normalized tokens include a term/phrase without synonym expansion. */
+function containsNormalizedTerm(adText: string, term: string): boolean {
+  const tokens = tokenize(adText);
+  if (tokens.length === 0) return false;
+  const key = synonymKey(term);
+  if (key === "") return false;
+  const tokenSet = new Set(tokens);
+  const stemmedText = tokens.join(" ");
+  return key.includes(" ") ? stemmedText.includes(key) : tokenSet.has(key);
+}
+
+/**
+ * Return the explicitly related-but-not-equivalent terms for a query concept.
+ * These terms are only surfaced as related evidence; they must never be
+ * treated as exact aliases or used to satisfy a MUST as an exact match.
+ */
+export function relatedConceptTerms(term: string, category?: string): string[] {
+  const key = synonymKey(term);
+  if (!category || category === "" || category === "all") return [];
+  const concepts = (synonymIndex.get(key) ?? []).filter((concept) =>
+    conceptAppliesToCategory(concept, category)
+  );
+  return [...new Set(concepts.flatMap((concept) => concept.related.map(synonymKey)))];
+}
+
+/** True if ad text contains this concept's related-but-distinct neighbor. */
+export function textMatchesRelated(adText: string, term: string, category?: string): boolean {
+  return relatedConceptTerms(term, category).some((related) =>
+    containsNormalizedTerm(adText, related)
+  );
+}
+
 /**
  * True if the ad text contains the term or an exact alias applicable to the
  * supplied category. Related concepts do not count as exact evidence.
  */
 export function textMatches(adText: string, term: string, category?: string): boolean {
-  const tokens = tokenize(adText);
-  if (tokens.length === 0) return false;
-  const tokenSet = new Set(tokens);
-  const stemmedText = tokens.join(" ");
   return expandSynonyms(term, category).some((syn) =>
-    syn.includes(" ") ? stemmedText.includes(syn) : tokenSet.has(syn)
+    containsNormalizedTerm(adText, syn)
   );
 }
