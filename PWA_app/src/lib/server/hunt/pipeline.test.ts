@@ -601,6 +601,35 @@ describe("intent buckets — flaw #19 (MUST/SHOULD/MUST-NOT/UNKNOWN)", () => {
     expect(done.stats.rejectedNoMatch).toBe(1); // s3
     expect(done.stats.nearMiss).toBe(0);
   });
+
+  it("ranks a real acoustic piano above design/digital acoustic claims", async () => {
+    const def = def19({
+      query: "پیانو آکوستیک",
+      category: "music",
+      include: ["پیانو", "آکوستیک"],
+    });
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "real", title: "پیانو آکوستیک یاماها" }),
+        summary({ sourceAdId: "design", title: "پیانو طرح آکوستیک" }),
+        summary({ sourceAdId: "digital", title: "پیانو دیجیتال آکوستیک" }),
+      ],
+      hasMore: false,
+    });
+    detail({
+      real: "پیانو آکوستیک واقعی یاماها",
+      design: "پیانو طرح آکوستیک با رنگ‌بندی سفارشی",
+      digital: "پیانو دیجیتال با صدای آکوستیک",
+    });
+    const done = await doneOf(def);
+
+    expect(done.results[0].sourceAdId).toBe("real");
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results.find((ad) => ad.sourceAdId === "design")?.matchKind).toBe("near");
+    expect(done.results.find((ad) => ad.sourceAdId === "digital")?.matchKind).toBe("near");
+    expect(done.results.find((ad) => ad.sourceAdId === "design")?.missingInfo).toContain("آکوستیک");
+    expect(done.results.find((ad) => ad.sourceAdId === "digital")?.missingInfo).toContain("آکوستیک");
+  });
 });
 
 describe("collapseDupes — bug #19 (dedupe before sort, keep newest)", () => {
