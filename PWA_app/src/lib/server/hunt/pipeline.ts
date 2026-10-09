@@ -18,8 +18,8 @@ import { parsePriceBound } from "./definition";
  *
  * Flow: list pages (cap 20, query-scoped) → title SCORING (recall-oriented,
  * Persian-aware) → near-dup collapse → details in prioritized batches of
- * 10 → description rules (hard AND over title+description) → scoring
- * (rubric in docs/output-quality.md flaw #2) → ranked.
+ * 10 → intent evaluation (MUST/SHOULD/MUST-NOT/UNKNOWN, flaw #19) →
+ * scoring (rubric in docs/output-quality.md flaw #2) → ranked.
  *
  * The title phase never hard-filters on includes (flaw #12): attributes
  * like neighborhoods routinely live in descriptions, not titles. Precision
@@ -35,6 +35,12 @@ export interface HuntDefinition {
   query: string;
   include: string[];
   exclude: string[];
+  /**
+   * SHOULD terms — ranking boost only (flaw #19, 2026-10-09). Populated
+   * from the query's preference cues («ترجیحاً»). Never filters, never
+   * penalizes: absence is simply no boost.
+   */
+  should: string[];
   /** City slug ("tehran") or "all". */
   city: string;
   /**
@@ -75,6 +81,14 @@ export interface ScoredAd {
   breakdown: ScoreBreakdown;
   /** Matched terms with where they matched — «چرا این آگهی؟» for free. */
   evidence: string[];
+  /**
+   * Intent verdict (flaw #19): "exact" = every MUST term evidenced in the
+   * ad's text; "near" = at least one MUST term evidenced, the rest UNKNOWN.
+   * The results UI labels near-misses honestly — never a silent drop.
+   */
+  matchKind: "exact" | "near";
+  /** MUST terms with no evidence in title or description (the UNKNOWN set). */
+  missingInfo: string[];
   /** True when the detail fetch failed — shown, never dropped. */
   detailUnknown?: boolean;
 }
@@ -87,7 +101,17 @@ export interface HuntStats {
   detailsChecked: number;
   confirmed: number;
   stale: boolean;
+  /**
+   * Redefined 2026-10-09 (flaw #19): ads KEPT as near-miss results
+   * (verdict "near") — shown to the user, labeled honestly. Was: ads
+   * rejected by the description hard-AND.
+   */
   nearMiss: number;
+  /**
+   * Detail-phase rejections (flaw #19): zero MUST evidence, MUST_NOT hits,
+   * and explicit condition contradictions.
+   */
+  rejectedNoMatch: number;
 }
 
 export type HuntEvent =
@@ -178,10 +202,10 @@ function isWeasel(title: string, term: string): boolean {
  * (neighborhood, specs) routinely live in descriptions, not titles.
  *
  * Now the title phase hard-rejects ONLY on excludes («نه» means نه — cheap
- * and safe). Everything else is scored by title strength; the top of the
- * ranking goes to the detail phase, where descriptionPass applies the hard
- * AND over title+description combined. Recall at the title, precision at
- * the description.
+ * and safe). MUST terms score double, SHOULD terms score single; the top of
+ * the ranking goes to the detail phase, where evaluateDescription applies
+ * the intent buckets over title+description combined (flaw #19). Recall at
+ * the title, precision at the description.
  */
 function titleScore(ad: ListingSummary, def: HuntDefinition): {
   excluded: boolean;
@@ -197,8 +221,14 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
   let needsDetailReview = false;
   for (const term of def.include) {
     if (textMatches(ad.title, term)) {
-      strength += 1;
+      strength += 2; // MUST weighs double at the title (flaw #19)
       if (isWeasel(ad.title, term)) needsDetailReview = true;
+    }
+  }
+  // SHOULD is a nudge, never a gate. Pre-#19 snapshots lack the bucket.
+  for (const term of def.should ?? []) {
+    if (textMatches(ad.title, term)) {
+      strength += 1;
     }
   }
   return { excluded: false, strength, needsDetailReview };
@@ -228,44 +258,147 @@ function conditionPass(combined: string, def: HuntDefinition): boolean {
   return true;
 }
 
-function descriptionPass(
+export interface DescriptionEvaluation {
+  verdict: "exact" | "near" | "rejected";
+  /** Matched MUST (+SHOULD) surface terms — «چرا این آگهی؟» for free. */
+  evidence: string[];
+  /** MUST terms with no evidence in title or description (the UNKNOWN set). */
+  missingInfo: string[];
+  /** MUST terms matched in the title. */
+  mustTitle: number;
+  /** MUST terms matched only in the description. */
+  mustDesc: number;
+  /** SHOULD terms matched in title+description. */
+  shouldMatched: number;
+}
+
+function rejectedEvaluation(): DescriptionEvaluation {
+  return {
+    verdict: "rejected",
+    evidence: [],
+    missingInfo: [],
+    mustTitle: 0,
+    mustDesc: 0,
+    shouldMatched: 0,
+  };
+}
+
+/**
+ * Intent evaluation (flaw #19, 2026-10-09) — replaces the hard-AND
+ * descriptionPass that killed every near-miss (the «برنج هندی» zero-result).
+ *
+ * Buckets:
+ * - MUST_NOT (def.exclude): any hit → rejected. «نه» means نه.
+ * - Explicit condition contradictions → rejected (flaw #15).
+ * - MUST (def.include): title match → mustTitle; else description match →
+ *   mustDesc; else the term is UNKNOWN → missingInfo (penalized in scoring,
+ *   NEVER dropped here).
+ * - SHOULD (def.should): match → small boost. Never filters, never penalizes.
+ *
+ * Verdict: "rejected" only when the ad shows ZERO MUST evidence (the pigeon
+ * rule — flaw #8 survives: an ad about something else entirely is not a
+ * result). Otherwise "exact" (every MUST evidenced) or "near" (some MUST
+ * UNKNOWN) — kept, ranked, and labeled honestly via missingInfo.
+ */
+function evaluateDescription(
   description: string,
   title: string,
   def: HuntDefinition
-): { pass: boolean; strength: number; evidence: string[] } {
-  const evidence: string[] = [];
-  let strength = 0;
+): DescriptionEvaluation {
   const combined = `${title} ${description}`;
-  for (const term of def.include) {
-    if (textMatches(combined, term)) {
-      strength += 1;
-      evidence.push(term);
-    } else {
-      return { pass: false, strength: 0, evidence: [] };
-    }
-  }
+  // 1. MUST_NOT — «نه» means نه.
   for (const term of def.exclude) {
     if (textMatches(combined, term)) {
-      return { pass: false, strength: 0, evidence: [] };
+      return rejectedEvaluation();
     }
   }
+  // 2. Explicit contradictions only (flaw #15) — unknown stays.
   if (!conditionPass(combined, def)) {
-    return { pass: false, strength: 0, evidence: [] };
+    return rejectedEvaluation();
   }
-  return { pass: true, strength, evidence };
+  // 3-4. SHOULD-only scan shared by the defensive empty-MUST path below.
+  // Pre-#19 snapshots lack the bucket — normalize, never crash.
+  const shouldTerms = def.should ?? [];
+  // Defensive: no MUST terms (never happens via resolveHuntDefinition, but
+  // old snapshots and direct callers must not crash or pass vacuously).
+  if (def.include.length === 0) {
+    const evidence: string[] = [];
+    let shouldMatched = 0;
+    for (const term of shouldTerms) {
+      if (textMatches(combined, term)) {
+        shouldMatched += 1;
+        evidence.push(term);
+      }
+    }
+    return {
+      verdict: evidence.length > 0 ? "near" : "rejected",
+      evidence,
+      missingInfo: [],
+      mustTitle: 0,
+      mustDesc: 0,
+      shouldMatched,
+    };
+  }
+  // 3. MUST with UNKNOWN semantics.
+  const evidence: string[] = [];
+  const missingInfo: string[] = [];
+  let mustTitle = 0;
+  let mustDesc = 0;
+  for (const term of def.include) {
+    if (textMatches(title, term)) {
+      mustTitle += 1;
+      evidence.push(term);
+    } else if (textMatches(description, term)) {
+      mustDesc += 1;
+      evidence.push(term);
+    } else {
+      missingInfo.push(term); // UNKNOWN — penalized in scoring, never dropped
+    }
+  }
+  // 4. SHOULD — boost only.
+  let shouldMatched = 0;
+  for (const term of shouldTerms) {
+    if (textMatches(combined, term)) {
+      shouldMatched += 1;
+      evidence.push(term);
+    }
+  }
+  // 5. Verdict.
+  if (mustTitle + mustDesc === 0) {
+    return { ...rejectedEvaluation(), missingInfo };
+  }
+  return {
+    verdict: missingInfo.length === 0 ? "exact" : "near",
+    evidence,
+    missingInfo,
+    mustTitle,
+    mustDesc,
+    shouldMatched,
+  };
 }
 
+/**
+ * Weighted intent score (flaw #19). MUST title matches weigh most, then
+ * MUST description matches, then price-known; SHOULD matches add a small
+ * boost; UNKNOWN terms (missingInfo) subtract a small penalty. The breakdown
+ * stays EXPLAINABLE (flaw #2) — never a magic number.
+ */
 function scoreAd(
-  titleStrength: number,
-  descStrength: number,
-  includeCount: number,
+  ev: DescriptionEvaluation,
+  mustCount: number,
+  shouldCount: number,
   price: number | null
 ): { score: number; breakdown: ScoreBreakdown } {
-  const title = includeCount > 0 ? titleStrength / includeCount : 1;
-  const description = includeCount > 0 ? descStrength / includeCount : 1;
+  const title = mustCount > 0 ? ev.mustTitle / mustCount : 0;
+  const description = mustCount > 0 ? ev.mustDesc / mustCount : 0;
   const priceKnown = price !== null ? 0.5 : 0;
+  const shouldBoost = shouldCount > 0 ? (0.5 * ev.shouldMatched) / shouldCount : 0;
+  const unknownPenalty = mustCount > 0 ? ev.missingInfo.length / mustCount : 0;
   const breakdown: ScoreBreakdown = { title, description, priceKnown };
-  return { score: 3 * title + 2 * description + priceKnown, breakdown };
+  return {
+    score: 3 * title + 2 * description + priceKnown + shouldBoost - unknownPenalty,
+    breakdown,
+  };
 }
 
 /**
@@ -294,6 +427,7 @@ export async function collectCandidates(
     confirmed: 0,
     stale: false,
     nearMiss: 0,
+    rejectedNoMatch: 0,
   };
 
   emit({ type: "started", query: def.query });
@@ -428,7 +562,9 @@ export async function confirmCandidates(
   // ---- Phase 4: details in prioritized batches of 10 ----------------------
   candidates.sort((a, b) => b.titleStrength - a.titleStrength);
   const toCheck = candidates.slice(0, MAX_DETAILS_PER_HUNT);
-  const includeCount = def.include.length;
+  const mustCount = def.include.length;
+  // Pre-#19 snapshots lack the SHOULD bucket — normalize, never crash.
+  const shouldCount = def.should?.length ?? 0;
   const results: ScoredAd[] = [];
   const confirmed: ScoredAd[] = [];
 
@@ -455,30 +591,17 @@ export async function confirmCandidates(
         // Invariant: failed detail = "unknown", never a silent drop.
         detailUnknown = true;
       }
-      if (detailUnknown) {
-        const { score, breakdown } = scoreAd(c.titleStrength, 0, includeCount, c.price);
-        const ad: ScoredAd = {
-          sourceAdId: c.sourceAdId,
-          title: c.title,
-          price: c.price,
-          priceText: c.priceText,
-          city: c.city,
-          thumbnail: c.thumbnail,
-          score: score * 0.5, // unknown details rank below verified ones
-          breakdown,
-          evidence: [],
-          detailUnknown: true,
-        };
-        results.push(ad);
-        batchConfirmed.push(ad);
+      // Intent evaluation (flaw #19): MUST/SHOULD/MUST-NOT/UNKNOWN. A
+      // failed/stale detail evaluates title-only (description = "") — the
+      // ad is never silently dropped for a fetch failure; unmatched MUST
+      // terms become UNKNOWN (missingInfo), not a rejection.
+      const ev = evaluateDescription(description, c.title, def);
+      if (ev.verdict === "rejected") {
+        stats.rejectedNoMatch += 1;
         continue;
       }
-      const r = descriptionPass(description, c.title, def);
-      if (!r.pass) {
-        stats.nearMiss += 1;
-        continue;
-      }
-      const { score, breakdown } = scoreAd(c.titleStrength, r.strength, includeCount, c.price);
+      if (ev.verdict === "near") stats.nearMiss += 1;
+      const { score, breakdown } = scoreAd(ev, mustCount, shouldCount, c.price);
       const ad: ScoredAd = {
         sourceAdId: c.sourceAdId,
         title: c.title,
@@ -486,9 +609,15 @@ export async function confirmCandidates(
         priceText: c.priceText,
         city: c.city,
         thumbnail: c.thumbnail,
-        score,
+        // Unknown details rank below verified ones (unchanged rule).
+        score: detailUnknown ? score * 0.5 : score,
         breakdown,
-        evidence: r.evidence,
+        evidence: ev.evidence,
+        // A failed/stale detail is never "exact" — the description was not
+        // verified (spec §7). Honest ceiling: "near".
+        matchKind: !detailUnknown && ev.verdict === "exact" ? "exact" : "near",
+        missingInfo: ev.missingInfo,
+        ...(detailUnknown ? { detailUnknown: true } : {}),
       };
       results.push(ad);
       batchConfirmed.push(ad);
@@ -504,7 +633,14 @@ export async function confirmCandidates(
   }
 
   // ---- Phase 5: ranking ----------------------------------------------------
-  results.sort((a, b) => b.score - a.score);
+  // Exact matches outrank near-misses; near-misses order by score.
+  results.sort((a, b) =>
+    a.matchKind === b.matchKind
+      ? b.score - a.score
+      : a.matchKind === "exact"
+        ? -1
+        : 1
+  );
   return results;
 }
 

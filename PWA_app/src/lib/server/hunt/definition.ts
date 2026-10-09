@@ -35,6 +35,7 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
     query,
     include: strArr(b.include),
     exclude: strArr(b.exclude),
+    should: [],
     city: str(b.city) || "all",
     category: str(b.category) || "all",
     priceMin: str(b.priceMin),
@@ -56,8 +57,10 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
  *
  * resolveHuntDefinition is the single choke point (hunts + kamin arm/run)
  * that turns the raw query into an honest, complete definition:
- *  1. content terms from the query text become MANDATORY (merged into
- *     include) — «پیانو U3 تهران» requires پیانو AND U3 in every ad;
+ *  1. content terms from the query text become MUST (merged into
+ *     include) — «پیانو U3 تهران» names پیانو AND U3; matched terms score,
+ *     unmatched terms become UNKNOWN (near-miss), never a silent drop
+ *     (flaw #19, 2026-10-09);
  *  2. a city named in the text applies when the picker is "all";
  *  3. a category named in the text («آپارتمان» → real-estate) applies when
  *     the picker is "all" — without this the provider scans every category
@@ -65,7 +68,9 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
  *     2026-10-06: «آپارتمان نوساز سعادت‌آباد» found nothing);
  *  4. price bounds named in the text apply when the fields are empty;
  *  5. inline «نه» excludes apply;
- *  6. nothing the user dismissed (by deterministic constraint id) applies.
+ *  6. nothing the user dismissed (by deterministic constraint id) applies;
+ *  7. preference cues («ترجیحاً») become SHOULD — ranking boost only,
+ *     never a filter (flaw #19).
  *
  * Structural words (city names, price expressions, cue words, excludes,
  * preference wishes) never become content terms.
@@ -139,10 +144,26 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     }
   }
 
+  // 5. SHOULD terms from preference cues («ترجیحاً تمیز», flaw #19).
+  // Ranking boost only — never filters, never penalizes. Deduped against
+  // MUST/NOT terms (stem-compared, like the include merge above).
+  const seenShould = new Set<string>();
+  for (const t of def.include) for (const s of tokenize(t)) seenShould.add(s);
+  for (const t of def.exclude) for (const s of tokenize(t)) seenShould.add(s);
+  const should: string[] = [];
+  for (const p of interp.preferences) {
+    const key = stemToken(p.value);
+    if (p.value !== "" && !seenShould.has(key)) {
+      should.push(p.value);
+      seenShould.add(key);
+    }
+  }
+
   return {
     ...def,
     include,
     exclude,
+    should,
     city,
     citySource,
     category,

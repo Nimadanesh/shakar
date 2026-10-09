@@ -130,8 +130,37 @@ describe("resolveHuntDefinition — the «پیانو» incident (2026-10-06)", (
   });
 });
 
-describe("parsePriceBound", () => {
-  it("parses digits-only and Persian digits", () => {
+describe("resolveHuntDefinition — SHOULD bucket (flaw #19, 2026-10-09)", () => {
+  it("maps «ترجیحاً» wishes to should (ranking-only)", () => {
+    const def = resolveHuntDefinition(body({ query: "گوشی ترجیحاً تمیز" }))!;
+    expect(def.should).toContain("تمیز");
+    expect(def.include).toContain("گوشی");
+    expect(def.include).not.toContain("تمیز");
+    expect(def.include).not.toContain("ترجیحاً");
+  });
+
+  it("dedupes should against include chips", () => {
+    const def = resolveHuntDefinition(
+      body({ query: "پیانو ترجیحاً تمیز", include: ["تمیز"] })
+    )!;
+    expect(def.should).not.toContain("تمیز");
+    expect(def.include).toContain("تمیز");
+  });
+
+  it("dedupes should against exclude terms", () => {
+    const def = resolveHuntDefinition(
+      body({ query: "پیانو ترجیحاً کهنه", exclude: ["کهنه"] })
+    )!;
+    expect(def.should).not.toContain("کهنه");
+  });
+
+  it("defaults should to [] when there are no preferences", () => {
+    const def = resolveHuntDefinition(body())!;
+    expect(def.should).toEqual([]);
+  });
+});
+
+describe("parsePriceBound", () => {  it("parses digits-only and Persian digits", () => {
     expect(parsePriceBound("200000000")).toBe(200000000);
     expect(parsePriceBound("۲۰۰")).toBe(200);
   });

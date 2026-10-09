@@ -576,6 +576,7 @@ export function realEnginePipeline(): Pick<EngineDeps, "collect" | "confirm"> {
         confirmed: 0,
         stale: false,
         nearMiss: 0,
+        rejectedNoMatch: 0,
       };
       return confirmCandidates(candidates, def, stats);
     },

@@ -43,6 +43,7 @@ const DEF: HuntDefinition = {
   query: "گوشی",
   include: ["گوشی"],
   exclude: ["خراب"],
+  should: [],
   city: "tehran",
   category: "mobile",
   priceMin: "",
@@ -85,14 +86,17 @@ describe("runPipeline", () => {
     const done = events.find((e) => e.type === "done");
     expect(done?.type).toBe("done");
     if (done?.type !== "done") return;
-    // a1 confirmed; a2 collapsed as dup; a3 checked (weak title) but failed
-    // description; a4 hard-rejected at title by the exclude.
+    // a1 confirmed; a2 collapsed as dup; a3 checked (weak title) but has
+    // zero MUST evidence → rejected (flaw #19: the pigeon rule survives);
+    // a4 hard-rejected at title by the exclude.
     expect(done.results.map((r) => r.sourceAdId)).toEqual(["a1"]);
     expect(done.stats.adsSeen).toBe(4);
     expect(done.stats.titleRejected).toBe(1);
     expect(done.stats.dupsCollapsed).toBe(1);
-    expect(done.stats.nearMiss).toBe(1);
+    expect(done.stats.nearMiss).toBe(0);
+    expect(done.stats.rejectedNoMatch).toBe(1);
     expect(done.results[0].evidence).toContain("گوشی");
+    expect(done.results[0].matchKind).toBe("exact");
     const ranked = events.find((e) => e.type === "ranked");
     expect(ranked).toMatchObject({ scored: 4, shortlisted: 2, excluded: 1 });
   });
@@ -114,6 +118,7 @@ describe("runPipeline", () => {
       query: "آپارتمان نوساز سعادت آباد",
       include: ["آپارتمان", "نوساز", "سعادت", "آباد"],
       exclude: [],
+      should: [],
       city: "tehran",
       category: "real-estate",
       priceMin: "",
@@ -246,6 +251,7 @@ describe("runPipeline", () => {
       query: "آپارتمان نوساز",
       include: ["آپارتمان", "نوساز"],
       exclude: [],
+      should: [],
       city: "tehran",
       category: "real-estate",
       priceMin: "",
@@ -436,6 +442,164 @@ describe("runPipeline", () => {
     if (done?.type !== "done") throw new Error("no done event");
     const ids = done.results.map((r) => r.sourceAdId).sort();
     expect(ids).toEqual(["a1", "a4"]);
+  });
+});
+
+describe("intent buckets — flaw #19 (MUST/SHOULD/MUST-NOT/UNKNOWN)", () => {
+  function def19(over: Partial<HuntDefinition> = {}): HuntDefinition {
+    return {
+      query: "برنج هندی",
+      include: ["برنج", "هندی"],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+      ...over,
+    };
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  it("LOCKED: برنج هندی — near-misses survive, zero-evidence dies", async () => {
+    // The friend's screenshot: 7 candidates, all killed by the hard AND.
+    // Now: exact + near are kept and labeled, only the zero-evidence ad dies.
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "a1", title: "برنج هندی اعلا", price: 100 }),
+        summary({ sourceAdId: "a2", title: "برنج", price: 90 }),
+        summary({ sourceAdId: "a3", title: "لوبیا قرمز", price: 50 }),
+      ],
+      hasMore: false,
+    });
+    detail({
+      a1: "برنج هندی درجه یک",
+      a2: "برنج ایرانی درجه یک", // «هندی» missing → UNKNOWN, not dead
+      a3: "لوبیا",
+    });
+    const done = await doneOf(def19());
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["a1", "a2"]);
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results[0].missingInfo).toEqual([]);
+    expect(done.results[1].matchKind).toBe("near");
+    expect(done.results[1].missingInfo).toEqual(["هندی"]);
+    expect(done.results[1].evidence).toContain("برنج");
+    expect(done.stats.nearMiss).toBe(1);
+    expect(done.stats.rejectedNoMatch).toBe(1); // a3: zero MUST evidence
+  });
+
+  it("LOCKED: piano regression — a pigeon ad is still rejected (flaw #8)", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "p1", title: "کفتر مسابقه‌ای اصیل" })],
+      hasMore: false,
+    });
+    detail({ p1: "کفتر مسابقه‌ای" });
+    const done = await doneOf(def19({ query: "پیانو", include: ["پیانو"] }));
+    expect(done.results).toEqual([]);
+    expect(done.stats.rejectedNoMatch).toBe(1);
+    expect(done.stats.nearMiss).toBe(0);
+  });
+
+  it("MUST_NOT still hard-rejects in the detail phase", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "e1", title: "برنج هندی اعلا" })],
+      hasMore: false,
+    });
+    // «کهنه» is not in the title (title phase passes) but hits the description.
+    detail({ e1: "برنج هندی کهنه" });
+    const done = await doneOf(def19({ exclude: ["کهنه"] }));
+    expect(done.results).toEqual([]);
+    expect(done.stats.rejectedNoMatch).toBe(1);
+  });
+
+  it("condition contradiction still rejects (flaw #15)", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "c1", title: "گوشی" })],
+      hasMore: false,
+    });
+    detail({ c1: "گوشی کارکرده تمیز" });
+    const done = await doneOf(
+      def19({ query: "گوشی", include: ["گوشی"], condition: "new" })
+    );
+    expect(done.results).toEqual([]);
+    expect(done.stats.rejectedNoMatch).toBe(1);
+  });
+
+  it("exact ranks above near even when the near ad has the higher raw score", async () => {
+    const def = def19({
+      query: "گوشی سامسونگ نو",
+      include: ["گوشی", "سامسونگ", "نو"],
+    });
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        // x1: every MUST evidenced (description-only) → exact, score 2.0
+        summary({ sourceAdId: "x1", title: "لوازم جانبی", price: null }),
+        // x2: 2/3 MUST in title + known price → near, score 2.17
+        summary({ sourceAdId: "x2", title: "گوشی سامسونگ", price: 100 }),
+      ],
+      hasMore: false,
+    });
+    detail({ x1: "گوشی سامسونگ نو", x2: "گوشی سامسونگ" });
+    const done = await doneOf(def);
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["x1", "x2"]);
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results[1].matchKind).toBe("near");
+    expect(done.results[1].score).toBeGreaterThan(done.results[0].score);
+  });
+
+  it("detailUnknown: title-only MUST match → near (never exact), score halved", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "d1", title: "برنج هندی", price: null })],
+      hasMore: false,
+    });
+    mockGetDetail.mockRejectedValueOnce(new Error("boom"));
+    const done = await doneOf(def19());
+    expect(done.results).toHaveLength(1);
+    const ad = done.results[0];
+    expect(ad.detailUnknown).toBe(true);
+    expect(ad.matchKind).toBe("near"); // unverified description → never exact
+    expect(ad.missingInfo).toEqual([]);
+    // Full title evidence: 3*1 + 0 + 0 = 3, halved for unknown details.
+    expect(ad.score).toBe(1.5);
+  });
+
+  it("SHOULD boosts ranking but never filters and never penalizes", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "s1", title: "برنج هندی", price: null }),
+        summary({ sourceAdId: "s2", title: "برنج هندی اعلا", price: null }),
+        // s3 matches the SHOULD term but zero MUST → still rejected.
+        summary({ sourceAdId: "s3", title: "لوبیا اعلا", price: null }),
+      ],
+      hasMore: false,
+    });
+    detail({ s1: "برنج هندی", s2: "برنج هندی اعلا", s3: "لوبیا" });
+    const done = await doneOf(def19({ should: ["اعلا"] }));
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["s2", "s1"]);
+    expect(done.results[0].evidence).toContain("اعلا");
+    expect(done.stats.rejectedNoMatch).toBe(1); // s3
+    expect(done.stats.nearMiss).toBe(0);
   });
 });
 

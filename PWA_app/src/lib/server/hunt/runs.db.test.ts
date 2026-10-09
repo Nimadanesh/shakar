@@ -39,6 +39,7 @@ const DEF = {
   query: "گوشی",
   include: ["گوشی"],
   exclude: [],
+  should: [],
   city: "tehran",
   category: "mobile",
   priceMin: "",
@@ -365,6 +366,7 @@ describe("event log", () => {  it("persists and replays events in id order, with
       stats: {
         adsSeen: 1, titleRejected: 0, dupsCollapsed: 0, candidates: 0,
         detailsChecked: 0, confirmed: 0, stale: false, nearMiss: 0,
+        rejectedNoMatch: 0,
       },
     });
     const all = await readRunEvents(run.id, 0);

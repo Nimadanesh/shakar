@@ -22,7 +22,10 @@
 **Severity:** HIGH — the hunter acts on the top 3.
 
 - **PREVENTION (now):** rubric locked here, implemented in M4 (pipeline doesn't exist yet — building a scorer now would be premature):
-  1. hard filters first (include/exclude) — binary, no score needed;
+  1. hard filters first — MUST_NOT (excludes) and explicit contradictions
+     only (flaw #19, 2026-10-09). MUST terms are scored, not binary:
+     matched terms add evidence, unmatched terms become UNKNOWN (a small
+     penalty plus an honest `missingInfo` label) — never a silent drop;
   2. survivors scored by: title-match strength > description-match strength > recency > price-known;
   3. score is EXPLAINABLE (ScoreBreakdown per contract) — never a magic number.
 - **CURE (M5+):** learn from triage — «مورد مخفی‌شده» (dismiss) and favorites become ranking signals. Never silently.
@@ -257,6 +260,41 @@
   live schema. **Verified on real Postgres with the EXACT live schema:
   9 checks green** (fresh-device bootstrap, grant respected when raised
   externally, guest race 10-parallel → exactly 3 allowed).
+
+## Flaw #19 — include hard-AND killed near-misses (the «برنج هندی» zero-result, 2026-10-09)
+**Severity:** HIGH — silent zero-results = the trust-killer (navid's friend's screenshot).
+
+- A friend's «برنج هندی» hunt: 7 candidates, ALL rejected — every ad missed
+  at least one mandatory include term in its text. The results page showed
+  zero with «چیزی که دقیقاً بخوره به مشخصاتت پیدا نکردم».
+- **Root cause:** `descriptionPass` applied a hard AND over every `include`
+  term on title+description combined. One missing term → ad dead. The piano
+  fix (flaw #8, mandatory terms) overshot into recall loss — the same class
+  of overshoot as flaw #12 at the title level.
+- **PREVENTION (now, in code):** intent buckets — `MUST` (`def.include`),
+  `SHOULD` (`def.should`, from «ترجیحاً» preference cues), `MUST_NOT`
+  (`def.exclude`), `UNKNOWN` (a MUST term with no evidence in the ad's
+  text). `evaluateDescription` replaces `descriptionPass`:
+  - MUST_NOT hit or explicit condition contradiction → rejected (the only
+    hard gates — «نه» means نه);
+  - zero MUST evidence → rejected (the pigeon rule — flaw #8 survives: an
+    ad about something else entirely is not a result);
+  - otherwise the ad is KEPT: `exact` (every MUST evidenced) or `near`
+    (some MUST UNKNOWN), with `missingInfo[]` naming the unknown terms and
+    a small UNKNOWN penalty in the score. Exact outranks near; near-misses
+    are labeled honestly for the results UI (`matchKind`).
+  - A failed/stale detail evaluates title-only and is never "exact"
+    (unverified) — the "unknown, never a silent drop" invariant holds.
+  - Old hunt_runs snapshots lack the SHOULD bucket — the pipeline
+    normalizes `def.should ?? []`, so a deep-history resume never crashes.
+- **Tests:** `pipeline.test.ts` — the «برنج هندی» locked case (exact + near
+  kept and ordered, zero-evidence rejected), the piano regression, the
+  MUST_NOT and condition gates, exact-before-near sort, SHOULD boost-only,
+  detailUnknown title-only near; `definition.test.ts` — preference cues map
+  to `should` (ranking-only) with include/exclude dedupe.
+- **LIVE-VERIFICATION PENDING (musi):** before/after live probes on real
+  Divar («برنج هندی», «برنج هندی دانه بلند» + golden set) — numbers to be
+  recorded here.
 
 ## Standing invariants (never weaken)
 

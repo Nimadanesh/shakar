@@ -44,6 +44,7 @@ const DEF = {
   query: "گوشی",
   include: ["گوشی"],
   exclude: [],
+  should: [],
   city: "tehran",
   category: "mobile",
   priceMin: "",
@@ -64,6 +65,7 @@ const QUOTA = {
 const STATS = {
   adsSeen: 10, titleRejected: 2, dupsCollapsed: 1, candidates: 3,
   detailsChecked: 3, confirmed: 1, stale: false, nearMiss: 0,
+  rejectedNoMatch: 0,
 };
 
 /** Same minimal PostgREST fake as runs.db.test.ts (shared query shapes). */

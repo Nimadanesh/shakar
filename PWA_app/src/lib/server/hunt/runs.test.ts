@@ -16,6 +16,7 @@ const DEF = {
   query: "گوشی",
   include: ["گوشی"],
   exclude: [],
+  should: [],
   city: "tehran",
   category: "mobile",
   priceMin: "",

@@ -233,6 +233,7 @@ const DEF: HuntDefinition = {
   query: "پیانو",
   include: ["یاماها"],
   exclude: [],
+  should: [],
   city: "all",
   category: "music",
   priceMin: "",
@@ -287,6 +288,8 @@ function scored(id: string): ScoredAd {
     score: 1,
     breakdown: { title: 1, description: 1, priceKnown: 0 },
     evidence: [],
+    matchKind: "exact",
+    missingInfo: [],
   };
 }
 

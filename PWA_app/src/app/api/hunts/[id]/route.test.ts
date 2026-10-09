@@ -19,6 +19,7 @@ const DEF = {
   query: "گوشی",
   include: ["گوشی"],
   exclude: [],
+  should: [],
   city: "tehran",
   category: "mobile",
   priceMin: "",
@@ -46,7 +47,7 @@ const DONE_EVENT = {
       evidence: ["گوشی"],
     },
   ],
-  stats: { adsSeen: 50, titleRejected: 10, dupsCollapsed: 0, candidates: 5, detailsChecked: 5, nearMiss: 0 },
+  stats: { adsSeen: 50, titleRejected: 10, dupsCollapsed: 0, candidates: 5, detailsChecked: 5, nearMiss: 0, rejectedNoMatch: 0 },
 } as const;
 
 beforeEach(() => {
