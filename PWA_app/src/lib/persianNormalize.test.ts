@@ -50,11 +50,20 @@ describe("tokenize", () => {
 });
 
 describe("expandSynonyms", () => {
-  it("expands bidirectionally (آپارتمان ↔ واحد)", () => {
-    expect(expandSynonyms("آپارتمان")).toContain("واحد");
-    // Canonical form is the normalized one (آ→ا since flaw #9).
-    expect(expandSynonyms("واحد")).toContain("اپارتمان");
+  it("expands exact aliases only when the category is applicable", () => {
+    expect(expandSynonyms("آپارتمان", "real-estate")).toContain("واحد");
+    // Canonical form is normalized (آ→ا since flaw #9).
+    expect(expandSynonyms("واحد", "real-estate")).toContain("اپارتمان");
+    expect(expandSynonyms("آپارتمان", "all")).toEqual(["اپارتمان"]);
   });
+
+  it("does not expand related-but-distinct concepts", () => {
+    expect(expandSynonyms("آپارتمان", "real-estate")).not.toContain("سوئیت");
+    expect(expandSynonyms("پیانو", "music")).not.toContain("کیبورد");
+    expect(expandSynonyms("یخچال", "home")).not.toContain("فریزر");
+    expect(expandSynonyms("کولر", "home")).not.toContain("اسپیلت");
+  });
+
   it("returns the term itself for unknown words", () => {
     expect(expandSynonyms("زرافه")).toEqual(["زرافه"]);
   });
@@ -65,13 +74,24 @@ describe("textMatches", () => {
     expect(textMatches("فروش موبايل‌ها", "موبایل")).toBe(true);
   });
   it("matches synonyms (user: آپارتمان, ad: واحد)", () => {
-    expect(textMatches("واحد ۸۰ متری نورگیر", "آپارتمان")).toBe(true);
+    expect(textMatches("واحد ۸۰ متری نورگیر", "آپارتمان", "real-estate")).toBe(true);
   });
   it("matches multi-word phrases (تلفن همراه)", () => {
-    expect(textMatches("تلفن همراه نو", "موبایل")).toBe(true);
+    expect(textMatches("تلفن همراه نو", "موبایل", "mobile")).toBe(true);
   });
   it("does not match unrelated text", () => {
     expect(textMatches("یخچال فریزر نو", "موبایل")).toBe(false);
+  });
+
+  it("keeps related household/music concepts distinct", () => {
+    expect(textMatches("سوئیت ۹۰ متری", "آپارتمان", "real-estate")).toBe(false);
+    expect(textMatches("کیبورد آموزشی", "پیانو", "music")).toBe(false);
+    expect(textMatches("فریزر صندوقی", "یخچال", "home")).toBe(false);
+    expect(textMatches("اسپیلت ۲۴ هزار", "کولر", "home")).toBe(false);
+  });
+
+  it("still matches a genuinely combined refrigerator-freezer listing", () => {
+    expect(textMatches("یخچال فریزر سالم", "یخچال", "home")).toBe(true);
   });
   it("is empty-safe", () => {
     expect(textMatches("", "موبایل")).toBe(false);
