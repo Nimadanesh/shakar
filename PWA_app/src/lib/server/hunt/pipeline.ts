@@ -1,6 +1,6 @@
 import "server-only";
 
-import { normalizeForMatch, textMatches } from "@/lib/persianNormalize";
+import { normalizeForMatch, textMatches, textMatchesRelated } from "@/lib/persianNormalize";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -245,6 +245,11 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
       } else {
         strength += 2; // MUST weighs double at the title (flaw #19)
       }
+    } else if (textMatchesRelated(ad.title, term, def.category)) {
+      // Related items enter the detail shortlist at a low priority so they
+      // can survive as honest near-matches without outranking exact items.
+      strength += 0.5;
+      needsDetailReview = true;
     }
   }
   // SHOULD is a nudge, never a gate. Pre-#19 snapshots lack the bucket.
@@ -366,6 +371,7 @@ function evaluateDescription(
   const missingInfo: string[] = [];
   let mustTitle = 0;
   let mustDesc = 0;
+  let relatedMatches = 0;
   for (const term of def.include) {
     if (termMatches(title, term, def)) {
       mustTitle += 1;
@@ -374,6 +380,14 @@ function evaluateDescription(
       mustDesc += 1;
       evidence.push(term);
     } else {
+      // A related neighbor is useful retrieval evidence, not proof of the
+      // MUST concept. Keep the MUST in UNKNOWN and only allow a near verdict.
+      if (
+        textMatchesRelated(title, term, def.category) ||
+        textMatchesRelated(description, term, def.category)
+      ) {
+        relatedMatches += 1;
+      }
       missingInfo.push(term); // UNKNOWN — penalized in scoring, never dropped
     }
   }
@@ -386,7 +400,7 @@ function evaluateDescription(
     }
   }
   // 5. Verdict.
-  if (mustTitle + mustDesc === 0) {
+  if (mustTitle + mustDesc === 0 && relatedMatches === 0) {
     return { ...rejectedEvaluation(), missingInfo };
   }
   return {
