@@ -31,12 +31,12 @@ Scope: `PWA_app/src/lib/server/hunt/**`, search-only normalization/interpretatio
 - Identify high-risk quality defects and define the evaluation protocol.
 - Exit gate: roadmap committed; no production code changed; rollback is simply returning to main.
 
-### Step 2 — Build a repeatable search-quality benchmark
-- Add a deterministic, versioned Persian query benchmark with realistic ordinary searches and hard negatives.
-- Cover at minimum: spelling/Arabic-Persian character variants, plural/ZWNJ variants, exact model identifiers, category collisions, negation, preferred-vs-required attributes, city/district, price bounds, condition, rent-vs-buy, missing details, reposts, and query ambiguity.
-- Add labeled candidate fixtures with expected relevant / irrelevant / uncertain judgments; separate parser correctness from ranking correctness.
-- Track Precision@5, Recall@10 where judged relevant candidates exist, nDCG@10 for graded relevance, zero-result rate, false-positive rate on hard negatives, and invariant violations. Report sample size and category breakdown; do not advertise a percentage without labels.
-- Exit gate: benchmark is reproducible and fails on deliberately introduced known regressions.
+### Step 2 — Build a repeatable search-quality benchmark (implemented; execution pending)
+- Added `src/lib/server/hunt/search-quality-benchmark.ts`, version `2026-10-09-v1`, with 13 deterministic Persian query cases and human-authored graded candidate labels (0–3).
+- Coverage: Persian spelling/Arabic-keyboard variants, plural/ZWNJ, exact model identifiers, category collisions, negation, preference-vs-MUST, city/district, price, condition, transaction, unknown attributes, ambiguity, and reposts.
+- Added metric helpers for Precision@K, Recall@K (with the judged-pool denominator explicit), and nDCG@K; added tests for metric arithmetic, dataset integrity, slice coverage, and current normalization anchors.
+- This is a seed benchmark, not yet a statistically representative dataset. It does not claim production Precision/Recall and does not automatically grade live Divar results. Expand labels with reviewed real-result judgments before claiming user-level quality.
+- Exit gate: run focused test, full test, typecheck and lint in a real Node environment; intentionally perturb metric/fixture behavior to confirm regression tests fail. Then record a baseline report before Step 3 changes.
 
 ### Step 3 — Fix synonym semantics without sacrificing recall
 - Replace global synonym equivalence with explicit concept metadata: canonical concept, aliases, related-but-not-equivalent concepts, applicable categories, and confidence/expansion policy.
