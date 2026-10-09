@@ -12,7 +12,7 @@
 - **PREVENTION (now, in code):** `src/lib/persianNormalize.ts`
   - `unifyChars` — Arabic-keyboard ads (موبايل) match Persian queries.
   - `stemToken` — safe noun affixes only (ها/های/ی). NO verb stemming, NO تر/ترین (documented why).
-  - SYNONYM_CONCEPTS — explicit concepts with exact aliases, related-but-distinct terms, and applicable categories. Related terms are not expanded as exact synonyms.
+  - SYNONYM_CONCEPTS — explicit concepts with exact aliases, related-but-distinct terms, and applicable categories. Related terms are not expanded as exact synonyms; the pipeline may retain them as low-priority near-matches with the requested MUST term still marked missing.
   - expandSynonyms — category-scoped exact-alias expansion; without reliable category context, it stays with the normalized term.
   - textMatches — token + phrase matching with optional category context. Related concepts such as suite/apartment, keyboard/piano, freezer/refrigerator, and split AC/cooler do not become bidirectional exact matches.
   - Tests: src/lib/persianNormalize.test.ts covers spelling/morphology positives and hard negatives for related concepts.
