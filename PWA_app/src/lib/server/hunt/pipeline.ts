@@ -274,7 +274,7 @@ function conditionPass(combined: string, def: HuntDefinition): boolean {
     return !USED_CUES.some((cue) => textMatches(combined, cue, def.category));
   }
   if (def.condition === "used") {
-    return !NEW_CUES.some((cue) => textMatches(combined, cue));
+    return !NEW_CUES.some((cue) => textMatches(combined, cue, def.category));
   }
   return true;
 }
@@ -346,7 +346,7 @@ function evaluateDescription(
     const evidence: string[] = [];
     let shouldMatched = 0;
     for (const term of shouldTerms) {
-      if (textMatches(combined, term)) {
+      if (textMatches(combined, term, def.category)) {
         shouldMatched += 1;
         evidence.push(term);
       }
@@ -379,7 +379,7 @@ function evaluateDescription(
   // 4. SHOULD — boost only.
   let shouldMatched = 0;
   for (const term of shouldTerms) {
-    if (textMatches(combined, term)) {
+    if (textMatches(combined, term, def.category)) {
       shouldMatched += 1;
       evidence.push(term);
     }
