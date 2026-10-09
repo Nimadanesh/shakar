@@ -59,7 +59,7 @@ describe("search quality metric calculations", () => {
 describe("benchmark fixture smoke checks against current Persian matching", () => {
   it("keeps core spelling and token-normalization positives as regression anchors", () => {
     expect(textMatches("اپارتمان ۹۰ متری نوساز", "آپارتمان")).toBe(true);
-    expect(textMatches("فروش موبايل‌ها", "موبایل")).toBe(true);
+    expect(textMatches("فروش موبايل‌ها", "موبایل", "mobile")).toBe(true);
     expect(normalizeForMatch("می‌روم، تهران!")).toBe("می روم تهران");
     expect(tokenize("ماشین‌ها")).toContain("ماشین");
   });
