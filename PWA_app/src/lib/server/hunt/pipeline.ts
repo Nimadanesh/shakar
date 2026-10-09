@@ -1,6 +1,6 @@
 import "server-only";
 
-import { textMatches } from "@/lib/persianNormalize";
+import { normalizeForMatch, textMatches } from "@/lib/persianNormalize";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -189,8 +189,26 @@ export interface CollectOptions {
 }
 
 /** «طرح X» weasel guard: the term appears but prefixed with طرح (fake). */
-function isWeasel(title: string, term: string): boolean {
-  return title.includes(`طرح ${term}`) || title.includes(`طرح${term}`);
+function isWeasel(text: string, term: string): boolean {
+  const normalizedText = normalizeForMatch(text);
+  const normalizedTerm = normalizeForMatch(term);
+  if (normalizedText === "" || normalizedTerm === "") return false;
+
+  // A descriptor such as "طرح آکوستیک" describes appearance/design, not
+  // necessarily the instrument subtype. Normalize first so آکوستیک/اکوستیک
+  // and spacing variants follow the same rule.
+  const descriptivePrefixes = ["طرح", "دیزاین", "شبیه", "ظاهر", "سبک"];
+  return (
+    descriptivePrefixes.some((prefix) =>
+      normalizedText.includes(`${prefix} ${normalizedTerm}`)
+    ) ||
+    (normalizedTerm === "اکوستیک" && normalizedText.includes("دیجیتال اکوستیک"))
+  );
+}
+
+/** Matching for positive query evidence; weasel phrasing is not proof of identity. */
+function termMatches(text: string, term: string, def: HuntDefinition): boolean {
+  return textMatches(text, term, def.category) && !isWeasel(text, term);
 }
 
 /**
@@ -213,21 +231,24 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
   needsDetailReview: boolean;
 } {
   for (const term of def.exclude) {
-    if (textMatches(ad.title, term)) {
+    if (textMatches(ad.title, term, def.category)) {
       return { excluded: true, strength: 0, needsDetailReview: false };
     }
   }
   let strength = 0;
   let needsDetailReview = false;
   for (const term of def.include) {
-    if (textMatches(ad.title, term)) {
-      strength += 2; // MUST weighs double at the title (flaw #19)
-      if (isWeasel(ad.title, term)) needsDetailReview = true;
+    if (textMatches(ad.title, term, def.category)) {
+      if (isWeasel(ad.title, term)) {
+        needsDetailReview = true;
+      } else {
+        strength += 2; // MUST weighs double at the title (flaw #19)
+      }
     }
   }
   // SHOULD is a nudge, never a gate. Pre-#19 snapshots lack the bucket.
   for (const term of def.should ?? []) {
-    if (textMatches(ad.title, term)) {
+    if (textMatches(ad.title, term, def.category)) {
       strength += 1;
     }
   }
@@ -250,7 +271,7 @@ const USED_CUES = ["کارکرده", "دست دوم", "استوک"];
  */
 function conditionPass(combined: string, def: HuntDefinition): boolean {
   if (def.condition === "new") {
-    return !USED_CUES.some((cue) => textMatches(combined, cue));
+    return !USED_CUES.some((cue) => textMatches(combined, cue, def.category));
   }
   if (def.condition === "used") {
     return !NEW_CUES.some((cue) => textMatches(combined, cue));
@@ -308,7 +329,7 @@ function evaluateDescription(
   const combined = `${title} ${description}`;
   // 1. MUST_NOT — «نه» means نه.
   for (const term of def.exclude) {
-    if (textMatches(combined, term)) {
+    if (textMatches(combined, term, def.category)) {
       return rejectedEvaluation();
     }
   }
@@ -345,10 +366,10 @@ function evaluateDescription(
   let mustTitle = 0;
   let mustDesc = 0;
   for (const term of def.include) {
-    if (textMatches(title, term)) {
+    if (termMatches(title, term, def)) {
       mustTitle += 1;
       evidence.push(term);
-    } else if (textMatches(description, term)) {
+    } else if (termMatches(description, term, def)) {
       mustDesc += 1;
       evidence.push(term);
     } else {
