@@ -70,6 +70,17 @@ describe("resolveHuntDefinition — the «پیانو» incident (2026-10-06)", (
     expect(def.citySource).toBe("picker");
   });
 
+  it("a small city from the full directory beats the picker (incident 2026-10-09)", () => {
+    // بناب was never in the ~90-city picker — the user hacked it in as a
+    // «باید» chip while the hunt ran in Tehran. Text detection now covers
+    // all 1177 Divar cities, so the text wins and the chip hack is unneeded.
+    const def = resolveHuntDefinition(
+      body({ query: "برنج هندی در بناب", city: "tehran" })
+    )!;
+    expect(def.city).toBe("bonab");
+    expect(def.citySource).toBe("text");
+  });
+
   it("applies the text category when the picker is all (flaw #10)", () => {
     const def = resolveHuntDefinition(
       body({ query: "آپارتمان نوساز سعادت آباد" })

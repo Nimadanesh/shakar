@@ -1,45 +1,17 @@
 import { normalizePersian } from "@/lib/normalizePersian";
+import { DIVAR_CITIES } from "@/lib/divarCities";
 import type { Interpretation, InterpretedConstraint } from "@/types/search";
 
 /** Cities the interpreter can spot inside query text. Exported for the
  * server-side query resolver (definition.ts) — the same vocabulary must
- * decide what is a city in both places. */
-export const KNOWN_CITIES: Array<{ id: string; names: string[] }> = [
-  { id: "tehran", names: ["تهران"] },
-  { id: "karaj", names: ["کرج"] },
-  { id: "isfahan", names: ["اصفهان"] },
-  { id: "shiraz", names: ["شیراز"] },
-  { id: "mashhad", names: ["مشهد"] },
-  { id: "tabriz", names: ["تبریز"] },
-  { id: "ahvaz", names: ["اهواز"] },
-  { id: "qom", names: ["قم"] },
-  { id: "kermanshah", names: ["کرمانشاه"] },
-  { id: "urmia", names: ["ارومیه", "اورمیه"] },
-  { id: "rasht", names: ["رشت"] },
-  { id: "zahedan", names: ["زاهدان"] },
-  { id: "hamadan", names: ["همدان"] },
-  { id: "kerman", names: ["کرمان"] },
-  { id: "yazd", names: ["یزد"] },
-  { id: "ardabil", names: ["اردبیل"] },
-  { id: "bandar-abbas", names: ["بندرعباس", "بندر عباس"] },
-  { id: "arak", names: ["اراک"] },
-  { id: "zanjan", names: ["زنجان"] },
-  { id: "qazvin", names: ["قزوین"] },
-  { id: "sanandaj", names: ["سنندج"] },
-  { id: "khorramabad", names: ["خرم‌آباد", "خرم آباد"] },
-  { id: "gorgan", names: ["گرگان"] },
-  { id: "sari", names: ["ساری"] },
-  { id: "bushehr", names: ["بوشهر"] },
-  { id: "birjand", names: ["بیرجند"] },
-  { id: "ilam", names: ["ایلام"] },
-  { id: "shahrekord", names: ["شهرکرد"] },
-  { id: "yasuj", names: ["یاسوج"] },
-  { id: "semnan", names: ["سمنان"] },
-  { id: "bojnurd", names: ["بجنورد"] },
-  { id: "kashan", names: ["کاشان"] },
-  { id: "dezful", names: ["دزفول"] },
-  { id: "kish", names: ["کیش"] },
-];
+ * decide what is a city in both places.
+ *
+ * The full Divar directory (1177 cities, generated from
+ * /v8/places/cities — see scripts/fetch-divar-cities.mjs), so smaller
+ * cities like بناب are detected instead of forcing users to hack the
+ * city in as a «باید» chip (incident 2026-10-09: a city chip starves
+ * retrieval instead of scoping it). */
+export const KNOWN_CITIES: Array<{ id: string; names: string[] }> = DIVAR_CITIES;
 
 /**
  * Word-boundary city mention check. Plain substring matching would fire

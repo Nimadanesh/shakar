@@ -296,6 +296,33 @@
   Divar («برنج هندی», «برنج هندی دانه بلند» + golden set) — numbers to be
   recorded here.
 
+## Flaw #20 — City picker covered ~90 cities; users hacked missing cities as «باید» chips (the Bonab zero-result, 2026-10-09)
+**Severity:** HIGH — a city-name chip is NOT a city filter.
+
+- navid (Bonab) couldn't pick his city — the picker only offered ~90 of
+  Divar's 1177. He wrote «شهر بناب» as a «باید» chip while the hunt ran in
+  (remembered) Tehran. Measured live: Tehran + the بناب chip → Divar
+  retrieval returned 3 ads vs 91 without the chip; all 3 were correctly
+  rejected in the detail phase → zero results. The keyword chip starves
+  retrieval instead of scoping it (Divar's keyword search is fuzzy; a city
+  word matches almost nothing).
+- **PREVENTION (now, in code):** the picker offers the FULL Divar city
+  directory — `scripts/fetch-divar-cities.mjs` generates
+  `src/lib/divarCities.ts` (1177 cities, 31 capitals first, committed so
+  pickers and text detection work offline); `src/data/taxonomy.ts` CITIES
+  derives from it (all three pickers — profile «شهر من», first-run prompt,
+  per-hunt override — get the list + Persian-normalized search for free
+  via the existing searchable OptionSheet); `interpret.ts` KNOWN_CITIES is
+  the same directory, so «بناب» in query text now resolves to `city:bonab`
+  and beats the picker via the existing citySource rule; GET /api/cities
+  serves the live list from the server's 24h taxonomy cache.
+- **CURE:** none needed — with every city pickable, the chip hack has no
+  reason to exist. If a zero-result with a city chip is ever reported
+  again, check definition.city first (the 2026-10-08 city-trust lesson).
+- **Tests:** `taxonomy.test.ts` (resolveCityId("bonab"), getAllCities order),
+  `route.test.ts` for /api/cities, `interpret.test.ts` («بناب» → city:bonab),
+  `definition.test.ts` (text بناب beats the picker).
+
 ## Standing invariants (never weaken)
 
 1. Quality > speed, always. Latency is spent on UX, never taken from results.
