@@ -8,7 +8,7 @@
  * 0 = irrelevant. "expectedTerms" are human-authored evidence cues for
  * fixture interpretation, not an assertion that current matching is correct.
  */
-export const SEARCH_QUALITY_BENCHMARK_VERSION = "2026-10-09-v1" as const;
+export const SEARCH_QUALITY_BENCHMARK_VERSION = "2026-10-09-v2" as const;
 
 export type RelevanceGrade = 0 | 1 | 2 | 3;
 export type BenchmarkSlice =
@@ -91,6 +91,11 @@ export const SEARCH_QUALITY_BENCHMARK: readonly SearchQualityCase[] = [
       { id: "coll-a1", title: "پیانو آکوستیک یاماها", description: "مدل دیواری", relevance: 3, note: "Exact target." },
       { id: "coll-a2", title: "کیبورد آموزشی", description: "دارای صدای پیانو", relevance: 0, note: "Keyboard is not an acoustic piano." },
       { id: "coll-a3", title: "پیانو دیجیتال", description: "کلاویه سنگین", relevance: 1, note: "Same broad instrument family, wrong subtype." },
+      { id: "coll-a-live1", title: "پیانو آکوستیک Yamaha W110BD", description: "", relevance: 3, note: "Observed in the user's live hunt; title names an acoustic piano." },
+      { id: "coll-a-live2", title: "پیانو اکوستیک سمیک مدل SU", description: "", relevance: 1, note: "User judged the listing detail to describe a طرح آکوستیک product; full description was not captured in the report." },
+      { id: "coll-a-live3", title: "پیانو آکوستیک یاماها مدل U1A3", description: "", relevance: 3, note: "Observed live result; title explicitly names an acoustic piano." },
+      { id: "coll-a-live4", title: "پیانو آکوستیک دیواری برند WaldStein", description: "", relevance: 3, note: "Observed live result; title explicitly names an acoustic piano." },
+      { id: "coll-a-live5", title: "پیانو طــرح آکـوسـتیــک ساخت ورنگ‌بندی سفارشی", description: "", relevance: 1, note: "Observed live hard negative: design wording is not proof of acoustic-piano subtype." },
     ],
   },
   {
@@ -102,6 +107,12 @@ export const SEARCH_QUALITY_BENCHMARK: readonly SearchQualityCase[] = [
       { id: "coll-b1", title: "یخچال فریزر کمبی", description: "سالم", relevance: 3, note: "A refrigerator product." },
       { id: "coll-b2", title: "فریزر صندوقی", description: "مناسب مغازه", relevance: 1, note: "Related appliance, not equivalent." },
       { id: "coll-b3", title: "ماشین لباسشویی", description: "کم‌کارکرد", relevance: 0, note: "Wrong appliance." },
+      { id: "coll-b-live1", title: "فروش اقساطی یخچال ساید هیمالیا", description: "", relevance: 2, note: "Observed live product listing; reported price was 1,000 toman and is suspicious, but title relevance is high." },
+      { id: "coll-b-live2", title: "خریدار یخچال سالم خراب سوخته", description: "", relevance: 1, note: "Observed live buy-side listing; related to refrigerators but not the same transaction direction as buying a product." },
+      { id: "coll-b-live3", title: "یخچال فریزر سینور سالم در حد نو", description: "", relevance: 3, note: "Observed live product listing; exact refrigerator-freezer item." },
+      { id: "coll-b-live4", title: "یخچال و فریزر", description: "", relevance: 3, note: "Observed live product listing; an explicitly combined appliance." },
+      { id: "coll-b-live5", title: "تعمیر یخچال", description: "", relevance: 1, note: "Related service, not a refrigerator product listing." },
+      { id: "coll-b-live6", title: "فریزر بدون برفک", description: "", relevance: 1, note: "Related appliance, not an exact refrigerator match." },
     ],
   },
   {
@@ -146,6 +157,11 @@ export const SEARCH_QUALITY_BENCHMARK: readonly SearchQualityCase[] = [
       { id: "loc-a1", title: "آپارتمان سعادت‌آباد", description: "تهران، سعادت آباد", relevance: 3, note: "City and district match across ZWNJ spelling." },
       { id: "loc-a2", title: "آپارتمان در کرج", description: "منطقه سعادت آباد ندارد", relevance: 0, note: "Wrong city." },
       { id: "loc-a3", title: "آپارتمان تهران", description: "محله در آگهی مشخص نیست", relevance: 2, note: "City matches; district is unknown." },
+      { id: "loc-a-live1", title: "آپارتمان سعادت آباد ۵۴۵ متر نوساز، مشاعات هتلینگ", description: "", relevance: 3, note: "Observed live top result; user judged it relevant to the query." },
+      { id: "loc-a-live2", title: "آپارتمان ۱۴۰ متر نوساز سعادت آباد", description: "", relevance: 3, note: "Observed live top-five result; user judged it relevant." },
+      { id: "loc-a-live3", title: "فروش 108 متر نوساز کم واحد در سعادت آباد", description: "", relevance: 3, note: "Observed live top-five result; user judged it relevant." },
+      { id: "loc-a-live4", title: "فروش آپارتمان ۱۴۵ متر نوساز فول امکانات سعادت آباد", description: "", relevance: 3, note: "Observed live top-five result; user judged it relevant." },
+      { id: "loc-a-live5", title: "107 متر، نوساز کلید نخورده، تک واحدی، سعادت آباد", description: "", relevance: 3, note: "Observed live top-five result; user judged it relevant." },
     ],
   },
   {
