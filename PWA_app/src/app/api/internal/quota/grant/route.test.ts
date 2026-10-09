@@ -72,6 +72,24 @@ describe("POST /api/internal/quota/grant", () => {
     expect(r2.status).toBe(503);
   });
 
+  it("accepts a secret with pasted trailing whitespace (Railway editor smuggles it)", async () => {
+    process.env.CRON_SECRET = "s3cr3t\n";
+    const db = fakeDb({ quota_counters: [], devices: [] });
+    mockServer.mockReturnValue({ rest: db.rest } as never);
+    const res = await post({ userId: UID, hunts: 5 }, "s3cr3t");
+    // Guard must pass — the failure mode was a permanent 403 "forbidden".
+    expect(res.status).not.toBe(403);
+    expect((await res.json()).ok).toBe(true);
+  });
+
+  it("treats a whitespace-only CRON_SECRET as not configured (fail-closed)", async () => {
+    process.env.CRON_SECRET = "   ";
+    const db = fakeDb({ quota_counters: [], devices: [] });
+    mockServer.mockReturnValue({ rest: db.rest } as never);
+    const res = await post({ userId: UID, hunts: 5 }, "s3cr3t");
+    expect(res.status).toBe(503);
+  });
+
   it("400 on non-UUID keys and bad hunts (typos fail fast)", async () => {
     const db = fakeDb({ quota_counters: [], devices: [] });
     mockServer.mockReturnValue({ rest: db.rest } as never);
