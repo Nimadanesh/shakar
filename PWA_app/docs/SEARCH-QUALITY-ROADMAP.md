@@ -31,7 +31,7 @@ Scope: `PWA_app/src/lib/server/hunt/**`, search-only normalization/interpretatio
 - Identify high-risk quality defects and define the evaluation protocol.
 - Exit gate: roadmap committed; no production code changed; rollback is simply returning to main.
 
-### Step 2 — Build a repeatable search-quality benchmark (implemented; execution pending)
+### Step 2 — Build a repeatable search-quality benchmark (implemented; execution pending) (implemented; execution pending)
 - Added `src/lib/server/hunt/search-quality-benchmark.ts`, version `2026-10-09-v1`, with 13 deterministic Persian query cases and human-authored graded candidate labels (0–3).
 - Coverage: Persian spelling/Arabic-keyboard variants, plural/ZWNJ, exact model identifiers, category collisions, negation, preference-vs-MUST, city/district, price, condition, transaction, unknown attributes, ambiguity, and reposts.
 - Added metric helpers for Precision@K, Recall@K (with the judged-pool denominator explicit), and nDCG@K; added tests for metric arithmetic, dataset integrity, slice coverage, and current normalization anchors.
@@ -87,5 +87,5 @@ Scope: `PWA_app/src/lib/server/hunt/**`, search-only normalization/interpretatio
 
 ## Session handoff
 
-Current completed work: Step 1 source audit and roadmap. Branch: `feat/search-quality-engine-v1`. Baseline commit: `bb27c76928602572a525b8ea0b61378ea475f0ab`.
-Next step: implement the benchmark before changing ranking or synonym behavior. Do not skip directly to weight tuning.
+Current completed work: Step 1 source audit and roadmap; Step 2 benchmark fixture, metric helpers, and tests committed on `feat/search-quality-engine-v1`. Baseline commit: `bb27c76928602572a525b8ea0b61378ea475f0ab`.
+Step 2 validation still requires running focused/full tests, typecheck, and lint in a Node environment. Do not change production ranking or synonym behavior until the benchmark's execution results are recorded.
