@@ -40,7 +40,7 @@ Scope: `PWA_app/src/lib/server/hunt/**`, search-only normalization/interpretatio
 
 ### Step 3 — Fix synonym semantics without sacrificing recall
 - Replace global synonym equivalence with explicit concept metadata: canonical concept, exact aliases, related-but-not-equivalent concepts, and applicable categories.
-- Exact aliases may normalize to one concept only in a reliable applicable category. Related concepts (e.g. suite vs apartment, freezer vs refrigerator, piano vs keyboard, split AC vs generic cooler) must not become bidirectional exact matches by default.
+- Exact aliases may normalize to one concept only in a reliable applicable category. Related concepts (e.g. suite vs apartment, freezer vs refrigerator, piano vs keyboard, split AC vs generic cooler) must not become bidirectional exact matches by default. Related terms may preserve a candidate as a low-priority near-match, but must remain in UNKNOWN/MUST-missing evidence and cannot satisfy an exact-match requirement.
 - Keep expansion for candidate retrieval distinct from mandatory matching. An expanded retrieval term must not automatically become a MUST requirement or proof of exact relevance.
 - Add tests for both positive aliases and hard negatives, including category-sensitive keyboard meanings and descriptive phrases such as «طرح آکوستیک».
 - Exit gate: known false-positive fixtures are rejected while spelling/morphology recall fixtures still pass.
