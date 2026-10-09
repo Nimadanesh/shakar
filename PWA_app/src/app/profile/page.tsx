@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Check, Pencil, User, X } from "lucide-react";
@@ -18,6 +18,7 @@ import { readFavoriteIds } from "@/hooks/useFavorites";
 import { readSavedHunts } from "@/lib/saved-hunts";
 import { HUNTS_PER_MONTH } from "@/lib/pricing";
 import { listKamins } from "@/lib/kamin-store";
+import { listKaminsServer } from "@/lib/kamin-client";
 import { readHunts } from "@/lib/hunt-store";
 import { signOut } from "@/lib/auth";
 import { useServerUsage } from "@/lib/usage";
@@ -223,8 +224,16 @@ function DataSection() {
   const { value: kamins } = useHydratedStore("kamins", listKamins);
   const { value: favIds } = useHydratedStore("favorites", readFavoriteIds);
   const { value: saved } = useHydratedStore("saved-hunts", readSavedHunts);
+  // Kamins live on the server when logged in (M5) — the local store is
+  // guest-only. Prefer the server count when it's available.
+  const [serverKaminCount, setServerKaminCount] = useState<number | null>(null);
+  useEffect(() => {
+    listKaminsServer().then((ks) => {
+      if (ks !== null) setServerKaminCount(ks.length);
+    });
+  }, []);
   const counts = {
-    kamins: (kamins ?? []).length,
+    kamins: serverKaminCount ?? (kamins ?? []).length,
     hunts: (hunts ?? []).length,
     favs: (favIds ?? []).length,
     saved: (saved ?? []).length,
