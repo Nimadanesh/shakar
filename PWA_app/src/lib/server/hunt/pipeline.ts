@@ -202,7 +202,8 @@ function isWeasel(text: string, term: string): boolean {
     descriptivePrefixes.some((prefix) =>
       normalizedText.includes(`${prefix} ${normalizedTerm}`)
     ) ||
-    (normalizedTerm === "اکوستیک" && normalizedText.includes("دیجیتال اکوستیک"))
+    (normalizedTerm === "اکوستیک" &&
+      (normalizedText.includes("دیجیتال اکوستیک") || normalizedText.includes("صدای اکوستیک")))
   );
 }
 
