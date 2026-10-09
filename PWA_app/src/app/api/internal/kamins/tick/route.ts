@@ -18,11 +18,15 @@ import { sendPushToUser } from "@/lib/server/push";
  * global and jittered — parallel checks would just queue behind it).
  */
 export async function POST(req: Request) {
-  const secret = process.env.CRON_SECRET;
+  // trim(): pasted secrets often smuggle a trailing space/newline from the
+  // Railway variable editor — an invisible mismatch that 403s forever.
+  // (Same guard as /api/internal/quota/grant: all CRON_SECRET-guarded
+  // routes must trim identically, or one accepts a secret another rejects.)
+  const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
     return NextResponse.json({ ok: false, error: "not-configured" }, { status: 503 });
   }
-  if (req.headers.get("x-cron-secret") !== secret) {
+  if (req.headers.get("x-cron-secret")?.trim() !== secret) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
