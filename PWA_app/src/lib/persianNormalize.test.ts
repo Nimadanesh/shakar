@@ -4,6 +4,8 @@ import {
   normalizeForMatch,
   stemToken,
   textMatches,
+  textMatchesRelated,
+  relatedConceptTerms,
   tokenize,
   unifyChars,
 } from "./persianNormalize";
@@ -83,11 +85,18 @@ describe("textMatches", () => {
     expect(textMatches("یخچال فریزر نو", "موبایل")).toBe(false);
   });
 
-  it("keeps related household/music concepts distinct", () => {
+  it("keeps related household/music concepts distinct for exact matching", () => {
     expect(textMatches("سوئیت ۹۰ متری", "آپارتمان", "real-estate")).toBe(false);
     expect(textMatches("کیبورد آموزشی", "پیانو", "music")).toBe(false);
     expect(textMatches("فریزر صندوقی", "یخچال", "home")).toBe(false);
     expect(textMatches("اسپیلت ۲۴ هزار", "کولر", "home")).toBe(false);
+  });
+
+  it("exposes related concepts separately for near-match evaluation", () => {
+    expect(relatedConceptTerms("یخچال", "home")).toContain("فریزر");
+    expect(textMatchesRelated("فریزر صندوقی", "یخچال", "home")).toBe(true);
+    expect(textMatchesRelated("فریزر صندوقی", "یخچال", "all")).toBe(false);
+    expect(textMatchesRelated("ماشین لباسشویی", "یخچال", "home")).toBe(false);
   });
 
   it("still matches a genuinely combined refrigerator-freezer listing", () => {
