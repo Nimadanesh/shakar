@@ -602,6 +602,33 @@ describe("intent buckets — flaw #19 (MUST/SHOULD/MUST-NOT/UNKNOWN)", () => {
     expect(done.stats.nearMiss).toBe(0);
   });
 
+  it("keeps a standalone freezer as a near-match, not an exact refrigerator match", async () => {
+    const def = def19({
+      query: "یخچال",
+      category: "home",
+      include: ["یخچال"],
+    });
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "fridge", title: "یخچال فریزر سالم" }),
+        summary({ sourceAdId: "freezer", title: "فریزر صندوقی بدون برفک" }),
+      ],
+      hasMore: false,
+    });
+    detail({
+      fridge: "یخچال فریزر سالم",
+      freezer: "فریزر صندوقی بدون برفک مناسب مغازه",
+    });
+    const done = await doneOf(def);
+
+    expect(done.results.map((ad) => ad.sourceAdId)).toEqual(["fridge", "freezer"]);
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results[1].matchKind).toBe("near");
+    expect(done.results[1].missingInfo).toEqual(["یخچال"]);
+    expect(done.stats.nearMiss).toBe(1);
+    expect(done.stats.rejectedNoMatch).toBe(0);
+  });
+
   it("ranks a real acoustic piano above design/digital acoustic claims", async () => {
     const def = def19({
       query: "پیانو آکوستیک",
