@@ -12,10 +12,11 @@
 - **PREVENTION (now, in code):** `src/lib/persianNormalize.ts`
   - `unifyChars` — Arabic-keyboard ads (موبايل) match Persian queries.
   - `stemToken` — safe noun affixes only (ها/های/ی). NO verb stemming, NO تر/ترین (documented why).
-  - `expandSynonyms` — bidirectional seed map (آپارتمان↔واحد↔سوئیت, ...). Marked SEED.
-  - `textMatches` — token + phrase matching. Recall-oriented (over-match > miss); ranking orders.
-  - Tests: `src/lib/persianNormalize.test.ts` (14 tests).
-- **CURE (M4):** pipeline's title/description filters MUST use `textMatches`, never raw `includes`. Synonym map grows from real zero-result/miss reports. Category-aware synonyms (کیبورد = musical vs computer).
+  - SYNONYM_CONCEPTS — explicit concepts with exact aliases, related-but-distinct terms, and applicable categories. Related terms are not expanded as exact synonyms.
+  - expandSynonyms — category-scoped exact-alias expansion; without reliable category context, it stays with the normalized term.
+  - textMatches — token + phrase matching with optional category context. Related concepts such as suite/apartment, keyboard/piano, freezer/refrigerator, and split AC/cooler do not become bidirectional exact matches.
+  - Tests: src/lib/persianNormalize.test.ts covers spelling/morphology positives and hard negatives for related concepts.
+- **CURE (Search Quality Engine Step 3 — prototype on isolated branch):** apply category-aware concept semantics in the hunt pipeline and treat descriptive language such as «طرح آکوستیک» as insufficient proof of an acoustic-piano subtype. This prototype is not production-shipped; its actual Node test/typecheck/lint run is pending.
 - **CURE (M7):** decision model for the semantic gray zone (measured first).
 
 ## Flaw #2 — Unproven ranking
