@@ -188,7 +188,7 @@ export interface CollectOptions {
   emit?: (e: HuntEvent) => void;
 }
 
-/** «طرح X» weasel guard: the term appears but prefixed with طرح (fake). */
+/** Guard against descriptive/design language being mistaken for exact subtype evidence. */
 function isWeasel(text: string, term: string): boolean {
   const normalizedText = normalizeForMatch(text);
   const normalizedTerm = normalizeForMatch(term);
