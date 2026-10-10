@@ -71,10 +71,18 @@ export function KaminDetailSheet({
   onDisarm: () => void;
 }) {
   const [activity, setActivity] = useState<KaminActivity | null | undefined>(undefined);
+  // Reset to loading when the fetch target changes. Render-phase update
+  // (prev key in state, not a ref) so the effect body never calls setState
+  // synchronously. Fetch itself stays in the effect with cancellation.
+  const activityKey = open && kamin ? kamin.id : null;
+  const [prevKey, setPrevKey] = useState<string | null>(null);
+  if (prevKey !== activityKey) {
+    setPrevKey(activityKey);
+    if (activity !== undefined) setActivity(undefined);
+  }
 
   useEffect(() => {
     if (!open || !kamin) return;
-    setActivity(undefined);
     let cancelled = false;
     fetchKaminActivity(kamin.id).then((a) => {
       if (!cancelled) setActivity(a ?? null);
