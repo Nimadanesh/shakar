@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { interpretQuery } from "@/lib/interpret";
-import { buildEffectiveContext, EMPTY_CONTEXT_BASE } from "@/lib/search-context";
+import { baseCities, buildEffectiveContext, EMPTY_CONTEXT_BASE } from "@/lib/search-context";
 
 const QUERY = "پیانو یاماها تهران زیر ۲۰۰ میلیون";
 
@@ -132,5 +132,14 @@ describe("condition in buildEffectiveContext", () => {
     const q = "۲۰۶ تیپ ۲";
     const ctx = buildEffectiveContext(q, EMPTY_CONTEXT_BASE, interpretQuery(q), new Set());
     expect(ctx.condition).toBe("");
+  });
+});
+
+describe("baseCities — canonical multi-location selection", () => {
+  it("prefers explicit cities and normalizes legacy city", () => {
+    expect(baseCities({ city: "all", cities: ["tehran", "karaj"] })).toEqual(["tehran", "karaj"]);
+    expect(baseCities({ city: "tehran" })).toEqual(["tehran"]);
+    expect(baseCities({ city: "all" })).toEqual([]);
+    expect(baseCities({ city: "" })).toEqual([]);
   });
 });

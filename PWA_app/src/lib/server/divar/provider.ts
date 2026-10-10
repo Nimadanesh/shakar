@@ -10,8 +10,12 @@
 export interface ListingQuery {
   /** Divar API category value, e.g. "apartment-sell". "" = all categories. */
   categorySlug: string;
-  /** Divar numeric city id as string, e.g. "1" (Tehran). "" = all cities. */
-  cityId: string;
+  /**
+   * Divar numeric city ids, e.g. ["1", "8"]. [] = all cities (exclusive).
+   * Serialized as `city_ids`; one request carries the whole selection —
+   * never one request per city.
+   */
+  cityIds: string[];
   priceMin?: number;
   priceMax?: number;
   /** Free-text keywords (normalized Persian) — sent as the API text query. */

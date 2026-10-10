@@ -54,7 +54,7 @@ describe("city resolution failures stay visible (never silent all-city)", () => 
     mockSearchLists.mockResolvedValueOnce({ listings: [], hasMore: false });
     await collectCandidates(def({ city: "eslamshahr" }), { maxPages: 1 });
     expect(mockSearchLists).toHaveBeenCalledWith(
-      expect.objectContaining({ cityId: "29" })
+      expect.objectContaining({ cityIds: ["29"] })
     );
   });
 
@@ -62,7 +62,7 @@ describe("city resolution failures stay visible (never silent all-city)", () => 
     mockSearchLists.mockResolvedValueOnce({ listings: [], hasMore: false });
     await collectCandidates(def({ city: "all" }), { maxPages: 1 });
     expect(mockSearchLists).toHaveBeenCalledWith(
-      expect.objectContaining({ cityId: "" })
+      expect.objectContaining({ cityIds: [] })
     );
   });
 
@@ -73,8 +73,26 @@ describe("city resolution failures stay visible (never silent all-city)", () => 
     });
     const { candidates } = await collectCandidates(def({ city: "younesi" }), { maxPages: 1 });
     expect(mockSearchLists).toHaveBeenCalledWith(
-      expect.objectContaining({ cityId: "3010" })
+      expect.objectContaining({ cityIds: ["3010"] })
     );
     expect(candidates).toHaveLength(1);
+  });
+
+  it("sends every selected id in one request, never one per city", async () => {
+    mockSearchLists.mockResolvedValueOnce({ listings: [], hasMore: false });
+    await collectCandidates(def({ city: "tehran", cities: ["tehran", "karaj", "qom"] }), {
+      maxPages: 1,
+    });
+    expect(mockSearchLists).toHaveBeenCalledTimes(1);
+    expect(mockSearchLists).toHaveBeenCalledWith(
+      expect.objectContaining({ cityIds: ["1", "2", "8"] })
+    );
+  });
+
+  it("rejects a set containing an invalid slug instead of narrowing silently", async () => {
+    await expect(
+      collectCandidates(def({ city: "tehran", cities: ["tehran", "nope"] }), { maxPages: 1 })
+    ).rejects.toMatchObject({ errorClass: "bad-request" });
+    expect(mockSearchLists).not.toHaveBeenCalled();
   });
 });

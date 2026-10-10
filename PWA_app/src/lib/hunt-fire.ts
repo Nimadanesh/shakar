@@ -11,30 +11,37 @@ export interface FireHuntInput {
 }
 
 /**
- * City resolution for the fire event (pure, tested). Rules:
+ * Multi-location fire planning (pure, tested). Contract:
+ * - An explicit multi-city set always wins, touched or not (it can only
+ *   come from a deliberate pick or a restored link — never a default).
  * - Untouched picker + live query-city inference → the inferred city wins
  *   (the text is the freshest signal; the dashed row already showed it).
- * - Hand-picked city (cityTouched, including «همه شهرها») → the pick wins;
- *   any live query-city inference is dismissed so the server cannot
- *   re-apply an overridden guess. A query typed after the pick gets fresh
- *   ids, so only the pick-time inference is silenced, never future ones.
- * - No inference → the pick stands as-is.
+ * - Hand-picked single/all (cityTouched) → the pick wins; live
+ *   query-city inferences are dismissed so the server cannot re-apply an
+ *   overridden guess. A query typed after the pick gets fresh ids, so
+ *   only the pick-time inference is silenced, never future ones.
+ * - No inference → the set stands as-is (possibly all-locations).
  */
-export function planFireCity(args: {
-  baseCity: string;
+export function planFireLocations(args: {
+  baseCities: string[];
   cityTouched: boolean;
   inferredCity: { id: string; value: string } | null;
   liveCityIds: string[];
   dismissed: ReadonlySet<string>;
-}): { city: string; dismissed: Set<string> } {
+}): { cities: string[]; dismissed: Set<string> } {
+  if (args.baseCities.length > 1) {
+    const next = new Set(args.dismissed);
+    for (const id of args.liveCityIds) next.add(id);
+    return { cities: [...args.baseCities], dismissed: next };
+  }
   if (!args.cityTouched && args.inferredCity) {
-    return { city: args.inferredCity.value, dismissed: new Set(args.dismissed) };
+    return { cities: [args.inferredCity.value], dismissed: new Set(args.dismissed) };
   }
   const next = new Set(args.dismissed);
   if (args.cityTouched) {
     for (const id of args.liveCityIds) next.add(id);
   }
-  return { city: args.baseCity, dismissed: next };
+  return { cities: [...args.baseCities], dismissed: next };
 }
 
 export type FireHuntResult =
@@ -64,6 +71,7 @@ export async function fireRealHunt(input: FireHuntInput): Promise<FireHuntResult
       include: input.base.include,
       exclude: input.base.exclude,
       city: input.base.city,
+      cities: input.base.cities ?? [],
       category: input.base.category,
       priceMin: input.base.priceMin,
       priceMax: input.base.priceMax,

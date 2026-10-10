@@ -115,7 +115,7 @@ describe("FirstPartyDivarProvider", () => {
     clearCache();
     const res = await divarProvider.searchLists({
       categorySlug: "apartment-sell",
-      cityId: "1",
+      cityIds: ["1"],
       keywords: [],
       page: 0,
     });
@@ -141,6 +141,29 @@ describe("FirstPartyDivarProvider", () => {
     );
   });
 
+  it("sends every selected city id in one city_ids array", async () => {
+    const calls = mockFetch(() => okJson(listJson()));
+    const { divarProvider } = await import("./divarClient");
+    const { clearCache } = await import("./cache");
+    clearCache();
+    await divarProvider.searchLists({
+      categorySlug: "",
+      cityIds: ["1", "8", "2"],
+      keywords: ["گوشی"],
+      page: 0,
+    });
+    const sent = JSON.parse(calls[0].init.body ?? "{}");
+    // All and only the selected ids — one request, never one per city.
+    expect(sent.city_ids).toEqual(["1", "8", "2"]);
+    await divarProvider.searchLists({
+      categorySlug: "",
+      cityIds: [],
+      keywords: ["گوشی"],
+      page: 0,
+    });
+    expect(JSON.parse(calls[1].init.body ?? "{}").city_ids).toEqual([]);
+  });
+
   it("sends keywords as the API text query (flaw #11)", async () => {
     const calls = mockFetch(() => okJson(listJson()));
     const { divarProvider } = await import("./divarClient");
@@ -148,7 +171,7 @@ describe("FirstPartyDivarProvider", () => {
     clearCache();
     await divarProvider.searchLists({
       categorySlug: "",
-      cityId: "1",
+      cityIds: ["1"],
       keywords: ["آپارتمان", "نوساز"],
       page: 0,
     });
@@ -166,7 +189,7 @@ describe("FirstPartyDivarProvider", () => {
     const cursor = { "@type": "type.googleapis.com/post_list.PaginationData" };
     await divarProvider.searchLists({
       categorySlug: "",
-      cityId: "1",
+      cityIds: ["1"],
       keywords: [],
       page: 1,
       cursor,
@@ -182,7 +205,7 @@ describe("FirstPartyDivarProvider", () => {
     clearCache();
     await divarProvider.searchLists({
       categorySlug: "",
-      cityId: "1",
+      cityIds: ["1"],
       keywords: [],
       page: 0,
     });
@@ -197,7 +220,7 @@ describe("FirstPartyDivarProvider", () => {
     clearCache();
     await divarProvider.searchLists({
       categorySlug: "",
-      cityId: "1",
+      cityIds: ["1"],
       keywords: [],
       page: 0,
     });
@@ -222,7 +245,7 @@ describe("FirstPartyDivarProvider", () => {
     const { divarProvider } = await import("./divarClient");
     const { clearCache } = await import("./cache");
     clearCache();
-    const q = { categorySlug: "apartment-sell", cityId: "1", keywords: [], page: 0 };
+    const q = { categorySlug: "apartment-sell", cityIds: ["1"], keywords: [], page: 0 };
     await divarProvider.searchLists(q);
     await divarProvider.searchLists(q);
     expect(calls).toHaveLength(1);
@@ -234,7 +257,7 @@ describe("FirstPartyDivarProvider", () => {
     const { clearCache } = await import("./cache");
     clearCache();
     await expect(
-      divarProvider.searchLists({ categorySlug: "x", cityId: "1", keywords: [], page: 9 })
+      divarProvider.searchLists({ categorySlug: "x", cityIds: ["1"], keywords: [], page: 9 })
     ).rejects.toMatchObject({ errorClass: "rate-limited" });
     expect(calls).toHaveLength(1); // never spin-retry against the quota
   });
@@ -245,7 +268,7 @@ describe("FirstPartyDivarProvider", () => {
     const { clearCache } = await import("./cache");
     clearCache();
     await expect(
-      divarProvider.searchLists({ categorySlug: "x", cityId: "1", keywords: [], page: 8 })
+      divarProvider.searchLists({ categorySlug: "x", cityIds: ["1"], keywords: [], page: 8 })
     ).rejects.toMatchObject({ errorClass: "upstream-down" });
     expect(calls).toHaveLength(2);
   });
@@ -304,7 +327,7 @@ describe("anti-footprint hardening", () => {
     const { divarProvider } = await import("./divarClient");
     const { clearCache } = await import("./cache");
     clearCache();
-    const q = { categorySlug: "apartment-sell", cityId: "1", keywords: [], page: 7 };
+    const q = { categorySlug: "apartment-sell", cityIds: ["1"], keywords: [], page: 7 };
     await expect(divarProvider.searchLists(q)).rejects.toMatchObject({
       errorClass: "rate-limited",
     });
@@ -324,13 +347,13 @@ describe("anti-footprint hardening", () => {
     clearCache();
     for (let page = 0; page < 5; page++) {
       await expect(
-        divarProvider.searchLists({ categorySlug: "apartment-sell", cityId: "1", keywords: [], page })
+        divarProvider.searchLists({ categorySlug: "apartment-sell", cityIds: ["1"], keywords: [], page })
       ).rejects.toMatchObject({ errorClass: "upstream-down" });
     }
     expect(calls).toHaveLength(5);
     // 6th fails fast — the ban is a normal state, not a retry storm.
     await expect(
-      divarProvider.searchLists({ categorySlug: "apartment-sell", cityId: "1", keywords: [], page: 99 })
+      divarProvider.searchLists({ categorySlug: "apartment-sell", cityIds: ["1"], keywords: [], page: 99 })
     ).rejects.toThrow("circuit open");
     expect(calls).toHaveLength(5);
   }, 30000);
@@ -347,7 +370,7 @@ describe("anti-footprint hardening", () => {
     setCached("list:1:apartment-sell::0:start", listJson(), -1);
     const res = await divarProvider.searchLists({
       categorySlug: "apartment-sell",
-      cityId: "1",
+      cityIds: ["1"],
       keywords: [],
       page: 0,
     });
@@ -365,7 +388,7 @@ describe("anti-footprint hardening", () => {
     const { clearCache } = await import("./cache");
     clearCache();
     await expect(
-      divarProvider.searchLists({ categorySlug: "apartment-sell", cityId: "1", keywords: [], page: 3 })
+      divarProvider.searchLists({ categorySlug: "apartment-sell", cityIds: ["1"], keywords: [], page: 3 })
     ).rejects.toMatchObject({ errorClass: "rate-limited" });
   });
 
@@ -408,7 +431,7 @@ describe("anti-footprint hardening", () => {
     const { clearCache } = await import("./cache");
     clearCache();
     await expect(
-      divarProvider.searchLists({ categorySlug: "apartment-sell", cityId: "1", keywords: [], page: 4 })
+      divarProvider.searchLists({ categorySlug: "apartment-sell", cityIds: ["1"], keywords: [], page: 4 })
     ).rejects.toBeDefined();
     const h = getIpHealth();
     expect(h.rateLimited429).toBe(1);

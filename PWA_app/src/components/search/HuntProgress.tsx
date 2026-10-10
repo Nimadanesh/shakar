@@ -278,7 +278,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
    */
   const esRef = useRef<EventSource | null>(null);
   const lineId = useRef(0);
-  const seenResults = useRef(new Set<string>());
 
   function handleStop() {
     esRef.current?.close();
@@ -600,20 +599,12 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           );
           break;
         case "details-batch": {
-          const fresh = e.confirmed.filter((ad) => {
-            if (seenResults.current.has(ad.sourceAdId)) return false;
-            seenResults.current.add(ad.sourceAdId);
-            return true;
-          });
-          if (fresh.length > 0) setResults((r) => [...r, ...fresh]);
+          // Progress only — never render provisional cards. Result cards
+          // appear exactly once from the terminal `done` event, in final
+          // server order, so a remembered position can never shift.
           pushTrace(`${fa(e.checked)} از ${fa(e.total)} بررسی شد.`, true);
           setCurrent(
-            fresh.length > 0
-              ? "اینا تأیید شدن — می‌تونی شروع کنی. بقیه‌شون دارن بررسی می‌شن."
-              : v("detail", [
-                  "دارم توضیحات رو می‌خونم...",
-                  "دارم جزئیات آگهی‌ها رو با دقت بررسی می‌کنم...",
-                ])
+            `دارم آگهی‌های منتخب رو بررسی می‌کنم… ${fa(e.checked)} از ${fa(e.total)} آگهی بررسی شد`
           );
           break;
         }
@@ -885,12 +876,13 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         </div>
       )}
 
-      {/* Streaming confirmed results — each card is tappable (detail),
-          favoritable and hideable. */}
+      {/* Final results — rendered once from the terminal `done` event in
+          exact server order. Each card is tappable (detail), favoritable
+          and hideable. */}
       {results.length > 0 && (
         <section className="mt-6">
           <h2 className="mb-3 text-sm font-medium text-zinc-500">
-            {done ? `نتایج (${fa(visibleResults.length)})` : "تأییدشده‌ها — بقیه در راهن"}
+            {`نتایج (${fa(visibleResults.length)})`}
           </h2>
           <div className="space-y-3">
             {results.map((ad, i) =>

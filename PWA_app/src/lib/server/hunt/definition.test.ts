@@ -163,11 +163,12 @@ describe("resolveHuntDefinition — city conflicts (full catalog)", () => {
   });
 
   it("drops only the applied city's names, not every mentioned place", () => {
-    // Picker pinned to Tehran; تبریز is mentioned but dismissed like an
-    // explicit override would. تهران (applied via picker city + text) drops;
-    // تبریز stays a content term rather than vanishing.
+    // Picker pinned to Tehran; both cities are mentioned but neither is
+    // dismissed: the multi-match is ambiguous, so no query city wins and
+    // the picker filter stands. تهران (filtering) drops; تبریز stays a
+    // content term rather than vanishing.
     const def = resolveHuntDefinition(
-      body({ query: "پیانو تهران تبریز", city: "tehran", dismissed: ["city:tabriz", "city:tehran"] })
+      body({ query: "پیانو تهران تبریز", city: "tehran" })
     )!;
     expect(def.city).toBe("tehran");
     expect(def.include).not.toContain("تهران");
@@ -178,6 +179,42 @@ describe("resolveHuntDefinition — city conflicts (full catalog)", () => {
     const def = resolveHuntDefinition(body({ query: "آپارتمان در اسلام‌شهر" }))!;
     expect(def.city).toBe("eslamshahr");
     expect(def.query).toBe("آپارتمان در اسلام‌شهر");
+  });
+
+  it("keeps an explicit multi-city set against a surviving inference", () => {
+    const def = resolveHuntDefinition(
+      body({ query: "گوشی مشهد", city: "tehran", cities: ["tehran", "karaj"] })
+    )!;
+    expect(def.cities).toEqual(["tehran", "karaj"]);
+    expect(def.city).toBe("tehran");
+    expect(def.citySource).toBe("picker");
+    expect(def.include).toContain("مشهد");
+  });
+
+  it("drops an overridden city mention once the user dismisses it", () => {
+    const def = resolveHuntDefinition(
+      body({
+        query: "گوشی مشهد",
+        city: "tehran",
+        cities: ["tehran", "karaj"],
+        dismissed: ["city:mashhad"],
+      })
+    )!;
+    expect(def.cities).toEqual(["tehran", "karaj"]);
+    expect(def.include).toContain("گوشی");
+    expect(def.include).not.toContain("مشهد");
+  });
+
+  it("rejects unknown slugs in an explicit set visibly", () => {
+    expect(
+      resolveHuntDefinition(body({ query: "گوشی", city: "all", cities: ["tehran", "nope"] }))
+    ).toBeNull();
+  });
+
+  it("normalizes a legacy single city into the canonical set", () => {
+    const def = resolveHuntDefinition(body({ query: "گوشی", city: "karaj" }))!;
+    expect(def.cities).toEqual(["karaj"]);
+    expect(def.city).toBe("karaj");
   });
 });
 

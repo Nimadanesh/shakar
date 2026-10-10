@@ -5,6 +5,9 @@ import {
   citySearchText,
   findMentionedPlaceSlugs,
   isPlaceSlug,
+  isValidLocationSet,
+  locationSummary,
+  normalizeLocationSlugs,
   normalizePlaceText,
   PLACE_ALIASES,
   placeBySlug,
@@ -12,6 +15,7 @@ import {
   placeNameVariants,
   placeNamesForSlug,
   searchPlaces,
+  toggleLocation,
 } from "./places";
 
 describe("divar place catalog integrity (generated from the official response)", () => {
@@ -75,6 +79,33 @@ describe("divar place catalog integrity (generated from the official response)",
   });
 });
 
+describe("province hierarchy (generated from Divar's own data)", () => {
+  it("has 31 verified provinces", async () => {
+    const { DIVAR_PROVINCES } = await import("@/data/divar-places");
+    expect(DIVAR_PROVINCES).toHaveLength(31);
+    const slugs = new Set(DIVAR_PROVINCES.map((p) => p.slug));
+    expect(slugs.size).toBe(31);
+    expect(slugs.has("tehran-province")).toBe(true);
+  });
+
+  it("assigns all 1,177 places to valid provinces with no duplicates", async () => {
+    const { DIVAR_PLACE_PROVINCE } = await import("@/data/divar-places");
+    const { provincePlaceCounts, unclassifiedPlaces } = await import("./places");
+    expect(Object.keys(DIVAR_PLACE_PROVINCE)).toHaveLength(1177);
+    expect(unclassifiedPlaces()).toEqual([]);
+    const counts = provincePlaceCounts();
+    expect(Object.values(counts).reduce((a, b) => a + b, 0)).toBe(1177);
+    expect(counts["tehran-province"]).toBeGreaterThan(0);
+  });
+
+  it("places Tehran city inside Tehran province", async () => {
+    const { provinceOfPlace, placesByProvince, provinceLabel } = await import("./places");
+    expect(provinceOfPlace("tehran")).toBe("tehran-province");
+    expect(placesByProvince("tehran-province").map((p) => p.slug)).toContain("tehran");
+    expect(typeof provinceLabel("tehran-province")).toBe("string");
+  });
+});
+
 describe("place search and mention matching", () => {
   it("ranks exact names before prefix and substring matches", () => {
     const res = searchPlaces("تهران", undefined, 5);
@@ -122,5 +153,28 @@ describe("place search and mention matching", () => {
     expect(citySearchText("urmia")).toContain("اورمیه");
     expect(citySearchText("bandar-abbas")).toContain("بندر عباس");
     expect(citySearchText("khorramabad")).toContain("خرم آباد");
+  });
+});
+
+describe("multi-location selection sets", () => {
+  it("normalizes, dedupes, and validates slugs", () => {
+    expect(normalizeLocationSlugs(["tehran", " ", "karaj", "tehran"])).toEqual(["tehran", "karaj"]);
+    expect(isValidLocationSet(["tehran", "karaj"])).toBe(true);
+    expect(isValidLocationSet(["tehran", "nope"])).toBe(false);
+    expect(isValidLocationSet([])).toBe(true);
+  });
+
+  it("toggles places with all-locations exclusivity", () => {
+    expect(toggleLocation([], "tehran")).toEqual(["tehran"]);
+    expect(toggleLocation(["tehran", "karaj"], "tehran")).toEqual(["karaj"]);
+    expect(toggleLocation(["tehran"], "karaj")).toEqual(["tehran", "karaj"]);
+  });
+
+  it("summarizes truthfully without hiding the count", () => {
+    expect(locationSummary([])).toBe("همه شهرها");
+    expect(locationSummary(["tehran"])).toBe("تهران");
+    expect(locationSummary(["tehran", "karaj"])).toBe("تهران، کرج");
+    expect(locationSummary(["tehran", "karaj", "qom"])).toContain("+");
+    expect(locationSummary(["tehran", "karaj", "qom"])).toContain("تهران");
   });
 });

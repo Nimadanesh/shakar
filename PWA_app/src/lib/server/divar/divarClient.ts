@@ -240,7 +240,10 @@ class FirstPartyDivarProvider implements ListingProvider {
     // (flaw #11 in docs/output-quality.md).
     const queryText = q.keywords.filter((k) => k.trim() !== "").join(" ").trim();
     const body: Record<string, unknown> = {
-      city_ids: q.cityId !== "" ? [q.cityId] : [],
+      // Multi-location in ONE request: every selected numeric id travels
+      // together (verified live: city_ids ["1","8"] returned تهران + قم
+      // ads in a single response). [] = all cities, as before.
+      city_ids: [...q.cityIds],
       search_data: {
         form_data: {
           data: {
@@ -264,7 +267,7 @@ class FirstPartyDivarProvider implements ListingProvider {
         ? "start"
         : `c${hashStr(JSON.stringify(q.cursor))}`;
     const cacheKey =
-      `list:${q.cityId}:${categorySlug ?? "all"}:${queryText}:${q.page}:${cursorKey}`;
+      `list:${q.cityIds.join(",")}:${categorySlug ?? "all"}:${queryText}:${q.page}:${cursorKey}`;
     const cached = getCached<DivarJson>(cacheKey);
     if (cached) return parseListJson(cached);
     try {
@@ -348,10 +351,14 @@ export const divarProvider: ListingProvider = new FirstPartyDivarProvider();
 export async function toListingQuery(opts: {
   category: string;
   citySlug: string;
+  /** Explicit multi-location selection; overrides the legacy single slug. */
+  citySlugs?: string[];
   page?: number;
 }): Promise<ListingQuery> {
   const categorySlug = CATEGORY_API_VALUE[opts.category] ?? "";
   // Unknown slugs throw instead of silently widening to all cities.
-  const cityId = await requireCityId(opts.citySlug);
-  return { categorySlug, cityId, keywords: [], page: opts.page ?? 0 };
+  const slugs = opts.citySlugs ?? (opts.citySlug === "all" || opts.citySlug === "" ? [] : [opts.citySlug]);
+  const cityIds: string[] = [];
+  for (const slug of slugs) cityIds.push(await requireCityId(slug));
+  return { categorySlug, cityIds, keywords: [], page: opts.page ?? 0 };
 }

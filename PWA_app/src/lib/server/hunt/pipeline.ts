@@ -41,8 +41,13 @@ export interface HuntDefinition {
    * penalizes: absence is simply no boost.
    */
   should: string[];
-  /** City slug ("tehran") or "all". */
+  /** City slug ("tehran") or "all". Legacy primary; `cities` is canonical. */
   city: string;
+  /**
+   * Ordered multi-location selection; `[]` = all locations (exclusive).
+   * Absent = legacy single `city`. Read only through `huntCities()`.
+   */
+  cities?: string[];
   /**
    * Where the final city came from (navid 2026-10-08). "text" when a city
    * word in the query overrode the picker/remembered value, "picker"
@@ -62,6 +67,16 @@ export interface HuntDefinition {
    * older half of the inventory. Same hunt, no extra quota.
    */
   deepHistory?: boolean;
+}
+
+/**
+ * Canonical ordered location selection: explicit `cities` when present,
+ * else the legacy single `city` ("all"/"" → []). Every consumer reads
+ * through this — stored hunts and deep links with only `city` keep working.
+ */
+export function huntCities(def: Pick<HuntDefinition, "city" | "cities">): string[] {
+  if (def.cities !== undefined) return [...def.cities];
+  return def.city !== "all" && def.city !== "" ? [def.city] : [];
 }
 
 export interface ScoreBreakdown {
@@ -453,7 +468,10 @@ export async function collectCandidates(
   // A selected city must never silently become a different city or an
   // all-city search because resolution failed: unknown slugs throw
   // visibly via requireCityId. "All cities" is valid only when requested.
-  const cityId = await requireCityId(def.city);
+  // Multi-location travels as ONE city_ids array in a single request —
+  // never one request per city (request pacing unchanged).
+  const cityIds: string[] = [];
+  for (const slug of huntCities(def)) cityIds.push(await requireCityId(slug));
   const all: ListingSummary[] = [];
   let pagesDone = 0;
   let cursor: unknown = opts.startCursor;
@@ -463,7 +481,7 @@ export async function collectCandidates(
     try {
       res = await divarProvider.searchLists({
         categorySlug,
-        cityId: cityId,
+        cityIds,
         // The hunt's content terms scope the list phase server-side
         // (flaw #11): without this we only ever see the freshest N ads of
         // everything, and older relevant inventory is unreachable.

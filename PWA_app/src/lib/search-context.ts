@@ -5,6 +5,12 @@ import type { Interpretation, SearchContext } from "@/types/search";
 export interface ContextBase {
   category: string;
   city: string;
+  /**
+   * Explicit multi-location selection (canonical): ordered place slugs,
+   * `[]` = all locations (exclusive). Absent = legacy single `city`
+   * ("all" or one slug), normalized via `baseCities` at every boundary.
+   */
+  cities?: string[];
   priceMin: string;
   priceMax: string;
   include: string[];
@@ -30,6 +36,16 @@ export const EMPTY_CONTEXT_BASE: ContextBase = {
   transaction: "",
   condition: "",
 };
+
+/**
+ * Canonical ordered location selection for a form base: explicit `cities`
+ * when present, else the legacy single `city` ("all"/"" → []). One
+ * function, every boundary — stored hunts and deep links keep working.
+ */
+export function baseCities(base: Pick<ContextBase, "city" | "cities">): string[] {
+  if (base.cities !== undefined) return [...base.cities];
+  return base.city !== "all" && base.city !== "" ? [base.city] : [];
+}
 
 /**
  * The single source of truth for city geo-semantics (M3 contract):

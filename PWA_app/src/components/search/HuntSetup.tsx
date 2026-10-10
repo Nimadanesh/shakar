@@ -13,19 +13,18 @@ import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
 import { SpecRow } from "@/components/search/SpecRow";
 import {
   CATEGORIES,
-  CITIES,
   categoryLabel,
-  cityLabel,
 } from "@/data/taxonomy";
 import { interpretQuery } from "@/lib/interpret";
-import { citySearchText } from "@/lib/places";
 import {
   getDimensionStatuses,
   isDimensionsBlocking,
   type DimensionId,
 } from "@/lib/dimensions";
 import { recordHunt } from "@/lib/hunt-store";
-import { fireRealHunt, planFireCity } from "@/lib/hunt-fire";
+import { fireRealHunt, planFireLocations } from "@/lib/hunt-fire";
+import { baseCities } from "@/lib/search-context";
+import { locationSummary } from "@/lib/places";
 import { getHomeCity } from "@/lib/home-city";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
@@ -45,6 +44,10 @@ const PriceSheet = dynamic(
   () => import("@/components/search/PriceSheet").then((m) => m.PriceSheet),
   { ssr: false }
 );
+const LocationPickerSheet = dynamic(
+  () => import("@/components/search/LocationPickerSheet").then((m) => m.LocationPickerSheet),
+  { ssr: false }
+);
 import { toggleFavoriteStored } from "@/hooks/useFavorites";
 import { parsePriceInput, formatPriceCompact } from "@/lib/prices";
 import { EMPTY_CONTEXT_BASE, type ContextBase } from "@/lib/search-context";
@@ -61,6 +64,24 @@ interface InferredReadings {
   city: { id: string; value: string; display: string } | null;
   priceMin: { id: string; value: string; display: string } | null;
   priceMax: { id: string; value: string; display: string } | null;
+}
+
+/**
+ * Location row summary: the actual selection count is never truncated
+ * away («تهران، کرج + ۲»). An untouched single default keeps the honest
+ * «پیش‌فرض» marker; anything hand-picked shows exactly what will run.
+ */
+function LocationSummary({ cities, touched }: { cities: string[]; touched: boolean }) {
+  if (cities.length === 0) return <>همه شهرها</>;
+  if (!touched && cities.length === 1) {
+    return (
+      <>
+        {locationSummary(cities)}
+        <span className="text-[11px] text-muted-foreground/80"> · پیش‌فرض</span>
+      </>
+    );
+  }
+  return <>{locationSummary(cities)}</>;
 }
 
 /**
@@ -114,6 +135,9 @@ export function HuntSetup() {
   const [initialized, setInitialized] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /** Canonical selection for this form (explicit multi or legacy single). */
+  const pickedCities = useMemo(() => baseCities(base), [base]);
 
   /** Live, free interpretation of the typed query — setup only, never paid. */
   const liveInterp = useMemo(() => {
@@ -234,8 +258,8 @@ export function HuntSetup() {
     // Fire-time merge (navid 2026-10-08): the city row SHOWED the dashed
     // inferred city — the hunt must run where the UI said. planFireCity
     // keeps the hand-pick-wins/text-wins contract in one tested place.
-    const { city: fireCity, dismissed: fireDismissed } = planFireCity({
-      baseCity: base.city,
+    const { cities: fireCities, dismissed: fireDismissed } = planFireLocations({
+      baseCities: pickedCities,
       cityTouched,
       inferredCity: inferred.city,
       liveCityIds: liveInterp
@@ -243,7 +267,8 @@ export function HuntSetup() {
         : [],
       dismissed,
     });
-    const fireBase = fireCity !== base.city ? { ...base, city: fireCity } : base;
+    const fireCity = fireCities[0] ?? "all";
+    const fireBase = { ...base, city: fireCity, cities: fireCities };
     try {
       const result = await fireRealHunt({ query: trimmed, base: fireBase, dismissed: fireDismissed });
       if (!result.ok) {
@@ -457,20 +482,15 @@ export function HuntSetup() {
               onOpen={() => setCategoryOpen(true)}
             />
             <SpecRow
-              label="شهر"
+              label="مکان"
               value={
-                inferred.city ? (
+                pickedCities.length <= 1 && inferred.city ? (
                   inferred.city.display
-                ) : !cityTouched && base.city !== "all" ? (
-                  <>
-                    {cityLabel(base.city)}
-                    <span className="text-[11px] text-muted-foreground/80"> · پیش‌فرض</span>
-                  </>
                 ) : (
-                  cityLabel(base.city)
+                  <LocationSummary cities={pickedCities} touched={cityTouched} />
                 )
               }
-              inferred={inferred.city !== null}
+              inferred={pickedCities.length <= 1 && inferred.city !== null}
               onOpen={() => setCityOpen(true)}
             />
             <SpecRow
@@ -555,24 +575,26 @@ export function HuntSetup() {
         onSelect={(value) => setBase((b) => ({ ...b, category: value }))}
         onClose={() => setCategoryOpen(false)}
       />
-      <OptionSheet
+      <LocationPickerSheet
+        key={cityOpen ? "open" : "closed"}
         open={cityOpen}
-        title="شهر"
-        options={CITIES.map((c) => ({ ...c, searchText: citySearchText(c.value) }))}
-        selected={base.city}
-        onSelect={(value) => {
-          setBase((b) => ({ ...b, city: value }));
+        selected={pickedCities}
+        onApply={(cities) => {
+          setBase((b) => ({ ...b, city: cities[0] ?? "all", cities }));
           setCityTouched(true);
-          // NOTE (navid 2026-10-08): a per-hunt city change does NOT touch
-          // the home city. The home city is set in the profile (or the
-          // first-run prompt) — hunting elsewhere once must not move it.
-          // …and settles the conflict: a hand-picked city dismisses the
-          // text's inference for this query (a new query re-infers fresh).
-          const inferredId = inferred.city?.id;
-          if (inferredId) setDismissed((d) => new Set(d).add(inferredId));
+          // NOTE (navid 2026-10-08): a per-hunt location change does NOT
+          // touch the home city. The home city is set in the profile (or
+          // the first-run prompt) — hunting elsewhere once must not move
+          // it. …and settles the conflict: a hand-picked set dismisses
+          // the text's inferences for this query (a new query re-infers).
+          if (liveInterp) {
+            const ids = liveInterp.applied
+              .filter((c) => c.kind === "city")
+              .map((c) => c.id);
+            if (ids.length > 0) setDismissed((d) => new Set([...d, ...ids]));
+          }
         }}
         onClose={() => setCityOpen(false)}
-        searchable
       />
 
       <PlanSheet open={planOpen} onClose={() => setPlanOpen(false)} />

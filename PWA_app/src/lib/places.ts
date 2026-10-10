@@ -1,5 +1,5 @@
 import { normalizePersian } from "@/lib/normalizePersian";
-import { DIVAR_PLACES } from "@/data/divar-places";
+import { DIVAR_PLACES, DIVAR_PLACE_PROVINCE, DIVAR_PROVINCES } from "@/data/divar-places";
 
 /**
  * Shared place matching for the city picker, query interpretation, and
@@ -93,6 +93,103 @@ export function placeNamesForSlug(slug: string): readonly string[] {
 export function citySearchText(slug: string): string {
   const official = placeBySlug(slug)?.name ?? slug;
   return [official, ...placeNamesForSlug(slug)].join(" ");
+}
+
+// ---------------------------------------------------------------------------
+// Multi-location selection sets. Canonical form: an ORDERED array of place
+// slugs; the EMPTY array means all locations (exclusive). Legacy single
+// `city` strings ("all" or a slug) normalize through `locationSlugs` at
+// every boundary so stored hunts and deep links keep working.
+// ---------------------------------------------------------------------------
+
+/** Deduplicated slugs in first-occurrence order; blanks dropped. */
+export function normalizeLocationSlugs(slugs: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of slugs) {
+    const t = s.trim();
+    if (t === "" || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
+/** True when every slug is a supported catalog place. */
+export function isValidLocationSet(slugs: readonly string[]): boolean {
+  return slugs.every((s) => isPlaceSlug(s));
+}
+
+/**
+ * Truthful one-line summary: «همه شهرها» for the all-locations state,
+ * official labels joined for a few, «first، second + N» beyond that —
+ * the count is never truncated away.
+ */
+export function locationSummary(slugs: readonly string[], maxShown = 2): string {
+  if (slugs.length === 0) return "همه شهرها";
+  const labels = slugs.map(placeLabel);
+  if (labels.length <= maxShown) return labels.join("، ");
+  const rest = labels.length - maxShown;
+  return `${labels.slice(0, maxShown).join("، ")} +${rest.toLocaleString("fa-IR")}`;
+}
+
+/** Toggle one place in a draft set (pure). Empty stays the all-state. */
+export function toggleLocation(draft: readonly string[], slug: string): string[] {
+  if (draft.includes(slug)) return draft.filter((s) => s !== slug);
+  return [...draft, slug];
+}
+
+// ---------------------------------------------------------------------------
+// Province hierarchy (generated from Divar's own places-web.json: type-1
+// provinces group type-2 places by verified slug — never name guessing).
+// ---------------------------------------------------------------------------
+
+export function provinces(): Array<{ readonly slug: string; readonly name: string }> {
+  return [...DIVAR_PROVINCES];
+}
+
+export function provinceBySlug(slug: string): { readonly id: number; readonly slug: string; readonly name: string } | null {
+  return DIVAR_PROVINCES.find((p) => p.slug === slug) ?? null;
+}
+
+export function provinceLabel(slug: string): string {
+  return provinceBySlug(slug)?.name ?? slug;
+}
+
+/** Canonical province slug for a place, or null when unclassified. */
+export function provinceOfPlace(placeSlug: string): string | null {
+  return DIVAR_PLACE_PROVINCE[placeSlug] ?? null;
+}
+
+/** Places of one province in catalog order. */
+export function placesByProvince(provinceSlug: string): Array<{ readonly slug: string; readonly name: string }> {
+  return DIVAR_PLACES.filter((p) => DIVAR_PLACE_PROVINCE[p.slug] === provinceSlug).map((p) => ({
+    slug: p.slug,
+    name: p.name,
+  }));
+}
+
+/** Place count per province slug. */
+export function provincePlaceCounts(): Readonly<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const p of DIVAR_PLACES) {
+    const prov = DIVAR_PLACE_PROVINCE[p.slug];
+    if (prov !== undefined) counts[prov] = (counts[prov] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/**
+ * Safety net: catalog places with no valid province assignment. Must stay
+ * empty against current data; the picker renders these under «سایر مکان‌ها»
+ * instead of dropping them if drift ever introduces any.
+ */
+export function unclassifiedPlaces(): Array<{ readonly slug: string; readonly name: string }> {
+  const provinces = new Set(DIVAR_PROVINCES.map((p) => p.slug));
+  return DIVAR_PLACES.filter((p) => {
+    const prov = DIVAR_PLACE_PROVINCE[p.slug];
+    return prov === undefined || !provinces.has(prov);
+  }).map((p) => ({ slug: p.slug, name: p.name }));
 }
 
 /**

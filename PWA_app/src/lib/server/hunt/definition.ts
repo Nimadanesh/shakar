@@ -9,7 +9,7 @@ import {
   EXCLUDE_PREFIXES,
   PRICE_STRUCTURAL_WORDS,
 } from "@/lib/interpret";
-import { placeNamesForSlug } from "@/lib/places";
+import { isPlaceSlug, placeNamesForSlug } from "@/lib/places";
 import { normalizeForMatch, stemToken, tokenize } from "@/lib/persianNormalize";
 import type { InterpretedConstraint } from "@/types/search";
 
@@ -31,12 +31,24 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
     b.condition === "new" || b.condition === "used" || b.condition === "any"
       ? b.condition
       : "";
+  const city = str(b.city) || "all";
+  // Canonical multi-location selection: explicit `cities` wins; otherwise
+  // the legacy single `city`. Unknown slugs fail validation visibly (null
+  // = 400) instead of silently widening to all-cities downstream.
+  const rawCities = Array.isArray(b.cities)
+    ? b.cities.filter((x): x is string => typeof x === "string")
+    : city !== "all" && city !== ""
+      ? [city]
+      : [];
+  const cities = [...new Set(rawCities.map((s) => s.trim()).filter((s) => s !== ""))];
+  if (cities.some((s) => !isPlaceSlug(s))) return null;
   return {
     query,
     include: strArr(b.include),
     exclude: strArr(b.exclude),
     should: [],
-    city: str(b.city) || "all",
+    city: cities[0] ?? "all",
+    cities,
     category: str(b.category) || "all",
     priceMin: str(b.priceMin),
     priceMax: str(b.priceMax),
@@ -91,12 +103,24 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   );
 
   // 1. Mandatory content terms from the query text.
-  // The effective city filter decides which place names are structural:
-  // an applied query city, else an explicit picker city. Merely mentioned
-  // (ambiguous/dismissed) or unknown places stay intact as content terms.
+  // The effective city filter decides which place names are structural.
+  // A multi-location request keeps its whole set: one surviving inference
+  // never overrides it, and the surviving mention stays intact (ambiguous
+  // against the set — raw query preserved, never guessed).
   const cityC = applied.find((c) => c.kind === "city");
-  const filterCity = cityC ? cityC.value : def.city !== "all" ? def.city : null;
-  const terms = contentTerms(def.query, applied, interp.preferences, filterCity);
+  const requested: string[] = def.cities ?? [];
+  const multiRequest = requested.length > 1;
+  const winningCity = multiRequest ? null : cityC ? cityC.value : null;
+  // Every city that filters this hunt is structural: the winning query
+  // city plus every explicitly requested one. (With a multi-city request,
+  // a mentioned member must not linger as an item keyword and silently
+  // kill the other cities' ads.)
+  const filterCities = [...new Set([...(winningCity ? [winningCity] : []), ...requested])];
+  // Dismissed city readings are rejected entirely: neither a filter nor a
+  // keyword. Without this, an overridden mention would linger as a MUST
+  // term and silently kill the selected scope's ads.
+  const dismissedCities = dismissed.filter((id) => id.startsWith("city:")).map((id) => id.slice(5));
+  const terms = contentTerms(def.query, applied, interp.preferences, filterCities, dismissedCities);
   const seenTerms = new Set<string>();
   for (const t of def.include) for (const s of tokenize(t)) seenTerms.add(s);
   const include = [...def.include];
@@ -114,9 +138,12 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   // remembered picker silently won). A dismissed inference never reaches
   // `applied`, and an explicit picker choice dismisses the inference
   // client-side — so a surviving conflict always resolves to the text.
-  // (cityC was resolved above for content-term dropping; reused here.)
-  const city = cityC ? cityC.value : def.city;
-  const citySource = cityC ? ("text" as const) : ("picker" as const);
+  // (cityC/multiRequest were resolved above; reused here.)
+  // A multi-location request keeps its whole set: one inferred city must
+  // never override an explicit multi-city selection.
+  const city = multiRequest ? requested[0] : cityC ? cityC.value : def.city;
+  const cities = multiRequest ? requested : cityC ? [cityC.value] : requested;
+  const citySource = multiRequest || !cityC ? ("picker" as const) : ("text" as const);
 
   // 3. Category from text when the picker didn't choose one. Explicit
   // picker wins. An unmapped text category ("personal") falls back to "all"
@@ -175,6 +202,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     exclude,
     should,
     city,
+    cities,
     citySource,
     category,
     priceMin,
@@ -204,7 +232,8 @@ function contentTerms(
   query: string,
   applied: InterpretedConstraint[],
   preferences: InterpretedConstraint[],
-  filterCity: string | null
+  filterCities: string[],
+  dismissedCities: string[]
 ): string[] {
   const surface = normalizeForMatch(query)
     .split(" ")
@@ -222,18 +251,23 @@ function contentTerms(
   // user's keywords. Slight imprecision for X+آباد place queries
   // («شهرک آباد» vs «شهرک غرب») is the known trade-off — see
   // docs/output-quality.md flaw #8 note.
-  const appliedCity = applied.find((c) => c.kind === "city");
-  if (appliedCity) for (const name of placeNamesForSlug(appliedCity.value)) drop(name);
-  // An explicit picker city is equally structural when no query city won:
-  // «پیانو تهران» with the picker on تهران must not gain تهران as an item
-  // keyword. (filterCity already equals the applied city in that case.)
-  if (!appliedCity && filterCity) for (const name of placeNamesForSlug(filterCity)) drop(name);
+  // Every city that filters this hunt is structural: the winning query
+  // city plus every explicitly requested one. «پیانو تهران» with the
+  // picker on تهران must not gain تهران as an item keyword, and a
+  // mentioned member of a multi-city set must not linger and silently
+  // kill the other cities' ads. Ambiguous or unknown mentions stay
+  // intact; explicitly dismissed readings drop entirely (neither filter
+  // nor keyword).
+  for (const slug of filterCities) for (const name of placeNamesForSlug(slug)) drop(name);
+  for (const slug of dismissedCities) for (const name of placeNamesForSlug(slug)) drop(name);
   for (const w of NEGATION_VERBS) drop(w);
   for (const p of EXCLUDE_PREFIXES) drop(p);
   for (const w of PRICE_STRUCTURAL_WORDS) drop(w);
   for (const c of applied) {
     if (
-      c.kind === "city" ||
+      // City displays are governed by filterCities/dismissedCities above
+      // (winning/requested/dismissed) — never dropped blindly here, or an
+      // overridden mention would vanish/appear inconsistently.
       c.kind === "priceMin" ||
       c.kind === "priceMax" ||
       c.kind === "exclude" ||
