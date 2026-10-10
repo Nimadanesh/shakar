@@ -59,11 +59,40 @@ describe("expandSynonyms", () => {
     expect(expandSynonyms("آپارتمان", "all")).toEqual(["اپارتمان"]);
   });
 
+  it("does not expand without reliable category context", () => {
+    // Missing, empty, and "all" must never produce unsafe equivalences.
+    expect(expandSynonyms("آپارتمان")).toEqual(["اپارتمان"]);
+    expect(expandSynonyms("آپارتمان", "")).toEqual(["اپارتمان"]);
+    expect(expandSynonyms("آپارتمان", "all")).toEqual(["اپارتمان"]);
+    expect(expandSynonyms("پیانو")).toEqual(["پیانو"]);
+    expect(expandSynonyms("پیانو", "")).toEqual(["پیانو"]);
+    expect(expandSynonyms("یخچال", "all")).toEqual(["یخچال"]);
+    expect(textMatches("واحد ۸۰ متری", "آپارتمان")).toBe(false);
+    expect(textMatches("واحد ۸۰ متری", "آپارتمان", "all")).toBe(false);
+  });
+
   it("does not expand related-but-distinct concepts", () => {
     expect(expandSynonyms("آپارتمان", "real-estate")).not.toContain("سوئیت");
     expect(expandSynonyms("پیانو", "music")).not.toContain("کیبورد");
     expect(expandSynonyms("یخچال", "home")).not.toContain("فریزر");
     expect(expandSynonyms("کولر", "home")).not.toContain("اسپیلت");
+  });
+
+  it("does not treat related terms as bidirectional aliases", () => {
+    // Related terms are indexed only as aliases of their own concept, if at all.
+    // Keyboard/freezer/suite must not expand back to the canonical concept.
+    expect(expandSynonyms("کیبورد", "music")).not.toContain("پیانو");
+    expect(expandSynonyms("فریزر", "home")).not.toContain("یخچال");
+    expect(expandSynonyms("سوئیت", "real-estate")).not.toContain("اپارتمان");
+    expect(expandSynonyms("اسپیلت", "home")).not.toContain("کولر");
+  });
+
+  it("supports benchmark intent categories alongside app category keys", () => {
+    // Benchmark fixtures use home-appliances/musical-instruments while the
+    // app uses home/music. Both must resolve to the same concept.
+    expect(expandSynonyms("آپارتمان", "real-estate")).toContain("واحد");
+    expect(relatedConceptTerms("یخچال", "home-appliances")).toContain("فریزر");
+    expect(relatedConceptTerms("پیانو", "musical-instruments")).toContain("کیبورد");
   });
 
   it("returns the term itself for unknown words", () => {

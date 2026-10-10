@@ -199,17 +199,48 @@ function isWeasel(text: string, term: string): boolean {
   // and spacing variants follow the same rule.
   const descriptivePrefixes = ["طرح", "دیزاین", "شبیه", "ظاهر", "سبک"];
   return (
-    descriptivePrefixes.some((prefix) =>
-      normalizedText.includes(`${prefix} ${normalizedTerm}`)
+    descriptivePrefixes.some(
+      (prefix) =>
+        normalizedText.includes(`${prefix} ${normalizedTerm}`) ||
+        normalizedText.includes(`${prefix}${normalizedTerm}`)
     ) ||
     (normalizedTerm === "اکوستیک" &&
       (normalizedText.includes("دیجیتال اکوستیک") || normalizedText.includes("صدای اکوستیک")))
   );
 }
 
-/** Matching for positive query evidence; weasel phrasing is not proof of identity. */
+/**
+ * Remove weasel phrasing so genuine co-occurring evidence can still count.
+ * Example: "پیانو آکوستیک با صدای آکوستیک گرم" keeps "پیانو آکوستیک"
+ * after "صدای آکوستیک" is stripped, while "پیانو طرح آکوستیک" leaves no
+ * acoustic evidence behind.
+ */
+function stripWeaselPhrases(normalizedText: string, normalizedTerm: string): string {
+  let stripped = normalizedText;
+  const descriptivePrefixes = ["طرح", "دیزاین", "شبیه", "ظاهر", "سبک"];
+  for (const prefix of descriptivePrefixes) {
+    stripped = stripped.split(`${prefix} ${normalizedTerm}`).join(" ");
+    stripped = stripped.split(`${prefix}${normalizedTerm}`).join(" ");
+  }
+  if (normalizedTerm === "اکوستیک") {
+    stripped = stripped.split("دیجیتال اکوستیک").join(" ");
+    stripped = stripped.split("صدای اکوستیک").join(" ");
+  }
+  return stripped.replace(/\s+/g, " ").trim();
+}
+
+/** Matching for positive query evidence; weasel phrasing alone is not proof of identity. */
 function termMatches(text: string, term: string, def: HuntDefinition): boolean {
-  return textMatches(text, term, def.category) && !isWeasel(text, term);
+  if (!textMatches(text, term, def.category)) return false;
+  if (!isWeasel(text, term)) return true;
+  // Weasel phrasing exists, but genuine evidence elsewhere in the same text
+  // still counts. Only when nothing remains after stripping is it insufficient.
+  const normalizedText = normalizeForMatch(text);
+  const normalizedTerm = normalizeForMatch(term);
+  if (normalizedText === "" || normalizedTerm === "") return false;
+  const stripped = stripWeaselPhrases(normalizedText, normalizedTerm);
+  if (stripped === "") return false;
+  return textMatches(stripped, term, def.category);
 }
 
 /**
@@ -239,12 +270,12 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
   let strength = 0;
   let needsDetailReview = false;
   for (const term of def.include) {
-    if (textMatches(ad.title, term, def.category)) {
-      if (isWeasel(ad.title, term)) {
-        needsDetailReview = true;
-      } else {
-        strength += 2; // MUST weighs double at the title (flaw #19)
-      }
+    if (termMatches(ad.title, term, def)) {
+      strength += 2; // MUST weighs double at the title (flaw #19)
+    } else if (textMatches(ad.title, term, def.category)) {
+      // Exact text present but only in weasel phrasing (e.g. طرح آکوستیک).
+      // No title strength, but keep for detail review.
+      needsDetailReview = true;
     } else if (textMatchesRelated(ad.title, term, def.category)) {
       // Related items enter the detail shortlist at a low priority so they
       // can survive as honest near-matches without outranking exact items.

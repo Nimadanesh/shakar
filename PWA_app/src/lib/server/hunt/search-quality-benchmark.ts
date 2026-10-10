@@ -228,6 +228,7 @@ export const SEARCH_QUALITY_BENCHMARK: readonly SearchQualityCase[] = [
       { id: "dup-a1", title: "آیفون ۱۳ تمیز", description: "۲۵۶ گیگ", relevance: 3, note: "Canonical relevant listing." },
       { id: "dup-a1-repost", title: "آیفون ۱۳ تمیز", description: "۲۵۶ گیگ", relevance: 3, note: "Same listing reposted; relevance label retained but metric should deduplicate IDs only if production does." },
       { id: "dup-a2", title: "آیفون ۱۳ پرو", description: "۱۲۸ گیگ", relevance: 1, note: "Different model variant." },
+      { id: "dup-a3", title: "ماشین لباسشویی", description: "کم‌کارکرد", relevance: 0, note: "Wrong entity; hard negative for the duplicates slice." },
     ],
   },
 ] as const;
