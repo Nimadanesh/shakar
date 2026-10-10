@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { EyeOff, Heart, Repeat, Bookmark, Share2, Check } from "lucide-react";
 import type { HuntDefinition, HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
 import { fa, pickVariant } from "@/lib/hunt-copy";
+import { matchLabel } from "@/lib/hunt-view-state";
 import { PriceToman } from "@/components/ui/PriceToman";
 import { clearActiveHunt, setActiveHunt } from "@/lib/active-hunt";
 
@@ -145,8 +146,14 @@ const ResultCard = memo(function ResultCard({
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 flex-1 break-words pe-4 text-sm font-medium leading-6">{ad.title}</h3>
           <span className="flex shrink-0 flex-col items-end gap-1">
-            <span className="rounded-md bg-zinc-900 px-2 py-0.5 text-[11px] text-white dark:bg-zinc-100 dark:text-zinc-900">
-              تأیید شد
+            <span
+              className={
+                ad.detailUnknown === true || ad.matchKind !== "exact"
+                  ? "rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] text-zinc-600 dark:border-zinc-800 dark:text-zinc-400"
+                  : "rounded-md bg-zinc-900 px-2 py-0.5 text-[11px] text-white dark:bg-zinc-100 dark:text-zinc-900"
+              }
+            >
+              {matchLabel(ad)}
             </span>
             {seen && (
               <span className="rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
@@ -240,6 +247,11 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
   const [results, setResults] = useState<ScoredAd[]>(() => initialCached?.results ?? []);
   const [stats, setStats] = useState<HuntStats | null>(() => initialCached?.stats ?? null);
   const [done, setDone] = useState(() => initialCached !== null);
+  // Honest progress only — real counts from real events. Result cards are
+  // never rendered from provisional batches; `results` is replaced exactly
+  // once from the terminal `done` event (see the stream handler below).
+  const [discovered, setDiscovered] = useState(0);
+  const [detailProgress, setDetailProgress] = useState<{ checked: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deepening, setDeepening] = useState(false);
   const [traceOpen, setTraceOpen] = useState(false);
@@ -278,7 +290,6 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
    */
   const esRef = useRef<EventSource | null>(null);
   const lineId = useRef(0);
-  const seenResults = useRef(new Set<string>());
 
   function handleStop() {
     esRef.current?.close();
@@ -568,9 +579,11 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           setCurrent("شکار شروع شد — دارم برات می‌گردم.");
           break;
         case "lists-progress":
+          setDiscovered(e.adsSeen);
           setCurrent(`دارم آگهی‌ها رو جمع می‌کنم... ${fa(e.adsSeen)} تا تا حالا`);
           break;
         case "lists-done":
+          setDiscovered(e.adsSeen);
           pushTrace(`${fa(e.adsSeen)} آگهی پیدا کردم.`, true);
           setCurrent(
             v("filter", [
@@ -600,26 +613,21 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           );
           break;
         case "details-batch": {
-          const fresh = e.confirmed.filter((ad) => {
-            if (seenResults.current.has(ad.sourceAdId)) return false;
-            seenResults.current.add(ad.sourceAdId);
-            return true;
-          });
-          if (fresh.length > 0) setResults((r) => [...r, ...fresh]);
+          // Progress only — never render provisional cards. The `confirmed`
+          // payload exists for the event contract (persistence/SSE replay)
+          // but must not move pixels before `done`.
+          setDetailProgress({ checked: e.checked, total: e.total });
           pushTrace(`${fa(e.checked)} از ${fa(e.total)} بررسی شد.`, true);
           setCurrent(
-            fresh.length > 0
-              ? "اینا تأیید شدن — می‌تونی شروع کنی. بقیه‌شون دارن بررسی می‌شن."
-              : v("detail", [
-                  "دارم توضیحات رو می‌خونم...",
-                  "دارم جزئیات آگهی‌ها رو با دقت بررسی می‌کنم...",
-                ])
+            `دارم آگهی‌های منتخب رو بررسی می‌کنم… ${fa(e.checked)} از ${fa(e.total)} آگهی بررسی شد`
           );
           break;
         }
         case "done":
           setStats(e.stats);
-          // Merge any stragglers, keep ranked order from the server.
+          // Single source of truth: replace the visible list wholesale in
+          // exactly the server's final order. Replays replace identically —
+          // cards can never duplicate or reshuffle after appearing.
           setResults(e.results);
           setDone(true);
           pushTrace("تموم شد.", true);
@@ -885,13 +893,61 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         </div>
       )}
 
-      {/* Streaming confirmed results — each card is tappable (detail),
-          favoritable and hideable. */}
+      {/* Waiting panel — progress, never provisional cards. Shown only
+          while the run is active; final cards render exactly once below. */}
+      {!done && !stopped && error === null && (
+        <section aria-live="polite" aria-label="پیشرفت شکار" className="mt-6">
+          {detailProgress !== null && detailProgress.total > 0 ? (
+            <div className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
+              <p className="text-[13px] leading-6 text-zinc-600 dark:text-zinc-400">
+                دارم آگهی‌های منتخب رو بررسی می‌کنم… {fa(detailProgress.checked)} از{" "}
+                {fa(detailProgress.total)} آگهی بررسی شد
+                {discovered > 0 && (
+                  <> — از میان {fa(discovered)} آگهی پیدا شده، فقط کاندیدهای منتخب بررسی می‌شن</>
+                )}
+              </p>
+              <div
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={detailProgress.total}
+                aria-valuenow={detailProgress.checked}
+                aria-label="پیشرفت بررسی آگهی‌ها"
+                className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800"
+              >
+                <div
+                  className="h-full rounded-full bg-zinc-900 transition-[width] duration-300 motion-reduce:transition-none dark:bg-zinc-100"
+                  style={{
+                    width: `${Math.min(100, (detailProgress.checked / detailProgress.total) * 100)}%`,
+                  }}
+                />
+              </div>
+              <div aria-hidden="true" className="mt-4 space-y-3">
+                <div className="h-20 animate-pulse rounded-lg bg-secondary motion-reduce:animate-none" />
+                <div className="h-20 animate-pulse rounded-lg bg-secondary motion-reduce:animate-none" />
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800" aria-busy="true">
+              <p className="text-[13px] leading-6 text-zinc-600 dark:text-zinc-400">
+                {discovered > 0
+                  ? `${fa(discovered)} آگهی پیدا شد — دارم مرتبط‌ترین‌ها رو جدا می‌کنم…`
+                  : "دارم برات می‌گردم…"}
+              </p>
+              <div aria-hidden="true" className="mt-4 space-y-3">
+                <div className="h-20 animate-pulse rounded-lg bg-secondary motion-reduce:animate-none" />
+                <div className="h-20 animate-pulse rounded-lg bg-secondary motion-reduce:animate-none" />
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Final results — rendered exactly once from the terminal `done`
+          event, in precisely the server-supplied order. No client re-sort,
+          no merge with provisional cards, stable keys by `sourceAdId`. */}
       {results.length > 0 && (
         <section className="mt-6">
-          <h2 className="mb-3 text-sm font-medium text-zinc-500">
-            {done ? `نتایج (${fa(visibleResults.length)})` : "تأییدشده‌ها — بقیه در راهن"}
-          </h2>
+          <h2 className="mb-3 text-sm font-medium text-zinc-500">نتایج ({fa(visibleResults.length)})</h2>
           <div className="space-y-3">
             {results.map((ad, i) =>
               hiddenIds.includes(ad.sourceAdId) ? (
