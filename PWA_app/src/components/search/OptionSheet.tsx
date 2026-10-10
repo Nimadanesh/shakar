@@ -8,7 +8,7 @@ import { normalizePersian } from "@/lib/normalizePersian";
 interface OptionSheetProps {
   open: boolean;
   title: string;
-  options: ReadonlyArray<{ value: string; label: string }>;
+  options: ReadonlyArray<{ value: string; label: string; searchText?: string }>;
   selected: string;
   onSelect: (value: string) => void;
   onClose: () => void;
@@ -50,9 +50,13 @@ export function OptionSheet({
   }
 
   const visible = useMemo(() => {
-    const needle = normalizePersian(query);
+    // ZWNJ-tolerant: «خرم آباد» (space) must find «خرم‌آباد», and Arabic
+    // variants fold the same way on both sides. Substring only — an unknown
+    // spelling honestly yields «شهری با این نام پیدا نشد», never a guess.
+    const fold = (s: string) => normalizePersian(s).replace(/‌/g, " ");
+    const needle = fold(query);
     if (!searchable || needle === "") return options;
-    return options.filter((opt) => normalizePersian(opt.label).includes(needle));
+    return options.filter((opt) => fold(opt.searchText ?? opt.label).includes(needle));
   }, [query, options, searchable]);
 
   return (

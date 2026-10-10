@@ -260,19 +260,21 @@ describe("taxonomy", () => {
     expect(CATEGORY_API_VALUE["real-estate"]).toBe("real-estate");
   });
 
-  it("resolves Tehran's slug to id 1 and caches the city list", async () => {
-    const calls = mockFetch((url: string) => {
-      if (url.includes("/places/cities"))
-        return okJson({ cities: [{ id: 1, slug: "tehran" }, { id: 2, slug: "karaj" }] });
-      return okJson(listJson());
+  it("resolves slugs from the canonical catalog without network", async () => {
+    // The catalog is the generated Divar response (`src/data/divar-places.ts`);
+    // resolution must not hit the network at all. Unknown slugs stay null
+    // here — callers use requireCityId so they never silently widen scope.
+    const calls = mockFetch(() => {
+      throw new Error("must not fetch");
     });
-    const { resolveCityId } = await import("./taxonomy");
-    const { clearCache } = await import("./cache");
-    clearCache();
+    const { resolveCityId, requireCityId } = await import("./taxonomy");
     expect(await resolveCityId("tehran")).toBe("1");
-    expect(await resolveCityId("karaj")).toBe("2");
+    expect(await resolveCityId("eslamshahr")).toBe("29");
     expect(await resolveCityId("unknown")).toBeNull();
-    expect(calls.filter((c) => c.url.includes("/places/cities"))).toHaveLength(1);
+    expect(await requireCityId("all")).toBe("");
+    expect(await requireCityId("tehran")).toBe("1");
+    await expect(requireCityId("unknown")).rejects.toMatchObject({ errorClass: "bad-request" });
+    expect(calls).toHaveLength(0);
   });
 });
 

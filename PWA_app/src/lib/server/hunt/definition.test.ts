@@ -130,6 +130,57 @@ describe("resolveHuntDefinition — the «پیانو» incident (2026-10-06)", (
   });
 });
 
+describe("resolveHuntDefinition — city conflicts (full catalog)", () => {
+  it("applies a newly supported small city from text", () => {
+    const def = resolveHuntDefinition(body({ query: "آپارتمان در اسلام‌شهر" }))!;
+    expect(def.city).toBe("eslamshahr");
+    expect(def.citySource).toBe("text");
+  });
+
+  it("keeps an explicit all-cities pick over an inferred city", () => {
+    const def = resolveHuntDefinition(
+      body({ query: "پیانو U3 تهران", city: "all", dismissed: ["city:tehran"] })
+    )!;
+    expect(def.city).toBe("all");
+    expect(def.citySource).toBe("picker");
+  });
+
+  it("leaves ambiguous multi-city queries unscoped with terms intact", () => {
+    const def = resolveHuntDefinition(body({ query: "آپارتمان تهران کرج" }))!;
+    expect(def.city).toBe("all");
+    expect(def.citySource).toBe("picker");
+    // Surface forms are matching-normalized (آ→ا), as elsewhere in HuntDefinition.
+    expect(def.include).toContain("اپارتمان");
+    expect(def.include).toContain("تهران");
+    expect(def.include).toContain("کرج");
+  });
+
+  it("keeps unknown place names intact instead of discarding them", () => {
+    const def = resolveHuntDefinition(body({ query: "پیانو در ناکجاآباد" }))!;
+    expect(def.city).toBe("all");
+    expect(def.include).toContain("ناکجااباد");
+    expect(def.include).toContain("پیانو");
+  });
+
+  it("drops only the applied city's names, not every mentioned place", () => {
+    // Picker pinned to Tehran; تبریز is mentioned but dismissed like an
+    // explicit override would. تهران (applied via picker city + text) drops;
+    // تبریز stays a content term rather than vanishing.
+    const def = resolveHuntDefinition(
+      body({ query: "پیانو تهران تبریز", city: "tehran", dismissed: ["city:tabriz", "city:tehran"] })
+    )!;
+    expect(def.city).toBe("tehran");
+    expect(def.include).not.toContain("تهران");
+    expect(def.include).toContain("تبریز");
+  });
+
+  it("serializes the resolved city for history and resume", () => {
+    const def = resolveHuntDefinition(body({ query: "آپارتمان در اسلام‌شهر" }))!;
+    expect(def.city).toBe("eslamshahr");
+    expect(def.query).toBe("آپارتمان در اسلام‌شهر");
+  });
+});
+
 describe("resolveHuntDefinition — SHOULD bucket (flaw #19, 2026-10-09)", () => {
   it("maps «ترجیحاً» wishes to should (ranking-only)", () => {
     const def = resolveHuntDefinition(body({ query: "گوشی ترجیحاً تمیز" }))!;

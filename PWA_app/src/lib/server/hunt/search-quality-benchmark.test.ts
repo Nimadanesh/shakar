@@ -45,7 +45,8 @@ describe("search quality metric calculations", () => {
   });
 
   it("rewards better ordering with nDCG@K", () => {
-    const ideal = evaluateRanking(["a", "b", "c"], labels, 3).ndcgAtK;
+    // Labels a=3,b=2,c=0,d=1: the true ideal top-3 is a,b,d (3,2,1).
+    const ideal = evaluateRanking(["a", "b", "d"], labels, 3).ndcgAtK;
     const poor = evaluateRanking(["c", "b", "a"], labels, 3).ndcgAtK;
     expect(ideal).toBeGreaterThan(poor);
     expect(ideal).toBeCloseTo(1);

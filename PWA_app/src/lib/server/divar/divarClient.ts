@@ -10,7 +10,7 @@ import {
 } from "./provider";
 import { divarFetch, type RequestKind } from "./throttle";
 import { getCached, getStale, setCached } from "./cache";
-import { CATEGORY_API_VALUE, resolveCityId } from "./taxonomy";
+import { CATEGORY_API_VALUE, requireCityId } from "./taxonomy";
 
 const API_BASE = "https://api.divar.ir/v8";
 const LIST_TTL_MS = 3 * 60 * 1000; // blueprint §3: list pages cache 2–5 min
@@ -351,7 +351,7 @@ export async function toListingQuery(opts: {
   page?: number;
 }): Promise<ListingQuery> {
   const categorySlug = CATEGORY_API_VALUE[opts.category] ?? "";
-  const cityId =
-    opts.citySlug === "all" ? "" : ((await resolveCityId(opts.citySlug)) ?? "");
+  // Unknown slugs throw instead of silently widening to all cities.
+  const cityId = await requireCityId(opts.citySlug);
   return { categorySlug, cityId, keywords: [], page: opts.page ?? 0 };
 }

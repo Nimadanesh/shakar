@@ -1,8 +1,7 @@
 import "server-only";
 
-import { divarFetch } from "./throttle";
-import { getCached, setCached } from "./cache";
-import type { DivarJson } from "./provider";
+import { DIVAR_PLACES } from "@/data/divar-places";
+import { ProviderError } from "./provider";
 
 /**
  * Taxonomy bridge: Shekaar's categories/cities → Divar's API values.
@@ -27,38 +26,31 @@ export const LEAF_CATEGORY = {
   tvProjector: "tv-projector",
 } as const;
 
-const CITY_TTL_MS = 24 * 60 * 60 * 1000;
-
-interface DivarCity {
-  id: number;
-  slug: string;
+/**
+ * Shekaar city slug ("tehran") → Divar numeric city id ("1"), resolved from
+ * the canonical catalog (`src/data/divar-places.ts`, generated from Divar's
+ * official place response) — no network, no drift from the picker.
+ * Returns null only when the slug is genuinely absent from the catalog
+ * (stale stored value or hand-crafted input). Callers must NOT silently
+ * fall back to all-cities in that case — use `requireCityId` so the
+ * failure stays visible instead of searching the wrong scope.
+ */
+export async function resolveCityId(slug: string): Promise<string | null> {
+  const match = DIVAR_PLACES.find((c) => c.slug === slug);
+  return match ? String(match.id) : null;
 }
 
 /**
- * Shekaar city slug ("tehran") → Divar numeric city id ("1").
- * Resolved once from /v8/places/cities and cached for 24h — never
- * hardcoded, so Divar-side id changes can't silently break search.
- * Returns null when the slug is unknown (caller falls back to all-cities).
+ * Strict variant for hunt execution paths: "all" resolves to "" (every
+ * city, explicitly requested); any other slug resolves to its Divar id.
+ * Throws a `bad-request` ProviderError for an unrecognized slug instead
+ * of silently running an all-city hunt the user never asked for.
  */
-export async function resolveCityId(slug: string): Promise<string | null> {
-  const key = "divar:cities";
-  let cities = getCached<DivarCity[]>(key);
-  if (!cities) {
-    const json: unknown = await divarFetch("https://api.divar.ir/v8/places/cities", {
-      method: "GET",
-      kind: "meta",
-    });
-    const rawCities: unknown[] = Array.isArray((json as DivarJson)?.cities)
-      ? ((json as DivarJson).cities as unknown[])
-      : [];
-    cities = rawCities
-      .filter(
-        (c): c is DivarCity =>
-          typeof (c as DivarCity)?.id === "number" && typeof (c as DivarCity)?.slug === "string"
-      )
-      .map((c) => ({ id: c.id, slug: c.slug }));
-    setCached(key, cities, CITY_TTL_MS);
+export async function requireCityId(slug: string): Promise<string> {
+  if (slug === "all" || slug === "") return "";
+  const id = await resolveCityId(slug);
+  if (id === null) {
+    throw new ProviderError("bad-request", `Unknown city slug: ${slug}`);
   }
-  const match = cities.find((c) => c.slug === slug);
-  return match ? String(match.id) : null;
+  return id;
 }

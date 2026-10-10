@@ -18,13 +18,14 @@ import {
   cityLabel,
 } from "@/data/taxonomy";
 import { interpretQuery } from "@/lib/interpret";
+import { citySearchText } from "@/lib/places";
 import {
   getDimensionStatuses,
   isDimensionsBlocking,
   type DimensionId,
 } from "@/lib/dimensions";
 import { recordHunt } from "@/lib/hunt-store";
-import { fireRealHunt } from "@/lib/hunt-fire";
+import { fireRealHunt, planFireCity } from "@/lib/hunt-fire";
 import { getHomeCity } from "@/lib/home-city";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
@@ -136,12 +137,13 @@ export function HuntSetup() {
       .filter((c) => c.kind === "exclude" && live(c.id) && !base.exclude.includes(c.value))
       .map((c) => ({ id: c.id, value: c.value, label: c.display }));
     const cityC = liveInterp.applied.find((c) => c.kind === "city" && live(c.id));
-    // A city named in the text is flagged (dashed «حدسی») whenever it
-    // differs from the current selection — including a remembered default.
-    // The text is the freshest signal, so it wins at fire time unless
-    // dismissed; the dashed display is the visible conflict flag.
+    // A city named in the text is flagged (dashed «حدسی») only while the
+    // picker is untouched: an untouched home/remembered default loses to
+    // the freshest signal (the piano hunt showed تهران but searched
+    // تبریز), but an explicit hand-pick — including «همه شهرها» — always
+    // wins and must not be contradicted by a dashed guess.
     const city =
-      cityC && cityC.value !== base.city
+      !cityTouched && cityC && cityC.value !== base.city
         ? { id: cityC.id, value: cityC.value, display: cityC.display }
         : null;
     const minC = liveInterp.applied.find((c) => c.kind === "priceMin" && live(c.id));
@@ -155,7 +157,7 @@ export function HuntSetup() {
         ? { id: maxC.id, value: maxC.value, display: maxC.display }
         : null;
     return { excludes, city, priceMin, priceMax };
-  }, [liveInterp, dismissed, base]);
+  }, [liveInterp, dismissed, base, cityTouched]);
 
   /**
    * THE single hunt event. The curated form becomes a persistent hunt
@@ -230,13 +232,20 @@ export function HuntSetup() {
     // /hunt/[runId].
     //
     // Fire-time merge (navid 2026-10-08): the city row SHOWED the dashed
-    // inferred city — the hunt must run where the UI said. The text wins
-    // unless dismissed (inferred.city is already null then). Without this
-    // the piano hunt displayed تهران but searched تبریز.
-    const fireBase =
-      inferred.city !== null ? { ...base, city: inferred.city.value } : base;
+    // inferred city — the hunt must run where the UI said. planFireCity
+    // keeps the hand-pick-wins/text-wins contract in one tested place.
+    const { city: fireCity, dismissed: fireDismissed } = planFireCity({
+      baseCity: base.city,
+      cityTouched,
+      inferredCity: inferred.city,
+      liveCityIds: liveInterp
+        ? liveInterp.applied.filter((c) => c.kind === "city").map((c) => c.id)
+        : [],
+      dismissed,
+    });
+    const fireBase = fireCity !== base.city ? { ...base, city: fireCity } : base;
     try {
-      const result = await fireRealHunt({ query: trimmed, base: fireBase, dismissed });
+      const result = await fireRealHunt({ query: trimmed, base: fireBase, dismissed: fireDismissed });
       if (!result.ok) {
         if (result.quotaError) setQuotaError(result.quotaError);
         setFiring(false);
@@ -248,7 +257,7 @@ export function HuntSetup() {
       // (Every firing is a paid event, even if the stream is abandoned.)
       // NOTE: record the MERGED base — history must show the city the hunt
       // really ran in, not the untouched picker value.
-      recordHunt(trimmed, fireBase, dismissed, result.runId);
+      recordHunt(trimmed, fireBase, fireDismissed, result.runId);
       // Quota changed on the server — drop the shared usage cache so the
       // button state re-reads fresh numbers on the next mount.
       invalidateUsage();
@@ -549,7 +558,7 @@ export function HuntSetup() {
       <OptionSheet
         open={cityOpen}
         title="شهر"
-        options={CITIES}
+        options={CITIES.map((c) => ({ ...c, searchText: citySearchText(c.value) }))}
         selected={base.city}
         onSelect={(value) => {
           setBase((b) => ({ ...b, city: value }));

@@ -4,12 +4,12 @@ import type { HuntDefinition } from "./pipeline";
 import {
   detectCategoryFromText,
   interpretQuery,
-  KNOWN_CITIES,
   PREFERENCE_CUES,
   NEGATION_VERBS,
   EXCLUDE_PREFIXES,
   PRICE_STRUCTURAL_WORDS,
 } from "@/lib/interpret";
+import { placeNamesForSlug } from "@/lib/places";
 import { normalizeForMatch, stemToken, tokenize } from "@/lib/persianNormalize";
 import type { InterpretedConstraint } from "@/types/search";
 
@@ -61,7 +61,11 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
  *     include) — «پیانو U3 تهران» names پیانو AND U3; matched terms score,
  *     unmatched terms become UNKNOWN (near-miss), never a silent drop
  *     (flaw #19, 2026-10-09);
- *  2. a city named in the text applies when the picker is "all";
+ *  2. a city named in the text applies when the picker is "all" — an
+ *     explicit picker choice (including "all") always wins: the client
+ *     dismisses query-city inferences on hand-pick, so only surviving
+ *     constraints apply. Multiple distinct city mentions apply nothing
+ *     (ambiguous — raw terms stay intact, never guessed);
  *  3. a category named in the text («آپارتمان» → real-estate) applies when
  *     the picker is "all" — without this the provider scans every category
  *     and the 500-ad window dilutes to ~27 apartments (flaw #10,
@@ -72,8 +76,9 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
  *  7. preference cues («ترجیحاً») become SHOULD — ranking boost only,
  *     never a filter (flaw #19).
  *
- * Structural words (city names, price expressions, cue words, excludes,
- * preference wishes) never become content terms.
+ * Structural words (applied city names, price expressions, cue words,
+ * excludes, preference wishes) never become content terms. Unapplied or
+ * unknown place names stay intact.
  */
 export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   const def = toHuntDefinition(body);
@@ -86,7 +91,12 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   );
 
   // 1. Mandatory content terms from the query text.
-  const terms = contentTerms(def.query, applied, interp.preferences);
+  // The effective city filter decides which place names are structural:
+  // an applied query city, else an explicit picker city. Merely mentioned
+  // (ambiguous/dismissed) or unknown places stay intact as content terms.
+  const cityC = applied.find((c) => c.kind === "city");
+  const filterCity = cityC ? cityC.value : def.city !== "all" ? def.city : null;
+  const terms = contentTerms(def.query, applied, interp.preferences, filterCity);
   const seenTerms = new Set<string>();
   for (const t of def.include) for (const s of tokenize(t)) seenTerms.add(s);
   const include = [...def.include];
@@ -100,11 +110,11 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
 
   // 2. City: the query text is the freshest signal. An explicit city word
   // beats a stored/remembered picker value (navid 2026-10-08 — the piano
-  // hunt's row SHOWED تهران but the hunt searched تبریز because the
+  // hunt's row SHOWED تهران but searched تبریز because the
   // remembered picker silently won). A dismissed inference never reaches
   // `applied`, and an explicit picker choice dismisses the inference
   // client-side — so a surviving conflict always resolves to the text.
-  const cityC = applied.find((c) => c.kind === "city");
+  // (cityC was resolved above for content-term dropping; reused here.)
   const city = cityC ? cityC.value : def.city;
   const citySource = cityC ? ("text" as const) : ("picker" as const);
 
@@ -193,7 +203,8 @@ function getDismissedIds(body: unknown): string[] {
 function contentTerms(
   query: string,
   applied: InterpretedConstraint[],
-  preferences: InterpretedConstraint[]
+  preferences: InterpretedConstraint[],
+  filterCity: string | null
 ): string[] {
   const surface = normalizeForMatch(query)
     .split(" ")
@@ -203,12 +214,20 @@ function contentTerms(
   const drop = (text: string) => {
     for (const t of tokenize(text)) structural.add(t);
   };
-  // NOTE: city names drop at TOKEN level («خرم آباد» drops both «خرم» and
-  // «آباد»), so «آباد» never becomes a content term. That's recall-safe
-  // (place suffixes are weak terms) but slightly imprecise for X+آباد
-  // place queries («شهرک آباد» vs «شهرک غرب»). Phrase-level dropping is
-  // the future refinement — see docs/output-quality.md flaw #8 note.
-  for (const city of KNOWN_CITIES) for (const name of city.names) drop(name);
+  // NOTE: city names drop at TOKEN level («خرم آباد» drops both «خرم»
+  // and «آباد»), so «آباد» never becomes a content term for the city that
+  // is actually filtering. Names of merely mentioned but unapplied cities
+  // (ambiguous queries, overridden inferences) and unknown words stay
+  // intact as content terms — stripping them would silently lose the
+  // user's keywords. Slight imprecision for X+آباد place queries
+  // («شهرک آباد» vs «شهرک غرب») is the known trade-off — see
+  // docs/output-quality.md flaw #8 note.
+  const appliedCity = applied.find((c) => c.kind === "city");
+  if (appliedCity) for (const name of placeNamesForSlug(appliedCity.value)) drop(name);
+  // An explicit picker city is equally structural when no query city won:
+  // «پیانو تهران» with the picker on تهران must not gain تهران as an item
+  // keyword. (filterCity already equals the applied city in that case.)
+  if (!appliedCity && filterCity) for (const name of placeNamesForSlug(filterCity)) drop(name);
   for (const w of NEGATION_VERBS) drop(w);
   for (const p of EXCLUDE_PREFIXES) drop(p);
   for (const w of PRICE_STRUCTURAL_WORDS) drop(w);

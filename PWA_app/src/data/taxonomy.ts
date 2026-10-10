@@ -1,5 +1,9 @@
 // Static taxonomy for Phase 1 (no backend taxonomy yet).
-// Values must stay consistent with interpret.ts KNOWN_CITIES.
+// City values stay consistent with interpret.ts KNOWN_CITIES: both derive
+// from the single source of truth (`src/data/divar-places.ts`, generated
+// from Divar's official place catalog — 1,177 places).
+
+import { DIVAR_PLACES } from "./divar-places";
 
 export const CATEGORIES = [
   { value: "all", label: "همه دسته‌ها" },
@@ -10,99 +14,11 @@ export const CATEGORIES = [
   { value: "home", label: "خانه و آشپزخانه" },
 ] as const;
 
-export const CITIES = [
+export const CITIES: ReadonlyArray<{ readonly value: string; readonly label: string }> = [
   { value: "all", label: "همه شهرها" },
-  // Provincial capitals first (verified Divar slugs 2026-10-08).
-  { value: "tehran", label: "تهران" },
-  { value: "mashhad", label: "مشهد" },
-  { value: "isfahan", label: "اصفهان" },
-  { value: "karaj", label: "کرج" },
-  { value: "shiraz", label: "شیراز" },
-  { value: "tabriz", label: "تبریز" },
-  { value: "ahvaz", label: "اهواز" },
-  { value: "qom", label: "قم" },
-  { value: "kermanshah", label: "کرمانشاه" },
-  { value: "urmia", label: "ارومیه" },
-  { value: "rasht", label: "رشت" },
-  { value: "zahedan", label: "زاهدان" },
-  { value: "hamadan", label: "همدان" },
-  { value: "kerman", label: "کرمان" },
-  { value: "yazd", label: "یزد" },
-  { value: "ardabil", label: "اردبیل" },
-  { value: "bandar-abbas", label: "بندرعباس" },
-  { value: "arak", label: "اراک" },
-  { value: "zanjan", label: "زنجان" },
-  { value: "qazvin", label: "قزوین" },
-  { value: "sanandaj", label: "سنندج" },
-  { value: "khorramabad", label: "خرم‌آباد" },
-  { value: "gorgan", label: "گرگان" },
-  { value: "sari", label: "ساری" },
-  { value: "bushehr", label: "بوشهر" },
-  { value: "birjand", label: "بیرجند" },
-  { value: "ilam", label: "ایلام" },
-  { value: "shahrekord", label: "شهرکرد" },
-  { value: "yasuj", label: "یاسوج" },
-  { value: "semnan", label: "سمنان" },
-  { value: "bojnurd", label: "بجنورد" },
-  // Major satellites and large cities (verified Divar slugs 2026-10-08).
-  { value: "kashan", label: "کاشان" },
-  { value: "dezful", label: "دزفول" },
-  { value: "kish", label: "کیش" },
-  { value: "abadan", label: "آبادان" },
-  { value: "najafabad", label: "نجف‌آباد" },
-  { value: "khomeyni-shahr", label: "خمینی‌شهر" },
-  { value: "shahin-shahr", label: "شاهین‌شهر" },
-  { value: "eslamshahr", label: "اسلام‌شهر" },
-  { value: "shahriar-city", label: "شهریار" },
-  { value: "pakdasht-city", label: "پاکدشت" },
-  { value: "nazarabad", label: "نظرآباد" },
-  { value: "eshtehard", label: "اشتهارد" },
-  { value: "abyek", label: "آبیک" },
-  { value: "alvand", label: "الوند" },
-  { value: "takestan", label: "تاکستان" },
-  { value: "khorramdarreh", label: "خرمدره" },
-  { value: "abhar", label: "ابهر" },
-  { value: "mahabad", label: "مهاباد" },
-  { value: "miandoab", label: "میاندوآب" },
-  { value: "bukan", label: "بوکان" },
-  { value: "sardasht", label: "سردشت" },
-  { value: "salmas", label: "سلماس" },
-  { value: "khoy", label: "خوی" },
-  { value: "marand", label: "مرند" },
-  { value: "maragheh", label: "مراغه" },
-  { value: "parsabad", label: "پارس‌آباد" },
-  { value: "khalkhal", label: "خلخال" },
-  { value: "germi", label: "گرمی" },
-  { value: "astara", label: "آستارا" },
-  { value: "talesh", label: "تالش" },
-  { value: "lahijan", label: "لاهیجان" },
-  { value: "langarud", label: "لنگرود" },
-  { value: "bandar-anzali", label: "بندر انزلی" },
-  { value: "someh-sara", label: "صومعه‌سرا" },
-  { value: "fuman", label: "فومن" },
-  { value: "rezvanshahr", label: "رضوانشهر" },
-  { value: "amol", label: "آمل" },
-  { value: "babol", label: "بابل" },
-  { value: "babolsar", label: "بابلسر" },
-  { value: "qaem-shahr", label: "قائم‌شهر" },
-  { value: "chalus", label: "چالوس" },
-  { value: "tonekabon", label: "تنکابن" },
-  { value: "ramsar", label: "رامسر" },
-  { value: "juybar", label: "جویبار" },
-  { value: "sabzevar", label: "سبزوار" },
-  { value: "torbat-heydariyeh", label: "تربت‌حیدریه" },
-  { value: "quchan", label: "قوچان" },
-  { value: "gonabad", label: "گناباد" },
-  { value: "kasmar", label: "کاشمر" },
-  { value: "tabas", label: "طبس" },
-  { value: "ghayen", label: "قائن" },
-  { value: "sarbisheh", label: "سربیشه" },
-  { value: "zirkouh", label: "زیرکوه" },
-  { value: "khusf", label: "خوسف" },
-  { value: "darmiyan", label: "درمیان" },
-  { value: "zohan", label: "زهان" },
-  { value: "kazeroon", label: "کازرون" },
-] as const;
+  // Official Divar order (major places first), verified labels + slugs.
+  ...DIVAR_PLACES.map((p) => ({ value: p.slug, label: p.name })),
+];
 
 export function cityLabel(cityId: string): string {
   return CITIES.find((c) => c.value === cityId)?.label ?? cityId;

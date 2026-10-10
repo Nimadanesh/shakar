@@ -22,6 +22,10 @@ vi.mock("../divar/taxonomy", () => ({
     apartmentRent: "apartment-rent",
   },
   resolveCityId: vi.fn(async () => "1"),
+  // Mirrors requireCityId semantics (all → "", known → id); the visible
+  // throw for unknown slugs is covered against the real module in
+  // city-resolution.test.ts.
+  requireCityId: vi.fn(async (slug: string) => (slug === "all" || slug === "" ? "" : "1")),
 }));
 
 import { divarProvider } from "../divar/divarClient";

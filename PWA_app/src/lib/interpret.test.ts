@@ -108,6 +108,34 @@ describe("interpretQuery", () => {
   });
 });
 
+describe("city inference from the full place catalog", () => {
+  it("infers previously missing cities (small and satellite)", () => {
+    expect(ids("آپارتمان در اسلام‌شهر")).toContain("city:eslamshahr");
+    expect(ids("خونه در آبیک")).toContain("city:abyek");
+    expect(ids("مغازه در یونسی")).toContain("city:younesi");
+  });
+
+  it("matches ZWNJ/space and Alef spelling variants", () => {
+    expect(ids("سوئیت در خرم آباد")).toContain("city:khorramabad");
+    expect(ids("خونه در آبادان")).toContain("city:abadan");
+  });
+
+  it("applies nothing when several distinct cities are named (no silent guess)", () => {
+    const multi = ids("آپارتمان تهران کرج");
+    expect(multi.filter((id) => id.startsWith("city:"))).toEqual([]);
+  });
+
+  it("applies nothing for the shared سیروان name (sirvan vs sirvan-city)", () => {
+    const found = ids("خانه در سیروان");
+    expect(found.filter((id) => id.startsWith("city:"))).toEqual([]);
+  });
+
+  it("leaves unknown place names without a city constraint", () => {
+    const found = ids("پیانو در ناکجاآباد");
+    expect(found.filter((id) => id.startsWith("city:"))).toEqual([]);
+  });
+});
+
 describe("mentionsRealEstate", () => {
   it("spots real-estate mentions", async () => {
     const { mentionsRealEstate } = await import("@/lib/interpret");

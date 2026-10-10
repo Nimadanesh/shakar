@@ -9,7 +9,7 @@ import {
   type ListingSummary,
 } from "../divar/provider";
 import { divarProvider } from "../divar/divarClient";
-import { CATEGORY_API_VALUE, LEAF_CATEGORY, resolveCityId } from "../divar/taxonomy";
+import { CATEGORY_API_VALUE, LEAF_CATEGORY, requireCityId } from "../divar/taxonomy";
 import { parsePriceBound } from "./definition";
 
 /**
@@ -450,7 +450,10 @@ export async function collectCandidates(
       : def.category === "real-estate" && def.transaction === "buy"
         ? LEAF_CATEGORY.apartmentSell
         : (CATEGORY_API_VALUE[def.category] ?? "");
-  const cityId = def.city !== "all" ? await resolveCityId(def.city) : null;
+  // A selected city must never silently become a different city or an
+  // all-city search because resolution failed: unknown slugs throw
+  // visibly via requireCityId. "All cities" is valid only when requested.
+  const cityId = await requireCityId(def.city);
   const all: ListingSummary[] = [];
   let pagesDone = 0;
   let cursor: unknown = opts.startCursor;
@@ -460,7 +463,7 @@ export async function collectCandidates(
     try {
       res = await divarProvider.searchLists({
         categorySlug,
-        cityId: cityId ?? "",
+        cityId: cityId,
         // The hunt's content terms scope the list phase server-side
         // (flaw #11): without this we only ever see the freshest N ads of
         // everything, and older relevant inventory is unreachable.

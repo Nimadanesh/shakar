@@ -10,6 +10,33 @@ export interface FireHuntInput {
   dismissed: ReadonlySet<string> | string[];
 }
 
+/**
+ * City resolution for the fire event (pure, tested). Rules:
+ * - Untouched picker + live query-city inference → the inferred city wins
+ *   (the text is the freshest signal; the dashed row already showed it).
+ * - Hand-picked city (cityTouched, including «همه شهرها») → the pick wins;
+ *   any live query-city inference is dismissed so the server cannot
+ *   re-apply an overridden guess. A query typed after the pick gets fresh
+ *   ids, so only the pick-time inference is silenced, never future ones.
+ * - No inference → the pick stands as-is.
+ */
+export function planFireCity(args: {
+  baseCity: string;
+  cityTouched: boolean;
+  inferredCity: { id: string; value: string } | null;
+  liveCityIds: string[];
+  dismissed: ReadonlySet<string>;
+}): { city: string; dismissed: Set<string> } {
+  if (!args.cityTouched && args.inferredCity) {
+    return { city: args.inferredCity.value, dismissed: new Set(args.dismissed) };
+  }
+  const next = new Set(args.dismissed);
+  if (args.cityTouched) {
+    for (const id of args.liveCityIds) next.add(id);
+  }
+  return { city: args.baseCity, dismissed: next };
+}
+
 export type FireHuntResult =
   | { ok: true; runId: string }
   | { ok: false; quotaError: string | null };

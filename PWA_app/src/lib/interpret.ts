@@ -1,56 +1,21 @@
 import { normalizePersian } from "@/lib/normalizePersian";
 import type { Interpretation, InterpretedConstraint } from "@/types/search";
+import { findMentionedPlaceSlugs, KNOWN_PLACES, placeLabel } from "@/lib/places";
 
-/** Cities the interpreter can spot inside query text. Exported for the
- * server-side query resolver (definition.ts) — the same vocabulary must
- * decide what is a city in both places. */
-export const KNOWN_CITIES: Array<{ id: string; names: string[] }> = [
-  { id: "tehran", names: ["تهران"] },
-  { id: "karaj", names: ["کرج"] },
-  { id: "isfahan", names: ["اصفهان"] },
-  { id: "shiraz", names: ["شیراز"] },
-  { id: "mashhad", names: ["مشهد"] },
-  { id: "tabriz", names: ["تبریز"] },
-  { id: "ahvaz", names: ["اهواز"] },
-  { id: "qom", names: ["قم"] },
-  { id: "kermanshah", names: ["کرمانشاه"] },
-  { id: "urmia", names: ["ارومیه", "اورمیه"] },
-  { id: "rasht", names: ["رشت"] },
-  { id: "zahedan", names: ["زاهدان"] },
-  { id: "hamadan", names: ["همدان"] },
-  { id: "kerman", names: ["کرمان"] },
-  { id: "yazd", names: ["یزد"] },
-  { id: "ardabil", names: ["اردبیل"] },
-  { id: "bandar-abbas", names: ["بندرعباس", "بندر عباس"] },
-  { id: "arak", names: ["اراک"] },
-  { id: "zanjan", names: ["زنجان"] },
-  { id: "qazvin", names: ["قزوین"] },
-  { id: "sanandaj", names: ["سنندج"] },
-  { id: "khorramabad", names: ["خرم‌آباد", "خرم آباد"] },
-  { id: "gorgan", names: ["گرگان"] },
-  { id: "sari", names: ["ساری"] },
-  { id: "bushehr", names: ["بوشهر"] },
-  { id: "birjand", names: ["بیرجند"] },
-  { id: "ilam", names: ["ایلام"] },
-  { id: "shahrekord", names: ["شهرکرد"] },
-  { id: "yasuj", names: ["یاسوج"] },
-  { id: "semnan", names: ["سمنان"] },
-  { id: "bojnurd", names: ["بجنورد"] },
-  { id: "kashan", names: ["کاشان"] },
-  { id: "dezful", names: ["دزفول"] },
-  { id: "kish", names: ["کیش"] },
-];
+/** Cities the interpreter can spot inside query text. Derived from the
+ * single source of truth (`src/data/divar-places.ts` via `@/lib/places`)
+ * — the same vocabulary the picker, the definition resolver, and the
+ * server-side Divar resolution all use, so the lists cannot drift apart.
+ * `names[0]` is always the official display name; the rest are
+ * orthographic variants and preserved aliases (match-only). */
+export const KNOWN_CITIES: Array<{ id: string; names: string[] }> = KNOWN_PLACES.map((p) => ({
+  id: p.slug,
+  names: [...p.names],
+}));
 
-/**
- * Word-boundary city mention check. Plain substring matching would fire
- * «رشت» inside «درشت» — with 28 cities in the lexicon that class of false
- * positive is no longer negligible. Persian words are space-separated
- * (ZWNJ stays inside a word), so (^|\s)…(\s|$) is the right boundary.
- */
-/** City-name check — a thin wrapper over the shared word-boundary helper. */
-function mentionsCity(normalized: string, name: string): boolean {
-  return includesWord(normalized, name);
-}
+/** Word-boundary city mention check lives in `@/lib/places`
+ * (`findMentionedPlaceSlugs`) so the picker, interpretation, and definition
+ * normalization share one implementation. */
 
 const UNIT_MULTIPLIER: Array<{ unit: string; factor: number }> = [
   { unit: "میلیارد", factor: 1_000_000_000 },
@@ -281,18 +246,22 @@ export function interpretQuery(raw: string): Interpretation {
   const normalized = normalizePersian(raw);
   if (normalized === "") return { version: "v1", applied, preferences };
 
-  for (const city of KNOWN_CITIES) {
-    if (city.names.some((name) => mentionsCity(normalized, name))) {
-      pushUnique(applied, {
-        id: `city:${city.id}`,
-        kind: "city",
-        value: city.id,
-        display: city.names[0],
-        source: "inferred",
-        applied: true,
-      });
-      break;
-    }
+  // City mentions: collect EVERY distinct supported place named in the
+  // query (catalog order). Exactly one → a confident inferred constraint.
+  // Two or more → ambiguous: apply NOTHING rather than silently guessing.
+  // The raw query stays intact downstream (see definition.ts: unapplied
+  // city names are never stripped from content terms).
+  const mentionedCities = findMentionedPlaceSlugs(normalized);
+  if (mentionedCities.length === 1) {
+    const cityId = mentionedCities[0];
+    pushUnique(applied, {
+      id: `city:${cityId}`,
+      kind: "city",
+      value: cityId,
+      display: placeLabel(cityId),
+      source: "inferred",
+      applied: true,
+    });
   }
 
   const transaction = detectTransaction(raw);
