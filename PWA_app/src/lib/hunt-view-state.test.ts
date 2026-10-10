@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { HuntEvent, ScoredAd } from "@/lib/server/hunt/pipeline";
-import { applyHuntViewEvent, createHuntViewState, matchLabel } from "./hunt-view-state";
+import { applyHuntViewEvent, createHuntViewState, markViewDone, matchLabel } from "./hunt-view-state";
 
 function ad(over: Partial<ScoredAd> & { sourceAdId: string }): ScoredAd {
   return {
@@ -48,6 +48,15 @@ describe("hunt view state — never show provisional cards", () => {
     const replay = applyHuntViewEvent(s, { type: "done", results: first, stats: {} as never } as HuntEvent);
     expect(replay.results.map((r) => r.sourceAdId)).toEqual(["b", "a"]);
     expect(replay.results).toHaveLength(2);
+  });
+
+  it("markViewDone shares replace-once semantics for non-event completion", () => {
+    let s = createHuntViewState(null);
+    s = markViewDone(s, [ad({ sourceAdId: "a" })]);
+    expect(s.results.map((r) => r.sourceAdId)).toEqual(["a"]);
+    expect(s.done).toBe(true);
+    const again = markViewDone(s, [ad({ sourceAdId: "a" })]);
+    expect(again.results).toHaveLength(1);
   });
 
   it("tracks discovered vs shortlisted honestly without implying review", () => {

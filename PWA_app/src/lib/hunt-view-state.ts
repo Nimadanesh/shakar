@@ -32,6 +32,14 @@ export function createHuntViewState(cached: { results: ScoredAd[] } | null): Hun
 }
 
 /**
+ * Non-event completion path (status-fetch for an already-finished run,
+ * failed runs): same replace-once semantics as the `done` event.
+ */
+export function markViewDone(state: HuntViewState, results: ScoredAd[]): HuntViewState {
+  return { ...state, results: [...results], done: true };
+}
+
+/**
  * Fold one pipeline event into view state. Pure and idempotent:
  * - `details-batch` never appends `confirmed` cards (progress only).
  * - `done` replaces the list wholesale in server order (repeat-safe).

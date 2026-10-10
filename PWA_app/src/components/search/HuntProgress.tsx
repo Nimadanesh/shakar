@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { EyeOff, Heart, Repeat, Bookmark, Share2, Check } from "lucide-react";
 import type { HuntDefinition, HuntEvent, HuntStats, ScoredAd } from "@/lib/server/hunt/pipeline";
 import { fa, pickVariant } from "@/lib/hunt-copy";
-import { matchLabel } from "@/lib/hunt-view-state";
+import { applyHuntViewEvent, createHuntViewState, markViewDone, matchLabel } from "@/lib/hunt-view-state";
 import { PriceToman } from "@/components/ui/PriceToman";
 import { clearActiveHunt, setActiveHunt } from "@/lib/active-hunt";
 
@@ -244,14 +244,16 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         : "چیزی که دقیقاً بخوره به مشخصاتت پیدا نکردم."
       : "شکار شروع شد — دارم برات می‌گردم."
   );
-  const [results, setResults] = useState<ScoredAd[]>(() => initialCached?.results ?? []);
+  // Single view state folded through tested pure helpers
+  // (`createHuntViewState` / `applyHuntViewEvent` / `markViewDone`):
+  // provisional batches advance progress only; the visible list is
+  // replaced exactly once from terminal completion, in server order.
+  const [view, setView] = useState(() => createHuntViewState(initialCached));
+  const results = view.results;
+  const done = view.done;
+  const discovered = view.discovered;
+  const detailProgress = view.total > 0 || view.checked > 0 ? { checked: view.checked, total: view.total } : null;
   const [stats, setStats] = useState<HuntStats | null>(() => initialCached?.stats ?? null);
-  const [done, setDone] = useState(() => initialCached !== null);
-  // Honest progress only — real counts from real events. Result cards are
-  // never rendered from provisional batches; `results` is replaced exactly
-  // once from the terminal `done` event (see the stream handler below).
-  const [discovered, setDiscovered] = useState(0);
-  const [detailProgress, setDetailProgress] = useState<{ checked: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deepening, setDeepening] = useState(false);
   const [traceOpen, setTraceOpen] = useState(false);
@@ -515,9 +517,8 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
         if (data?.definition) setDefinition(data.definition);
         if (data && (data.status === "done" || data.status === "failed")) {
           const doneResults = Array.isArray(data.results) ? data.results : [];
-          setResults(doneResults);
+          setView((prev) => markViewDone(prev, doneResults));
           if (data.stats) setStats(data.stats);
-          setDone(true);
           // The journey, not just "done": when the user opens جزئیات on a
           // completed hunt, they see the work that was done — reconstructed
           // honestly from the persisted stats (navid 2026-10-08).
@@ -579,11 +580,11 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           setCurrent("شکار شروع شد — دارم برات می‌گردم.");
           break;
         case "lists-progress":
-          setDiscovered(e.adsSeen);
+          setView((prev) => applyHuntViewEvent(prev, e));
           setCurrent(`دارم آگهی‌ها رو جمع می‌کنم... ${fa(e.adsSeen)} تا تا حالا`);
           break;
         case "lists-done":
-          setDiscovered(e.adsSeen);
+          setView((prev) => applyHuntViewEvent(prev, e));
           pushTrace(`${fa(e.adsSeen)} آگهی پیدا کردم.`, true);
           setCurrent(
             v("filter", [
@@ -593,6 +594,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           );
           break;
         case "ranked":
+          setView((prev) => applyHuntViewEvent(prev, e));
           pushTrace(
             `${fa(e.scored)} آگهی رو مرور کردم — ${fa(e.shortlisted)} تای مرتبط‌تر رو جدا کردم${e.excluded > 0 ? ` (${fa(e.excluded)} تا با «نباید»هات حذف شد)` : ""}.`,
             true
@@ -600,6 +602,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           setCurrent("حالا دارم توضیحاتشون رو یکی‌یکی می‌خونم...");
           break;
         case "candidates":
+          setView((prev) => applyHuntViewEvent(prev, e));
           pushTrace(
             `${fa(e.count)} کاندید موندن${e.dupsCollapsed > 0 ? ` (${fa(e.dupsCollapsed)} تکراری حذف شد)` : ""} — حالا دارم توضیحاتشون رو می‌خونم.`,
             true
@@ -616,7 +619,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           // Progress only — never render provisional cards. The `confirmed`
           // payload exists for the event contract (persistence/SSE replay)
           // but must not move pixels before `done`.
-          setDetailProgress({ checked: e.checked, total: e.total });
+          setView((prev) => applyHuntViewEvent(prev, e));
           pushTrace(`${fa(e.checked)} از ${fa(e.total)} بررسی شد.`, true);
           setCurrent(
             `دارم آگهی‌های منتخب رو بررسی می‌کنم… ${fa(e.checked)} از ${fa(e.total)} آگهی بررسی شد`
@@ -628,8 +631,7 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           // Single source of truth: replace the visible list wholesale in
           // exactly the server's final order. Replays replace identically —
           // cards can never duplicate or reshuffle after appearing.
-          setResults(e.results);
-          setDone(true);
+          setView((prev) => applyHuntViewEvent(prev, e));
           pushTrace("تموم شد.", true);
           setCurrent(
             e.results.length > 0
