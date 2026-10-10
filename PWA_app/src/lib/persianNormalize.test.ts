@@ -4,6 +4,8 @@ import {
   normalizeForMatch,
   stemToken,
   textMatches,
+  textMatchesRelated,
+  relatedConceptTerms,
   tokenize,
   unifyChars,
 } from "./persianNormalize";
@@ -50,11 +52,49 @@ describe("tokenize", () => {
 });
 
 describe("expandSynonyms", () => {
-  it("expands bidirectionally (آپارتمان ↔ واحد)", () => {
-    expect(expandSynonyms("آپارتمان")).toContain("واحد");
-    // Canonical form is the normalized one (آ→ا since flaw #9).
-    expect(expandSynonyms("واحد")).toContain("اپارتمان");
+  it("expands exact aliases only when the category is applicable", () => {
+    expect(expandSynonyms("آپارتمان", "real-estate")).toContain("واحد");
+    // Canonical form is normalized (آ→ا since flaw #9).
+    expect(expandSynonyms("واحد", "real-estate")).toContain("اپارتمان");
+    expect(expandSynonyms("آپارتمان", "all")).toEqual(["اپارتمان"]);
   });
+
+  it("does not expand without reliable category context", () => {
+    // Missing, empty, and "all" must never produce unsafe equivalences.
+    expect(expandSynonyms("آپارتمان")).toEqual(["اپارتمان"]);
+    expect(expandSynonyms("آپارتمان", "")).toEqual(["اپارتمان"]);
+    expect(expandSynonyms("آپارتمان", "all")).toEqual(["اپارتمان"]);
+    expect(expandSynonyms("پیانو")).toEqual(["پیانو"]);
+    expect(expandSynonyms("پیانو", "")).toEqual(["پیانو"]);
+    expect(expandSynonyms("یخچال", "all")).toEqual(["یخچال"]);
+    expect(textMatches("واحد ۸۰ متری", "آپارتمان")).toBe(false);
+    expect(textMatches("واحد ۸۰ متری", "آپارتمان", "all")).toBe(false);
+  });
+
+  it("does not expand related-but-distinct concepts", () => {
+    expect(expandSynonyms("آپارتمان", "real-estate")).not.toContain("سوئیت");
+    expect(expandSynonyms("پیانو", "music")).not.toContain("کیبورد");
+    expect(expandSynonyms("یخچال", "home")).not.toContain("فریزر");
+    expect(expandSynonyms("کولر", "home")).not.toContain("اسپیلت");
+  });
+
+  it("does not treat related terms as bidirectional aliases", () => {
+    // Related terms are indexed only as aliases of their own concept, if at all.
+    // Keyboard/freezer/suite must not expand back to the canonical concept.
+    expect(expandSynonyms("کیبورد", "music")).not.toContain("پیانو");
+    expect(expandSynonyms("فریزر", "home")).not.toContain("یخچال");
+    expect(expandSynonyms("سوئیت", "real-estate")).not.toContain("اپارتمان");
+    expect(expandSynonyms("اسپیلت", "home")).not.toContain("کولر");
+  });
+
+  it("supports benchmark intent categories alongside app category keys", () => {
+    // Benchmark fixtures use home-appliances/musical-instruments while the
+    // app uses home/music. Both must resolve to the same concept.
+    expect(expandSynonyms("آپارتمان", "real-estate")).toContain("واحد");
+    expect(relatedConceptTerms("یخچال", "home-appliances")).toContain("فریزر");
+    expect(relatedConceptTerms("پیانو", "musical-instruments")).toContain("کیبورد");
+  });
+
   it("returns the term itself for unknown words", () => {
     expect(expandSynonyms("زرافه")).toEqual(["زرافه"]);
   });
@@ -65,13 +105,31 @@ describe("textMatches", () => {
     expect(textMatches("فروش موبايل‌ها", "موبایل")).toBe(true);
   });
   it("matches synonyms (user: آپارتمان, ad: واحد)", () => {
-    expect(textMatches("واحد ۸۰ متری نورگیر", "آپارتمان")).toBe(true);
+    expect(textMatches("واحد ۸۰ متری نورگیر", "آپارتمان", "real-estate")).toBe(true);
   });
   it("matches multi-word phrases (تلفن همراه)", () => {
-    expect(textMatches("تلفن همراه نو", "موبایل")).toBe(true);
+    expect(textMatches("تلفن همراه نو", "موبایل", "mobile")).toBe(true);
   });
   it("does not match unrelated text", () => {
     expect(textMatches("یخچال فریزر نو", "موبایل")).toBe(false);
+  });
+
+  it("keeps related household/music concepts distinct for exact matching", () => {
+    expect(textMatches("سوئیت ۹۰ متری", "آپارتمان", "real-estate")).toBe(false);
+    expect(textMatches("کیبورد آموزشی", "پیانو", "music")).toBe(false);
+    expect(textMatches("فریزر صندوقی", "یخچال", "home")).toBe(false);
+    expect(textMatches("اسپیلت ۲۴ هزار", "کولر", "home")).toBe(false);
+  });
+
+  it("exposes related concepts separately for near-match evaluation", () => {
+    expect(relatedConceptTerms("یخچال", "home")).toContain("فریزر");
+    expect(textMatchesRelated("فریزر صندوقی", "یخچال", "home")).toBe(true);
+    expect(textMatchesRelated("فریزر صندوقی", "یخچال", "all")).toBe(false);
+    expect(textMatchesRelated("ماشین لباسشویی", "یخچال", "home")).toBe(false);
+  });
+
+  it("still matches a genuinely combined refrigerator-freezer listing", () => {
+    expect(textMatches("یخچال فریزر سالم", "یخچال", "home")).toBe(true);
   });
   it("is empty-safe", () => {
     expect(textMatches("", "موبایل")).toBe(false);

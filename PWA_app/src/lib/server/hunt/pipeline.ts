@@ -1,6 +1,6 @@
 import "server-only";
 
-import { textMatches } from "@/lib/persianNormalize";
+import { normalizeForMatch, textMatches, textMatchesRelated } from "@/lib/persianNormalize";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -188,9 +188,59 @@ export interface CollectOptions {
   emit?: (e: HuntEvent) => void;
 }
 
-/** «طرح X» weasel guard: the term appears but prefixed with طرح (fake). */
-function isWeasel(title: string, term: string): boolean {
-  return title.includes(`طرح ${term}`) || title.includes(`طرح${term}`);
+/** Guard against descriptive/design language being mistaken for exact subtype evidence. */
+function isWeasel(text: string, term: string): boolean {
+  const normalizedText = normalizeForMatch(text);
+  const normalizedTerm = normalizeForMatch(term);
+  if (normalizedText === "" || normalizedTerm === "") return false;
+
+  // A descriptor such as "طرح آکوستیک" describes appearance/design, not
+  // necessarily the instrument subtype. Normalize first so آکوستیک/اکوستیک
+  // and spacing variants follow the same rule.
+  const descriptivePrefixes = ["طرح", "دیزاین", "شبیه", "ظاهر", "سبک"];
+  return (
+    descriptivePrefixes.some(
+      (prefix) =>
+        normalizedText.includes(`${prefix} ${normalizedTerm}`) ||
+        normalizedText.includes(`${prefix}${normalizedTerm}`)
+    ) ||
+    (normalizedTerm === "اکوستیک" &&
+      (normalizedText.includes("دیجیتال اکوستیک") || normalizedText.includes("صدای اکوستیک")))
+  );
+}
+
+/**
+ * Remove weasel phrasing so genuine co-occurring evidence can still count.
+ * Example: "پیانو آکوستیک با صدای آکوستیک گرم" keeps "پیانو آکوستیک"
+ * after "صدای آکوستیک" is stripped, while "پیانو طرح آکوستیک" leaves no
+ * acoustic evidence behind.
+ */
+function stripWeaselPhrases(normalizedText: string, normalizedTerm: string): string {
+  let stripped = normalizedText;
+  const descriptivePrefixes = ["طرح", "دیزاین", "شبیه", "ظاهر", "سبک"];
+  for (const prefix of descriptivePrefixes) {
+    stripped = stripped.split(`${prefix} ${normalizedTerm}`).join(" ");
+    stripped = stripped.split(`${prefix}${normalizedTerm}`).join(" ");
+  }
+  if (normalizedTerm === "اکوستیک") {
+    stripped = stripped.split("دیجیتال اکوستیک").join(" ");
+    stripped = stripped.split("صدای اکوستیک").join(" ");
+  }
+  return stripped.replace(/\s+/g, " ").trim();
+}
+
+/** Matching for positive query evidence; weasel phrasing alone is not proof of identity. */
+function termMatches(text: string, term: string, def: HuntDefinition): boolean {
+  if (!textMatches(text, term, def.category)) return false;
+  if (!isWeasel(text, term)) return true;
+  // Weasel phrasing exists, but genuine evidence elsewhere in the same text
+  // still counts. Only when nothing remains after stripping is it insufficient.
+  const normalizedText = normalizeForMatch(text);
+  const normalizedTerm = normalizeForMatch(term);
+  if (normalizedText === "" || normalizedTerm === "") return false;
+  const stripped = stripWeaselPhrases(normalizedText, normalizedTerm);
+  if (stripped === "") return false;
+  return textMatches(stripped, term, def.category);
 }
 
 /**
@@ -213,21 +263,29 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
   needsDetailReview: boolean;
 } {
   for (const term of def.exclude) {
-    if (textMatches(ad.title, term)) {
+    if (textMatches(ad.title, term, def.category)) {
       return { excluded: true, strength: 0, needsDetailReview: false };
     }
   }
   let strength = 0;
   let needsDetailReview = false;
   for (const term of def.include) {
-    if (textMatches(ad.title, term)) {
+    if (termMatches(ad.title, term, def)) {
       strength += 2; // MUST weighs double at the title (flaw #19)
-      if (isWeasel(ad.title, term)) needsDetailReview = true;
+    } else if (textMatches(ad.title, term, def.category)) {
+      // Exact text present but only in weasel phrasing (e.g. طرح آکوستیک).
+      // No title strength, but keep for detail review.
+      needsDetailReview = true;
+    } else if (textMatchesRelated(ad.title, term, def.category)) {
+      // Related items enter the detail shortlist at a low priority so they
+      // can survive as honest near-matches without outranking exact items.
+      strength += 0.5;
+      needsDetailReview = true;
     }
   }
   // SHOULD is a nudge, never a gate. Pre-#19 snapshots lack the bucket.
   for (const term of def.should ?? []) {
-    if (textMatches(ad.title, term)) {
+    if (textMatches(ad.title, term, def.category)) {
       strength += 1;
     }
   }
@@ -250,10 +308,10 @@ const USED_CUES = ["کارکرده", "دست دوم", "استوک"];
  */
 function conditionPass(combined: string, def: HuntDefinition): boolean {
   if (def.condition === "new") {
-    return !USED_CUES.some((cue) => textMatches(combined, cue));
+    return !USED_CUES.some((cue) => textMatches(combined, cue, def.category));
   }
   if (def.condition === "used") {
-    return !NEW_CUES.some((cue) => textMatches(combined, cue));
+    return !NEW_CUES.some((cue) => textMatches(combined, cue, def.category));
   }
   return true;
 }
@@ -308,7 +366,7 @@ function evaluateDescription(
   const combined = `${title} ${description}`;
   // 1. MUST_NOT — «نه» means نه.
   for (const term of def.exclude) {
-    if (textMatches(combined, term)) {
+    if (textMatches(combined, term, def.category)) {
       return rejectedEvaluation();
     }
   }
@@ -325,7 +383,7 @@ function evaluateDescription(
     const evidence: string[] = [];
     let shouldMatched = 0;
     for (const term of shouldTerms) {
-      if (textMatches(combined, term)) {
+      if (textMatches(combined, term, def.category)) {
         shouldMatched += 1;
         evidence.push(term);
       }
@@ -344,27 +402,36 @@ function evaluateDescription(
   const missingInfo: string[] = [];
   let mustTitle = 0;
   let mustDesc = 0;
+  let relatedMatches = 0;
   for (const term of def.include) {
-    if (textMatches(title, term)) {
+    if (termMatches(title, term, def)) {
       mustTitle += 1;
       evidence.push(term);
-    } else if (textMatches(description, term)) {
+    } else if (termMatches(description, term, def)) {
       mustDesc += 1;
       evidence.push(term);
     } else {
+      // A related neighbor is useful retrieval evidence, not proof of the
+      // MUST concept. Keep the MUST in UNKNOWN and only allow a near verdict.
+      if (
+        textMatchesRelated(title, term, def.category) ||
+        textMatchesRelated(description, term, def.category)
+      ) {
+        relatedMatches += 1;
+      }
       missingInfo.push(term); // UNKNOWN — penalized in scoring, never dropped
     }
   }
   // 4. SHOULD — boost only.
   let shouldMatched = 0;
   for (const term of shouldTerms) {
-    if (textMatches(combined, term)) {
+    if (textMatches(combined, term, def.category)) {
       shouldMatched += 1;
       evidence.push(term);
     }
   }
   // 5. Verdict.
-  if (mustTitle + mustDesc === 0) {
+  if (mustTitle + mustDesc === 0 && relatedMatches === 0) {
     return { ...rejectedEvaluation(), missingInfo };
   }
   return {
