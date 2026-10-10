@@ -76,4 +76,10 @@ describe("matchLabel — honest status from verified fields", () => {
     expect(matchLabel({ matchKind: "exact" })).toBe("تطابق متنی کامل");
     expect(matchLabel({ matchKind: "near" })).toBe("تطابق متنی نسبی");
   });
+
+  it("never labels title-only evaluation as a full-detail review", () => {
+    expect(matchLabel({ matchKind: "exact", evaluationScope: "title" })).toBe("تطابق عنوان کامل");
+    expect(matchLabel({ detailUnknown: true, matchKind: "exact", evaluationScope: "title" })).toBe("بررسی ناقص");
+    expect(matchLabel({ matchKind: "exact", evaluationScope: "detail" })).toBe("تطابق متنی کامل");
+  });
 });

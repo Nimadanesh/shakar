@@ -29,7 +29,9 @@ const mockGetDetail = vi.mocked(divarProvider.getDetail);
 const DEF: HuntDefinition = {
   query: "گوشی",
   include: ["گوشی"],
-  exclude: [],
+  // Non-empty exclude forces genuine detail review (the title-only fast
+  // path never applies), so getDetail call order/concurrency is observable.
+  exclude: ["خراب"],
   should: [],
   city: "tehran",
   category: "mobile",

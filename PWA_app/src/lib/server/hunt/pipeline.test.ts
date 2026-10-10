@@ -574,7 +574,10 @@ describe("intent buckets — flaw #19 (MUST/SHOULD/MUST-NOT/UNKNOWN)", () => {
       hasMore: false,
     });
     mockGetDetail.mockRejectedValueOnce(new Error("boom"));
-    const done = await doneOf(def19());
+    // The SHOULD term is absent from the title, so this candidate genuinely
+    // requires detail review (title-only fast path does not apply) and the
+    // rejected fetch exercises the unknown-detail semantics below.
+    const done = await doneOf(def19({ should: ["اعلا"] }));
     expect(done.results).toHaveLength(1);
     const ad = done.results[0];
     expect(ad.detailUnknown).toBe(true);

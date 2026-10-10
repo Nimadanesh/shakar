@@ -63,14 +63,18 @@ export function applyHuntViewEvent(state: HuntViewState, event: HuntEvent): Hunt
   }
 }
 
-export type MatchLabel = "بررسی ناقص" | "تطابق متنی کامل" | "تطابق متنی نسبی";
+export type MatchLabel = "بررسی ناقص" | "تطابق عنوان کامل" | "تطابق متنی کامل" | "تطابق متنی نسبی";
 
 /**
- * Honest result-status label from verified result fields. Never implies
+ * Honest result-status label from verified result fields. Title-only
+ * results are never labeled as full-detail reviews. Never implies
  * authenticity, seller intent, or product-vs-service proof.
  */
-export function matchLabel(ad: Pick<ScoredAd, "detailUnknown" | "matchKind">): MatchLabel {
+export function matchLabel(
+  ad: Pick<ScoredAd, "detailUnknown" | "matchKind"> & { evaluationScope?: "title" | "detail" }
+): MatchLabel {
   if (ad.detailUnknown === true) return "بررسی ناقص";
+  if (ad.evaluationScope === "title") return "تطابق عنوان کامل";
   if (ad.matchKind === "exact") return "تطابق متنی کامل";
   return "تطابق متنی نسبی";
 }

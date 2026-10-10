@@ -525,7 +525,16 @@ export function HuntProgress({ runId, query }: { runId: string; query: string })
           const st = data.stats;
           if (st) {
             pushTrace(`${fa(st.adsSeen)} آگهی بررسی شد.`, true);
-            pushTrace(`${fa(st.detailsChecked)} جزئیات آگهی خوانده شد.`, true);
+            // Honest detail accounting: title-only evaluations never
+            // fetched a description, so a zero-detail hunt must not claim
+            // that details were read.
+            if (st.detailsChecked > 0) {
+              pushTrace(`${fa(st.detailsChecked)} جزئیات آگهی خوانده شد.`, true);
+            }
+            const titleOnly = st.titleOnlyEvaluated ?? 0;
+            if (titleOnly > 0) {
+              pushTrace(`${fa(titleOnly)} مورد از روی تیتر بررسی شد.`, true);
+            }
           }
           pushTrace(
             doneResults.length > 0

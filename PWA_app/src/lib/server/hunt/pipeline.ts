@@ -91,6 +91,12 @@ export interface ScoredAd {
   missingInfo: string[];
   /** True when the detail fetch failed — shown, never dropped. */
   detailUnknown?: boolean;
+  /**
+   * Evaluation scope (perf/safe-hunt-request-reduction): "title" when the
+   * verdict was fully determined from the title without a detail request,
+   * "detail" for normally reviewed results. Absent on old runs = "detail".
+   */
+  evaluationScope?: "title" | "detail";
 }
 
 export interface HuntStats {
@@ -112,6 +118,20 @@ export interface HuntStats {
    * and explicit condition contradictions.
    */
   rejectedNoMatch: number;
+  /**
+   * Collection diagnostic (perf/safe-hunt-request-reduction): set only when
+   * list pagination stopped early because the top-100 shortlist was already
+   * saturated at maximum title strength. Absent = full scan. Old runs lack
+   * the key — treat as a full scan.
+   */
+  collectionStopReason?: "top-k-saturated";
+  /**
+   * Title-only evaluations (perf/safe-hunt-request-reduction): results whose
+   * verdict was fully determined from the title, with no detail request.
+   * `detailsChecked` counts actual detail requests only — never this.
+   * Absent on old runs = 0.
+   */
+  titleOnlyEvaluated?: number;
 }
 
 export type HuntEvent =
@@ -290,6 +310,47 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
     }
   }
   return { excluded: false, strength, needsDetailReview };
+}
+
+/**
+ * Theoretical maximum title strength for a definition: every MUST term
+ * matched exactly in the title (+2 each) plus every SHOULD term (+1 each).
+ * Related (+0.5) and weasel-only (0) evidence can never reach it.
+ *
+ * Exported for testing — the saturation early-stop proof depends on this
+ * matching the titleScore weights above. If the weights ever change, this
+ * function and its tests must change together.
+ */
+export function maxTitleStrength(def: HuntDefinition): number {
+  return 2 * def.include.length + (def.should?.length ?? 0);
+}
+
+/**
+ * Title-only resolvability (perf/safe-hunt-request-reduction): true only
+ * when the final verdict, evidence, SHOULD boost, and score are already
+ * completely determined by the title, so a detail request cannot change
+ * anything. Uses the existing matchers — never a new formula:
+ * - at least one MUST term (an empty MUST set proves nothing);
+ * - no weasel/related ambiguity flag (`needsDetailReview`);
+ * - every MUST already exact in the title (`termMatches`);
+ * - every SHOULD already matched in the title (`textMatches`);
+ * - no excludes to check against the description;
+ * - no new/used condition gate that reads the description.
+ *
+ * Exported for testing.
+ */
+export function canResolveFromTitle(candidate: Candidate, def: HuntDefinition): boolean {
+  if (def.include.length === 0) return false;
+  if (candidate.needsDetailReview) return false;
+  for (const term of def.include) {
+    if (!termMatches(candidate.title, term, def)) return false;
+  }
+  for (const term of def.should ?? []) {
+    if (!textMatches(candidate.title, term, def.category)) return false;
+  }
+  if (def.exclude.length > 0) return false;
+  if (def.condition === "new" || def.condition === "used") return false;
+  return true;
 }
 
 /**
@@ -480,10 +541,63 @@ function scoreAd(
  * confirmCandidates with ONLY the new ids — details are never re-fetched
  * for ads the user already knows about.
  */
+/**
+ * Saturation counter for the top-100 early stop. Replays exactly the
+ * shortlist semantics — existing `titleScore` + excludes, fetch-order
+ * `collapseDupes`, and the known-price-bound predicate (unknown prices
+ * stay eligible) — over the accumulated listings, counting only unique
+ * candidates at exactly the theoretical maximum strength. Pure: never
+ * mutates stats; the real single counting pass still happens in Phase 2.
+ *
+ * Exported for testing.
+ */
+export function countSaturatedCandidates(
+  listings: readonly ListingSummary[],
+  def: HuntDefinition,
+  minPrice: number | null,
+  maxPrice: number | null,
+  maxStrength: number
+): number {
+  let count = 0;
+  const seen = new Set<string>();
+  for (const ad of listings) {
+    const r = titleScore(ad, def);
+    if (r.excluded) continue;
+    if (r.strength !== maxStrength) continue;
+    const key = dupKey(
+      ad.title,
+      ad.price !== null ? String(ad.price) : null,
+      ad.city,
+      ad.district
+    );
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (minPrice !== null || maxPrice !== null) {
+      if (
+        !(
+          ad.price === null ||
+          ((minPrice === null || ad.price >= minPrice) &&
+            (maxPrice === null || ad.price <= maxPrice))
+        )
+      ) {
+        continue;
+      }
+    }
+    count += 1;
+    if (count >= MAX_DETAILS_PER_HUNT) break;
+  }
+  return count;
+}
+
 export async function collectCandidates(
   def: HuntDefinition,
   opts: CollectOptions = {}
-): Promise<{ candidates: Candidate[]; stats: HuntStats; endCursor?: unknown }> {
+): Promise<{
+  candidates: Candidate[];
+  stats: HuntStats;
+  endCursor?: unknown;
+  collectionStopReason?: "top-k-saturated";
+}> {
   const emit = opts.emit ?? (() => {});
   const stats: HuntStats = {
     adsSeen: 0,
@@ -495,6 +609,7 @@ export async function collectCandidates(
     stale: false,
     nearMiss: 0,
     rejectedNoMatch: 0,
+    titleOnlyEvaluated: 0,
   };
 
   emit({ type: "started", query: def.query });
@@ -522,6 +637,11 @@ export async function collectCandidates(
   let pagesDone = 0;
   let cursor: unknown = opts.startCursor;
   let endCursor: unknown = undefined;
+  // Parsed once for both the saturation check below and the Phase 3b price
+  // filter — identical predicate, unknown prices stay eligible in both.
+  const boundMinPrice = parsePriceBound(def.priceMin);
+  const boundMaxPrice = parsePriceBound(def.priceMax);
+  const saturationStrength = maxTitleStrength(def);
   for (let i = 0; i < maxPages; i++) {
     let res;
     try {
@@ -552,6 +672,20 @@ export async function collectCandidates(
     // missing cursor — that would re-fetch the same page forever.
     if (!res.hasMore || res.nextCursor === undefined || res.nextCursor === null) break;
     cursor = res.nextCursor;
+    // Top-100 saturation early stop (perf/safe-hunt-request-reduction):
+    // the shortlist below keeps the top MAX_DETAILS_PER_HUNT by title
+    // strength with a stable fetch order for ties. Once 100 unique,
+    // non-excluded, price-eligible candidates already sit at the
+    // theoretical maximum, no unseen candidate can outrank them — later
+    // ties sort strictly after. Never fires on candidate count alone.
+    if (
+      def.include.length > 0 &&
+      countSaturatedCandidates(all, def, boundMinPrice, boundMaxPrice, saturationStrength) >=
+        MAX_DETAILS_PER_HUNT
+    ) {
+      stats.collectionStopReason = "top-k-saturated";
+      break;
+    }
   }
   emit({ type: "lists-done", adsSeen: all.length, stale: stats.stale });
 
@@ -600,9 +734,10 @@ export async function collectCandidates(
   // ---- Phase 3b: price bounds (hunt specs are honored) ---------------------
   // Unknown-price ads STAY (contract) — only KNOWN prices outside the range
   // are dropped. Runs before the details budget so we never spend detail
-  // fetches on ads the price spec already rules out.
-  const minPrice = parsePriceBound(def.priceMin);
-  const maxPrice = parsePriceBound(def.priceMax);
+  // fetches on ads the price spec already rules out. Same predicate as the
+  // saturation check above (parsed once, before the page walk).
+  const minPrice = boundMinPrice;
+  const maxPrice = boundMaxPrice;
   let priced = unique;
   if (minPrice !== null || maxPrice !== null) {
     priced = unique.filter(
@@ -617,7 +752,14 @@ export async function collectCandidates(
   // Big-hunt signal: the UI suggests narrowing; pipeline continues with top 100.
   if (priced.length > 100) emit({ type: "big-hunt", candidates: priced.length });
 
-  return { candidates: priced, stats, endCursor };
+  return {
+    candidates: priced,
+    stats,
+    endCursor,
+    ...(stats.collectionStopReason !== undefined
+      ? { collectionStopReason: stats.collectionStopReason }
+      : {}),
+  };
 }
 
 export async function confirmCandidates(
@@ -627,6 +769,14 @@ export async function confirmCandidates(
   emit: (e: HuntEvent) => void = () => {}
 ): Promise<ScoredAd[]> {
   // ---- Phase 4: details in prioritized batches of 10 ----------------------
+  // Title-only fast path (perf/safe-hunt-request-reduction): candidates
+  // satisfying canResolveFromTitle skip getDetail — the existing
+  // evaluateDescription/scoreAd run with an empty description, which cannot
+  // change the MUST verdict, SHOULD boost, or score once every MUST/SHOULD
+  // term is already title-matched and no exclude/condition gate applies.
+  // Progress `checked/total` counts completed candidate evaluations
+  // (fetched + title-only); stats.detailsChecked counts actual detail
+  // requests only and stays honest.
   candidates.sort((a, b) => b.titleStrength - a.titleStrength);
   const toCheck = candidates.slice(0, MAX_DETAILS_PER_HUNT);
   const mustCount = def.include.length;
@@ -634,29 +784,36 @@ export async function confirmCandidates(
   const shouldCount = def.should?.length ?? 0;
   const results: ScoredAd[] = [];
   const confirmed: ScoredAd[] = [];
+  let evaluated = 0;
 
   for (let i = 0; i < toCheck.length; i += DETAIL_BATCH) {
     const batch = toCheck.slice(i, i + DETAIL_BATCH);
     const batchConfirmed: ScoredAd[] = [];
     for (const c of batch) {
-      stats.detailsChecked += 1;
       let description = "";
       let detailUnknown = false;
-      try {
-        const detail = await divarProvider.getDetail(c.sourceAdId);
-        if (detail.stale === true) {
-          // Finding #1 (bug-bounty round 6): a stale detail is NOT verified
-          // data — the detail API was down and this may be up to 60 min old
-          // (price changed, ad deleted). Treating it as confirmed would let
-          // the kamin baseline permanently consume an ad that was never
-          // actually verified. Same path as a failed fetch: detailUnknown.
+      let scope: "title" | "detail" = "detail";
+      if (canResolveFromTitle(c, def)) {
+        scope = "title";
+        stats.titleOnlyEvaluated = (stats.titleOnlyEvaluated ?? 0) + 1;
+      } else {
+        stats.detailsChecked += 1;
+        try {
+          const detail = await divarProvider.getDetail(c.sourceAdId);
+          if (detail.stale === true) {
+            // Finding #1 (bug-bounty round 6): a stale detail is NOT verified
+            // data — the detail API was down and this may be up to 60 min old
+            // (price changed, ad deleted). Treating it as confirmed would let
+            // the kamin baseline permanently consume an ad that was never
+            // actually verified. Same path as a failed fetch: detailUnknown.
+            detailUnknown = true;
+          } else {
+            description = detail.description;
+          }
+        } catch {
+          // Invariant: failed detail = "unknown", never a silent drop.
           detailUnknown = true;
-        } else {
-          description = detail.description;
         }
-      } catch {
-        // Invariant: failed detail = "unknown", never a silent drop.
-        detailUnknown = true;
       }
       // Intent evaluation (flaw #19): MUST/SHOULD/MUST-NOT/UNKNOWN. A
       // failed/stale detail evaluates title-only (description = "") — the
@@ -665,6 +822,7 @@ export async function confirmCandidates(
       const ev = evaluateDescription(description, c.title, def);
       if (ev.verdict === "rejected") {
         stats.rejectedNoMatch += 1;
+        evaluated += 1;
         continue;
       }
       if (ev.verdict === "near") stats.nearMiss += 1;
@@ -684,16 +842,18 @@ export async function confirmCandidates(
         // verified (spec §7). Honest ceiling: "near".
         matchKind: !detailUnknown && ev.verdict === "exact" ? "exact" : "near",
         missingInfo: ev.missingInfo,
+        evaluationScope: scope,
         ...(detailUnknown ? { detailUnknown: true } : {}),
       };
       results.push(ad);
       batchConfirmed.push(ad);
+      evaluated += 1;
     }
     stats.confirmed = results.length;
     confirmed.push(...batchConfirmed);
     emit({
       type: "details-batch",
-      checked: stats.detailsChecked,
+      checked: evaluated,
       total: toCheck.length,
       confirmed: batchConfirmed,
     });
