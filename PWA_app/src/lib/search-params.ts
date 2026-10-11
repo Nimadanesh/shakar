@@ -6,8 +6,10 @@ import { normalizeLocationSlugs } from "@/lib/places";
  * Pure functions — the single source of truth for ?q=&inc=&exc=&cat=&city=&cities=&min=&max=&img=&tx=&cond=.
  *
  * Multi-location round-trips exactly through `cities` (comma-joined
- * slugs). Legacy single `city` is still read (old links/history) and
- * still written as the first selection for maximal compatibility.
+ * slugs). The legacy single `city` field is ALWAYS written too (first
+ * selection, or omitted for all-locations): old readers that only know
+ * `city` see the first city instead of silently widening to all, and this
+ * codebase prefers `cities` on read so the full set is never narrowed.
  */
 export function readParams(params: URLSearchParams): { query: string; base: ContextBase } {
   const tx = params.get("tx");
@@ -49,8 +51,10 @@ export function writeParams(query: string, base: ContextBase): string {
       : base.city !== "all"
         ? [base.city]
         : [];
-  if (cities.length > 1) params.set("cities", cities.join(","));
-  else if (cities.length === 1) params.set("city", cities[0]);
+  if (cities.length > 1) {
+    params.set("cities", cities.join(","));
+    params.set("city", cities[0]);
+  } else if (cities.length === 1) params.set("city", cities[0]);
   else if (base.city !== "all") params.set("city", base.city);
   if (base.priceMin.trim() !== "") params.set("min", base.priceMin.trim());
   if (base.priceMax.trim() !== "") params.set("max", base.priceMax.trim());

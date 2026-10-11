@@ -71,6 +71,12 @@ export function cityScopeFor(
  * signal and overrides a stored preference (flagged as inferred in the UI).
  * Dismissed inferred constraints stay off until the raw query changes.
  * Preferences never enter the context.
+ *
+ * SCOPE NOTE: this builds a single-city DISPLAY context for evidence
+ * views (ad detail) and stored kamin records — not the hunt execution
+ * scope. Execution reads the canonical multi-location set through
+ * `baseCities()` / `huntCities()` and `resolveHuntDefinition`, which is
+ * where explicit multi/all selections and strict resolution live.
  */
 export function buildEffectiveContext(
   query: string,

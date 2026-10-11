@@ -11,6 +11,8 @@ describe("search-params multi-location round-trip", () => {
   it("round-trips several places exactly", () => {
     const url = writeParams("گوشی", base({ city: "tehran", cities: ["tehran", "karaj", "qom"] }));
     expect(url).toContain("cities=tehran%2Ckaraj%2Cqom");
+    // Legacy readers see the first city rather than all-locations.
+    expect(url).toContain("city=tehran");
     const back = readParams(new URLSearchParams(url.slice(2)));
     expect(back.base.cities).toEqual(["tehran", "karaj", "qom"]);
     expect(back.base.city).toBe("tehran");

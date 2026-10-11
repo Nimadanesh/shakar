@@ -216,6 +216,17 @@ describe("resolveHuntDefinition — city conflicts (full catalog)", () => {
     expect(def.cities).toEqual(["karaj"]);
     expect(def.city).toBe("karaj");
   });
+
+  it("contradictory inputs: canonical array wins, empty stays all", () => {
+    const emptied = resolveHuntDefinition(body({ query: "گوشی", city: "karaj", cities: [] }))!;
+    expect(emptied.cities).toEqual([]);
+    expect(emptied.city).toBe("all");
+    const multi = resolveHuntDefinition(
+      body({ query: "گوشی", city: "karaj", cities: ["tehran", "qom"] })
+    )!;
+    expect(multi.cities).toEqual(["tehran", "qom"]);
+    expect(multi.city).toBe("tehran");
+  });
 });
 
 describe("resolveHuntDefinition — SHOULD bucket (flaw #19, 2026-10-09)", () => {
