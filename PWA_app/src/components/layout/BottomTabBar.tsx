@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Archive, Bookmark, Crosshair, User } from "lucide-react";
@@ -14,6 +15,13 @@ const tabs = [
 
 export function BottomTabBar() {
   const pathname = usePathname();
+  // Optimistic active state: highlight the tapped tab IMMEDIATELY, don't
+  // wait for the navigation to complete. Without this, a slow route load
+  // feels like a hang — the user taps repeatedly, then actions pile up.
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
 
   return (
     <nav
@@ -25,14 +33,19 @@ export function BottomTabBar() {
         {tabs.map(({ href, label, icon: Icon }) => {
           // A hunt page (/hunt/[id]) belongs to the شکار flow.
           const isActive =
-            href === "/"
-              ? pathname === "/" || pathname.startsWith("/hunt")
-              : pathname.startsWith(href);
+            pendingHref !== null
+              ? pendingHref === href
+              : href === "/"
+                ? pathname === "/" || pathname.startsWith("/hunt")
+                : pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
               aria-current={isActive ? "page" : undefined}
+              onClick={() => {
+                if (href !== pathname) setPendingHref(href);
+              }}
               className={cn(
                 "flex flex-col items-center gap-0.5 rounded-[20px] py-1.5 text-[11px] leading-4 transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-ring active:scale-95",
                 isActive
