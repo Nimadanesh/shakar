@@ -30,7 +30,7 @@ export const WhatField = forwardRef<HTMLInputElement, WhatFieldProps>(
     }, [value]);
 
     return (
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <label
           htmlFor="hunt-what"
           className="text-[13px] font-medium leading-5 text-foreground"

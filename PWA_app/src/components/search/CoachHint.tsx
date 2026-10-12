@@ -64,9 +64,8 @@ export function CoachHint() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-lg py-2 focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]"
+        className="flex w-full items-center justify-start gap-2 rounded-lg py-2 focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.98]"
       >
-        <Sparkles size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />
         <span
           className="bg-clip-text text-[13px] font-medium text-transparent"
           style={{
@@ -78,6 +77,7 @@ export function CoachHint() {
         >
           چگونه شکار بهتری داشته باشیم؟
         </span>
+        <Sparkles size={15} aria-hidden="true" className="shrink-0 text-muted-foreground" />
       </button>
 
       <BottomSheet

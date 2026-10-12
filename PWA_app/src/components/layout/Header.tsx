@@ -24,7 +24,7 @@ function BrandButton({ onClick }: { onClick: () => void }) {
       className="relative flex shrink-0 items-center gap-2 py-1 pl-1 transition-transform focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
     >
       <span className="relative flex text-foreground">
-        <LogoMark className="size-9" />
+        <LogoMark className="size-7" />
         {/* Guest nudge: a quiet dot — this is the proactive login entry.
             Shown only once we KNOW the user is a guest (no flash for
             logged-in users). */}
@@ -35,7 +35,7 @@ function BrandButton({ onClick }: { onClick: () => void }) {
           />
         )}
       </span>
-      <span className="text-[19px] font-extrabold leading-7 tracking-tight text-foreground">
+      <span className="text-[18px] font-extrabold leading-7 tracking-tight text-foreground">
         شکار
       </span>
     </button>

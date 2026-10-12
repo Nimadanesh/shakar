@@ -224,7 +224,7 @@ export function MarketSheet({
       label="اخبار و قیمت بازار"
       title="بازار"
       subtitle="قیمت لحظه‌ای و خبرهای مهم اقتصادی"
-      dialogClassName="min-h-[60dvh]"
+      dialogClassName="h-[75dvh]"
     >
       <SegmentedTabs
         tabs={TABS.map((t) => ({ ...t }))}
@@ -232,9 +232,13 @@ export function MarketSheet({
         onChange={(id) => setTab(id as TabId)}
         ariaLabel="بخش‌های بازار"
       />
-      {tab === "prices" && <PricesTab />}
-      {tab === "news" && <NewsTab />}
-      {tab === "advisor" && <AdvisorTab />}
+      {/* Fixed-height sheet: tab switches never resize it; long
+          content scrolls inside instead of growing the sheet. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {tab === "prices" && <PricesTab />}
+        {tab === "news" && <NewsTab />}
+        {tab === "advisor" && <AdvisorTab />}
+      </div>
     </BottomSheet>
   );
 }
