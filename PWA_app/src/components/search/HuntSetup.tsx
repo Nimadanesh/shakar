@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, Camera, Music } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CoachHint } from "@/components/search/CoachHint";
 import { WhatField } from "@/components/search/WhatField";
 import { TypoNudge, TYPO_PAUSE_MS } from "@/components/search/TypoNudge";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -48,12 +48,6 @@ import { toggleFavoriteStored } from "@/hooks/useFavorites";
 import { parsePriceInput, formatPriceCompact } from "@/lib/prices";
 import { EMPTY_CONTEXT_BASE, type ContextBase } from "@/lib/search-context";
 import { readParams } from "@/lib/search-params";
-
-const EXAMPLES = [
-  { label: "پیانو U3 تهران", query: "پیانو U3 تهران", icon: Music },
-  { label: "آپارتمان نوساز سعادت‌آباد", query: "آپارتمان نوساز سعادت‌آباد", icon: Building2 },
-  { label: "دوربین سونی زیر ۱۰۰م", query: "دوربین سونی زیر ۱۰۰ میلیون", icon: Camera },
-];
 
 interface InferredReadings {
   excludes: InferredChip[];
@@ -265,12 +259,6 @@ export function HuntSetup() {
     setQuery((q) => applyTypoFixToText(q, originalToken, fixed));
   }
 
-  /** Suggested hunt: fill the WHAT field for review. Never auto-fires. */
-  function applySuggestedHunt(exampleQuery: string) {
-    setQuery(exampleQuery);
-    inputRef.current?.focus({ preventScroll: true });
-  }
-
   function addExplicit(kind: "include" | "exclude", term: string) {
     setBase((b) =>
       kind === "include" && !b.include.includes(term)
@@ -369,33 +357,7 @@ export function HuntSetup() {
 
       {query.trim() === "" ? (
         <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <p className="text-xs leading-5 text-muted-foreground">شکارهای پیشنهادی</p>
-            <div
-              className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1"
-              style={{
-                maskImage:
-                  "linear-gradient(to left, black calc(100% - 2rem), transparent)",
-                WebkitMaskImage:
-                  "linear-gradient(to left, black calc(100% - 2rem), transparent)",
-              }}
-            >
-              {EXAMPLES.map((example) => {
-                const Icon = example.icon;
-                return (
-                  <button
-                    key={example.label}
-                    type="button"
-                    onClick={() => applySuggestedHunt(example.query)}
-                    className="flex min-h-11 shrink-0 snap-start items-center gap-2 rounded-lg border border-border bg-card px-4 text-[13px] text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-                  >
-                    <Icon size={15} aria-hidden="true" className="shrink-0" />
-                    {example.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <CoachHint />
           <div
             aria-hidden="true"
             className="pointer-events-none h-24 opacity-100"

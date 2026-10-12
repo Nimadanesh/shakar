@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { HuntSetup } from "@/components/search/HuntSetup";
 import { HomeCityPrompt } from "@/components/search/HomeCityPrompt";
+import { NewsFab } from "@/components/market/NewsFab";
 
 export default function Home() {
   return (
@@ -9,6 +10,7 @@ export default function Home() {
         <HuntSetup />
       </Suspense>
       <HomeCityPrompt />
+      <NewsFab />
     </main>
   );
 }
