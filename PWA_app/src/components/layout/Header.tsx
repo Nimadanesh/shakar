@@ -14,7 +14,7 @@ const PlanSheet = dynamic(
 import { LogoMark } from "@/components/brand/LogoMark";
 import { useProfile } from "@/hooks/useProfile";
 
-function BrandButton({ onClick }: { onClick: () => void }) {
+function LogoButton({ onClick }: { onClick: () => void }) {
   const { loggedIn } = useProfile();
   return (
     <button
@@ -34,9 +34,6 @@ function BrandButton({ onClick }: { onClick: () => void }) {
             className="absolute -left-0.5 -top-0.5 size-3 rounded-full border-2 border-background bg-primary"
           />
         )}
-      </span>
-      <span className="text-[18px] font-extrabold leading-7 tracking-tight text-foreground">
-        شکار
       </span>
     </button>
   );
@@ -80,9 +77,9 @@ function NotificationButton({ onClick }: { onClick: () => void }) {
 }
 
 /**
- * App header: the Shekaar brand block (mark + wordmark, → profile) on the
- * start side, plan + notifications as quiet backgrounded icon buttons on
- * the end side. No capsule, no container — one shared component, so this
+ * App header: the Shekaar mark (→ profile) on the start side,
+ * plan + notifications as quiet backgrounded icon buttons on the end side.
+ * No capsule, no container — one shared component, so this
  * is the header on every page of the app.
  */
 export function Header() {
@@ -93,7 +90,7 @@ export function Header() {
     <>
       <header className="sticky top-0 z-40 px-4 pt-3">
         <div className="mx-auto flex h-14 w-full max-w-screen-sm items-center justify-between">
-          <BrandButton onClick={() => router.push("/profile")} />
+          <LogoButton onClick={() => router.push("/profile")} />
           <div className="flex items-center gap-2">
             <button
               type="button"

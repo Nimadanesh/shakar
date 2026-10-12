@@ -7,11 +7,19 @@ interface WhatFieldProps {
   onChange: (value: string) => void;
 }
 
-const ROTATING = [
-  "مثلاً پیانو آکوستیک یاماها U3…",
-  "مثلاً آپارتمان نوساز سعادت‌آباد…",
-  "مثلاً دوربین سونی زیر ۱۰۰ میلیون…",
+/**
+ * Rotating examples — the same worked examples from the
+ * «چگونه شکار بهتری داشته باشیم؟» coaching sheet, so the box itself
+ * teaches the pattern. The new line slides in from below, pushing the
+ * old one up (killed by the global reduced-motion rule).
+ */
+const EXAMPLES = [
+  "مثلاً آپارتمان ۸۰ تا ۱۰۰ متری در سعادت‌آباد، آسانسور حتماً، طبقه اول نباشه، تا ۸ میلیارد",
+  "مثلاً لپ‌تاپ گیمینگ، RTX 4060 حتماً، رم ۱۶ گیگ، تا ۸۰ میلیون",
+  "مثلاً آیفون ۱۳، بدون تعمیر، ۱۲۸ گیگ، تا ۵۰ میلیون",
 ];
+
+const ROTATE_MS = 4000;
 
 /**
  * «چی؟» — the WHAT of the hunt. A plain field of the hunt-definition
@@ -20,12 +28,15 @@ const ROTATING = [
  */
 export const WhatField = forwardRef<HTMLInputElement, WhatFieldProps>(
   function WhatField({ value, onChange }, ref) {
-    const [slot, setSlot] = useState(0);
+    const [[prevSlot, slot], setSlots] = useState<[number, number]>([0, 0]);
     const localRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
       if (value !== "") return;
-      const t = setInterval(() => setSlot((s) => (s + 1) % ROTATING.length), 4000);
+      const t = setInterval(
+        () => setSlots(([p, s]) => [s, (s + 1) % EXAMPLES.length]),
+        ROTATE_MS
+      );
       return () => clearInterval(t);
     }, [value]);
 
@@ -37,26 +48,52 @@ export const WhatField = forwardRef<HTMLInputElement, WhatFieldProps>(
         >
           چی رو می‌خوای شکار کنی؟
         </label>
-        <input
-          id="hunt-what"
-          ref={(node) => {
-            localRef.current = node;
-            if (typeof ref === "function") ref(node);
-            else if (ref) ref.current = node;
-          }}
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => {
-            // A quota unit is at stake — Enter must never fire the hunt.
-            if (e.key === "Enter") localRef.current?.blur();
-          }}
-          placeholder={ROTATING[slot]}
-          autoComplete="off"
-          enterKeyHint="done"
-          aria-label="چی رو می‌خوای شکار کنی؟"
-          className="h-13 min-h-13 w-full rounded-lg border border-border bg-card px-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
-        />
+        <div className="relative">
+          <input
+            id="hunt-what"
+            ref={(node) => {
+              localRef.current = node;
+              if (typeof ref === "function") ref(node);
+              else if (ref) ref.current = node;
+            }}
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              // A quota unit is at stake — Enter must never fire the hunt.
+              if (e.key === "Enter") localRef.current?.blur();
+            }}
+            autoComplete="off"
+            enterKeyHint="done"
+            aria-label="چی رو می‌خوای شکار کنی؟"
+            className="h-13 min-h-13 w-full rounded-lg border border-border bg-card px-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+          />
+          {value === "" && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 overflow-hidden"
+            >
+              {prevSlot !== slot && (
+                <span
+                  key={`out-${prevSlot}`}
+                  className="animate-ph-out absolute inset-0 flex items-center px-4"
+                >
+                  <span className="min-w-0 truncate text-base text-muted-foreground">
+                    {EXAMPLES[prevSlot]}
+                  </span>
+                </span>
+              )}
+              <span
+                key={`in-${slot}`}
+                className="animate-ph-in absolute inset-0 flex items-center px-4"
+              >
+                <span className="min-w-0 truncate text-base text-muted-foreground">
+                  {EXAMPLES[slot]}
+                </span>
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
