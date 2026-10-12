@@ -102,9 +102,13 @@ const ResultCard = memo(function ResultCard({
 }) {
   const { isFavorite, toggle } = useGatedFavorites();
   const favorite = isFavorite(ad.sourceAdId);
-  // Seen marker: evaluated on mount, so returning from the ad's detail
-  // page (which marks it seen) shows "دیده شد" immediately.
-  const [seen] = useState(() => isAdSeen(ad.sourceAdId));
+  // Seen marker: evaluated after mount, so returning from the ad's detail
+  // page (which marks it seen) shows "دیده شد" immediately. Hydration-safe:
+  // localStorage is client-only — a render-time read mismatches SSR.
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    setSeen(isAdSeen(ad.sourceAdId));
+  }, [ad.sourceAdId]);
   // Per-ad share (navid 2026-10-08, spec B): the result card is where the
   // user decides "this one" — sharing must not wait for the detail page.
   // Shares the ad's own canonical URL, not the hunt page.

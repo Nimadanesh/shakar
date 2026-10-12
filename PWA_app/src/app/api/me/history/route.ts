@@ -9,6 +9,37 @@ interface HuntRunRow {
   created_at: string;
 }
 /**
+ * DELETE /api/me/history?runId=… — remove one hunt run from the user's
+ * history. Owner-scoped: only the run's owner can delete it. The client
+ * tombstones the runId locally first, so the merge can never resurrect it
+ * even if this request fails (retry on next sync).
+ */
+export async function DELETE(req: Request): Promise<NextResponse> {
+  if (!supabaseConfigured() || !supabaseServer()) {
+    return NextResponse.json({ ok: false, error: "unavailable" }, { status: 503 });
+  }
+  const sb = supabaseServer()!;
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ ok: false, error: "guest" }, { status: 401 });
+  }
+  const runId = new URL(req.url).searchParams.get("runId")?.trim() ?? "";
+  if (runId === "") {
+    return NextResponse.json({ ok: false, error: "empty-run-id" }, { status: 400 });
+  }
+  try {
+    await sb.rest(
+      "DELETE",
+      `hunt_runs?id=eq.${encodeURIComponent(runId)}&owner_user_id=eq.${encodeURIComponent(userId)}`
+    );
+    return NextResponse.json({ ok: true, data: { runId } });
+  } catch (e) {
+    console.warn("[history/delete]", (e as Error).message);
+    return NextResponse.json({ ok: false, error: "delete-failed" }, { status: 500 });
+  }
+}
+
+/**
  * GET /api/me/history — the logged-in user's hunt history, derived from
  * hunt_runs (owner_user_id). No new table: the runs already record who
  * fired them.

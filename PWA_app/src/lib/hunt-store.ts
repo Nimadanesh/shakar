@@ -1,5 +1,6 @@
 import type { ContextBase } from "@/lib/search-context";
 import { invalidateCached } from "@/lib/session-cache";
+import { addTombstone } from "@/lib/tombstones";
 
 /**
  * A fired hunt: one paid search event, persisted as an asset.
@@ -167,6 +168,14 @@ export function readHunts(): HuntRecord[] {
 /** Removes one hunt from history. Two-step confirmed in the UI. */
 export function deleteHunt(id: string): void {
   if (id === "") return;
+  // Tombstone the id AND the runId: the profile sync merges server history
+  // by runId, and without the tombstone a deleted hunt zombies back into
+  // the archive on the next refresh/sync.
+  const doomed = readAll().find((h) => h.id === id);
+  if (doomed) {
+    addTombstone("history", doomed.id);
+    if (doomed.runId) addTombstone("history", doomed.runId);
+  }
   persist(readAll().filter((h) => h.id !== id));
   invalidateCached("hunts");
 }

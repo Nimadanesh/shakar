@@ -10,6 +10,16 @@ export function applyTheme(theme: ThemeName) {
   const root = document.documentElement;
   root.classList.remove("dark", "light");
   root.classList.add(theme);
+  // Keep the mobile browser chrome (address bar) in sync with the theme.
+  // The inline bootstrap script in layout.tsx sets the initial value
+  // pre-paint; this keeps it correct on toggle.
+  try {
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "light" ? "#F4F4F5" : "#0B0B0C");
+  } catch {
+    /* non-fatal */
+  }
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
