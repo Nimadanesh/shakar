@@ -58,6 +58,22 @@ function buildDots(): DotSpec[] {
 
 const DOTS = buildDots();
 
+interface MeteorSpec {
+  top: string;
+  left: string;
+  angle: number; // deg — the streak diagonal
+  duration: number; // s — full cycle (mostly invisible, waiting)
+  delay: number; // s (negative = desync)
+  length: number; // px — tail length
+}
+
+// Two meteors, rare and surprising: each is visible for ~1.5s per cycle,
+// the rest of the time it's gone waiting for the next fall.
+const METEORS: MeteorSpec[] = [
+  { top: "10%", left: "68%", angle: -32, duration: 16, delay: -4, length: 110 },
+  { top: "26%", left: "82%", angle: -27, duration: 23, delay: -13, length: 88 },
+];
+
 export function AmbientDots() {
   return (
     <div
@@ -79,6 +95,24 @@ export function AmbientDots() {
             animation: `ambient-drift ${d.duration}s ease-in-out ${d.delay}s infinite alternate`,
           }}
         />
+      ))}
+      {METEORS.map((m, i) => (
+        <span
+          key={`meteor-${i}`}
+          className="meteor absolute"
+          style={{
+            top: m.top,
+            left: m.left,
+            ["--meteor-angle" as string]: `${m.angle}deg`,
+            animation: `meteor-shoot ${m.duration}s linear ${m.delay}s infinite`,
+          }}
+        >
+          <span
+            className="meteor-tail block h-[3px] rounded-full"
+            style={{ width: m.length }}
+          />
+          <span className="meteor-head absolute -left-[2px] top-1/2 h-[6px] w-[6px] -translate-y-1/2 rounded-full" />
+        </span>
       ))}
     </div>
   );
