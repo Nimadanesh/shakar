@@ -14,25 +14,30 @@ const PlanSheet = dynamic(
 import { LogoMark } from "@/components/brand/LogoMark";
 import { useProfile } from "@/hooks/useProfile";
 
-function LogoButton({ onClick }: { onClick: () => void }) {
+function BrandButton({ onClick }: { onClick: () => void }) {
   const { loggedIn } = useProfile();
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={loggedIn === false ? "ورود / پروفایل" : "پروفایل"}
-      className="relative flex size-11 shrink-0 items-center justify-center text-foreground transition-transform focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.96]"
+      className="relative flex shrink-0 items-center gap-2 py-1 pl-1 transition-transform focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
     >
-      <LogoMark className="size-9" />
-      {/* Guest nudge: a quiet dot — this is the proactive login entry.
-          Shown only once we KNOW the user is a guest (no flash for
-          logged-in users). */}
-      {loggedIn === false && (
-        <span
-          aria-hidden="true"
-          className="absolute -left-0.5 -top-0.5 size-3 rounded-full border-2 border-background bg-primary"
-        />
-      )}
+      <span className="relative flex text-foreground">
+        <LogoMark className="size-9" />
+        {/* Guest nudge: a quiet dot — this is the proactive login entry.
+            Shown only once we KNOW the user is a guest (no flash for
+            logged-in users). */}
+        {loggedIn === false && (
+          <span
+            aria-hidden="true"
+            className="absolute -left-0.5 -top-0.5 size-3 rounded-full border-2 border-background bg-primary"
+          />
+        )}
+      </span>
+      <span className="text-[19px] font-extrabold leading-7 tracking-tight text-foreground">
+        شکار
+      </span>
     </button>
   );
 }
@@ -75,9 +80,10 @@ function NotificationButton({ onClick }: { onClick: () => void }) {
 }
 
 /**
- * App header, capsule-free: the Shekaar mark (→ profile) on the start side,
- * plan + notifications as quiet backgrounded icon buttons on the end side.
- * No container, no shadow — the hunt form owns the page now.
+ * App header: the Shekaar brand block (mark + wordmark, → profile) on the
+ * start side, plan + notifications as quiet backgrounded icon buttons on
+ * the end side. No capsule, no container — one shared component, so this
+ * is the header on every page of the app.
  */
 export function Header() {
   const router = useRouter();
@@ -87,7 +93,7 @@ export function Header() {
     <>
       <header className="sticky top-0 z-40 px-4 pt-3">
         <div className="mx-auto flex h-14 w-full max-w-screen-sm items-center justify-between">
-          <LogoButton onClick={() => router.push("/profile")} />
+          <BrandButton onClick={() => router.push("/profile")} />
           <div className="flex items-center gap-2">
             <button
               type="button"
