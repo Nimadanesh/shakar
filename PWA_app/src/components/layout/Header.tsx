@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Bell, Wallet } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { getSession } from "@/lib/auth";
 // Closed-by-default sheet: split into its own chunk so it never blocks
 // the initial page paint.
@@ -85,10 +86,24 @@ function NotificationButton({ onClick }: { onClick: () => void }) {
 export function Header() {
   const router = useRouter();
   const [planOpen, setPlanOpen] = useState(false);
+  // The header is transparent at rest; once the page scrolls, content
+  // slides under it — give it a background so it never looks tangled.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <>
-      <header className="sticky top-0 z-40 px-4 pt-3">
+      <header
+        className={cn(
+          "sticky top-0 z-40 px-4 pt-3 transition-colors duration-200",
+          scrolled && "bg-background/85 backdrop-blur-md"
+        )}
+      >
         <div className="mx-auto flex h-14 w-full max-w-screen-sm items-center justify-between">
           <LogoButton onClick={() => router.push("/profile")} />
           <div className="flex items-center gap-2">

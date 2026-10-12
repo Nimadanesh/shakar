@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { BottomTabBar } from "@/components/layout/BottomTabBar";
 import { ActiveHuntChip } from "@/components/search/ActiveHuntChip";
+import { AmbientDots } from "@/components/layout/AmbientDots";
 import { useProfileSync } from "@/hooks/useProfileSync";
 import { warmUsage } from "@/lib/usage";
 
@@ -27,25 +28,28 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
 
-  if (chromeless) {
-    return (
-      <div className="mx-auto flex w-full max-w-screen-sm flex-1 flex-col px-4">
-        {children}
-      </div>
-    );
-  }
-
+  // AmbientDots first in DOM + `relative` content: the dots paint behind
+  // every page, never intercept touches, never cover content.
   return (
     <>
-      <Header />
-      <div
-        className="mx-auto flex w-full max-w-screen-sm flex-1 flex-col px-4"
-        style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
-      >
-        {children}
-      </div>
-      <BottomTabBar />
-      <ActiveHuntChip />
+      <AmbientDots />
+      {chromeless ? (
+        <div className="relative mx-auto flex w-full max-w-screen-sm flex-1 flex-col px-4">
+          {children}
+        </div>
+      ) : (
+        <>
+          <Header />
+          <div
+            className="relative mx-auto flex w-full max-w-screen-sm flex-1 flex-col px-4"
+            style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+          >
+            {children}
+          </div>
+          <BottomTabBar />
+          <ActiveHuntChip />
+        </>
+      )}
     </>
   );
 }
