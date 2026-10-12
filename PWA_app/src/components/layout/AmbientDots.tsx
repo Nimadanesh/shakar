@@ -46,10 +46,10 @@ function buildDots(): DotSpec[] {
       left: rand() * 100,
       top: rand() * 100,
       size: 2 + rand() * 3, // 2–5px
-      duration: 22 + rand() * 26, // 22–48s: slow, calm
-      delay: -(rand() * 48), // spread across the cycle
-      dx: (rand() - 0.5) * 90, // ±45px drift
-      dy: (rand() - 0.5) * 70, // ±35px drift
+      duration: 8 + rand() * 10, // 8–18s: visibly alive, still calm
+      delay: -(rand() * 18), // spread across the cycle
+      dx: (rand() - 0.5) * 140, // ±70px drift
+      dy: (rand() - 0.5) * 110, // ±55px drift
       opacity: 0.35 + rand() * 0.65, // multiplied by the color's alpha
     });
   }
