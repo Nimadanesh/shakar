@@ -26,6 +26,12 @@ import {
 import { recordHunt } from "@/lib/hunt-store";
 import { fireRealHunt } from "@/lib/hunt-fire";
 import { getHomeCity } from "@/lib/home-city";
+import {
+  clearDraft,
+  draftHasData,
+  readDraft,
+  saveDraft,
+} from "@/lib/hunt-draft";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { isOnboarded } from "@/lib/first-run";
 import { takePendingAction } from "@/lib/auth";
@@ -71,6 +77,15 @@ export function HuntSetup() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Draft persistence (navid 2026-10-12): the in-progress definition
+  // survives navigation — an accidental tap away never loses what was
+  // typed.
+  //
+  // HYDRATION: HuntSetup SSRs (the WhatField input is in the server HTML),
+  // so NO browser storage may be read during render/initializers — the
+  // server and the first client render must agree. The draft restores in
+  // the mount effect below (one frame of empty form on full reload, then
+  // the data pops in); client-side navigations restore just as fast.
   const [query, setQuery] = useState("");
   // Pause detection for the typo nudge: it must never interrupt the word
   // being typed — only finished words (or a paused last word) get nudged.
@@ -78,14 +93,13 @@ export function HuntSetup() {
   // Home city: the user's standing location (navid 2026-10-08, two-location
   // model). It seeds the form; a per-hunt change NEVER rewrites it — hunting
   // in another city once must not re-target all future hunts.
-  const [base, setBase] = useState<ContextBase>(() => ({
-    ...EMPTY_CONTEXT_BASE,
-    city: getHomeCity() ?? "all",
-  }));
+  const [base, setBase] = useState<ContextBase>({ ...EMPTY_CONTEXT_BASE, city: "all" });
   // Whether the city was hand-picked for THIS hunt. An untouched home-city
   // default renders with a «پیش‌فرض» marker (navid 2026-10-08) — the default
   // is never silent.
   const [cityTouched, setCityTouched] = useState(false);
+  // The home-city default, resolved after mount (client-only).
+  const [homeCity, setHomeCity] = useState("all");
   // The first-run home-city prompt may set the home city while this form
   // is already mounted — re-seed the untouched default so the visible row
   // and the fired hunt agree.
@@ -105,6 +119,43 @@ export function HuntSetup() {
   const [cityOpen, setCityOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
   const [initialized, setInitialized] = useState(false);
+
+  // Mount: restore the draft (if any) or seed the home-city default.
+  // Runs after hydration, so server and client first-render agree.
+  useEffect(() => {
+    const home = getHomeCity() ?? "all";
+    setHomeCity(home);
+    const draft = readDraft();
+    if (draft) {
+      setQuery(draft.query);
+      setBase(draft.base);
+      setCityTouched(draft.cityTouched);
+      setDismissed(new Set(draft.dismissed));
+    } else {
+      setBase((b) => ({ ...b, city: home }));
+    }
+  }, []);
+
+  // Persist the draft on every change (cheap: small JSON, sync write).
+  // Cleared on successful fire and on × — never on failure, so a quota
+  // error doesn't vaporize the form.
+  useEffect(() => {
+    saveDraft({ query, base, cityTouched, dismissed: [...dismissed] });
+  }, [query, base, cityTouched, dismissed]);
+
+  /** × in the «چی؟» field: wipe the whole form back to pristine. */
+  function clearAllFields() {
+    setQuery("");
+    setBase({ ...EMPTY_CONTEXT_BASE, city: homeCity });
+    setCityTouched(false);
+    setDismissed(new Set());
+    clearDraft();
+  }
+
+  const hasFormData = draftHasData(
+    { query, base, cityTouched, dismissed: [...dismissed] },
+    homeCity
+  );
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -243,6 +294,8 @@ export function HuntSetup() {
       // NOTE: record the MERGED base — history must show the city the hunt
       // really ran in, not the untouched picker value.
       recordHunt(trimmed, fireBase, dismissed, result.runId);
+      // The draft served its purpose — the hunt is fired, start fresh.
+      clearDraft();
       // Quota changed on the server — drop the shared usage cache so the
       // button state re-reads fresh numbers on the next mount.
       invalidateUsage();
@@ -346,7 +399,13 @@ export function HuntSetup() {
 
   return (
     <div className="flex flex-col gap-4">
-      <WhatField ref={inputRef} value={query} onChange={setQuery} />
+      <WhatField
+        ref={inputRef}
+        value={query}
+        onChange={setQuery}
+        onClearAll={clearAllFields}
+        showClear={hasFormData}
+      />
       {hasIntent && (
         <TypoNudge
           query={query}

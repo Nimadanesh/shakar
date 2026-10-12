@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { Inter, Vazirmatn } from "next/font/google";
 import { AppChrome } from "@/components/layout/AppChrome";
 import "./globals.css";
@@ -53,7 +52,22 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <Script id="theme-init" src="/theme-init.js" strategy="beforeInteractive" />
+        {/* Theme bootstrap: INLINE (not an external file) so it runs
+            synchronously during HTML parsing — before the first paint, with
+            zero network fetch. An external script (next/script
+            beforeInteractive) can lose the race to first paint → the black
+            flash on light theme. This is the root fix for the flash.
+
+            It also re-asserts the theme if anything ever wipes the <html>
+            class afterwards (e.g. a React client re-render after a
+            hydration mismatch rebuilds <html> from the vdom's "dark").
+            Without this, one bad component can stick the whole app in the
+            wrong theme until the user toggles it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){function a(){try{var t=localStorage.getItem('shakar-theme');var d=document.documentElement;var w=t==='light'?'light':'dark';if(!d.classList.contains(w)){d.classList.remove('dark','light');d.classList.add(w);}var m=document.querySelector('meta[name=theme-color]');if(m){m.setAttribute('content',w==='light'?'#F4F4F5':'#0B0B0C');}}catch(e){}}a();try{if(window.location.pathname==='/'&&localStorage.getItem('shakar-onboarded')!=='1'){window.location.replace('/onboarding');}}catch(e){}try{new MutationObserver(a).observe(document.documentElement,{attributes:true,attributeFilter:['class']});}catch(e){}})();`,
+          }}
+        />
       </head>
       <body
         className="flex min-h-full flex-col bg-background font-sans text-foreground"

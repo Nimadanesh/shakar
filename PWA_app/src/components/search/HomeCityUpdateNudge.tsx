@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
 import { cityLabel } from "@/data/taxonomy";
 import { getHomeCity, setHomeCity } from "@/lib/home-city";
@@ -78,14 +78,19 @@ export function HomeCityUpdateGate({
 }: {
   definition: HuntDefinition | null;
 }) {
-  const [home] = useState<string | null>(() => getHomeCity());
-  const [never] = useState<boolean>(() => {
+  // Hydration-safe: browser storage is client-only (see HomeCityRow — a
+  // render-time read mismatches SSR and can wipe the theme class).
+  const [home, setHome] = useState<string | null>(null);
+  const [never, setNever] = useState(false);
+
+  useEffect(() => {
+    setHome(getHomeCity());
     try {
-      return window.localStorage.getItem(NEVER_ASK_KEY) === "1";
+      setNever(window.localStorage.getItem(NEVER_ASK_KEY) === "1");
     } catch {
-      return false;
+      /* storage unavailable */
     }
-  });
+  }, []);
   if (
     never ||
     home === null ||

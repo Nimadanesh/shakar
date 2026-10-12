@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, MapPin } from "lucide-react";
 import { OptionSheet } from "@/components/search/OptionSheet";
 import { CITIES, cityLabel } from "@/data/taxonomy";
@@ -13,8 +13,18 @@ import { getHomeCity, setHomeCity } from "@/lib/home-city";
  * the profile-sync slice.
  */
 export function HomeCityRow() {
-  const [home, setHome] = useState<string | null>(() => getHomeCity());
+  // Hydration-safe: localStorage is client-only. The server (and the first
+  // client render) show null/"ثبت نشده"; the real value lands after mount.
+  // Reading it in the useState initializer mismatches SSR → hydration
+  // failure → React regenerates the tree client-side, re-rendering <html>
+  // from the vdom and wiping the theme class (the profile-page
+  // light→dark-on-refresh bug).
+  const [home, setHome] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setHome(getHomeCity());
+  }, []);
 
   function pick(cityId: string) {
     setHomeCity(cityId);

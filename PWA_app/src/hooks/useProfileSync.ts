@@ -5,6 +5,12 @@ import { getSession, onSessionChange } from "@/lib/auth";
 import { getDeviceId } from "@/lib/device";
 import { invalidateCached } from "@/lib/session-cache";
 import { normalizeBase } from "@/lib/saved-hunts";
+import {
+  addTombstone,
+  readTombstones,
+  removeTombstone,
+  type TombstoneKind,
+} from "@/lib/tombstones";
 
 /**
  * Profile sync (navid 2026-10-08): the profile IS the phone number.
@@ -69,47 +75,11 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 }
 
 /* ------------------------------------------------------------------ */
-/* Tombstones: ids deleted while offline. Merges skip them (no zombie */
+/* Tombstones: ids deleted while offline. Merges skip them (no zombie  */
 /* re-adds); the next successful sync pushes them as DELETEs, then     */
 /* clears them. Capped so the list can't grow forever.                 */
+/* Implementation lives in @/lib/tombstones (shared with hunt-store).  */
 /* ------------------------------------------------------------------ */
-
-const TOMBSTONE_CAP = 500;
-
-function tombstoneKey(kind: "favorites" | "hidden-ads"): string {
-  return `shakar:${kind}:tombstones:v1`;
-}
-
-function readTombstones(kind: "favorites" | "hidden-ads"): Set<string> {
-  try {
-    const raw = window.localStorage.getItem(tombstoneKey(kind));
-    const arr: unknown = raw ? JSON.parse(raw) : [];
-    return new Set(Array.isArray(arr) ? arr.filter((v): v is string => typeof v === "string") : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function addTombstone(kind: "favorites" | "hidden-ads", id: string): void {
-  try {
-    const set = readTombstones(kind);
-    set.add(id);
-    const arr = [...set].slice(-TOMBSTONE_CAP);
-    window.localStorage.setItem(tombstoneKey(kind), JSON.stringify(arr));
-  } catch {
-    // Best-effort.
-  }
-}
-
-function removeTombstone(kind: "favorites" | "hidden-ads", id: string): void {
-  try {
-    const set = readTombstones(kind);
-    if (!set.delete(id)) return;
-    window.localStorage.setItem(tombstoneKey(kind), JSON.stringify([...set]));
-  } catch {
-    // Best-effort.
-  }
-}
 
 export function mergeFavorites(server: ServerFavorite[]): void {
   if (typeof window === "undefined" || server.length === 0) return;
@@ -219,9 +189,13 @@ export function mergeHistory(server: ServerHistoryItem[]): void {
     const raw = window.localStorage.getItem(key);
     const local: Array<{ id: string; runId?: string }> = raw ? JSON.parse(raw) : [];
     const seen = new Set(local.map((r) => r.runId ?? r.id));
+    // Tombstoned = deleted on this device (possibly offline) — never
+    // re-add; the tombstone is pushed as a DELETE on the next sync.
+    // Without this, a deleted hunt zombies back on every refresh.
+    const tombstones = readTombstones("history");
     const merged: Array<Record<string, unknown>> = [...local];
     for (const s of server) {
-      if (seen.has(s.runId) || s.query.trim() === "") continue;
+      if (seen.has(s.runId) || tombstones.has(s.runId) || s.query.trim() === "") continue;
       const def = s.definition ?? {};
       merged.push({
         id: `server:${s.runId}`,
@@ -351,15 +325,16 @@ async function pushLocalToServer(userId: string): Promise<boolean> {
 
 /** Push tombstoned deletes to the server, then clear them. */
 async function pushTombstones(): Promise<void> {
-  const jobs: Array<{ kind: "favorites" | "hidden-ads"; url: string }> = [
-    { kind: "favorites", url: "/api/me/favorites" },
-    { kind: "hidden-ads", url: "/api/me/hidden-ads" },
+  const jobs: Array<{ kind: TombstoneKind; url: string; param: string }> = [
+    { kind: "favorites", url: "/api/me/favorites", param: "adToken" },
+    { kind: "hidden-ads", url: "/api/me/hidden-ads", param: "adToken" },
+    { kind: "history", url: "/api/me/history", param: "runId" },
   ];
-  for (const { kind, url } of jobs) {
+  for (const { kind, url, param } of jobs) {
     const ids = [...readTombstones(kind)];
     for (const id of ids) {
       try {
-        const res = await fetch(`${url}?adToken=${encodeURIComponent(id)}`, {
+        const res = await fetch(`${url}?${param}=${encodeURIComponent(id)}`, {
           method: "DELETE",
         });
         if (res.ok) removeTombstone(kind, id);
