@@ -882,6 +882,35 @@ describe("semantic caps — unified engine (5b)", () => {  function defCap(over:
     expect(kinds["md-max"]).toBe("near");
   });
 
+  it("accessory listing capped at near; the item itself stays exact (S1 live probe)", async () => {
+    // Real probe 2026-10-15: «قاب ایفون ۱۳ پرو» showed as exact for an
+    // «آیفون ۱۳ پرو» hunt. A case is not the phone — cap at near, never drop.
+    listings([
+      { sourceAdId: "acc-case", title: "قاب ایفون ۱۳ پرو" },
+      { sourceAdId: "acc-glass", title: "گلس ایفون ۱۳ پرو" },
+      { sourceAdId: "md-exact", title: "آیفون ۱۳ پرو ۲۵۶ گیگ" },
+    ]);
+    detail({ "acc-case": "قاب ژله‌ای", "acc-glass": "گلس سرامیکی", "md-exact": "سالم" });
+    const done = await doneOf(
+      defCap({ query: "آیفون ۱۳ پرو", include: ["آیفون", "۱۳", "پرو"], category: "mobile" })
+    );
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["acc-case"]).toBe("near");
+    expect(kinds["acc-glass"]).toBe("near");
+    expect(kinds["md-exact"]).toBe("exact");
+  });
+
+  it("hunting the accessory itself is unaffected by the accessory cap", async () => {
+    // The marker is skipped when the query itself contains it.
+    listings([{ sourceAdId: "acc-case", title: "قاب ایفون ۱۳ پرو" }]);
+    detail({ "acc-case": "قاب ژله‌ای" });
+    const done = await doneOf(
+      defCap({ query: "قاب ایفون ۱۳", include: ["قاب", "ایفون", "۱۳"], category: "mobile" })
+    );
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["acc-case"]).toBe("exact");
+  });
+
   it("repair polarity: «بدون تعمیر» satisfies, «تعمیر شده» contradicts", async () => {
     const def = defCap({
       query: "آیفون ۱۳، بدون تعمیر",

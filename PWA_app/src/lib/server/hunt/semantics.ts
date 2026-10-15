@@ -511,6 +511,17 @@ export function assessServiceTarget(
 const VARIANT_MARKERS = ["مکس", "اولترا", "الترا", "پلاس", "مینی", "لایت", "اف ای"];
 
 /**
+ * Accessory markers: the listing is for an ACCESSORY of the hunted item,
+ * not the item itself («قاب ایفون ۱۳ پرو» for an «آیفون ۱۳ پرو» hunt).
+ * Same locality rule as variants: only matters when every query term
+ * already matches AND the marker sits next to a matched query term.
+ * Deliberately tight — «بند» (strap) etc. wait for R3 evidence.
+ * A query that itself hunts the accessory («قاب ایفون») is unaffected:
+ * the marker is skipped when it's one of the query tokens.
+ */
+const ACCESSORY_MARKERS = ["قاب", "کاور", "گلس"];
+
+/**
  * Asymmetric model-identity check.
  *
  * - Specific query («آیفون ۱۳ پرو») vs more specific sibling listing
@@ -519,6 +530,9 @@ const VARIANT_MARKERS = ["مکس", "اولترا", "الترا", "پلاس", "م
  * - Broad query («آیفون ۱۳») vs specific listing («… پرو»): NO mismatch —
  *   family-compatible, stays eligible under the existing contract.
  * - Exact phrase on both sides: no marker beyond the query → no mismatch.
+ * - Accessory listing («قاب ایفون ۱۳ پرو») vs item query («آیفون ۱۳ پرو»):
+ *   MISMATCH — the listing is for an accessory of the item, not the item.
+ *   A query hunting the accessory itself («قاب ایفون») is unaffected.
  */
 export function assessModelSpecificity(
   includeTerms: readonly string[],
@@ -543,22 +557,27 @@ export function assessModelSpecificity(
     if (queryTokens.has(tok)) matchedPositions.add(i);
   });
 
-  for (const rawMarker of VARIANT_MARKERS) {
-    const marker = normalizeForMatch(rawMarker);
-    if (marker === "" || queryTokens.has(marker)) continue;
-    const positions: number[] = [];
-    listingTokens.forEach((tok, i) => {
-      if (tok === marker) positions.push(i);
-    });
-    if (positions.length === 0) continue;
-    const adjacent = positions.some((p) =>
-      [...matchedPositions].some((m) => Math.abs(m - p) <= 3)
-    );
-    if (adjacent) {
-      return {
-        mismatch: true,
-        reason: `sibling-variant:listing-adds:"${rawMarker}"`,
-      };
+  for (const [markers, kind] of [
+    [VARIANT_MARKERS, "sibling-variant"],
+    [ACCESSORY_MARKERS, "accessory"],
+  ] as const) {
+    for (const rawMarker of markers) {
+      const marker = normalizeForMatch(rawMarker);
+      if (marker === "" || queryTokens.has(marker)) continue;
+      const positions: number[] = [];
+      listingTokens.forEach((tok, i) => {
+        if (tok === marker) positions.push(i);
+      });
+      if (positions.length === 0) continue;
+      const adjacent = positions.some((p) =>
+        [...matchedPositions].some((m) => Math.abs(m - p) <= 3)
+      );
+      if (adjacent) {
+        return {
+          mismatch: true,
+          reason: `${kind}:listing-adds:"${rawMarker}"`,
+        };
+      }
     }
   }
   return { mismatch: false, reason: "no-extra-variant" };
