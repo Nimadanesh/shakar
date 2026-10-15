@@ -23,6 +23,13 @@ describe("unifyChars", () => {
     expect(unifyChars("رئیس")).toBe("رییس");
     expect(textMatches("اپارتمان ۹۰ متری نوساز", "آپارتمان")).toBe(true);
   });
+
+  it("matches ی-final terms through expanded keys (Phase 1.4 double-stem fix)", () => {
+    // expandSynonyms stems («لباسشویی» → «لباسشوی»); re-stemming the key
+    // («لباسشو») must not lose the match against stemmed ad tokens.
+    expect(textMatches("تعمیر لباسشویی در محل", "لباسشویی", "home")).toBe(true);
+    expect(expandSynonyms("لباسشویی", "home")).toContain("لباسشوی");
+  });
 });
 
 describe("normalizeForMatch", () => {

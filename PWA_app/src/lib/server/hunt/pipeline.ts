@@ -1,6 +1,18 @@
 import "server-only";
 
 import { normalizeForMatch, textMatches, textMatchesRelated } from "@/lib/persianNormalize";
+import { detectTransaction } from "@/lib/interpret";
+import {
+  assessListingRole,
+  assessModelSpecificity,
+  assessQueryIntent,
+  assessRepairPolarity,
+  assessRepairService,
+  assessServiceTarget,
+  exclusionFires,
+  isRepairWord,
+  rolesClash,
+} from "./semantics";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -262,8 +274,11 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
   strength: number;
   needsDetailReview: boolean;
 } {
+  // Title-phase MUST_NOT uses the scoped exclusion check: a title that
+  // explicitly marks repair-absent («آیفون ۱۳ بدون تعمیر») must survive the
+  // title phase so the detail phase can verify it. «نه» still means نه.
   for (const term of def.exclude) {
-    if (textMatches(ad.title, term, def.category)) {
+    if (exclusionFires(ad.title, term, def.category)) {
       return { excluded: true, strength: 0, needsDetailReview: false };
     }
   }
@@ -364,9 +379,11 @@ function evaluateDescription(
   def: HuntDefinition
 ): DescriptionEvaluation {
   const combined = `${title} ${description}`;
-  // 1. MUST_NOT — «نه» means نه.
+  // 1. MUST_NOT — «نه» means نه, scoped for repair words (see exclusionFires:
+  // an explicit «بدون تعمیر» listing satisfies a no-repair request instead
+  // of being banned by its own vocabulary).
   for (const term of def.exclude) {
-    if (textMatches(combined, term, def.category)) {
+    if (exclusionFires(combined, term, def.category)) {
       return rejectedEvaluation();
     }
   }
@@ -434,8 +451,75 @@ function evaluateDescription(
   if (mustTitle + mustDesc === 0 && relatedMatches === 0) {
     return { ...rejectedEvaluation(), missingInfo };
   }
+  // 5b. Semantic compatibility (Phase 1.4): full lexical MUST evidence is
+  // not enough when the query intent and the listing role explicitly
+  // contradict (product query vs service/buyer-seeking ad), when the
+  // listing is a more specific sibling variant (specific query vs
+  // «پرو مکس»), when a requested negative attribute is UNVERIFIED
+  // (no-repair request vs unknown repair history), when a service query
+  // meets an item that NEEDS repair instead of an offered service, or
+  // when a service query's offer cannot be bound to the requested target
+  // (incidental appliance mention). A service-intent exact additionally
+  // requires support: a confident service role or an explicit offer
+  // signal — never a bare word overlap. Every cap turns would-be exact
+  // into near — kept and ranked, never silently dropped. Near stays near,
+  // rejected stays rejected. Only an explicitly ABSENT attribute
+  // («بدون تعمیر») may satisfy its requirement as exact.
+  if (missingInfo.length === 0) {
+    const intent = assessQueryIntent(def.query, def.category, def.transaction);
+    const role = assessListingRole(combined);
+    const explicitBuy =
+      def.transaction === "buy" || detectTransaction(def.query) === "buy";
+    const clash = rolesClash(intent, role, explicitBuy);
+    const identity = clash.clash
+      ? { mismatch: false as const, reason: "skipped:role-clash" }
+      : assessModelSpecificity(def.include, combined, def.category);
+    const repairRequested = def.exclude.some((t) => isRepairWord(t));
+    const repairUnknown =
+      repairRequested && assessRepairPolarity(combined).polarity === "unknown";
+    // Offered service vs item needing repair (narrowly service-scoped, so
+    // product searches never lose a damaged item they may still want).
+    const repairService = assessRepairService(combined);
+    const serviceIntent = intent.role === "service";
+    const needsRepairMismatch =
+      serviceIntent &&
+      repairService.signal === "item_needs_repair" &&
+      role.role !== "service";
+    const unsupportedServiceExact =
+      serviceIntent && role.role === "unknown" && repairService.signal !== "service_offered";
+    // Target binding: a service offer for another appliance must not read
+    // as an exact match for the requested one. Binding is required only
+    // for service intent; all other intents keep existing behavior.
+    const targetBound =
+      !serviceIntent || assessServiceTarget(def.include, combined, def.category).bound;
+    if (
+      clash.clash ||
+      identity.mismatch ||
+      repairUnknown ||
+      needsRepairMismatch ||
+      unsupportedServiceExact ||
+      !targetBound
+    ) {
+      return {
+        verdict: "near",
+        evidence,
+        missingInfo,
+        mustTitle,
+        mustDesc,
+        shouldMatched,
+      };
+    }
+    return {
+      verdict: "exact",
+      evidence,
+      missingInfo,
+      mustTitle,
+      mustDesc,
+      shouldMatched,
+    };
+  }
   return {
-    verdict: missingInfo.length === 0 ? "exact" : "near",
+    verdict: "near",
     evidence,
     missingInfo,
     mustTitle,

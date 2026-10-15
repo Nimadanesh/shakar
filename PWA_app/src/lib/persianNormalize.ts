@@ -215,15 +215,28 @@ export function expandSynonyms(term: string, category?: string): string[] {
   return [...new Set(concepts.flatMap((concept) => concept.aliases.map(synonymKey)))];
 }
 
-/** True if normalized tokens include a term/phrase without synonym expansion. */
+/**
+ * True if normalized tokens include a term/phrase without synonym expansion.
+ *
+ * Phase 1.4 note: `term` may already be a stemmed synonym key (textMatches
+ * feeds expandSynonyms output back here), and stemming is NOT idempotent
+ * for ی-final words («لباسشویی» → «لباسشوی» → «لباسشو»). Both the raw
+ * normalized and the stemmed key are therefore accepted. The raw variant
+ * can only match stem-stable tokens (where it equals the stemmed key), so
+ * this strictly repairs the double-stem miss without new false positives.
+ */
 function containsNormalizedTerm(adText: string, term: string): boolean {
   const tokens = tokenize(adText);
   if (tokens.length === 0) return false;
-  const key = synonymKey(term);
-  if (key === "") return false;
+  const raw = normalizeForMatch(term);
+  const keys = new Set([raw, synonymKey(term)]);
+  keys.delete("");
+  if (keys.size === 0) return false;
   const tokenSet = new Set(tokens);
   const stemmedText = tokens.join(" ");
-  return key.includes(" ") ? stemmedText.includes(key) : tokenSet.has(key);
+  const hit = (key: string): boolean =>
+    key.includes(" ") ? stemmedText.includes(key) : tokenSet.has(key);
+  return [...keys].some(hit);
 }
 
 /**

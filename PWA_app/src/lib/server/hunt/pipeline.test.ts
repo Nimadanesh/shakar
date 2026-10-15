@@ -736,12 +736,12 @@ describe("intent buckets — flaw #19 (MUST/SHOULD/MUST-NOT/UNKNOWN)", () => {
     }
   });
 
-  it("documents current repair/buyer-side behavior: MUST evidence still counts as exact", async () => {
-    // The pipeline has no service-vs-product or buyer-vs-seller distinction
-    // (flaw #7, future M4b). These listings contain یخچال, so they satisfy
-    // the MUST textually. matchKind "exact" here means MUST-evidenced, not
-    // a transaction-direction claim. If service/intent logic is added later,
-    // this test must be revisited.
+  it("Phase 1: service/buyer-side listings are near, not exact, for a product query", async () => {
+    // Previously this test LOCKED exact for MUST-evidenced repair/buyer ads
+    // and said to revisit it once service/intent logic landed (flaw #7).
+    // Now: «تعمیر یخچال در محل» (service) and «خریدار یخچال …»
+    // (buyer-seeking) still pass the lexical MUST, but the listing-role
+    // assessment caps them at near — no misleading exact, no silent drop.
     const def = def19({
       query: "یخچال",
       category: "home",
@@ -760,12 +760,13 @@ describe("intent buckets — flaw #19 (MUST/SHOULD/MUST-NOT/UNKNOWN)", () => {
     });
     const done = await doneOf(def);
 
+    // Recall preserved: both listings remain eligible, honestly labeled.
     expect(done.results).toHaveLength(2);
-    // Current behavior: textual MUST match → exact. No silent transaction
-    // claim is made; the limitation is documented, not hidden.
     for (const ad of done.results) {
-      expect(ad.matchKind).toBe("exact");
+      expect(ad.matchKind).toBe("near");
     }
+    expect(done.stats.nearMiss).toBe(2);
+    expect(done.stats.rejectedNoMatch).toBe(0);
   });
 });
 
