@@ -603,6 +603,99 @@ describe("intent buckets — flaw #19 (MUST/SHOULD/MUST-NOT/UNKNOWN)", () => {
   });
 });
 
+describe("service intent — P0 (HumanTest S3: تعمیر یخچال)", () => {
+  function defService(over: Partial<HuntDefinition> = {}): HuntDefinition {
+    return {
+      query: "تعمیر یخچال",
+      include: ["تعمیر", "یخچال"],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+      serviceIntent: true,
+      ...over,
+    };
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  it("ranks the repairer above the fridge-for-sale", async () => {
+    listings([
+      { sourceAdId: "g1", title: "یخچال سامسونگ" },
+      { sourceAdId: "s1", title: "تعمیرکار یخچال در منزل" },
+    ]);
+    detail({
+      g1: "یخچال تعمیرشده، آماده فروش", // goods: matches یخچال only
+      s1: "تعمیرات انواع یخچال در محل", // provider: demand satisfied via تعمیرکار/تعمیرات
+    });
+    const done = await doneOf(defService());
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["s1", "g1"]);
+    expect(done.results[0].matchKind).toBe("exact");
+    // The goods ad still renders (spectrum UX) but sinks: scoring-zero equivalent.
+    expect(done.results[1].score).toBeLessThan(done.results[0].score - 2);
+  });
+
+  it("provider-form satisfies the تعمیر MUST (the S3 root cause)", async () => {
+    listings([{ sourceAdId: "s1", title: "تعمیرکار یخچال" }]);
+    detail({ s1: "خدمات تعمیر یخچال" });
+    const done = await doneOf(defService());
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].missingInfo).toEqual([]);
+    expect(done.results[0].evidence).toContain("تعمیر");
+  });
+
+  it("does NOT penalize goods ads when serviceIntent is off (S5 guard)", async () => {
+    listings([{ sourceAdId: "g1", title: "یخچال سامسونگ" }]);
+    detail({ g1: "یخچال نو، فروش" });
+    const done = await doneOf(defService({ serviceIntent: false }));
+    // No goods penalty without service intent: score must stay non-negative
+    // and the ad must not be sunk by the P0 adjustments.
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].score).toBeGreaterThanOrEqual(0);
+  });
+
+  it("Q4: تعمیری query does not trigger the service path", async () => {
+    // resolveHuntDefinition-level: detectServiceIntent("یخچال تعمیری") is false,
+    // so even if include carried تعمیر, the demand-family must not fire.
+    // Here we assert the definition resolver end to end.
+    const { resolveHuntDefinition } = await import("./definition");
+    const def = resolveHuntDefinition({ query: "یخچال تعمیری" });
+    expect(def?.serviceIntent).toBe(false);
+    const def2 = resolveHuntDefinition({ query: "تعمیر یخچال" });
+    expect(def2?.serviceIntent).toBe(true);
+    expect(def2?.include).toContain("تعمیر");
+  });
+});
+
 describe("collapseDupes — bug #19 (dedupe before sort, keep newest)", () => {
   function cand(over: Partial<Candidate> & { sourceAdId: string }): Candidate {
     return {

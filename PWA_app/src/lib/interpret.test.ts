@@ -166,6 +166,38 @@ describe("detectCondition", () => {
   });
 });
 
+describe("detectServiceIntent — P0 (HumanTest S3)", () => {
+  it("detects service demand: تعمیر / تعمیرکار / نصب / نصاب", async () => {
+    const { detectServiceIntent } = await import("@/lib/interpret");
+    expect(detectServiceIntent("تعمیر یخچال")).toBe(true);
+    expect(detectServiceIntent("تعمیرکار یخچال در منزل")).toBe(true);
+    expect(detectServiceIntent("تعمیرات تخصصی موبایل")).toBe(true);
+    expect(detectServiceIntent("نصاب کولر گازی")).toBe(true);
+    expect(detectServiceIntent("نصب کولر گازی در محل")).toBe(true);
+  });
+
+  it("Q4 guard: تعمیری / تعمیرشده reads as repaired GOODS, not service", async () => {
+    const { detectServiceIntent } = await import("@/lib/interpret");
+    expect(detectServiceIntent("یخچال تعمیری")).toBe(false);
+    expect(detectServiceIntent("یخچال تعمیرشده")).toBe(false);
+    expect(detectServiceIntent("گوشی تعمیری سالم")).toBe(false);
+  });
+
+  it("stays silent on goods queries", async () => {
+    const { detectServiceIntent } = await import("@/lib/interpret");
+    expect(detectServiceIntent("یخچال")).toBe(false);
+    expect(detectServiceIntent("آیفون ۱۳")).toBe(false);
+    expect(detectServiceIntent("")).toBe(false);
+  });
+
+  it("is word-boundary safe", async () => {
+    const { detectServiceIntent } = await import("@/lib/interpret");
+    // «تعمیرگاه» (repair SHOP as a place noun) is not in the demand list —
+    // must not fire via substring.
+    expect(detectServiceIntent("تعمیرگاه")).toBe(false);
+  });
+});
+
 describe("detectCategoryFromText", () => {
   it("hints goods categories from head words", async () => {
     const { detectCategoryFromText } = await import("@/lib/interpret");

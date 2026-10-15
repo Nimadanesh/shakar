@@ -1,6 +1,12 @@
 import "server-only";
 
 import { textMatches } from "@/lib/persianNormalize";
+import {
+  GOODS_SALE_CUES,
+  SERVICE_DEMAND_FAMILY,
+  SERVICE_PROVIDER_CUES,
+  isServiceDemandTerm,
+} from "@/lib/interpret";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -56,6 +62,13 @@ export interface HuntDefinition {
   priceMax: string;
   transaction: "" | "rent" | "buy";
   condition: "" | "new" | "used" | "any";
+  /**
+   * Service intent (P0, HumanTest S3): the query wants a SERVICE performed
+   * («تعمیر یخچال»), not a good. Computed by detectServiceIntent in
+   * resolveHuntDefinition. Optional for backward compatibility with
+   * pre-intent definitions and tests — absent means false.
+   */
+  serviceIntent?: boolean;
   /**
    * Second-phase opt-in («می‌خوای برم سراغ قدیمی‌ترها؟»): when true, the
    * list phase starts at page MAX_LIST_PAGES_PER_HUNT instead of 0 — the
@@ -270,6 +283,13 @@ export interface DescriptionEvaluation {
   mustDesc: number;
   /** SHOULD terms matched in title+description. */
   shouldMatched: number;
+  /**
+   * Service-intent signals (P0): provider-cue hits and goods-for-sale cue
+   * hits in title+description. Counted only when def.serviceIntent is true;
+   * zero otherwise, so non-service hunts are never affected.
+   */
+  providerHits: number;
+  goodsHits: number;
 }
 
 function rejectedEvaluation(): DescriptionEvaluation {
@@ -280,7 +300,16 @@ function rejectedEvaluation(): DescriptionEvaluation {
     mustTitle: 0,
     mustDesc: 0,
     shouldMatched: 0,
+    providerHits: 0,
+    goodsHits: 0,
   };
+}
+
+/** Count cue hits in text (P0 service-intent signals). */
+function countCues(text: string, cues: string[]): number {
+  let n = 0;
+  for (const cue of cues) if (textMatches(text, cue)) n += 1;
+  return n;
 }
 
 /**
@@ -319,6 +348,11 @@ function evaluateDescription(
   // 3-4. SHOULD-only scan shared by the defensive empty-MUST path below.
   // Pre-#19 snapshots lack the bucket — normalize, never crash.
   const shouldTerms = def.should ?? [];
+  const serviceIntent = def.serviceIntent ?? false;
+  // Service-intent ad-type signals (P0): counted on title+description
+  // combined, only when the hunt wants a service. Zero otherwise.
+  const providerHits = serviceIntent ? countCues(combined, SERVICE_PROVIDER_CUES) : 0;
+  const goodsHits = serviceIntent ? countCues(combined, GOODS_SALE_CUES) : 0;
   // Defensive: no MUST terms (never happens via resolveHuntDefinition, but
   // old snapshots and direct callers must not crash or pass vacuously).
   if (def.include.length === 0) {
@@ -337,6 +371,8 @@ function evaluateDescription(
       mustTitle: 0,
       mustDesc: 0,
       shouldMatched,
+      providerHits,
+      goodsHits,
     };
   }
   // 3. MUST with UNKNOWN semantics.
@@ -345,10 +381,17 @@ function evaluateDescription(
   let mustTitle = 0;
   let mustDesc = 0;
   for (const term of def.include) {
+    // P0: a service-demand MUST term («تعمیر») is satisfied when the demand
+    // appears in ANY morphological form («تعمیرکار», «تعمیرات»…). Token-level
+    // matching alone is blind to the agentive form — the S3 root cause.
+    const demandSatisfied =
+      serviceIntent &&
+      isServiceDemandTerm(term) &&
+      SERVICE_DEMAND_FAMILY.some((w) => textMatches(combined, w));
     if (textMatches(title, term)) {
       mustTitle += 1;
       evidence.push(term);
-    } else if (textMatches(description, term)) {
+    } else if (demandSatisfied || textMatches(description, term)) {
       mustDesc += 1;
       evidence.push(term);
     } else {
@@ -365,7 +408,7 @@ function evaluateDescription(
   }
   // 5. Verdict.
   if (mustTitle + mustDesc === 0) {
-    return { ...rejectedEvaluation(), missingInfo };
+    return { ...rejectedEvaluation(), missingInfo, providerHits, goodsHits };
   }
   return {
     verdict: missingInfo.length === 0 ? "exact" : "near",
@@ -374,6 +417,8 @@ function evaluateDescription(
     mustTitle,
     mustDesc,
     shouldMatched,
+    providerHits,
+    goodsHits,
   };
 }
 
@@ -382,6 +427,12 @@ function evaluateDescription(
  * MUST description matches, then price-known; SHOULD matches add a small
  * boost; UNKNOWN terms (missingInfo) subtract a small penalty. The breakdown
  * stays EXPLAINABLE (flaw #2) — never a magic number.
+ *
+ * P0 service-intent adjustments (HumanTest S3): a provider cue in the ad
+ * lifts it (+1); a goods-for-sale ad with NO provider cue on a service
+ * hunt sinks to the bottom (-4, scoring-zero equivalent — the S3 rubric
+ * grades refrigerator-for-sale as 0). The ad is still rendered, never
+ * dropped: scoring zero ≠ product zero (the near-miss spectrum UX).
  */
 function scoreAd(
   ev: DescriptionEvaluation,
@@ -394,9 +445,18 @@ function scoreAd(
   const priceKnown = price !== null ? 0.5 : 0;
   const shouldBoost = shouldCount > 0 ? (0.5 * ev.shouldMatched) / shouldCount : 0;
   const unknownPenalty = mustCount > 0 ? ev.missingInfo.length / mustCount : 0;
+  const providerBoost = ev.providerHits > 0 ? 1 : 0;
+  const goodsPenalty = ev.goodsHits > 0 && ev.providerHits === 0 ? 4 : 0;
   const breakdown: ScoreBreakdown = { title, description, priceKnown };
   return {
-    score: 3 * title + 2 * description + priceKnown + shouldBoost - unknownPenalty,
+    score:
+      3 * title +
+      2 * description +
+      priceKnown +
+      shouldBoost -
+      unknownPenalty +
+      providerBoost -
+      goodsPenalty,
     breakdown,
   };
 }

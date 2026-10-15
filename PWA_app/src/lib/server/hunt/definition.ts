@@ -3,6 +3,7 @@ import "server-only";
 import type { HuntDefinition } from "./pipeline";
 import {
   detectCategoryFromText,
+  detectServiceIntent,
   interpretQuery,
   KNOWN_CITIES,
   PREFERENCE_CUES,
@@ -159,6 +160,12 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     }
   }
 
+  // 6. Service intent (P0, HumanTest S3): «تعمیر یخچال» wants a repairer,
+  // not a fridge. Computed from the raw query text — never guessed from
+  // ad text. The Q4 guard («یخچال تعمیری» = repaired good) lives inside
+  // detectServiceIntent.
+  const serviceIntent = detectServiceIntent(def.query);
+
   return {
     ...def,
     include,
@@ -169,6 +176,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     category,
     priceMin,
     priceMax,
+    serviceIntent,
   };
 }
 

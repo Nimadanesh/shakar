@@ -23,7 +23,8 @@ export type BenchmarkSlice =
   | "transaction"
   | "unknown"
   | "ambiguity"
-  | "duplicates";
+  | "duplicates"
+  | "service-intent";
 
 export interface BenchmarkCandidate {
   id: string;
@@ -213,6 +214,18 @@ export const SEARCH_QUALITY_BENCHMARK: readonly SearchQualityCase[] = [
       { id: "dup-a1-repost", title: "آیفون ۱۳ تمیز", description: "۲۵۶ گیگ", relevance: 3, note: "Same listing reposted; relevance label retained but metric should deduplicate IDs only if production does." },
       { id: "dup-a2", title: "آیفون ۱۳ پرو", description: "۱۲۸ گیگ", relevance: 1, note: "Different model variant." },
       { id: "dup-a3", title: "گوشی سامسونگ گلکسی", description: "سالم", relevance: 0, note: "Wrong brand entirely; hard negative." },
+    ],
+  },
+  {
+    id: "service-fridge-repair",
+    slice: "service-intent",
+    query: "تعمیر یخچال",
+    intent: { category: "all", must: ["تعمیر", "یخچال"], should: [], mustNot: [], unknown: [] },
+    candidates: [
+      { id: "srv-a1", title: "تعمیرکار یخچال در منزل", description: "تعمیرات انواع یخچال در محل", relevance: 3, note: "Service provider; exact intent (HumanTest S3)." },
+      { id: "srv-a2", title: "یخچال سامسونگ", description: "تعمیرشده، آماده فروش", relevance: 0, note: "Refrigerator for sale; S3 rubric = 0." },
+      { id: "srv-a3", title: "یخچال فریزر نو", description: "با گارانتی، فروش", relevance: 0, note: "Goods for sale; S3 rubric = 0." },
+      { id: "srv-a4", title: "ابزار تعمیر یخچال", description: "فروش عمده ابزار", relevance: 1, note: "Parts/tools; S3 rubric = 1." },
     ],
   },
 ] as const;

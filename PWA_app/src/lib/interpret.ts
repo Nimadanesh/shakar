@@ -121,6 +121,69 @@ export function detectCondition(raw: string): ConditionType | null {
   return null;
 }
 
+/**
+ * Service-demand cues — words where the user wants a SERVICE performed,
+ * not a good (HumanTest S3, flaw #21: «تعمیر یخچال» must find repairers,
+ * not fridges for sale). Word-boundary on the normalized query.
+ * Conservative seed — grows from real hunt data, like SYNONYM_GROUPS.
+ */
+const SERVICE_DEMAND_WORDS = ["تعمیر", "تعمیرات", "تعمیرکار", "نصب", "نصاب"];
+
+/**
+ * Repaired-goods forms — the Q4 guard. «یخچال تعمیری» / «تعمیرشده» reads as
+ * a repaired GOOD for sale, never as service demand. Checked on SURFACE
+ * forms first: the stemmer would conflate «تعمیری»→«تعمیر», so this must
+ * run before any stemmed cue check.
+ */
+const REPAIRED_GOODS_FORMS = ["تعمیری", "تعمیرشده", "تعمیر شده"];
+
+/**
+ * «تعمیر یخچال» → true (wants a repair service); «تعمیرکار یخچال» → true;
+ * «نصاب کولر گازی» → true; «یخچال تعمیری» → false (repaired fridge, Q4);
+ * «یخچال» → false. The repaired-goods guard runs first on surface forms.
+ */
+export function detectServiceIntent(raw: string): boolean {
+  const normalized = normalizePersian(raw);
+  if (REPAIRED_GOODS_FORMS.some((w) => includesWord(normalized, w))) return false;
+  return SERVICE_DEMAND_WORDS.some((w) => includesWord(normalized, w));
+}
+
+/** True when a MUST term is a service-demand cue (satisfiable by provider forms). */
+export function isServiceDemandTerm(term: string): boolean {
+  const normalized = normalizePersian(term);
+  return SERVICE_DEMAND_WORDS.some((w) => includesWord(normalized, w));
+}
+
+/**
+ * Morphological family of the service demand — a demand MUST term is
+ * satisfied when ANY of these appears in the ad text. This is what makes
+ * «تعمیرکار یخچال» satisfy the «تعمیر» in «تعمیر یخچال» (token-level
+ * matching alone is blind to the agentive form — the S3 root cause).
+ */
+export const SERVICE_DEMAND_FAMILY = [...SERVICE_DEMAND_WORDS];
+
+/**
+ * Provider/agentive cues in AD text — the supply side of service intent.
+ * Used for the ranking boost. Tight on purpose: «خدمات» alone is too broad
+ * («خدمات پس از فروش» appears on goods ads).
+ */
+export const SERVICE_PROVIDER_CUES = [
+  "تعمیرکار",
+  "تعمیرات",
+  "سرویسکار",
+  "نصاب",
+  "در محل",
+  "در منزل",
+];
+
+/**
+ * Goods-for-sale cues — when a service-intent hunt meets an ad carrying
+ * these and NO provider cue, the ad is a good, not a service (HumanTest S3
+ * rubric: refrigerator-for-sale = 0). Tight on purpose: «قیمت» also
+ * appears in legitimate service ads («قیمت توافقی»).
+ */
+export const GOODS_SALE_CUES = ["فروش", "آکبند"];
+
 /** Head-word hints for the required-dimensions engine. Explicit category
  *  picker wins; these only fire when the user never touched it. */
 const VEHICLE_HINT_WORDS = [
