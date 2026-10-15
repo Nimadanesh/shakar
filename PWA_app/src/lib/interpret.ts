@@ -184,6 +184,15 @@ export const SERVICE_PROVIDER_CUES = [
  */
 export const GOODS_SALE_CUES = ["فروش", "آکبند"];
 
+/**
+ * Needs-the-service cues — the Q1 case: «یخچال خراب نیازمند تعمیر» is a
+ * GOOD needing repair (for sale), not a repair provider. On a service
+ * hunt, an ad carrying these with NO provider cue is demoted like a
+ * goods ad. The providerHits===0 guard keeps legitimate providers safe
+ * («یخچال خراب خود را به ما بسپارید» still has تعمیرکار).
+ */
+export const NEEDS_REPAIR_CUES = ["خراب", "نیازمند", "نیاز به"];
+
 /** Head-word hints for the required-dimensions engine. Explicit category
  *  picker wins; these only fire when the user never touched it. */
 const VEHICLE_HINT_WORDS = [

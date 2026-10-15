@@ -3,6 +3,7 @@ import "server-only";
 import { textMatches } from "@/lib/persianNormalize";
 import {
   GOODS_SALE_CUES,
+  NEEDS_REPAIR_CUES,
   SERVICE_DEMAND_FAMILY,
   SERVICE_PROVIDER_CUES,
   isServiceDemandTerm,
@@ -284,12 +285,14 @@ export interface DescriptionEvaluation {
   /** SHOULD terms matched in title+description. */
   shouldMatched: number;
   /**
-   * Service-intent signals (P0): provider-cue hits and goods-for-sale cue
-   * hits in title+description. Counted only when def.serviceIntent is true;
-   * zero otherwise, so non-service hunts are never affected.
+   * Service-intent signals (P0): provider-cue hits, goods-for-sale cue
+   * hits, and needs-repair cue hits in title+description. Counted only
+   * when def.serviceIntent is true; zero otherwise, so non-service hunts
+   * are never affected.
    */
   providerHits: number;
   goodsHits: number;
+  needsRepairHits: number;
 }
 
 function rejectedEvaluation(): DescriptionEvaluation {
@@ -302,6 +305,7 @@ function rejectedEvaluation(): DescriptionEvaluation {
     shouldMatched: 0,
     providerHits: 0,
     goodsHits: 0,
+    needsRepairHits: 0,
   };
 }
 
@@ -353,6 +357,7 @@ function evaluateDescription(
   // combined, only when the hunt wants a service. Zero otherwise.
   const providerHits = serviceIntent ? countCues(combined, SERVICE_PROVIDER_CUES) : 0;
   const goodsHits = serviceIntent ? countCues(combined, GOODS_SALE_CUES) : 0;
+  const needsRepairHits = serviceIntent ? countCues(combined, NEEDS_REPAIR_CUES) : 0;
   // Defensive: no MUST terms (never happens via resolveHuntDefinition, but
   // old snapshots and direct callers must not crash or pass vacuously).
   if (def.include.length === 0) {
@@ -373,6 +378,7 @@ function evaluateDescription(
       shouldMatched,
       providerHits,
       goodsHits,
+      needsRepairHits,
     };
   }
   // 3. MUST with UNKNOWN semantics.
@@ -408,7 +414,7 @@ function evaluateDescription(
   }
   // 5. Verdict.
   if (mustTitle + mustDesc === 0) {
-    return { ...rejectedEvaluation(), missingInfo, providerHits, goodsHits };
+    return { ...rejectedEvaluation(), missingInfo, providerHits, goodsHits, needsRepairHits };
   }
   return {
     verdict: missingInfo.length === 0 ? "exact" : "near",
@@ -419,6 +425,7 @@ function evaluateDescription(
     shouldMatched,
     providerHits,
     goodsHits,
+    needsRepairHits,
   };
 }
 
@@ -429,10 +436,11 @@ function evaluateDescription(
  * stays EXPLAINABLE (flaw #2) — never a magic number.
  *
  * P0 service-intent adjustments (HumanTest S3): a provider cue in the ad
- * lifts it (+1); a goods-for-sale ad with NO provider cue on a service
+ * lifts it (+1); a goods-for-sale ad — or a good NEEDING the service
+ * («یخچال خراب نیازمند تعمیر», Q1) — with NO provider cue on a service
  * hunt sinks to the bottom (-4, scoring-zero equivalent — the S3 rubric
- * grades refrigerator-for-sale as 0). The ad is still rendered, never
- * dropped: scoring zero ≠ product zero (the near-miss spectrum UX).
+ * grades both as 0). The ad is still rendered, never dropped: scoring
+ * zero ≠ product zero (the near-miss spectrum UX).
  */
 function scoreAd(
   ev: DescriptionEvaluation,
@@ -446,7 +454,8 @@ function scoreAd(
   const shouldBoost = shouldCount > 0 ? (0.5 * ev.shouldMatched) / shouldCount : 0;
   const unknownPenalty = mustCount > 0 ? ev.missingInfo.length / mustCount : 0;
   const providerBoost = ev.providerHits > 0 ? 1 : 0;
-  const goodsPenalty = ev.goodsHits > 0 && ev.providerHits === 0 ? 4 : 0;
+  const nonServiceHits = ev.goodsHits + ev.needsRepairHits;
+  const goodsPenalty = nonServiceHits > 0 && ev.providerHits === 0 ? 4 : 0;
   const breakdown: ScoreBreakdown = { title, description, priceKnown };
   return {
     score:

@@ -683,6 +683,20 @@ describe("service intent — P0 (HumanTest S3: تعمیر یخچال)", () => {
     expect(done.results[0].score).toBeGreaterThanOrEqual(0);
   });
 
+  it("Q1: a fridge NEEDING repair sinks on a service hunt", async () => {
+    listings([
+      { sourceAdId: "n1", title: "یخچال نیازمند تعمیر" },
+      { sourceAdId: "s1", title: "تعمیرکار یخچال در منزل" },
+    ]);
+    detail({
+      n1: "یخچال خراب، نیازمند تعمیر", // good needing the service — not a provider
+      s1: "تعمیرات انواع یخچال در محل",
+    });
+    const done = await doneOf(defService());
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["s1", "n1"]);
+    expect(done.results[1].score).toBeLessThan(0);
+  });
+
   it("Q4: تعمیری query does not trigger the service path", async () => {
     // resolveHuntDefinition-level: detectServiceIntent("یخچال تعمیری") is false,
     // so even if include carried تعمیر, the demand-family must not fire.
