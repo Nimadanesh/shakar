@@ -164,16 +164,19 @@ export const SERVICE_DEMAND_FAMILY = [...SERVICE_DEMAND_WORDS];
 
 /**
  * Provider/agentive cues in AD text — the supply side of service intent.
- * Used for the ranking boost. Tight on purpose: «خدمات» alone is too broad
- * («خدمات پس از فروش» appears on goods ads).
+ * Used for the ranking boost. Tight on purpose:
+ * - «خدمات» alone is too broad («خدمات پس از فروش» appears on goods ads);
+ * - «در محل» / «در منزل» are location phrases sellers also use
+ *   («بازدید در محل») — they must not shield a goods ad from the
+ *   goods penalty, so they are NOT provider cues. A genuine mobile
+ *   repairer almost always also names the trade (تعمیرکار/تعمیرات/…),
+ *   which the demand-family MUST satisfaction already rewards.
  */
 export const SERVICE_PROVIDER_CUES = [
   "تعمیرکار",
   "تعمیرات",
   "سرویسکار",
   "نصاب",
-  "در محل",
-  "در منزل",
 ];
 
 /**

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { textMatches } from "@/lib/persianNormalize";
+import { normalizeForMatch, textMatches } from "@/lib/persianNormalize";
 import {
   GOODS_SALE_CUES,
   NEEDS_REPAIR_CUES,
@@ -317,6 +317,21 @@ function countCues(text: string, cues: string[]): number {
 }
 
 /**
+ * Strip needs-repair phrases before provider-cue counting (P0 refinement).
+ * «نیازمند تعمیرکار» / «نیاز به تعمیرکار» describes the ITEM's need (a
+ * broken good for sale), not the seller's trade — the provider cue inside
+ * must not count as provider evidence, and the needs-repair demotion must
+ * still fire. Only the cue directly governed by the need-word is stripped;
+ * a genuine «تعمیرکار یخچال» elsewhere in the text still counts.
+ */
+function stripNeedPhrases(text: string): string {
+  return text
+    .replace(/نیازمند\s+\S+/g, " ")
+    .replace(/نیاز\s+به\s+\S+/g, " ")
+    .replace(/محتاج\s+\S+/g, " ");
+}
+
+/**
  * Intent evaluation (flaw #19, 2026-10-09) — replaces the hard-AND
  * descriptionPass that killed every near-miss (the «برنج هندی» zero-result).
  *
@@ -355,7 +370,9 @@ function evaluateDescription(
   const serviceIntent = def.serviceIntent ?? false;
   // Service-intent ad-type signals (P0): counted on title+description
   // combined, only when the hunt wants a service. Zero otherwise.
-  const providerHits = serviceIntent ? countCues(combined, SERVICE_PROVIDER_CUES) : 0;
+  const providerHits = serviceIntent
+    ? countCues(stripNeedPhrases(normalizeForMatch(combined)), SERVICE_PROVIDER_CUES)
+    : 0;
   const goodsHits = serviceIntent ? countCues(combined, GOODS_SALE_CUES) : 0;
   const needsRepairHits = serviceIntent ? countCues(combined, NEEDS_REPAIR_CUES) : 0;
   // Defensive: no MUST terms (never happens via resolveHuntDefinition, but

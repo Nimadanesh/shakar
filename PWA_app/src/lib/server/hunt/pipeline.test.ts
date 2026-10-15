@@ -697,6 +697,36 @@ describe("service intent — P0 (HumanTest S3: تعمیر یخچال)", () => {
     expect(done.results[1].score).toBeLessThan(0);
   });
 
+  it("در محل does NOT shield a seller ad (location phrase, not a trade word)", async () => {
+    listings([
+      { sourceAdId: "n1", title: "یخچال آدمیرال نیازمند تعمیر" },
+      { sourceAdId: "s1", title: "تعمیرکار یخچال" },
+    ]);
+    detail({
+      // Seller language: viewing on site. No trade word anywhere.
+      n1: "فروش یخچال، بازدید در محل",
+      s1: "تعمیرات یخچال",
+    });
+    const done = await doneOf(defService());
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["s1", "n1"]);
+    expect(done.results[1].score).toBeLessThan(0);
+  });
+
+  it("نیازمند تعمیرکار describes the item's need, not the seller's trade", async () => {
+    listings([
+      { sourceAdId: "n1", title: "یخچال نیازمند تعمیرکار" },
+      { sourceAdId: "s1", title: "تعمیرکار یخچال" },
+    ]);
+    detail({
+      // Broken fridge for sale; the تعمیرکار here is what the ITEM needs.
+      n1: "یخچال سالم نیست، نیازمند تعمیرکار",
+      s1: "تعمیرات یخچال در محل",
+    });
+    const done = await doneOf(defService());
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["s1", "n1"]);
+    expect(done.results[1].score).toBeLessThan(0);
+  });
+
   it("Q4: تعمیری query does not trigger the service path", async () => {
     // resolveHuntDefinition-level: detectServiceIntent("یخچال تعمیری") is false,
     // so even if include carried تعمیر, the demand-family must not fire.
