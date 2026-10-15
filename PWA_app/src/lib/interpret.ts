@@ -55,8 +55,8 @@ export const PREFERENCE_CUES = ["ترجیحاً", "ترجیحا", "کاش", "ا�
 
 /** Words that pin a real-estate hunt to rent vs buy. Checked on the
  *  normalized query; «اجاره» also matches «اجاره‌ای». */
-const RENT_WORDS = ["اجاره", "رهن"];
-const BUY_WORDS = ["خرید", "فروش", "معاوضه"];
+const RENT_WORDS = ["اجاره", "اجاره‌ای", "رهن"];
+const BUY_WORDS = ["خرید", "فروش", "فروشی", "معاوضه"];
 
 /** Words that answer the goods «condition» dimension (نو / کارکرده). */
 const CONDITION_NEW_WORDS = ["نو", "آکبند", "صفر"];
@@ -80,12 +80,14 @@ const REAL_ESTATE_WORDS = [
   "خونه",
   "خانه",
   "آپارتمان",
-  "ویل",
+  "ویلا",
+  "ویلایی",
   "زمین",
   "مغازه",
   "دفتر",
   "سوئیت",
-  "پنت",
+  "پنتهاوس",
+  "پنت‌هاوس",
   "ملک",
   "برج",
   "کلنگی",
@@ -93,18 +95,25 @@ const REAL_ESTATE_WORDS = [
 
 export type TransactionType = "rent" | "buy";
 
-/** «خونه اجاره‌ای» → "rent", «آپارتمان فروشی» → "buy", else null. */
+/** «خونه اجاره‌ای» → "rent", «آپارتمان فروشی» → "buy", else null.
+ *  Word-boundary (never substring): plain includes() matched «زمین» inside
+ *  «بادام زمینی» and misclassified a peanut hunt as real estate (2026-10-15
+ *  prod incident). Inflected forms («فروشی», «اجاره‌ای») are listed
+ *  explicitly instead. */
 export function detectTransaction(raw: string): TransactionType | null {
   const normalized = normalizePersian(raw);
-  if (RENT_WORDS.some((w) => normalized.includes(w))) return "rent";
-  if (BUY_WORDS.some((w) => normalized.includes(w))) return "buy";
+  if (RENT_WORDS.some((w) => includesWord(normalized, w))) return "rent";
+  if (BUY_WORDS.some((w) => includesWord(normalized, w))) return "buy";
   return null;
 }
 
-/** True when the query talks about real estate (خونه، آپارتمان، …). */
+/** True when the query talks about real estate (خونه، آپارتمان، …).
+ *  Word-boundary (never substring): see detectTransaction note above.
+ *  «ویل»/«پنت» were substring stems — replaced with their real surface
+ *  forms («ویلا»، «پنتهاوس» incl. the ZWNJ spelling). */
 export function mentionsRealEstate(raw: string): boolean {
   const normalized = normalizePersian(raw);
-  return REAL_ESTATE_WORDS.some((w) => normalized.includes(w));
+  return REAL_ESTATE_WORDS.some((w) => includesWord(normalized, w));
 }
 
 export type ConditionType = "new" | "used";

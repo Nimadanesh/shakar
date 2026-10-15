@@ -824,8 +824,7 @@ describe("transaction direction — P1 (HumanTest S4: خریدار یخچال)",
   });
 });
 
-describe("semantic caps — unified engine (5b)", () => {
-  function defCap(over: Partial<HuntDefinition> = {}): HuntDefinition {
+describe("semantic caps — unified engine (5b)", () => {  function defCap(over: Partial<HuntDefinition> = {}): HuntDefinition {
     return {
       query: "probe",
       include: [],
@@ -992,5 +991,70 @@ describe("collapseDupes — bug #19 (dedupe before sort, keep newest)", () => {
     const { unique, dupsCollapsed } = collapseDupes([tehran, isfahan]);
     expect(dupsCollapsed).toBe(0);
     expect(unique).toHaveLength(2);
+  });
+});
+
+describe("S5 goods-intent regression gate (R1a: B 0.8688)", () => {
+  function defS5(over: Partial<HuntDefinition> = {}): HuntDefinition {
+    return {
+      query: "پراید ۱۳۱ مدل ۹۸",
+      include: ["پراید", "۱۳۱", "مدل", "۹۸"],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "vehicles",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+      ...over,
+    };
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("resolves a detailed goods query without losing model/year terms", async () => {
+    const { resolveHuntDefinition } = await import("./definition");
+    const def = resolveHuntDefinition({ query: "پراید ۱۳۱ مدل ۹۸" });
+    expect(def?.category).toBe("vehicles");
+    // The detail terms must survive into MUST — losing «۹۸» would make
+    // every Pride 131 an exact match.
+    expect(def?.include).toContain("پراید");
+    expect(def?.include).toContain("۹۸");
+  });
+
+  it("exact model+year stays exact; wrong year capped at near", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "right", title: "پراید ۱۳۱ مدل ۹۸" }),
+        summary({ sourceAdId: "wrong-year", title: "پراید ۱۳۱ مدل ۹۵" }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: id === "right" ? "سالم، بیمه دارد" : "سالم",
+      images: [],
+      categorySlug: "",
+    }));
+    const done = await doneOf(defS5());
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["right"]).toBe("exact");
+    // «۹۸» is missing → near via MUST-missing, never exact.
+    expect(kinds["wrong-year"]).toBe("near");
+    expect(done.results[0].sourceAdId).toBe("right");
   });
 });

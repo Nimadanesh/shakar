@@ -127,6 +127,25 @@ describe("mentionsRealEstate", () => {
     expect(mentionsRealEstate("پیانو آکوستیک")).toBe(false);
     expect(mentionsRealEstate("گوشی آیفون")).toBe(false);
   });
+
+  it("never substring-matches: «زمین» inside «بادام زمینی» is not real estate (prod incident 2026-10-15)", async () => {
+    const { mentionsRealEstate, detectCategoryFromText } = await import("@/lib/interpret");
+    // The peanut hunt was misclassified as real estate (ملک) and returned
+    // zero results — «زمینی» contains «زمین» as a substring.
+    expect(mentionsRealEstate("بادام زمینی")).toBe(false);
+    expect(mentionsRealEstate("بادام زمینی ایرانی دشت مغان")).toBe(false);
+    expect(detectCategoryFromText("بادام زمینی")).not.toBe("real-estate");
+    // ...but a real land query still classifies.
+    expect(mentionsRealEstate("زمین کشاورزی")).toBe(true);
+    expect(mentionsRealEstate("فروش زمین")).toBe(true);
+  });
+
+  it("keeps villa and penthouse surface forms (were substring stems)", async () => {
+    const { mentionsRealEstate } = await import("@/lib/interpret");
+    expect(mentionsRealEstate("ویلا شمال")).toBe(true);
+    expect(mentionsRealEstate("ویلایی تهران")).toBe(true);
+    expect(mentionsRealEstate("پنتهاوس زعفرانیه")).toBe(true);
+  });
 });
 
 describe("detectTransaction", () => {
@@ -134,6 +153,13 @@ describe("detectTransaction", () => {
     const { detectTransaction } = await import("@/lib/interpret");
     expect(detectTransaction("خونه ۵۰ متری")).toBeNull();
     expect(detectTransaction("پیانو")).toBeNull();
+  });
+
+  it("detects rent/buy with word boundaries (inflected forms included)", async () => {
+    const { detectTransaction } = await import("@/lib/interpret");
+    expect(detectTransaction("خونه اجاره‌ای")).toBe("rent");
+    expect(detectTransaction("آپارتمان فروشی")).toBe("buy");
+    expect(detectTransaction("رهن کامل")).toBe("rent");
   });
 });
 
