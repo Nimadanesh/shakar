@@ -7,6 +7,7 @@ import { getOtpConfig, type OtpConfig } from "./config";
 import { buildProvider, MockProvider, type OtpProvider } from "./provider";
 import { MemoryOtpStore, type OtpStore, SupabaseOtpStore } from "./store";
 import { supabaseServer, type SupabaseServer } from "@/lib/supabase-server";
+import { getClientIp } from "@/lib/server/clientIp";
 
 let memoryStore: MemoryOtpStore | null = null;
 
@@ -133,7 +134,7 @@ export async function ensureProfileId(
 }
 
 export function clientIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return req.headers.get("x-real-ip") ?? "unknown";
+  // H1 fix (2026-10-15): shared implementation trusts the LAST
+  // X-Forwarded-For entry (edge-appended), not the first one.
+  return getClientIp(req) ?? "unknown";
 }

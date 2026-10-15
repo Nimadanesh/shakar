@@ -1,6 +1,7 @@
 import "server-only";
 
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase-server";
+import { getClientIp } from "./clientIp";
 import { expireCheck } from "@/lib/server/subscription/lifecycle";
 import { TIERS } from "@/lib/tiers";
 
@@ -328,15 +329,11 @@ async function rpcConsumeGuest(
 }
 
 /** Best-effort client IP for the guest velocity cap (finding #15).
- *  Behind Railway/Vercel the real IP is the first x-forwarded-for entry. */
+ *  H1 fix (2026-10-15): delegates to the shared getClientIp, which trusts
+ *  the LAST X-Forwarded-For entry (edge-appended), not the attacker-
+ *  controlled first one. */
 export function clientIp(req: Request): string | null {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) {
-    const first = fwd.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  const real = req.headers.get("x-real-ip")?.trim();
-  return real || null;
+  return getClientIp(req);
 }
 
 /** Free-hunt IP velocity cap (finding #15): even rotating device ids,

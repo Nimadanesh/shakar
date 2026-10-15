@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase-server";
+import { checkCronSecret } from "@/lib/server/cronAuth";
 import {
   reindexPrices,
   SubscriptionError,
@@ -17,16 +18,10 @@ import {
  * subscriptions pick up the new price on their next cycle.
  */
 export async function POST(req: Request) {
-  // trim(): pasted secrets often smuggle a trailing space/newline from the
-  // Railway variable editor — an invisible mismatch that 403s forever.
-  // (Same guard as /api/internal/quota/grant: all CRON_SECRET-guarded
-  // routes must trim identically, or one accepts a secret another rejects.)
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) {
-    return NextResponse.json({ ok: false, error: "not-configured" }, { status: 503 });
-  }
-  if (req.headers.get("x-cron-secret")?.trim() !== secret) {
-    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  // M3 (2026-10-15): timing-safe shared guard (was `!==` comparison).
+  const auth = checkCronSecret(req, "not-configured");
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   }
   if (!supabaseConfigured()) {
     return NextResponse.json({ ok: false, error: "not-configured" }, { status: 503 });

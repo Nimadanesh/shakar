@@ -63,8 +63,9 @@ export async function POST(req: Request) {
   const now = Date.now();
   const secure = config.isProd;
 
-  if (!config.isProd) {
+  if (config.allowDevAuth) {
     // Dev backdoor: any well-formed code verifies a local dev session.
+    // Explicit opt-in only (ALLOW_DEV_AUTH=1) — never by NODE_ENV absence.
     // With Supabase configured we still mint a real profile row.
     let userId = `dev:${mobile}`;
     if (sb) {
