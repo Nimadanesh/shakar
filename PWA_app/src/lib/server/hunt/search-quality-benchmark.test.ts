@@ -25,7 +25,7 @@ describe("search quality benchmark dataset", () => {
     for (const slice of [
       "normalization", "entity-collision", "model-identifier", "negation",
       "preference", "location", "price", "condition", "transaction",
-      "unknown", "ambiguity", "duplicates", "service-intent",
+      "unknown", "ambiguity", "duplicates", "service-intent", "transaction-direction",
     ]) expect(slices.has(slice as never)).toBe(true);
   });
 });

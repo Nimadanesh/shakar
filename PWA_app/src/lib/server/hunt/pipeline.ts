@@ -2,6 +2,8 @@ import "server-only";
 
 import { normalizeForMatch, textMatches } from "@/lib/persianNormalize";
 import {
+  DEALER_CUES,
+  DEALER_FIRST_PERSON,
   GOODS_SALE_CUES,
   NEEDS_REPAIR_CUES,
   SERVICE_DEMAND_FAMILY,
@@ -70,6 +72,16 @@ export interface HuntDefinition {
    * pre-intent definitions and tests — absent means false.
    */
   serviceIntent?: boolean;
+  /**
+   * Transaction direction (P1, HumanTest S4): which side of the deal the
+   * hunter is on. "buy" = hunter wants seller listings (dealer «خریدار»
+   * ads are competitors → demoted); "sell" = hunter wants buyers (dealer
+   * ads are the buyers → kept). Set explicitly by the hunt form when it
+   * captures direction (decision bank Q6: never guessed from query text);
+   * absent defaults to "buy" — the common hunter is a buyer, and the S4
+   * rubric grades from that side.
+   */
+  direction?: "buy" | "sell";
   /**
    * Second-phase opt-in («می‌خوای برم سراغ قدیمی‌ترها؟»): when true, the
    * list phase starts at page MAX_LIST_PAGES_PER_HUNT instead of 0 — the
@@ -293,6 +305,13 @@ export interface DescriptionEvaluation {
   providerHits: number;
   goodsHits: number;
   needsRepairHits: number;
+  /**
+   * P1 transaction direction (HumanTest S4): dealer «خریدار» ads are
+   * competitors when the hunter wants sellers. True unless the hunt
+   * explicitly set direction "sell".
+   */
+  dealerHits: number;
+  huntWantsSellers: boolean;
 }
 
 function rejectedEvaluation(): DescriptionEvaluation {
@@ -306,6 +325,8 @@ function rejectedEvaluation(): DescriptionEvaluation {
     providerHits: 0,
     goodsHits: 0,
     needsRepairHits: 0,
+    dealerHits: 0,
+    huntWantsSellers: true,
   };
 }
 
@@ -329,6 +350,22 @@ function stripNeedPhrases(text: string): string {
     .replace(/نیازمند\s+\S+/g, " ")
     .replace(/نیاز\s+به\s+\S+/g, " ")
     .replace(/محتاج\s+\S+/g, " ");
+}
+
+/**
+ * Dealer hits (P1, HumanTest S4): fixed phrases («خریدارم») plus the
+ * proximity rule — «خریدار» with a first-person marker («خریدار یخچال
+ * هستیم») anywhere in the text. Bare «هستیم» without خریدار never counts.
+ */
+function countDealerHits(text: string): number {
+  let n = countCues(text, DEALER_CUES);
+  if (
+    textMatches(text, "خریدار") &&
+    countCues(text, DEALER_FIRST_PERSON) > 0
+  ) {
+    n += 1;
+  }
+  return n;
 }
 
 /**
@@ -375,6 +412,11 @@ function evaluateDescription(
     : 0;
   const goodsHits = serviceIntent ? countCues(combined, GOODS_SALE_CUES) : 0;
   const needsRepairHits = serviceIntent ? countCues(combined, NEEDS_REPAIR_CUES) : 0;
+  // P1 (HumanTest S4, flaw #22): dealer «خریدار» ads are competitors when
+  // the hunter wants seller listings (the default); they ARE the buyers
+  // when the hunter explicitly wants to sell.
+  const huntWantsSellers = (def.direction ?? "buy") === "buy";
+  const dealerHits = countDealerHits(combined);
   // Defensive: no MUST terms (never happens via resolveHuntDefinition, but
   // old snapshots and direct callers must not crash or pass vacuously).
   if (def.include.length === 0) {
@@ -396,6 +438,8 @@ function evaluateDescription(
       providerHits,
       goodsHits,
       needsRepairHits,
+      dealerHits,
+      huntWantsSellers,
     };
   }
   // 3. MUST with UNKNOWN semantics.
@@ -431,7 +475,7 @@ function evaluateDescription(
   }
   // 5. Verdict.
   if (mustTitle + mustDesc === 0) {
-    return { ...rejectedEvaluation(), missingInfo, providerHits, goodsHits, needsRepairHits };
+    return { ...rejectedEvaluation(), missingInfo, providerHits, goodsHits, needsRepairHits, dealerHits, huntWantsSellers };
   }
   return {
     verdict: missingInfo.length === 0 ? "exact" : "near",
@@ -443,6 +487,8 @@ function evaluateDescription(
     providerHits,
     goodsHits,
     needsRepairHits,
+    dealerHits,
+    huntWantsSellers,
   };
 }
 
@@ -458,6 +504,11 @@ function evaluateDescription(
  * hunt sinks to the bottom (-4, scoring-zero equivalent — the S3 rubric
  * grades both as 0). The ad is still rendered, never dropped: scoring
  * zero ≠ product zero (the near-miss spectrum UX).
+ *
+ * P1 transaction direction (HumanTest S4, flaw #22): dealer «خریدار» ads
+ * are competitors when the hunter wants sellers → sink like goods
+ * (S4 rubric = 0, reason intent-inversion); when the hunter explicitly
+ * wants to sell, the dealer IS a buyer → small boost instead.
  */
 function scoreAd(
   ev: DescriptionEvaluation,
@@ -473,6 +524,8 @@ function scoreAd(
   const providerBoost = ev.providerHits > 0 ? 1 : 0;
   const nonServiceHits = ev.goodsHits + ev.needsRepairHits;
   const goodsPenalty = nonServiceHits > 0 && ev.providerHits === 0 ? 4 : 0;
+  const dealerPenalty = ev.huntWantsSellers && ev.dealerHits > 0 ? 4 : 0;
+  const dealerBoost = !ev.huntWantsSellers && ev.dealerHits > 0 ? 1 : 0;
   const breakdown: ScoreBreakdown = { title, description, priceKnown };
   return {
     score:
@@ -482,7 +535,9 @@ function scoreAd(
       shouldBoost -
       unknownPenalty +
       providerBoost -
-      goodsPenalty,
+      goodsPenalty -
+      dealerPenalty +
+      dealerBoost,
     breakdown,
   };
 }

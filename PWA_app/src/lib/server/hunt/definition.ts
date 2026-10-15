@@ -10,6 +10,7 @@ import {
   NEGATION_VERBS,
   EXCLUDE_PREFIXES,
   PRICE_STRUCTURAL_WORDS,
+  ROLE_WORDS,
 } from "@/lib/interpret";
 import { normalizeForMatch, stemToken, tokenize } from "@/lib/persianNormalize";
 import type { InterpretedConstraint } from "@/types/search";
@@ -220,6 +221,9 @@ function contentTerms(
   for (const w of NEGATION_VERBS) drop(w);
   for (const p of EXCLUDE_PREFIXES) drop(p);
   for (const w of PRICE_STRUCTURAL_WORDS) drop(w);
+  // P1 (HumanTest S4, flaw #22): role words name a transaction role, never
+  // the wanted item — «خریدار یخچال» must not REQUIRE ads to say خریدار.
+  for (const w of ROLE_WORDS) drop(w);
   for (const c of applied) {
     if (
       c.kind === "city" ||

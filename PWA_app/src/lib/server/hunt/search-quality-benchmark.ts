@@ -24,7 +24,8 @@ export type BenchmarkSlice =
   | "unknown"
   | "ambiguity"
   | "duplicates"
-  | "service-intent";
+  | "service-intent"
+  | "transaction-direction";
 
 export interface BenchmarkCandidate {
   id: string;
@@ -226,6 +227,17 @@ export const SEARCH_QUALITY_BENCHMARK: readonly SearchQualityCase[] = [
       { id: "srv-a2", title: "یخچال سامسونگ", description: "تعمیرشده، آماده فروش", relevance: 0, note: "Refrigerator for sale; S3 rubric = 0." },
       { id: "srv-a3", title: "یخچال فریزر نو", description: "با گارانتی، فروش", relevance: 0, note: "Goods for sale; S3 rubric = 0." },
       { id: "srv-a4", title: "ابزار تعمیر یخچال", description: "فروش عمده ابزار", relevance: 1, note: "Parts/tools; S3 rubric = 1." },
+    ],
+  },
+  {
+    id: "direction-buyer-hunter",
+    slice: "transaction-direction",
+    query: "خریدار یخچال",
+    intent: { category: "home", must: ["یخچال"], should: [], mustNot: [], unknown: [] },
+    candidates: [
+      { id: "dir-a1", title: "یخچال سامسونگ", description: "سالم، فروش", relevance: 3, note: "Seller listing; what the buyer-hunter wants (S4)." },
+      { id: "dir-a2", title: "خریدار یخچال هستیم", description: "خریدار انواع یخچال", relevance: 0, note: "Competing dealer; S4 rubric = 0 (intent-inversion)." },
+      { id: "dir-a3", title: "یخچال فریزر", description: "نو", relevance: 2, note: "Seller listing; related." },
     ],
   },
 ] as const;

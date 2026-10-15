@@ -196,6 +196,42 @@ export const GOODS_SALE_CUES = ["فروش", "آکبند"];
  */
 export const NEEDS_REPAIR_CUES = ["خراب", "نیازمند", "نیاز به"];
 
+/**
+ * Role words — خریدار/فروشنده name a TRANSACTION ROLE, not an item
+ * (HumanTest S4, flaw #22). They must never become MUST content terms:
+ * «خریدار یخچال» wants seller listings, and matching خریدار as a keyword
+ * returns competing dealers — exactly backwards (intent inversion).
+ * Direction itself cannot be guessed from query text (decision bank Q6) —
+ * the hunt form captures it explicitly; the engine just stops misreading
+ * the role word as the wanted item.
+ */
+export const ROLE_WORDS = [
+  "خریدار",
+  "خریدارم",
+  "خریداریم",
+  "فروشنده",
+  "فروشنده‌ام",
+  "فروشنده‌ایم",
+];
+
+/**
+ * Dealer cues in AD text — the advertiser is a buyer/dealer («خریدارم»),
+ * not an end buyer (decision bank Q7). For a hunter seeking sellers these
+ * are competitors (S4 rubric = 0). Fixed phrases plus the proximity rule
+ * («خریدار یخچال هستیم» — buyer word + first-person marker, not
+ * necessarily adjacent). Bare «هستیم» alone is never enough.
+ */
+export const DEALER_CUES = [
+  "خریدارم",
+  "خریداریم",
+  "خریدار هستیم",
+  "خریدار می‌باشیم",
+  "خریدار میباشیم",
+];
+
+/** First-person markers that turn a nearby «خریدار» into a dealer signal. */
+export const DEALER_FIRST_PERSON = ["هستیم", "هستم", "می‌باشیم", "میباشیم"];
+
 /** Head-word hints for the required-dimensions engine. Explicit category
  *  picker wins; these only fire when the user never touched it. */
 const VEHICLE_HINT_WORDS = [

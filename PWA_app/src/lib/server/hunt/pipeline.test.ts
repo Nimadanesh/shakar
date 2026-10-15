@@ -740,6 +740,90 @@ describe("service intent — P0 (HumanTest S3: تعمیر یخچال)", () => {
   });
 });
 
+describe("transaction direction — P1 (HumanTest S4: خریدار یخچال)", () => {
+  function defDir(over: Partial<HuntDefinition> = {}): HuntDefinition {
+    return {
+      query: "خریدار یخچال",
+      include: ["یخچال"], // خریدار is stripped: role word, not content
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+      ...over,
+    };
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  it("competing dealer sinks below the seller listing (default: hunter wants sellers)", async () => {
+    listings([
+      { sourceAdId: "d1", title: "خریدار یخچال هستیم" },
+      { sourceAdId: "s1", title: "یخچال سامسونگ" },
+    ]);
+    detail({
+      d1: "خریدار انواع یخچال", // dealer — competitor, S4 rubric = 0
+      s1: "یخچال سالم، فروش",
+    });
+    const done = await doneOf(defDir());
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["s1", "d1"]);
+    expect(done.results[1].score).toBeLessThan(0);
+  });
+
+  it("direction=sell: the dealer is a buyer — no penalty, small boost", async () => {
+    listings([
+      { sourceAdId: "d1", title: "خریدار یخچال هستیم" },
+      { sourceAdId: "s1", title: "یخچال سامسونگ" },
+    ]);
+    detail({
+      d1: "خریدار انواع یخچال",
+      s1: "یخچال سالم، فروش",
+    });
+    const done = await doneOf(defDir({ direction: "sell" }));
+    // No penalty for the dealer now; its score beats the plain seller ad.
+    expect(
+      done.results.find((r) => r.sourceAdId === "d1")!.score
+    ).toBeGreaterThan(done.results.find((r) => r.sourceAdId === "s1")!.score);
+    expect(done.results.find((r) => r.sourceAdId === "d1")!.score).toBeGreaterThan(0);
+  });
+
+  it("resolveHuntDefinition strips role words from MUST (the S4 inversion)", async () => {
+    const { resolveHuntDefinition } = await import("./definition");
+    const def = resolveHuntDefinition({ query: "خریدار یخچال" });
+    expect(def?.include).toEqual(["یخچال"]);
+    const def2 = resolveHuntDefinition({ query: "فروشنده مبل راحتی" });
+    expect(def2?.include).toEqual(["مبل", "راحتی"]);
+  });
+});
+
 describe("collapseDupes — bug #19 (dedupe before sort, keep newest)", () => {
   function cand(over: Partial<Candidate> & { sourceAdId: string }): Candidate {
     return {
