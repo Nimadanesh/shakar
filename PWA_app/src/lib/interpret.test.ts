@@ -55,6 +55,12 @@ describe("interpretQuery", () => {
     expect(ids("مغازه در قم")).toContain("city:qom");
   });
 
+  it("detects cities from the full Divar directory, not just the old 28 (incident 2026-10-09)", () => {
+    // بناب was never in the hand-written list — users hacked it in as a
+    // «باید» chip, which starves retrieval instead of scoping it.
+    expect(ids("آپارتمان در بناب")).toContain("city:bonab");
+  });
+
   it("does not match a city inside another word (word boundaries)", () => {
     // «درشت» contains «رشت» — must not infer Rasht.
     expect(ids("ماهی درشت")).not.toContain("city:rasht");
