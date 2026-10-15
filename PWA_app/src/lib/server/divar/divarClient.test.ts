@@ -257,6 +257,10 @@ describe("taxonomy", () => {
     for (const c of ["all", "vehicles", "real-estate", "music", "mobile", "home"]) {
       expect(c in CATEGORY_API_VALUE).toBe(true);
     }
+    for (const c of ["personal", "services", "jobs", "industrial"]) {
+      // Deliberately unmapped: fail open to "all" until Divar slugs verified.
+      expect(CATEGORY_API_VALUE[c]).toBe("");
+    }
     expect(CATEGORY_API_VALUE["real-estate"]).toBe("real-estate");
   });
 

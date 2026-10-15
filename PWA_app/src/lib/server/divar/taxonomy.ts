@@ -14,9 +14,17 @@ export const CATEGORY_API_VALUE: Record<string, string> = {
   all: "",
   vehicles: "vehicles",
   "real-estate": "real-estate",
-  music: "leisure-hobbies", // آلات موسیقی lives under سرگرمی و فراغت
+  music: "leisure-hobbies", // سرگرمی و فراغت (id "music" is historical)
   mobile: "electronic-devices", // کالای دیجیتال
   home: "home-kitchen", // خانه و آشپزخانه
+  // services / jobs / industrial / personal: deliberately unmapped ("") —
+  // fail open to "all" until their Divar slugs are verified live (post-R3).
+  // Listed explicitly so the "covers every app category" test stays green
+  // and the fail-open is a decision, not an omission.
+  services: "",
+  jobs: "",
+  industrial: "",
+  personal: "",
 };
 
 /** Leaf slugs for M4 refinements (all verified live 2026-10-06). */

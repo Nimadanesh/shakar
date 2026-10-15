@@ -80,6 +80,7 @@ const REAL_ESTATE_WORDS = [
   "خونه",
   "خانه",
   "آپارتمان",
+  "آپارتمانی",
   "ویلا",
   "ویلایی",
   "زمین",
@@ -91,6 +92,8 @@ const REAL_ESTATE_WORDS = [
   "ملک",
   "برج",
   "کلنگی",
+  "مسکونی",
+  "تجاری",
 ];
 
 export type TransactionType = "rent" | "buy";
@@ -110,9 +113,13 @@ export function detectTransaction(raw: string): TransactionType | null {
 /** True when the query talks about real estate (خونه، آپارتمان، …).
  *  Word-boundary (never substring): see detectTransaction note above.
  *  «ویل»/«پنت» were substring stems — replaced with their real surface
- *  forms («ویلا»، «پنتهاوس» incl. the ZWNJ spelling). */
+ *  forms («ویلا»، «پنتهاوس» incl. the ZWNJ spelling).
+ *  «دفتر» is ambiguous (office vs notebook): «دفتر مشق/یادداشت» is
+ *  stationery, never real estate — the peanut family (2026-10-15). */
+const NOTEBOOK_WORDS = ["مشق", "یادداشت"];
 export function mentionsRealEstate(raw: string): boolean {
   const normalized = normalizePersian(raw);
+  if (NOTEBOOK_WORDS.some((w) => includesWord(normalized, w))) return false;
   return REAL_ESTATE_WORDS.some((w) => includesWord(normalized, w));
 }
 
@@ -246,36 +253,95 @@ export const DEALER_FIRST_PERSON = ["هستیم", "هستم", "می‌باشیم
 const VEHICLE_HINT_WORDS = [
   "ماشین", "خودرو", "وانت", "تیپ", "پراید", "پژو", "سمند", "دنا", "تیبا",
   "کوییک", "شاهین", "ساینا", "رانا", "تویوتا", "هیوندای", "نیسان", "کامیون",
+  "موتورسیکلت", "موتور",
 ];
 const MOBILE_HINT_WORDS = [
   "گوشی", "موبایل", "آیفون", "سامسونگ", "شیائومی", "هواوی", "تبلت",
   "لپتاپ", "لپ‌تاپ", "کامپیوتر", "رایانه", "مانیتور", "کنسول",
   "مودم", "پرینتر", "دوربین", "عکاسی", "اسپیکر", "هدفون", "هندزفری",
-  "شارژر", "پاوربانک",
+  "شارژر", "پاوربانک", "مک‌بوک", "آیپد", "ایرپاد", "گلکسی",
 ];
 const HOME_HINT_WORDS = [
   "مبل", "مبلمان", "یخچال", "فریزر", "تلویزیون", "لباسشویی", "ظرفشویی",
   "کولر", "فرش", "قالی", "موکت", "پرده", "تخت", "تختخواب", "کمد", "دراور",
   "صندلی", "جاروبرقی", "بخارشوی", "اتو", "آباژور", "لوستر", "آینه", "میز",
+  "بخاری", "آبگرمکن", "هود", "اجاق", "فر", "سرویس خواب",
+  "پکیج دیواری", // phrase only: bare «پکیج» also means course package
 ];
-const MUSIC_HINT_WORDS = [
+/**
+ * سرگرمی و فراغت (Divar: leisure-hobbies). NOTE: the TextCategory id stays
+ * "music" (historical — persisted in kamin-store; renaming would orphan
+ * stored kamins). The label is «سرگرمی و فراغت» and the words cover the
+ * whole parent category, not just instruments.
+ */
+const LEISURE_HINT_WORDS = [
   "پیانو", "گیتار", "ویولن", "سنتور", "سهتار", "دف", "تنبک", "درام",
-  "ساز", "آکوستیک",
+  "ساز", "آکوستیک", "کتاب", "دوچرخه", "اسکوتر", "اسباب‌بازی", "پازل",
+  "شطرنج",
 ];
 const PERSONAL_HINT_WORDS = [
   "مانتو", "پالتو", "بارانی", "کاپشن", "شلوار", "پیراهن", "تیشرت",
   "کفش", "کتونی", "بوت", "صندل", "کیف", "کوله", "چمدان", "عینک",
   "ساعت", "طلا", "جواهر", "انگشتر", "گردنبند", "دستبند", "عطر", "ادکلن",
-  "لباس",
+  "لباس", "شال", "روسری", "کمربند", "کلاه",
 ];
+
+/** Jobs (Divar: استخدام و کاریابی). Unambiguous — never a goods modifier. */
+const JOBS_HINT_WORDS = ["استخدام", "کاریابی"];
+
+/**
+ * Business / industrial equipment (Divar: کسب‌وکار و تجهیزات).
+ * Phrase-only: bare «دستگاه» is hopelessly ambiguous (دستگاه قهوه‌ساز
+ * is home, دستگاه تزریق پلاستیک is industrial).
+ */
+const INDUSTRIAL_HINT_WORDS = ["ماشین‌آلات", "تجهیزات صنعتی", "خط تولید"];
+
+/**
+ * Standalone service words — unambiguous service hunts with no goods
+ * involved. Deliberately NOT «نظافت» («دستگاه نظافت صنعتی» is a good)
+ * and NOT «آموزش» («کتاب آموزش زبان» is a good). Demand patterns
+ * (تعمیر/نصب/نصاب) come from detectServiceIntent (P0, Q4-guarded).
+ */
+const SERVICE_STANDALONE_WORDS = [
+  "قالیشویی",
+  "باربری",
+  "اسباب‌کشی",
+  "آرایشگری",
+  "خیاطی",
+  "تدریس",
+  "تعمیرگاه",
+];
+
+/**
+ * «نصب شده» is the state of a GOOD («کولر نصب شده» — an installed AC for
+ * sale), never a service demand. Same family as the تعمیری Q4 guard:
+ * checked before detectServiceIntent so the category doesn't claim it.
+ */
+const INSTALLED_FORMS = ["نصب شده", "نصب‌شده"];
+
+/**
+ * True when the query hunts a SERVICE, not a good. Runs before every
+ * goods category: «تعمیر یخچال» must be services (no «نو یا کارکرده؟»
+ * question), while «یخچال تعمیری» stays home via the Q4 guard inside
+ * detectServiceIntent.
+ */
+export function isServicesQuery(raw: string): boolean {
+  const normalized = normalizePersian(raw);
+  if (INSTALLED_FORMS.some((w) => includesWord(normalized, w))) return false;
+  if (detectServiceIntent(raw)) return true;
+  return SERVICE_STANDALONE_WORDS.some((w) => includesWord(normalized, w));
+}
 
 export type TextCategory =
   | "real-estate"
   | "vehicles"
   | "mobile"
   | "home"
-  | "music"
-  | "personal";
+  | "music" // historical id — covers all of سرگرمی و فراغت (see LEISURE_HINT_WORDS)
+  | "personal"
+  | "services"
+  | "jobs"
+  | "industrial";
 
 /**
  * Disambiguation guards (category double-check, 2026-10-15). Some head
@@ -286,7 +352,18 @@ export type TextCategory =
  *   fridges too. «گوشی سامسونگ» still hits mobile (no appliance present).
  * - «میز» + «کنسول» is furniture («میز کنسول»), not a game console.
  */
-const VEHICLE_DISQUALIFIERS = ["لباسشویی", "ظرفشویی", "حساب", "اصلاح"];
+const VEHICLE_DISQUALIFIERS = [
+  "لباسشویی",
+  "ظرفشویی",
+  "حساب",
+  "اصلاح",
+  "یخچال",
+  "فریزر",
+  "کولر",
+  // «تیپ» is also a clothing style («تیپ مردانه») — never a car then.
+  "مردانه",
+  "زنانه",
+];
 const MOBILE_DISQUALIFIERS = [
   "یخچال",
   "فریزر",
@@ -304,12 +381,17 @@ const MOBILE_DISQUALIFIERS = [
 export function detectCategoryFromText(raw: string): TextCategory | null {
   const normalized = normalizePersian(raw);
   const hits = (words: string[]) => words.some((w) => includesWord(normalized, w));
+  // Services first: «تعمیر یخچال» is a repairman hunt, not a fridge hunt —
+  // it must not fall through to home and ask «نو یا کارکرده؟».
+  if (isServicesQuery(raw)) return "services";
   if (mentionsRealEstate(raw)) return "real-estate";
   if (hits(VEHICLE_HINT_WORDS) && !hits(VEHICLE_DISQUALIFIERS)) return "vehicles";
   if (hits(MOBILE_HINT_WORDS) && !hits(MOBILE_DISQUALIFIERS)) return "mobile";
   if (hits(HOME_HINT_WORDS)) return "home";
-  if (hits(MUSIC_HINT_WORDS)) return "music";
+  if (hits(LEISURE_HINT_WORDS)) return "music";
   if (hits(PERSONAL_HINT_WORDS)) return "personal";
+  if (hits(INDUSTRIAL_HINT_WORDS)) return "industrial";
+  if (hits(JOBS_HINT_WORDS)) return "jobs";
   return null;
 }
 

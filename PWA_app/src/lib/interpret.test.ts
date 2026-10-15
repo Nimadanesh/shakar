@@ -290,3 +290,72 @@ describe("category double-check battery", () => {
     expect(detectCategoryFromText(query)).toBe(expected);
   });
 });
+
+/**
+ * Category expansion (navid, 2026-10-15): 6 categories are too few — align
+ * with Divar's top-level taxonomy (services, jobs, industrial) and widen
+ * the goods lists. Every new word earned its place by surviving the
+ * adversarial pass below: ambiguous candidates («پکیج»، «نظافت»،
+ * «آموزش») were REJECTED, not added.
+ */
+describe("category expansion battery", () => {
+  const cases: Array<[query: string, expected: string | null]> = [
+    // services — demand patterns first (P0), standalone words second
+    ["تعمیر یخچال", "services"],
+    ["تعمیرات تخصصی موبایل", "services"],
+    ["نصاب کولر گازی می‌خوام", "services"],
+    ["تعمیرکار یخچال", "services"],
+    ["قالیشویی", "services"],
+    ["باربری تهران", "services"],
+    ["تعمیرگاه مجاز", "services"],
+    // ...but repaired/installed GOODS stay goods (Q4 family)
+    ["یخچال تعمیری", "home"],
+    ["کولر نصب شده", "home"],
+    // jobs
+    ["استخدام منشی", "jobs"],
+    ["کاریابی", "jobs"],
+    // industrial — phrase-only triggers
+    ["ماشین‌آلات صنعتی", "industrial"],
+    ["خط تولید", "industrial"],
+    ["تجهیزات صنعتی", "industrial"],
+    ["دستگاه قهوه‌ساز", null], // bare «دستگاه» is ambiguous — never guess
+    // leisure (id "music" is historical)
+    ["دوچرخه", "music"],
+    ["کتاب", "music"],
+    ["اسباب‌بازی", "music"],
+    // expanded goods lists
+    ["موتور هوندا", "vehicles"],
+    ["موتورسیکلت", "vehicles"],
+    ["موتور یخچال", "home"], // engine, not a bike
+    ["مک‌بوک پرو", "mobile"],
+    ["ایرپاد", "mobile"],
+    ["بخاری برقی", "home"],
+    ["سرویس خواب", "home"],
+    ["هود آشپزخانه", "home"],
+    ["شال زنانه", "personal"],
+    ["کلاه", "personal"],
+    ["ملک تجاری", "real-estate"],
+    // rejected candidates stay null (documented, not forgotten)
+    ["پکیج آموزشی", null], // «پکیج» also means course package
+    ["پکیج دیواری", "home"], // ...but the phrase is unambiguous
+    ["دفتر مشق", null], // stationery, NOT real estate (peanut family)
+    ["دفتر کار", "real-estate"], // guard the guard: offices stay real estate
+    ["تیپ مردانه", null], // clothing style, NOT a car trim
+    ["چیز عجیب", null],
+  ];
+
+  it.each(cases)("«%s» → %s", async (query, expected) => {
+    const { detectCategoryFromText } = await import("@/lib/interpret");
+    expect(detectCategoryFromText(query)).toBe(expected);
+  });
+
+  it("isServicesQuery guards installed goods", async () => {
+    const { isServicesQuery } = await import("@/lib/interpret");
+    expect(isServicesQuery("تعمیر یخچال")).toBe(true);
+    expect(isServicesQuery("نصاب کولر")).toBe(true);
+    expect(isServicesQuery("قالیشویی")).toBe(true);
+    expect(isServicesQuery("کولر نصب شده")).toBe(false);
+    expect(isServicesQuery("یخچال تعمیری")).toBe(false);
+    expect(isServicesQuery("یخچال")).toBe(false);
+  });
+});

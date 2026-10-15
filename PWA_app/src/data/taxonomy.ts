@@ -7,9 +7,13 @@ export const CATEGORIES = [
   { value: "all", label: "همه دسته‌ها" },
   { value: "vehicles", label: "خودرو" },
   { value: "real-estate", label: "املاک" },
-  { value: "music", label: "آلات موسیقی" },
+  { value: "music", label: "سرگرمی و فراغت" },
   { value: "mobile", label: "موبایل و کالای دیجیتال" },
   { value: "home", label: "خانه و آشپزخانه" },
+  { value: "personal", label: "وسایل شخصی" },
+  { value: "services", label: "خدمات" },
+  { value: "jobs", label: "استخدام و کاریابی" },
+  { value: "industrial", label: "کسب‌وکار و تجهیزات" },
 ] as const;
 
 export const CITIES = [
