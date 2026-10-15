@@ -8,8 +8,20 @@ import {
   NEEDS_REPAIR_CUES,
   SERVICE_DEMAND_FAMILY,
   SERVICE_PROVIDER_CUES,
+  detectTransaction,
   isServiceDemandTerm,
 } from "@/lib/interpret";
+import {
+  assessListingRole,
+  assessModelSpecificity,
+  assessQueryIntent,
+  assessRepairPolarity,
+  assessRepairService,
+  assessServiceTarget,
+  exclusionFires,
+  isRepairWord,
+  rolesClash,
+} from "./semantics";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -239,7 +251,10 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
   needsDetailReview: boolean;
 } {
   for (const term of def.exclude) {
-    if (textMatches(ad.title, term)) {
+    // Scoped exclusion (unified engine): a title that explicitly marks
+    // repair-absent («آیفون ۱۳ بدون تعمیر») must survive the title phase so
+    // the detail phase can verify it. «نه» still means نه.
+    if (exclusionFires(ad.title, term, def.category)) {
       return { excluded: true, strength: 0, needsDetailReview: false };
     }
   }
@@ -369,6 +384,58 @@ function countDealerHits(text: string): number {
 }
 
 /**
+ * Semantic compatibility caps (unified engine — from laptop semantics.ts).
+ * True when a would-be exact must be capped to near. Kept and ranked,
+ * never silently dropped.
+ *
+ * Two adaptations for the unified engine:
+ * - Intent is assessed on the STRIPPED include terms, not the raw query.
+ *   P1 strips role words (خریدار/فروشنده) from MUST; assessing the raw
+ *   query would resurrect the S4 inversion as a phantom buyer-seeking
+ *   intent and cap the very seller listings the hunter wants.
+ * - Service intent is the union of the lexical detector (def.serviceIntent
+ *   — covers نصب/نصاب phrasing the role assessor misses) and the role
+ *   assessor.
+ *
+ * Contract (never weaken): the semantic layer decides the VERDICT
+ * (exact vs near); the scoring signals (P0/P1) decide RANKING.
+ */
+function semanticCapFires(def: HuntDefinition, combined: string): boolean {
+  const intent = assessQueryIntent(def.include.join(" "), def.category, def.transaction);
+  const role = assessListingRole(combined);
+  const explicitBuy =
+    def.transaction === "buy" || detectTransaction(def.query) === "buy";
+  const clash = rolesClash(intent, role, explicitBuy);
+  const identity = clash.clash
+    ? { mismatch: false as const, reason: "skipped:role-clash" }
+    : assessModelSpecificity(def.include, combined, def.category);
+  const repairRequested = def.exclude.some((t) => isRepairWord(t));
+  const repairUnknown =
+    repairRequested && assessRepairPolarity(combined).polarity === "unknown";
+  const repairService = assessRepairService(combined);
+  const serviceIntent = (def.serviceIntent ?? false) || intent.role === "service";
+  const needsRepairMismatch =
+    serviceIntent &&
+    repairService.signal === "item_needs_repair" &&
+    role.role !== "service";
+  const unsupportedServiceExact =
+    serviceIntent &&
+    role.role === "unknown" &&
+    repairService.signal !== "service_offered";
+  const targetBound =
+    !serviceIntent ||
+    assessServiceTarget(def.include, combined, def.category).bound;
+  return (
+    clash.clash ||
+    identity.mismatch ||
+    repairUnknown ||
+    needsRepairMismatch ||
+    unsupportedServiceExact ||
+    !targetBound
+  );
+}
+
+/**
  * Intent evaluation (flaw #19, 2026-10-09) — replaces the hard-AND
  * descriptionPass that killed every near-miss (the «برنج هندی» zero-result).
  *
@@ -391,9 +458,11 @@ function evaluateDescription(
   def: HuntDefinition
 ): DescriptionEvaluation {
   const combined = `${title} ${description}`;
-  // 1. MUST_NOT — «نه» means نه.
+  // 1. MUST_NOT — «نه» means نه, with repair-word polarity scoping (an
+  // explicit «بدون تعمیر» listing satisfies a no-repair request instead of
+  // being banned by its own vocabulary).
   for (const term of def.exclude) {
-    if (textMatches(combined, term)) {
+    if (exclusionFires(combined, term, def.category)) {
       return rejectedEvaluation();
     }
   }
@@ -476,6 +545,24 @@ function evaluateDescription(
   // 5. Verdict.
   if (mustTitle + mustDesc === 0) {
     return { ...rejectedEvaluation(), missingInfo, providerHits, goodsHits, needsRepairHits, dealerHits, huntWantsSellers };
+  }
+  // 5b. Semantic compatibility caps (unified engine). A would-be exact
+  // that the semantic layer contradicts becomes near — kept and ranked,
+  // never silently dropped.
+  if (missingInfo.length === 0 && semanticCapFires(def, combined)) {
+    return {
+      verdict: "near",
+      evidence,
+      missingInfo,
+      mustTitle,
+      mustDesc,
+      shouldMatched,
+      providerHits,
+      goodsHits,
+      needsRepairHits,
+      dealerHits,
+      huntWantsSellers,
+    };
   }
   return {
     verdict: missingInfo.length === 0 ? "exact" : "near",

@@ -824,6 +824,134 @@ describe("transaction direction — P1 (HumanTest S4: خریدار یخچال)",
   });
 });
 
+describe("semantic caps — unified engine (5b)", () => {
+  function defCap(over: Partial<HuntDefinition> = {}): HuntDefinition {
+    return {
+      query: "probe",
+      include: [],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+      ...over,
+    };
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  it("sibling variant capped at near; exact model stays exact (S1)", async () => {
+    listings([
+      { sourceAdId: "md-exact", title: "آیفون ۱۳ پرو ۲۵۶ گیگ" },
+      { sourceAdId: "md-max", title: "آیفون ۱۳ پرو مکس" },
+    ]);
+    detail({ "md-exact": "سالم", "md-max": "۱۲۸ گیگ" });
+    const done = await doneOf(
+      defCap({ query: "آیفون ۱۳ پرو", include: ["آیفون", "۱۳", "پرو"], category: "mobile" })
+    );
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["md-exact"]).toBe("exact");
+    // Every query token matches, but «مکس» adds unrequested specificity.
+    expect(kinds["md-max"]).toBe("near");
+  });
+
+  it("repair polarity: «بدون تعمیر» satisfies, «تعمیر شده» contradicts", async () => {
+    const def = defCap({
+      query: "آیفون ۱۳، بدون تعمیر",
+      include: ["آیفون", "۱۳"],
+      exclude: ["تعمیر"],
+      category: "mobile",
+    });
+    listings([{ sourceAdId: "no-repair", title: "آیفون ۱۳ بدون تعمیر" }]);
+    detail({ "no-repair": "سالم و تمیز" });
+    const done = await doneOf(def);
+    // Explicitly satisfies the absence request — not banned by its own vocabulary.
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].matchKind).toBe("exact");
+
+    listings([{ sourceAdId: "repaired", title: "آیفون ۱۳" }]);
+    detail({ repaired: "تعمیر شده، سالم" });
+    const done2 = await doneOf(def);
+    // Explicit contradiction — rejected.
+    expect(done2.results).toHaveLength(0);
+  });
+
+  it("service offer for the wrong appliance capped at near (target binding)", async () => {
+    listings([
+      { sourceAdId: "wm-incidental", title: "تعمیر لباسشویی در محل" },
+      { sourceAdId: "fridge-offer", title: "تعمیر یخچال در محل" },
+    ]);
+    detail({
+      "wm-incidental": "تعمیر لباسشویی در محل با ضمانت یکساله، یخچال فریزر هم موجود است",
+      "fridge-offer": "تعمیر یخچال در محل، سرویس فوری",
+    });
+    const done = await doneOf(
+      defCap({
+        query: "تعمیر یخچال",
+        include: ["تعمیر", "یخچال"],
+        serviceIntent: true,
+        category: "home",
+      })
+    );
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    // Offer targets the washer; the fridge is incidental and far.
+    expect(kinds["wm-incidental"]).toBe("near");
+    expect(kinds["fridge-offer"]).toBe("exact");
+  });
+
+  it("item needing repair capped at near for a service query (not exact)", async () => {
+    listings([
+      { sourceAdId: "need-daewoo", title: "یخچال فریزر دوو" },
+      { sourceAdId: "offer-ok", title: "تعمیر یخچال در محل" },
+    ]);
+    detail({
+      "need-daewoo": "یخچال فریزر دوو-نیاز به تعمیر دارد",
+      "offer-ok": "تعمیر یخچال در محل، سرویس فوری",
+    });
+    const done = await doneOf(
+      defCap({
+        query: "تعمیر یخچال",
+        include: ["تعمیر", "یخچال"],
+        serviceIntent: true,
+        category: "home",
+      })
+    );
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["need-daewoo"]).toBe("near");
+    expect(kinds["offer-ok"]).toBe("exact");
+    // And the genuine offer still outranks the needs-repair item.
+    expect(done.results[0].sourceAdId).toBe("offer-ok");
+  });
+});
+
 describe("collapseDupes — bug #19 (dedupe before sort, keep newest)", () => {
   function cand(over: Partial<Candidate> & { sourceAdId: string }): Candidate {
     return {
