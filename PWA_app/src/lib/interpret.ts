@@ -249,14 +249,14 @@ const VEHICLE_HINT_WORDS = [
 ];
 const MOBILE_HINT_WORDS = [
   "گوشی", "موبایل", "آیفون", "سامسونگ", "شیائومی", "هواوی", "تبلت",
-  "لپتاپ", "لپ‌تاپ", "کامپیوتر", "رایانه", "مانیتور", "کنسول", "هوشمند",
+  "لپتاپ", "لپ‌تاپ", "کامپیوتر", "رایانه", "مانیتور", "کنسول",
   "مودم", "پرینتر", "دوربین", "عکاسی", "اسپیکر", "هدفون", "هندزفری",
   "شارژر", "پاوربانک",
 ];
 const HOME_HINT_WORDS = [
   "مبل", "مبلمان", "یخچال", "فریزر", "تلویزیون", "لباسشویی", "ظرفشویی",
   "کولر", "فرش", "قالی", "موکت", "پرده", "تخت", "تختخواب", "کمد", "دراور",
-  "صندلی", "جاروبرقی", "بخارشوی", "اتو", "آباژور", "لوستر", "آینه",
+  "صندلی", "جاروبرقی", "بخارشوی", "اتو", "آباژور", "لوستر", "آینه", "میز",
 ];
 const MUSIC_HINT_WORDS = [
   "پیانو", "گیتار", "ویولن", "سنتور", "سهتار", "دف", "تنبک", "درام",
@@ -278,6 +278,25 @@ export type TextCategory =
   | "personal";
 
 /**
+ * Disambiguation guards (category double-check, 2026-10-15). Some head
+ * words are ambiguous even with word boundaries — the compound tells the
+ * truth:
+ * - «ماشین لباسشویی/ظرفشویی/حساب/اصلاح» is an appliance, not a vehicle.
+ * - «سامسونگ» + appliance («یخچال سامسونگ») is home — Samsung makes
+ *   fridges too. «گوشی سامسونگ» still hits mobile (no appliance present).
+ * - «میز» + «کنسول» is furniture («میز کنسول»), not a game console.
+ */
+const VEHICLE_DISQUALIFIERS = ["لباسشویی", "ظرفشویی", "حساب", "اصلاح"];
+const MOBILE_DISQUALIFIERS = [
+  "یخچال",
+  "فریزر",
+  "تلویزیون",
+  "لباسشویی",
+  "ظرفشویی",
+  "میز",
+];
+
+/**
  * Best-guess category from free text for the required-dimensions engine.
  * Real estate first (preserves the #4 transaction behavior), then goods.
  * Null when nothing matches — the engine stays silent rather than guess.
@@ -286,8 +305,8 @@ export function detectCategoryFromText(raw: string): TextCategory | null {
   const normalized = normalizePersian(raw);
   const hits = (words: string[]) => words.some((w) => includesWord(normalized, w));
   if (mentionsRealEstate(raw)) return "real-estate";
-  if (hits(VEHICLE_HINT_WORDS)) return "vehicles";
-  if (hits(MOBILE_HINT_WORDS)) return "mobile";
+  if (hits(VEHICLE_HINT_WORDS) && !hits(VEHICLE_DISQUALIFIERS)) return "vehicles";
+  if (hits(MOBILE_HINT_WORDS) && !hits(MOBILE_DISQUALIFIERS)) return "mobile";
   if (hits(HOME_HINT_WORDS)) return "home";
   if (hits(MUSIC_HINT_WORDS)) return "music";
   if (hits(PERSONAL_HINT_WORDS)) return "personal";

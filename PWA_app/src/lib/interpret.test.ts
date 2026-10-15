@@ -245,3 +245,48 @@ describe("detectCategoryFromText", () => {
     expect(detectCategoryFromText("چیز عجیب")).toBeNull();
   });
 });
+
+/**
+ * Big double-check (navid, 2026-10-15): the peanut incident showed one
+ * misclassification can hide a bigger problem. This battery reviews every
+ * category with adversarial queries — ambiguous head words, compounds,
+ * and cross-category brands.
+ */
+describe("category double-check battery", () => {
+  const cases: Array<[query: string, expected: string | null]> = [
+    // vehicles — and its impostors
+    ["پراید ۱۳۱ مدل ۹۸", "vehicles"],
+    ["پژو ۲۰۶", "vehicles"],
+    ["ماشین لباسشویی", "home"], // NOT vehicles
+    ["ماشین ظرفشویی بوش", "home"], // NOT vehicles
+    ["ماشین حساب", null], // NOT vehicles; nothing better either
+    // mobile — and its impostors
+    ["آیفون ۱۳ پرو", "mobile"],
+    ["گوشی سامسونگ", "mobile"],
+    ["یخچال سامسونگ", "home"], // NOT mobile — Samsung makes fridges too
+    ["تلویزیون سامسونگ", "home"], // NOT mobile
+    ["میز کنسول", "home"], // NOT mobile — furniture, not a game console
+    ["کنسول بازی", "mobile"],
+    // home — and smart-home modifiers
+    ["مبل راحتی", "home"],
+    // «خانه هوشمند» is genuinely ambiguous (smart apartment vs smart-home
+    // gear); the standing real-estate-first precedence decides. Documented,
+    // not a bug like the peanut case.
+    ["خانه هوشمند", "real-estate"],
+    ["ساعت هوشمند", "personal"], // via «ساعت», not «هوشمند»
+    ["میز ناهارخوری", "home"],
+    // real estate — and the peanut incident
+    ["آپارتمان نوساز", "real-estate"],
+    ["زمین کشاورزی", "real-estate"],
+    ["بادام زمینی", null], // prod incident 2026-10-15 — NOT real-estate
+    ["ویلا شمال", "real-estate"],
+    // music / personal sanity
+    ["پیانو آکوستیک", "music"],
+    ["مانتو زنانه", "personal"],
+  ];
+
+  it.each(cases)("«%s» → %s", async (query, expected) => {
+    const { detectCategoryFromText } = await import("@/lib/interpret");
+    expect(detectCategoryFromText(query)).toBe(expected);
+  });
+});
