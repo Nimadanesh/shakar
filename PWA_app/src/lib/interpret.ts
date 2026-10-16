@@ -74,6 +74,23 @@ export function includesWord(normalized: string, word: string): boolean {
   return new RegExp(`(^|\\s)${escaped}(\\s|$)`).test(normalized);
 }
 
+/**
+ * List-side ZWNJ tolerance (battery follow-up, 2026-10-16).
+ * Many Persian keyboards lack ZWNJ, so users type «لپ تاپ» for «لپ‌تاپ» —
+ * the spaced form is the COMMON case, not an edge. For every list word
+ * containing ZWNJ, also try its spaced form — against the ORIGINAL input.
+ * Input is never split: «قهوه‌ساز» must not become «قهوه ساز» and match
+ * «ساز» (regression caught by interpret.test.ts). A ZWNJ↔space variant of
+ * the same lexical item can't false-positive — it's the same word.
+ */
+export function includesWordZwnjTolerant(normalized: string, word: string): boolean {
+  if (includesWord(normalized, word)) return true;
+  // U+200C ZERO WIDTH NON-JOINER — escape form, never a literal invisible char
+  if (word.includes("\u200C")) {
+    return includesWord(normalized, word.replace(/\u200C/g, " "));
+  }
+  return false;
+}
 /** Real-estate mentions that make the transaction type (rent/buy) a
  *  required disambiguation when no transaction word is present. */
 const REAL_ESTATE_WORDS = [
@@ -89,7 +106,6 @@ const REAL_ESTATE_WORDS = [
   "سوئیت",
   "پنتهاوس",
   "پنت‌هاوس",
-  "پنت هاوس", // battery #2: spaced form users type
   "ملک",
   "برج",
   "کلنگی",
@@ -127,9 +143,9 @@ const NOTEBOOK_WORDS = ["مشق", "یادداشت"];
 const REAL_ESTATE_FALSE_FRIENDS = ["میلاد", "خانه بازی"];
 export function mentionsRealEstate(raw: string): boolean {
   const normalized = normalizePersian(raw);
-  if (NOTEBOOK_WORDS.some((w) => includesWord(normalized, w))) return false;
-  if (REAL_ESTATE_FALSE_FRIENDS.some((w) => includesWord(normalized, w))) return false;
-  return REAL_ESTATE_WORDS.some((w) => includesWord(normalized, w));
+  if (NOTEBOOK_WORDS.some((w) => includesWordZwnjTolerant(normalized, w))) return false;
+  if (REAL_ESTATE_FALSE_FRIENDS.some((w) => includesWordZwnjTolerant(normalized, w))) return false;
+  return REAL_ESTATE_WORDS.some((w) => includesWordZwnjTolerant(normalized, w));
 }
 
 export type ConditionType = "new" | "used";
@@ -274,7 +290,7 @@ const VEHICLE_AMBIGUOUS_WORDS = ["ماشین", "موتور", "تیپ"];
 const VEHICLE_HINT_WORDS = [...VEHICLE_STRONG_WORDS, ...VEHICLE_AMBIGUOUS_WORDS];
 const MOBILE_HINT_WORDS = [
   "گوشی", "موبایل", "آیفون", "سامسونگ", "شیائومی", "هواوی", "تبلت",
-  "لپتاپ", "لپ‌تاپ", "لپ تاپ", // battery #13: spaced form users type
+  "لپتاپ", "لپ‌تاپ",
   "کامپیوتر", "رایانه", "مانیتور", "کنسول",
   "مودم", "پرینتر", "دوربین", "عکاسی", "اسپیکر", "هدفون", "هندزفری",
   "شارژر", "پاوربانک", "پاور بانک", // battery #14: spaced form users type
@@ -299,10 +315,10 @@ const HOME_HINT_WORDS = [
  */
 const LEISURE_HINT_WORDS = [
   "پیانو", "گیتار", "ویولن", "ویولون", // battery #27: spelling variant
-  "سنتور", "سهتار", "سه تار", // battery #28: spaced form users type
+  "سنتور", "سهتار", "سه تار", "سه‌تار", // battery #28: all three spellings users type
   "دف", "تنبک", "درام",
   "ساز", "آکوستیک", "کتاب", "دوچرخه", "اسکوتر",
-  "اسباب‌بازی", "اسباب بازی", // battery #25: spaced form users type
+  "اسباب‌بازی",
   "پازل",
   "شطرنج",
   "لگو", "ماهیگیری", "تلسکوپ", // battery #26/#29/#30
@@ -335,7 +351,6 @@ const JOBS_HINT_WORDS = [
  */
 const INDUSTRIAL_HINT_WORDS = [
   "ماشین‌آلات",
-  "ماشین آلات", // battery #49: spaced form users type
   "تجهیزات صنعتی",
   "خط تولید",
   "موتور برق", // battery #50: generator
@@ -355,7 +370,6 @@ const SERVICE_STANDALONE_WORDS = [
   "قالیشویی",
   "باربری",
   "اسباب‌کشی",
-  "اسباب کشی", // battery #38: spaced form users type
   "آرایشگری",
   "خیاطی",
   "تدریس",
@@ -380,9 +394,9 @@ const INSTALLED_FORMS = ["نصب شده", "نصب‌شده"];
  */
 export function isServicesQuery(raw: string): boolean {
   const normalized = normalizePersian(raw);
-  if (INSTALLED_FORMS.some((w) => includesWord(normalized, w))) return false;
+  if (INSTALLED_FORMS.some((w) => includesWordZwnjTolerant(normalized, w))) return false;
   if (detectServiceIntent(raw)) return true;
-  return SERVICE_STANDALONE_WORDS.some((w) => includesWord(normalized, w));
+  return SERVICE_STANDALONE_WORDS.some((w) => includesWordZwnjTolerant(normalized, w));
 }
 
 /**
@@ -393,7 +407,7 @@ export function isServicesQuery(raw: string): boolean {
  */
 export function isJobsQuery(raw: string): boolean {
   const normalized = normalizePersian(raw);
-  return JOBS_HINT_WORDS.some((w) => includesWord(normalized, w));
+  return JOBS_HINT_WORDS.some((w) => includesWordZwnjTolerant(normalized, w));
 }
 
 export type TextCategory =
@@ -428,8 +442,7 @@ const VEHICLE_DISQUALIFIERS = [
   "مردانه",
   "زنانه",
   // battery: compounds that beat the ambiguous «ماشین»/«موتور»
-  "ماشین آلات", // «ماشین آلات صنعتی» → industrial (both spacings listed)
-  "ماشین‌آلات",
+  "ماشین‌آلات", // «ماشین آلات صنعتی» → industrial (spaced form via ZWNJ tolerance)
   "موتور برق", // «موتور برق دیزلی» → industrial generator
   "اسپرسوساز", // «ماشین اسپرسوساز» → home appliance
 ];
@@ -468,7 +481,7 @@ const NON_BRAND_GOODS_WORDS = ALL_GOODS_WORDS.filter((w) => !BRAND_WORDS.include
  */
 export function detectCategoryFromText(raw: string): TextCategory | null {
   const normalized = normalizePersian(raw);
-  const hits = (words: string[]) => words.some((w) => includesWord(normalized, w));
+  const hits = (words: string[]) => words.some((w) => includesWordZwnjTolerant(normalized, w));
   // Services first: «تعمیر یخچال» is a repairman hunt, not a fridge hunt —
   // it must not fall through to home and ask «نو یا کارکرده؟».
   if (isServicesQuery(raw)) return "services";
