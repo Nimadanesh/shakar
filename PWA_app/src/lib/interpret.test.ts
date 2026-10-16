@@ -359,3 +359,84 @@ describe("category expansion battery", () => {
     expect(isServicesQuery("یخچال")).toBe(false);
   });
 });
+
+/**
+ * R3 battery round 2 (DeepSeek, triaged by musi, 2026-10-16): 60 adversarial
+ * variants around the 10 locked R3 hunts → 13 hard divergences → 7 fixes.
+ * The separator-agnostic matcher (indexTokens) replaced the ZWNJ-only
+ * tolerance: every separator spelling of a compound now matches, while
+ * short words still can't fire inside compounds («قهوه‌ساز» ≠ «ساز»).
+ */
+describe("R3 battery round 2", () => {
+  const cases: Array<[query: string, expected: string | null]> = [
+    // separator-agnostic compounds — every spelling lands the same
+    ["ماشین لباسشویی", "home"],
+    ["ماشین لباس‌شویی", "home"], // ZWNJ spelling
+    ["ماشین لباس شویی", "home"], // spaced spelling
+    ["ماشین رختشویی", "home"], // synonym
+    ["ماشین رخت‌شویی", "home"],
+    ["لپ‌تاپ", "mobile"],
+    ["لپ تاپ", "mobile"],
+    ["لپتاپ", "mobile"],
+    ["سه‌تار", "music"],
+    ["سه تار", "music"],
+    // alef folding — the most common Persian keyboard variation
+    ["ایفون ۱۳ پرو", "mobile"], // ا instead of آ
+    ["اپارتمان نوساز", "real-estate"],
+    // synonyms
+    ["اتومبیل بدون رنگ", "vehicles"],
+    // agentive forms — joined, ZWNJ, spaced
+    ["نصبکننده کولر گازی", "services"],
+    ["نصب‌کننده کولر گازی", "services"],
+    ["نصب کننده کولر گازی", "services"],
+    // possessive / plural suffixes
+    ["میخوام پرایدم رو بفروشم", "vehicles"],
+    ["ماشینم", "vehicles"],
+    ["پرایدها", "vehicles"],
+    // short words still can't fire inside ZWNJ-joined compounds (the قهوه‌ساز guard)
+    ["دستگاه قهوه‌ساز", null],
+    ["قهوه‌ساز", null],
+  ];
+
+  it.each(cases)("«%s» → %s", async (query, expected) => {
+    const { detectCategoryFromText } = await import("@/lib/interpret");
+    expect(detectCategoryFromText(query)).toBe(expected);
+  });
+
+  it("«بی‌رنگ» in every spelling excludes «رنگ» like «بدون رنگ»", async () => {
+    const { interpretQuery } = await import("@/lib/interpret");
+    for (const q of ["ماشین بیرنگ", "ماشین بی‌رنگ", "ماشین بی رنگ", "ماشین بدون رنگ"]) {
+      const { applied } = interpretQuery(q);
+      expect(applied.some((c) => c.kind === "exclude" && c.value === "رنگ")).toBe(true);
+    }
+  });
+
+  it("possessive stemmer never mangles short words", async () => {
+    const { detectCategoryFromText } = await import("@/lib/interpret");
+    // «نام»/«شام»/«تنها» must not stem (stem < 4 chars) — and none of these
+    // are category words anyway, so the classifier stays silent, not wrong.
+    expect(detectCategoryFromText("نام")).toBeNull();
+    expect(detectCategoryFromText("شام")).toBeNull();
+  });
+});
+
+describe("R3 battery round 2 — ZWNJ-joined multi-word tokens", () => {
+  it.each([
+    ["ماشین‌لباسشویی", "home"], // ZWNJ between two full words
+    ["ماشین‌ظرفشویی", "home"],
+  ])("«%s» → %s", async (query, expected) => {
+    const { detectCategoryFromText } = await import("@/lib/interpret");
+    expect(detectCategoryFromText(query)).toBe(expected);
+  });
+
+  it("long-word substring never fires for short words", async () => {
+    const { includesWordSmart } = await import("@/lib/interpret");
+    const { normalizePersian } = await import("@/lib/normalizePersian");
+    const n = normalizePersian("دستگاه قهوه‌ساز");
+    expect(includesWordSmart(n, "ساز")).toBe(false); // 3 chars: token-only
+    expect(includesWordSmart(n, "قهوه‌ساز")).toBe(true); // the compound itself matches
+    // cross-token phantoms are impossible: «تعمیر یخچال» must not match «تعمیری»
+    const n2 = normalizePersian("تعمیر یخچال");
+    expect(includesWordSmart(n2, "تعمیری")).toBe(false);
+  });
+});

@@ -21,7 +21,7 @@ export const KNOWN_CITIES: Array<{ id: string; names: string[] }> = DIVAR_CITIES
  */
 /** City-name check — a thin wrapper over the shared word-boundary helper. */
 function mentionsCity(normalized: string, name: string): boolean {
-  return includesWord(normalized, name);
+  return includesWordSmart(normalized, name);
 }
 
 const UNIT_MULTIPLIER: Array<{ unit: string; factor: number }> = [
@@ -75,22 +75,70 @@ export function includesWord(normalized: string, word: string): boolean {
 }
 
 /**
- * List-side ZWNJ tolerance (battery follow-up, 2026-10-16).
- * Many Persian keyboards lack ZWNJ, so users type «لپ تاپ» for «لپ‌تاپ» —
- * the spaced form is the COMMON case, not an edge. For every list word
- * containing ZWNJ, also try its spaced form — against the ORIGINAL input.
- * Input is never split: «قهوه‌ساز» must not become «قهوه ساز» and match
- * «ساز» (regression caught by interpret.test.ts). A ZWNJ↔space variant of
- * the same lexical item can't false-positive — it's the same word.
+ * Separator-agnostic word matcher (R3 battery round 2, 2026-10-16).
+ * Many Persian keyboards lack ZWNJ, so «لپ تاپ», «لپ‌تاپ» and «لپتاپ» must
+ * all match the same list entry — but the input is never blindly squashed:
+ * «قهوه‌ساز» must not match «ساز» (regression in interpret.test.ts).
+ * Instead the input is indexed as tokens:
+ * - split on whitespace (ZWNJ stays inside tokens),
+ * - every token also indexed ZWNJ-stripped («لباس‌شویی» ≡ «لباسشویی»),
+ * - adjacent pairs also indexed joined («لپ»+«تاپ» → «لپتاپ»),
+ * - possessive/plural suffixes stripped («پرایدم»→«پراید»، «پرایدها»→«پراید»;
+ *   stem must be >=4 chars so «نام»/«شام»/«تنها» never stem).
+ * A list word matches iff its ZWNJ-stripped form EQUALS an indexed token —
+ * never substring — so short words can't fire inside compounds. Multi-word
+ * list entries («موتور برق») match a consecutive token run.
  */
-export function includesWordZwnjTolerant(normalized: string, word: string): boolean {
-  if (includesWord(normalized, word)) return true;
-  // U+200C ZERO WIDTH NON-JOINER — escape form, never a literal invisible char
-  if (word.includes("\u200C")) {
-    return includesWord(normalized, word.replace(/\u200C/g, " "));
-  }
-  return false;
+const ZWNJ_RE = /\u200C/g;
+
+/**
+ * Canonical token form: ZWNJ stripped + Alef-with-madda folded to bare
+ * Alef — mirroring normalizePersian, so list words («آیفون») and folded
+ * input («ایفون») meet on the same form. Applied to BOTH sides.
+ */
+function foldToken(t: string): string {
+  return t.replace(ZWNJ_RE, "").replace(/آ/g, "ا");
 }
+
+function indexTokens(normalized: string): Set<string> {
+  const toks = normalized.split(/\s+/).filter(Boolean);
+  const idx = new Set<string>();
+  const push = (t: string) => {
+    const z = foldToken(t);
+    if (z !== "") idx.add(z);
+    // conservative stem: possessive م/ت/ش/مان/تان/شان + plural ها/های
+    const stem = z.replace(/(مان|تان|شان|های|ها|[متش])$/, "");
+    if (stem.length >= 4 && stem !== z) idx.add(stem);
+  };
+  toks.forEach(push);
+  for (let i = 0; i + 1 < toks.length; i++) {
+    const joined = foldToken(toks[i] + toks[i + 1]);
+    if (joined !== "") idx.add(joined);
+  }
+  return idx;
+}
+
+export function includesWordSmart(normalized: string, word: string): boolean {
+  const w = foldToken(word);
+  if (!w.includes(" ")) {
+    if (indexTokens(normalized).has(w)) return true;
+    // Last resort for a SINGLE ZWNJ-joined token («ماشین‌لباسشویی»):
+    // a LONG list word (6+ chars) may sit inside the one folded token.
+    // Restricted to single-token inputs: joining across spaces creates
+    // phantom words («تعمیر یخچال» → «تعمیری» via یخچال's ی).
+    // Short words stay token-only — «ساز» must never match «قهوهساز».
+    if (w.length >= 6 && !/\s/.test(normalized)) {
+      if (foldToken(normalized).includes(w)) return true;
+    }
+    return false;
+  }
+  const parts = w.split(/\s+/);
+  const toks = normalized.split(/\s+/).filter(Boolean).map(foldToken);
+  return toks.some((_, i) => parts.every((p, j) => toks[i + j] === p));
+}
+
+/** Back-compat alias — the separator-tolerant entry point used across the classifier. */
+export const includesWordZwnjTolerant = includesWordSmart;
 /** Real-estate mentions that make the transaction type (rent/buy) a
  *  required disambiguation when no transaction word is present. */
 const REAL_ESTATE_WORDS = [
@@ -157,8 +205,8 @@ export type ConditionType = "new" | "used";
  */
 export function detectCondition(raw: string): ConditionType | null {
   const normalized = normalizePersian(raw);
-  if (CONDITION_USED_WORDS.some((w) => includesWord(normalized, w))) return "used";
-  if (CONDITION_NEW_WORDS.some((w) => includesWord(normalized, w))) return "new";
+  if (CONDITION_USED_WORDS.some((w) => includesWordSmart(normalized, w))) return "used";
+  if (CONDITION_NEW_WORDS.some((w) => includesWordSmart(normalized, w))) return "new";
   return null;
 }
 
@@ -168,7 +216,8 @@ export function detectCondition(raw: string): ConditionType | null {
  * not fridges for sale). Word-boundary on the normalized query.
  * Conservative seed — grows from real hunt data, like SYNONYM_GROUPS.
  */
-const SERVICE_DEMAND_WORDS = ["تعمیر", "تعمیرات", "تعمیرکار", "نصب", "نصاب"];
+const SERVICE_DEMAND_WORDS = ["تعمیر", "تعمیرات", "تعمیرکار", "نصب", "نصاب", "نصب‌کننده"];
+// R3 battery #12: «نصبکننده» (joined) — smart matcher covers نصب‌کننده/نصب کننده/نصبکننده
 
 /**
  * Repaired-goods forms — the Q4 guard. «یخچال تعمیری» / «تعمیرشده» reads as
@@ -185,8 +234,8 @@ const REPAIRED_GOODS_FORMS = ["تعمیری", "تعمیرشده", "تعمیر ش
  */
 export function detectServiceIntent(raw: string): boolean {
   const normalized = normalizePersian(raw);
-  if (REPAIRED_GOODS_FORMS.some((w) => includesWord(normalized, w))) return false;
-  return SERVICE_DEMAND_WORDS.some((w) => includesWord(normalized, w));
+  if (REPAIRED_GOODS_FORMS.some((w) => includesWordSmart(normalized, w))) return false;
+  return SERVICE_DEMAND_WORDS.some((w) => includesWordSmart(normalized, w));
 }
 
 /** True when a MUST term is a service-demand cue (satisfiable by provider forms). */
@@ -281,7 +330,7 @@ export const DEALER_FIRST_PERSON = ["هستیم", "هستم", "می‌باشیم
  * appliance word present); AMBIGUOUS words («ماشین», «موتور», «تیپ»)
  * still honor the disqualifiers («ماشین لباسشویی» → home). */
 const VEHICLE_STRONG_WORDS = [
-  "خودرو", "وانت", "پراید", "پژو", "سمند", "دنا", "تیبا",
+  "خودرو", "اتومبیل", "وانت", "پراید", "پژو", "سمند", "دنا", "تیبا",
   "کوییک", "شاهین", "ساینا", "رانا", "تویوتا", "هیوندای", "نیسان", "کامیون",
   "موتورسیکلت",
   "لندکروزر", "بنز", // battery #8/#9
@@ -299,6 +348,7 @@ const MOBILE_HINT_WORDS = [
 ];
 const HOME_HINT_WORDS = [
   "مبل", "مبلمان", "یخچال", "فریزر", "تلویزیون", "لباسشویی", "ظرفشویی",
+  "رختشویی", // R3 battery #54
   "کولر", "فرش", "قالی", "موکت", "پرده", "تخت", "تختخواب", "کمد", "دراور",
   "صندلی", "جاروبرقی", "بخارشوی", "اتو", "آباژور", "لوستر", "آینه", "میز",
   "بخاری", "آبگرمکن", "هود", "اجاق", "فر", "سرویس خواب",
@@ -433,6 +483,7 @@ export type TextCategory =
 const VEHICLE_DISQUALIFIERS = [
   "لباسشویی",
   "ظرفشویی",
+  "رختشویی", // R3 battery #54: synonym of لباسشویی (all separator spellings via smart matcher)
   "حساب",
   "اصلاح",
   "یخچال",
@@ -582,6 +633,9 @@ export function interpretQuery(raw: string): Interpretation {
   const preferences: InterpretedConstraint[] = [];
   const normalized = normalizePersian(raw);
   if (normalized === "") return { version: "v1", applied, preferences };
+  // «بی‌رنگ»/«بیرنگ»/«بی رنگ» reads as «بدون رنگ» (R3 battery #39) —
+  // rewrite once so the EXCLUDE_PREFIXES path below handles every spelling.
+  const segmentsFrom = normalized.replace(/بی‌رنگ|بیرنگ|بی رنگ/g, "بدون رنگ");
 
   for (const city of KNOWN_CITIES) {
     if (city.names.some((name) => mentionsCity(normalized, name))) {
@@ -643,7 +697,7 @@ export function interpretQuery(raw: string): Interpretation {
     });
   }
 
-  for (const rawSegment of splitSegments(normalized)) {
+  for (const rawSegment of splitSegments(segmentsFrom)) {
     // Inline «نه»: «زیر ۲۰۰ میلیون نه دیجیتال» → content + exclude term.
     // The remainder keeps flowing through the other checks (price, city…).
     let segment = rawSegment;
