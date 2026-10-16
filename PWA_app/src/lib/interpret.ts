@@ -89,11 +89,13 @@ const REAL_ESTATE_WORDS = [
   "سوئیت",
   "پنتهاوس",
   "پنت‌هاوس",
+  "پنت هاوس", // battery #2: spaced form users type
   "ملک",
   "برج",
   "کلنگی",
   "مسکونی",
   "تجاری",
+  "ساختمان", // battery #1: «پیش‌فروش ساختمان» — «پیش‌فروش» alone stays out (car pre-sales)
 ];
 
 export type TransactionType = "rent" | "buy";
@@ -117,9 +119,16 @@ export function detectTransaction(raw: string): TransactionType | null {
  *  «دفتر» is ambiguous (office vs notebook): «دفتر مشق/یادداشت» is
  *  stationery, never real estate — the peanut family (2026-10-15). */
 const NOTEBOOK_WORDS = ["مشق", "یادداشت"];
+/**
+ * Real-estate false friends (battery #56/#57, peanut family): landmarks and
+ * venues that contain a real-estate word but are not property —
+ * «برج میلاد», «خانه بازی کودکان».
+ */
+const REAL_ESTATE_FALSE_FRIENDS = ["میلاد", "خانه بازی"];
 export function mentionsRealEstate(raw: string): boolean {
   const normalized = normalizePersian(raw);
   if (NOTEBOOK_WORDS.some((w) => includesWord(normalized, w))) return false;
+  if (REAL_ESTATE_FALSE_FRIENDS.some((w) => includesWord(normalized, w))) return false;
   return REAL_ESTATE_WORDS.some((w) => includesWord(normalized, w));
 }
 
@@ -249,17 +258,28 @@ export const DEALER_CUES = [
 export const DEALER_FIRST_PERSON = ["هستیم", "هستم", "می‌باشیم", "میباشیم"];
 
 /** Head-word hints for the required-dimensions engine. Explicit category
- *  picker wins; these only fire when the user never touched it. */
-const VEHICLE_HINT_WORDS = [
-  "ماشین", "خودرو", "وانت", "تیپ", "پراید", "پژو", "سمند", "دنا", "تیبا",
+ *  picker wins; these only fire when the user never touched it.
+ *
+ * Vehicles are split (battery #10/#11): STRONG words are unambiguous
+ * («کامیون یخچال‌دار», «پژو پارس کولر‌دار» stay vehicles even with an
+ * appliance word present); AMBIGUOUS words («ماشین», «موتور», «تیپ»)
+ * still honor the disqualifiers («ماشین لباسشویی» → home). */
+const VEHICLE_STRONG_WORDS = [
+  "خودرو", "وانت", "پراید", "پژو", "سمند", "دنا", "تیبا",
   "کوییک", "شاهین", "ساینا", "رانا", "تویوتا", "هیوندای", "نیسان", "کامیون",
-  "موتورسیکلت", "موتور",
+  "موتورسیکلت",
+  "لندکروزر", "بنز", // battery #8/#9
 ];
+const VEHICLE_AMBIGUOUS_WORDS = ["ماشین", "موتور", "تیپ"];
+const VEHICLE_HINT_WORDS = [...VEHICLE_STRONG_WORDS, ...VEHICLE_AMBIGUOUS_WORDS];
 const MOBILE_HINT_WORDS = [
   "گوشی", "موبایل", "آیفون", "سامسونگ", "شیائومی", "هواوی", "تبلت",
-  "لپتاپ", "لپ‌تاپ", "کامپیوتر", "رایانه", "مانیتور", "کنسول",
+  "لپتاپ", "لپ‌تاپ", "لپ تاپ", // battery #13: spaced form users type
+  "کامپیوتر", "رایانه", "مانیتور", "کنسول",
   "مودم", "پرینتر", "دوربین", "عکاسی", "اسپیکر", "هدفون", "هندزفری",
-  "شارژر", "پاوربانک", "مک‌بوک", "آیپد", "ایرپاد", "گلکسی",
+  "شارژر", "پاوربانک", "پاور بانک", // battery #14: spaced form users type
+  "مک‌بوک", "آیپد", "ایرپاد", "گلکسی",
+  "هدست", "موس", "مونوپاد", // battery #15/#17/#18
 ];
 const HOME_HINT_WORDS = [
   "مبل", "مبلمان", "یخچال", "فریزر", "تلویزیون", "لباسشویی", "ظرفشویی",
@@ -267,6 +287,9 @@ const HOME_HINT_WORDS = [
   "صندلی", "جاروبرقی", "بخارشوی", "اتو", "آباژور", "لوستر", "آینه", "میز",
   "بخاری", "آبگرمکن", "هود", "اجاق", "فر", "سرویس خواب",
   "پکیج دیواری", // phrase only: bare «پکیج» also means course package
+  "ساعت دیواری", // battery #23: wall clock is home, not personal «ساعت»
+  "اسپرسوساز", // battery #24: «ماشین اسپرسوساز» is an appliance
+  "کاغذ دیواری", "چرخ گوشت", // battery #21/#22
 ];
 /**
  * سرگرمی و فراغت (Divar: leisure-hobbies). NOTE: the TextCategory id stays
@@ -275,26 +298,52 @@ const HOME_HINT_WORDS = [
  * whole parent category, not just instruments.
  */
 const LEISURE_HINT_WORDS = [
-  "پیانو", "گیتار", "ویولن", "سنتور", "سهتار", "دف", "تنبک", "درام",
-  "ساز", "آکوستیک", "کتاب", "دوچرخه", "اسکوتر", "اسباب‌بازی", "پازل",
+  "پیانو", "گیتار", "ویولن", "ویولون", // battery #27: spelling variant
+  "سنتور", "سهتار", "سه تار", // battery #28: spaced form users type
+  "دف", "تنبک", "درام",
+  "ساز", "آکوستیک", "کتاب", "دوچرخه", "اسکوتر",
+  "اسباب‌بازی", "اسباب بازی", // battery #25: spaced form users type
+  "پازل",
   "شطرنج",
+  "لگو", "ماهیگیری", "تلسکوپ", // battery #26/#29/#30
 ];
 const PERSONAL_HINT_WORDS = [
   "مانتو", "پالتو", "بارانی", "کاپشن", "شلوار", "پیراهن", "تیشرت",
-  "کفش", "کتونی", "بوت", "صندل", "کیف", "کوله", "چمدان", "عینک",
+  "کفش", "کتونی", "بوت", "صندل", "کیف", "کوله", "کوله‌پشتی", // battery #36
+  "چمدان", "عینک",
   "ساعت", "طلا", "جواهر", "انگشتر", "گردنبند", "دستبند", "عطر", "ادکلن",
   "لباس", "شال", "روسری", "کمربند", "کلاه",
+  "ماشین اصلاح", // battery #31: electric razor — phrase beats «ماشین»→vehicles
+  "اتوی", // battery #32: ezafe form «اتوی مو» ≠ «اتو»
+  "شلوارک", // battery #33: whole-word «شلوارک» ≠ «شلوار»
 ];
 
 /** Jobs (Divar: استخدام و کاریابی). Unambiguous — never a goods modifier. */
-const JOBS_HINT_WORDS = ["استخدام", "کاریابی"];
+const JOBS_HINT_WORDS = [
+  "استخدام",
+  "کاریابی",
+  "شغلی", // battery #44: «فرصت شغلی»
+  "کارآموز", // battery #45
+  "کارمند", // battery #46
+  "دستیار", // battery #47
+];
 
 /**
  * Business / industrial equipment (Divar: کسب‌وکار و تجهیزات).
  * Phrase-only: bare «دستگاه» is hopelessly ambiguous (دستگاه قهوه‌ساز
  * is home, دستگاه تزریق پلاستیک is industrial).
  */
-const INDUSTRIAL_HINT_WORDS = ["ماشین‌آلات", "تجهیزات صنعتی", "خط تولید"];
+const INDUSTRIAL_HINT_WORDS = [
+  "ماشین‌آلات",
+  "ماشین آلات", // battery #49: spaced form users type
+  "تجهیزات صنعتی",
+  "خط تولید",
+  "موتور برق", // battery #50: generator
+  "کمپرسور", // battery #51
+  "دیگ بخار", // battery #52
+  "دریل", // battery #53
+  "خط بسته‌بندی", // battery #54
+];
 
 /**
  * Standalone service words — unambiguous service hunts with no goods
@@ -306,10 +355,14 @@ const SERVICE_STANDALONE_WORDS = [
   "قالیشویی",
   "باربری",
   "اسباب‌کشی",
+  "اسباب کشی", // battery #38: spaced form users type
   "آرایشگری",
   "خیاطی",
   "تدریس",
   "تعمیرگاه",
+  "کارواش", // battery #37
+  "خشکشویی", // battery #39
+  "نظافت منزل", // battery #40: phrase only — bare «نظافت» stays out (industrial goods)
 ];
 
 /**
@@ -330,6 +383,17 @@ export function isServicesQuery(raw: string): boolean {
   if (INSTALLED_FORMS.some((w) => includesWord(normalized, w))) return false;
   if (detectServiceIntent(raw)) return true;
   return SERVICE_STANDALONE_WORDS.some((w) => includesWord(normalized, w));
+}
+
+/**
+ * True when the query hunts a JOB, not a good (battery #43).
+ * «استخدام راننده وانت» is a job ad — «وانت» must not steal it into
+ * vehicles. Mirrors the services-first pattern: the jobs words are
+ * unambiguous (never goods modifiers), so jobs run before goods.
+ */
+export function isJobsQuery(raw: string): boolean {
+  const normalized = normalizePersian(raw);
+  return JOBS_HINT_WORDS.some((w) => includesWord(normalized, w));
 }
 
 export type TextCategory =
@@ -363,6 +427,11 @@ const VEHICLE_DISQUALIFIERS = [
   // «تیپ» is also a clothing style («تیپ مردانه») — never a car then.
   "مردانه",
   "زنانه",
+  // battery: compounds that beat the ambiguous «ماشین»/«موتور»
+  "ماشین آلات", // «ماشین آلات صنعتی» → industrial (both spacings listed)
+  "ماشین‌آلات",
+  "موتور برق", // «موتور برق دیزلی» → industrial generator
+  "اسپرسوساز", // «ماشین اسپرسوساز» → home appliance
 ];
 const MOBILE_DISQUALIFIERS = [
   "یخچال",
@@ -371,7 +440,26 @@ const MOBILE_DISQUALIFIERS = [
   "لباسشویی",
   "ظرفشویی",
   "میز",
+  "کولر", // battery #19: «کولر گازی سامسونگ» is an AC, not a phone
 ];
+
+/**
+ * Cross-category brands (battery #55, never-guess): a bare «سامسونگ»
+ * spans phones, fridges and TVs — the engine must not guess mobile.
+ * With a category word («یخچال سامسونگ», «گوشی سامسونگ») that word decides.
+ */
+const BRAND_WORDS = ["سامسونگ", "شیائومی", "هواوی", "الجی", "سونی"];
+const ALL_GOODS_WORDS = [
+  ...VEHICLE_HINT_WORDS,
+  ...MOBILE_HINT_WORDS,
+  ...HOME_HINT_WORDS,
+  ...LEISURE_HINT_WORDS,
+  ...PERSONAL_HINT_WORDS,
+  ...INDUSTRIAL_HINT_WORDS,
+  ...JOBS_HINT_WORDS,
+  ...SERVICE_STANDALONE_WORDS,
+];
+const NON_BRAND_GOODS_WORDS = ALL_GOODS_WORDS.filter((w) => !BRAND_WORDS.includes(w));
 
 /**
  * Best-guess category from free text for the required-dimensions engine.
@@ -384,14 +472,22 @@ export function detectCategoryFromText(raw: string): TextCategory | null {
   // Services first: «تعمیر یخچال» is a repairman hunt, not a fridge hunt —
   // it must not fall through to home and ask «نو یا کارکرده؟».
   if (isServicesQuery(raw)) return "services";
+  // Jobs second (battery #43): «استخدام راننده وانت» is a job ad —
+  // «وانت» must not steal it into vehicles. Jobs words are unambiguous.
+  if (isJobsQuery(raw)) return "jobs";
   if (mentionsRealEstate(raw)) return "real-estate";
-  if (hits(VEHICLE_HINT_WORDS) && !hits(VEHICLE_DISQUALIFIERS)) return "vehicles";
+  // Strong vehicle words beat disqualifiers (battery #10/#11):
+  // «کامیون یخچال‌دار» and «پژو پارس کولر‌دار» are vehicles, full stop.
+  if (hits(VEHICLE_STRONG_WORDS)) return "vehicles";
+  if (hits(VEHICLE_AMBIGUOUS_WORDS) && !hits(VEHICLE_DISQUALIFIERS)) return "vehicles";
+  // Bare brands never guess (battery #55, peanut family): «سامسونگ»
+  // alone → null. With a category word, that word decides.
+  if (hits(BRAND_WORDS) && !hits(NON_BRAND_GOODS_WORDS)) return null;
   if (hits(MOBILE_HINT_WORDS) && !hits(MOBILE_DISQUALIFIERS)) return "mobile";
   if (hits(HOME_HINT_WORDS)) return "home";
   if (hits(LEISURE_HINT_WORDS)) return "music";
   if (hits(PERSONAL_HINT_WORDS)) return "personal";
   if (hits(INDUSTRIAL_HINT_WORDS)) return "industrial";
-  if (hits(JOBS_HINT_WORDS)) return "jobs";
   return null;
 }
 
