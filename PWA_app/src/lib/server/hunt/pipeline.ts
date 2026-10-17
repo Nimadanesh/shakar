@@ -139,6 +139,13 @@ export interface ScoredAd {
   missingInfo: string[];
   /** True when the detail fetch failed — shown, never dropped. */
   detailUnknown?: boolean;
+  /**
+   * R5 (2026-10-17): first ~200 chars of the ad description,
+   * whitespace-collapsed — lets a human grader verify condition claims
+   * («بدون رنگ») the engine read from the description. Display-only;
+   * never scored.
+   */
+  descSnippet?: string;
 }
 
 export interface HuntStats {
@@ -894,6 +901,8 @@ export async function confirmCandidates(
         matchKind: !detailUnknown && ev.verdict === "exact" ? "exact" : "near",
         missingInfo: ev.missingInfo,
         ...(detailUnknown ? { detailUnknown: true } : {}),
+        // R5 grading packets show this so condition claims are verifiable.
+        descSnippet: description.replace(/\s+/g, " ").trim().slice(0, 200),
       };
       results.push(ad);
       batchConfirmed.push(ad);
