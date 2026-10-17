@@ -1671,3 +1671,171 @@ describe("R6 fixes — 2026-10-17 third grading round (wrong-item rejection)", (
     expect(kindsOf(await doneOf(defB!))["butter"]).toBe("exact");
   });
 });
+
+describe("R7 speech-act role — seek-buyer (navid's R6 product decision)", () => {
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  it("effectiveWantsSellers: explicit form wins; roleMode overrides the default", async () => {
+    const { effectiveWantsSellers } = await import("./pipeline");
+    const base: HuntDefinition = { ...DEF, include: ["پراید"] };
+    expect(effectiveWantsSellers({ ...base })).toBe(true); // default: buyer
+    expect(effectiveWantsSellers({ ...base, roleMode: "seek-buyer" })).toBe(false);
+    expect(effectiveWantsSellers({ ...base, roleMode: "self-seller" })).toBe(false);
+    expect(effectiveWantsSellers({ ...base, roleMode: "seek-seller" })).toBe(true);
+    expect(effectiveWantsSellers({ ...base, roleMode: "self-buyer" })).toBe(true);
+    expect(effectiveWantsSellers({ ...base, roleMode: "none" })).toBe(true);
+    // Explicit form answers always win over the query's role.
+    expect(effectiveWantsSellers({ ...base, direction: "sell", roleMode: "seek-seller" })).toBe(false);
+    expect(effectiveWantsSellers({ ...base, direction: "buy", roleMode: "seek-buyer" })).toBe(true);
+  });
+
+  it("resolveHuntDefinition carries the query's roleMode", async () => {
+    expect(resolveHuntDefinition({ query: "خریدار پراید" })?.roleMode).toBe("seek-buyer");
+    expect(resolveHuntDefinition({ query: "پراید" })?.roleMode).toBe("none");
+  });
+
+  it("seek-buyer hunt: buyer ads outrank clear offer ads (wrong-side demote)", async () => {
+    const def = resolveHuntDefinition({ query: "خریدار پراید" });
+    listings([
+      { sourceAdId: "offer", title: "پراید ۱۳۱ فروش فوری" },
+      { sourceAdId: "buyer", title: "خریدار پراید" },
+    ]);
+    detail({
+      offer: "پراید ۱۳۱ مدل ۹۰ فروش فوری",
+      buyer: "خریدار پراید هستیم نقد",
+    });
+    const done = await doneOf(def!);
+    const ids = done.results.map((r) => r.sourceAdId);
+    expect(ids).toContain("buyer");
+    expect(ids).toContain("offer");
+    expect(ids.indexOf("buyer")).toBeLessThan(ids.indexOf("offer"));
+  });
+
+  it("role-silent ads stay fully compatible on a seek-buyer hunt", async () => {
+    const def = resolveHuntDefinition({ query: "خریدار پراید" });
+    listings([{ sourceAdId: "plain", title: "پراید ۱۳۱" }]);
+    detail({ plain: "پراید ۱۳۱ مدل ۹۰" });
+    const done = await doneOf(def!);
+    // No role cue → unknown stance → no wrong-side penalty, still exact.
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["plain"]);
+    expect(done.results[0].matchKind).toBe("exact");
+  });
+
+  it("default hunt still demotes dealer ads (no S4 regression)", async () => {
+    const def = resolveHuntDefinition({ query: "پراید" });
+    listings([
+      { sourceAdId: "seller", title: "پراید ۱۳۱" },
+      { sourceAdId: "dealer", title: "خریدار پراید" },
+    ]);
+    detail({
+      seller: "پراید ۱۳۱ مدل ۹۰",
+      dealer: "خریدار پراید هستیم",
+    });
+    const done = await doneOf(def!);
+    const ids = done.results.map((r) => r.sourceAdId);
+    expect(ids.indexOf("seller")).toBeLessThan(ids.indexOf("dealer"));
+  });
+});
+
+describe("R7 defeasible absence — counter-evidence defeats the universal (DeepSeek P2)", () => {
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+  function kindsOf(done: { results: Array<{ sourceAdId: string; matchKind: string }> }) {
+    return Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+  }
+
+  it("R6 h7: partial negation «دو تیکه رنگ و باقیش بی رنگ» is present → rejected", async () => {
+    const def = resolveHuntDefinition({ query: "ماشین بدون رنگ" });
+    expect(def!.absentAttributes).toEqual(["رنگ"]);
+    listings([
+      { sourceAdId: "partial", title: "ماشین پراید ۱۳۱" },
+      { sourceAdId: "clean", title: "ماشین پراید ۱۱۱" },
+    ]);
+    detail({
+      partial: "ماشین دو تیکه رنگ و باقیش بی رنگ",
+      clean: "ماشین پراید بدون رنگ",
+    });
+    const kinds = kindsOf(await doneOf(def!));
+    expect(kinds["partial"]).toBeUndefined(); // rejected, not shown
+    expect(kinds["clean"]).toBe("exact");
+  });
+
+  it("R6 h12: «دور رنگ» implied-present caps to near, never exact", async () => {
+    const def = resolveHuntDefinition({ query: "ماشین بدون تصادف" });
+    listings([
+      { sourceAdId: "repaint", title: "ماشین پراید ۱۳۲" },
+      { sourceAdId: "clean", title: "ماشین پراید ۱۴۱" },
+    ]);
+    detail({
+      repaint: "ماشین شاسیا سالم بدون ضربه دور رنگ جهت زیبایی",
+      clean: "ماشین پراید بدون رنگ",
+    });
+    const done = await doneOf(def!);
+    const kinds = kindsOf(done);
+    expect(kinds["repaint"]).toBe("near"); // was: false exact
+    expect(kinds["clean"]).toBe("exact");
+    // And the repaint ranks below the clean car.
+    const ids = done.results.map((r) => r.sourceAdId);
+    expect(ids.indexOf("clean")).toBeLessThan(ids.indexOf("repaint"));
+  });
+
+  it("negated bodywork («بدون نیاز به صافکاری») is not implied-present", async () => {
+    const { assessAbsencePolarity } = await import("./semantics");
+    // Supports absence (or unknown) — never counter-evidence.
+    expect(assessAbsencePolarity("ماشین بدون نیاز به صافکاری", "تصادف").polarity).not.toBe("implied");
+    expect(assessAbsencePolarity("ماشین بدون نیاز به صافکاری", "تصادف").polarity).not.toBe("present");
+  });
+
+  it("plain absence and unknown keep their old verdicts", async () => {
+    const { assessAbsencePolarity } = await import("./semantics");
+    expect(assessAbsencePolarity("پراید بدون رنگ", "رنگ").polarity).toBe("absent");
+    expect(assessAbsencePolarity("پراید مدل ۹۰", "رنگ").polarity).toBe("unknown");
+    expect(assessAbsencePolarity("پراید رنگ شده", "رنگ").polarity).toBe("present");
+    expect(assessAbsencePolarity("بی رنگ", "تصادف").polarity).toBe("absent"); // synonym bridge kept
+  });
+});

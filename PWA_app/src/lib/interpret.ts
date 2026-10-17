@@ -333,6 +333,55 @@ export const DEALER_CUES = [
 /** First-person markers that turn a nearby «خریدار» into a dealer signal. */
 export const DEALER_FIRST_PERSON = ["هستیم", "هستم", "می‌باشیم", "میباشیم"];
 
+/**
+ * Speech-act role of the query — WHOSE ads the hunter wants (R7,
+ * 2026-10-18; navid's R6 product decision on «خریدار پراید»).
+ * - "seek-buyer": bare «خریدار X» — the hunter is a seller looking for
+ *   BUYERS (people), not the goods.
+ * - "seek-seller": bare «فروشنده X» — the hunter is a buyer looking for
+ *   sellers (the goods, from sellers).
+ * - "self-buyer": «خریدار X هستم/م» / «X میخرم» — the hunter IS the buyer
+ *   → wants the goods (sellers).
+ * - "self-seller": «فروشنده X هستم/م» / «X میفروشم» — the hunter IS the
+ *   seller → wants buyers.
+ * - "none": no role language — the default goods hunt.
+ */
+export type RoleMode = "seek-buyer" | "seek-seller" | "self-buyer" | "self-seller" | "none";
+
+/** First-person verb forms that declare the hunter's own side. */
+const SELF_BUYER_VERBS = ["میخرم", "می خرم"];
+const SELF_SELLER_VERBS = ["میفروشم", "می فروشم"];
+const SELF_COPULA = ["هستم", "هستیم"];
+
+/**
+ * Detect the query's speech-act role. Closed morphological classes only
+ * (role nouns + first-person/copula/verb forms) — never guessed from
+ * open vocabulary. Both roles present («خریدار و فروشنده») → "none"
+ * (ambiguous, never silently resolved).
+ */
+export function detectRoleMode(raw: string): RoleMode {
+  const normalized = normalizePersian(raw);
+  const hasBuyer =
+    includesWordSmart(normalized, "خریدار") ||
+    includesWordSmart(normalized, "خریدارم") ||
+    includesWordSmart(normalized, "خریداریم");
+  const hasSeller = includesWordSmart(normalized, "فروشنده");
+  if (hasBuyer && hasSeller) return "none";
+  const selfDeclared =
+    SELF_COPULA.some((w) => includesWordSmart(normalized, w)) ||
+    includesWordSmart(normalized, "خریدارم") ||
+    includesWordSmart(normalized, "خریداریم") ||
+    normalized.includes("فروشنده‌ام") ||
+    normalized.includes("فروشنده‌ایم");
+  const selfBuys = SELF_BUYER_VERBS.some((w) => includesWordSmart(normalized, w));
+  const selfSells = SELF_SELLER_VERBS.some((w) => includesWordSmart(normalized, w));
+  if ((hasBuyer && selfDeclared) || selfBuys) return "self-buyer";
+  if ((hasSeller && selfDeclared) || selfSells) return "self-seller";
+  if (hasBuyer) return "seek-buyer";
+  if (hasSeller) return "seek-seller";
+  return "none";
+}
+
 /** Head-word hints for the required-dimensions engine. Explicit category
  *  picker wins; these only fire when the user never touched it.
  *

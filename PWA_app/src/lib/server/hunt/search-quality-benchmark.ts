@@ -233,11 +233,14 @@ export const SEARCH_QUALITY_BENCHMARK: readonly SearchQualityCase[] = [
     id: "direction-buyer-hunter",
     slice: "transaction-direction",
     query: "خریدار یخچال",
+    // R7 (2026-10-18): bare «خریدار X» = seek-buyer — the hunter is a
+    // seller looking for BUYERS (navid's R6 product decision), NOT the
+    // goods. This supersedes the S4-era reading (seller listings = 3).
     intent: { category: "home", must: ["یخچال"], should: [], mustNot: [], unknown: [] },
     candidates: [
-      { id: "dir-a1", title: "یخچال سامسونگ", description: "سالم، فروش", relevance: 3, note: "Seller listing; what the buyer-hunter wants (S4)." },
-      { id: "dir-a2", title: "خریدار یخچال هستیم", description: "خریدار انواع یخچال", relevance: 0, note: "Competing dealer; S4 rubric = 0 (intent-inversion)." },
-      { id: "dir-a3", title: "یخچال فریزر", description: "نو", relevance: 2, note: "Seller listing; related." },
+      { id: "dir-a1", title: "یخچال سامسونگ", description: "سالم، فروش", relevance: 0, note: "Seller listing; wrong side for a buyer-seeking hunt (R7)." },
+      { id: "dir-a2", title: "خریدار یخچال هستیم", description: "خریدار انواع یخچال", relevance: 3, note: "Buyer ad; exactly what the buyer-seeking hunter wants (R7)." },
+      { id: "dir-a3", title: "یخچال فریزر", description: "نو", relevance: 0, note: "Seller listing; wrong side for a buyer-seeking hunt (R7)." },
     ],
   },
 ] as const;

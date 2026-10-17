@@ -450,3 +450,21 @@ describe("R3 battery round 2 — ZWNJ-joined multi-word tokens", () => {
     expect(includesWordSmart(n2, "تعمیری")).toBe(false);
   });
 });
+
+describe("detectRoleMode — R7 speech-act role (HumanTest S4)", () => {
+  it.each([
+    ["خریدار پراید", "seek-buyer"], // navid's R6: bare = seeks buyers
+    ["فروشنده پراید", "seek-seller"],
+    ["خریدار پراید هستم", "self-buyer"],
+    ["خریدار پرایدم", "seek-buyer"], // possessive on پراید: seller seeking a buyer
+    ["پراید میخرم", "self-buyer"],
+    ["فروشنده پراید هستم", "self-seller"],
+    ["پراید میفروشم", "self-seller"],
+    ["خریدار و فروشنده پراید", "none"], // ambiguous: never silently resolved
+    ["پراید مدل 88", "none"], // plain goods hunt
+    ["ماشین بدون رنگ", "none"],
+  ])("«%s» → %s", async (query, expected) => {
+    const { detectRoleMode } = await import("@/lib/interpret");
+    expect(detectRoleMode(query)).toBe(expected);
+  });
+});

@@ -10,6 +10,7 @@ import {
   SERVICE_PROVIDER_CUES,
   detectTransaction,
   isServiceDemandTerm,
+  type RoleMode,
 } from "@/lib/interpret";
 import {
   assessAbsencePolarity,
@@ -26,6 +27,13 @@ import {
   isRepairWord,
   rolesClash,
 } from "./semantics";
+import {
+  adKindForCategorySlug,
+  adKindForTitle,
+  kindGateRejects,
+  queryKindForDef,
+  targetKindForDef,
+} from "./kindLexicon";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -96,8 +104,19 @@ export interface HuntDefinition {
    * captures direction (decision bank Q6: never guessed from query text);
    * absent defaults to "buy" — the common hunter is a buyer, and the S4
    * rubric grades from that side.
+   *
+   * R7 (2026-10-18): the query's speech-act role overrides the default
+   * when the form didn't answer — bare «خریدار X» (roleMode "seek-buyer")
+   * means the hunter is a seller looking for buyers (navid's R6 product
+   * decision). See effectiveWantsSellers.
    */
   direction?: "buy" | "sell";
+  /**
+   * Speech-act role of the query (R7): whose ads the hunter wants.
+   * Resolved in resolveHuntDefinition via detectRoleMode. Optional for
+   * backward compatibility — absent means "none".
+   */
+  roleMode?: RoleMode;
   /**
    * Absent-attributes (R3, 2026-10-17): «بدون X» constraints from the query
    * («ماشین بدون رنگ» → ["رنگ"]). NOT excludes — a desired absence is a
@@ -118,6 +137,20 @@ export interface ScoreBreakdown {
   title: number;
   description: number;
   priceKnown: number;
+}
+
+/**
+ * R7 (2026-10-18): which side of the market the hunt wants.
+ * Explicit form answer wins; otherwise the query's speech-act role
+ * decides (bare «خریدار X» = seek-buyer → wants buyers); otherwise the
+ * default ("buy" — the common hunter is a buyer).
+ */
+export function effectiveWantsSellers(def: HuntDefinition): boolean {
+  if (def.direction === "sell") return false;
+  if (def.direction === "buy") return true;
+  const mode = def.roleMode ?? "none";
+  if (mode === "seek-buyer" || mode === "self-seller") return false;
+  return true;
 }
 
 export interface ScoredAd {
@@ -169,6 +202,16 @@ export interface HuntStats {
    * and explicit condition contradictions.
    */
   rejectedNoMatch: number;
+  /**
+   * R7 (2026-10-18): two-directional measurement (DeepSeek blind spot) —
+   * a sample of REJECTED ads (title + rejection kind) for the
+   * false-rejection audit. Every round graded only the shown results
+   * (false positives); nothing measured good ads killed by the rules.
+   * Capped at 12/hunt, first-rejected-first (candidates are processed in
+   * title-strength order, so these are the most likely false rejections).
+   * The grading packet renders them for parallel grading.
+   */
+  rejectedSample: Array<{ title: string; kind: string; price: number | null }>;
 }
 
 export type HuntEvent =
@@ -347,6 +390,14 @@ export interface DescriptionEvaluation {
   dealerHits: number;
   huntWantsSellers: boolean;
   /**
+   * R7 (2026-10-18): the ad's speech-act stance from assessListingRole
+   * ("product" | "buyer-seeking" | "service" | "rental" | "exchange" |
+   * "unknown"). Powers the wrong-side demote: a clear offer ad on a
+   * buyer-seeking hunt sinks like a dealer ad does on a seller-seeking
+   * hunt (rank penalty, never a hard drop — most ads are role-silent).
+   */
+  adRole: string;
+  /**
    * R6 (2026-10-17): why a wrong-item ad was rejected
    * (part:offering:"…", seeker:…, bait:…, demand-goods:…). Feeds the
    * «گزارش شکار» market report ("X ads seen but not your item") — no
@@ -368,6 +419,7 @@ function rejectedEvaluation(): DescriptionEvaluation {
     needsRepairHits: 0,
     dealerHits: 0,
     huntWantsSellers: true,
+    adRole: "unknown",
   };
 }
 
@@ -436,7 +488,17 @@ function semanticCapFires(
   def: HuntDefinition,
   combined: string
 ): { fire: boolean; wrongItemKind: string | null } {
-  const intent = assessQueryIntent(def.include.join(" "), def.category, def.transaction);
+  let intent = assessQueryIntent(def.include.join(" "), def.category, def.transaction);
+  // R7 (2026-10-18): the query's speech-act role IS the query intent. A
+  // bare «خریدار X» hunt seeks buyer ads — so a buyer-seeking ad is
+  // compatible (no clash), and a clear offer ad clashes (capped to near,
+  // like dealer ads on seller-seeking hunts). The role word was stripped
+  // from include by design (R4), so the intent assessor never sees it —
+  // the resolved roleMode carries it instead.
+  const roleMode = def.roleMode ?? "none";
+  if (roleMode === "seek-buyer" || roleMode === "self-seller") {
+    intent = { role: "buyer-seeking", reason: "query-role-mode:seek-buyer" };
+  }
   const role = assessListingRole(combined);
   const explicitBuy =
     def.transaction === "buy" || detectTransaction(def.query) === "buy";
@@ -447,9 +509,12 @@ function semanticCapFires(
   // R3 (2026-10-17): absent-attributes generalize the repair polarity
   // rule — «بدون رنگ» with no paint info is unknown, capped at near
   // (never exact); the نه-sourced repair rule is preserved as-is.
-  const absentUnknown = (def.absentAttributes ?? []).some(
-    (a) => assessAbsencePolarity(combined, a).polarity === "unknown"
-  );
+  // R7 (2026-10-18): present-implied counter-evidence («دور رنگ» for
+  // «بدون تصادف») defeats exactness the same way — capped to near.
+  const absentNotExact = (def.absentAttributes ?? []).some((a) => {
+    const p = assessAbsencePolarity(combined, a).polarity;
+    return p === "unknown" || p === "implied";
+  });
   const repairRequested = def.exclude.some((t) => isRepairWord(t));
   const repairUnknown =
     repairRequested && assessRepairPolarity(combined).polarity === "unknown";
@@ -473,7 +538,7 @@ function semanticCapFires(
   const fire =
     clash.clash ||
     identity.mismatch ||
-    absentUnknown ||
+    absentNotExact ||
     repairUnknown ||
     needsRepairMismatch ||
     unsupportedServiceExact ||
@@ -506,7 +571,13 @@ function semanticCapFires(
 function evaluateDescription(
   description: string,
   title: string,
-  def: HuntDefinition
+  def: HuntDefinition,
+  /**
+   * R7 (P1): Divar's leaf category slug for the ad (from the detail
+   * fetch). Corroborates the head-kind when the title head is unknown —
+   * never a hard gate alone.
+   */
+  categorySlug: string = ""
 ): DescriptionEvaluation {
   const combined = `${title} ${description}`;
   // 1. MUST_NOT — «نه» means نه, with repair-word polarity scoping (an
@@ -545,9 +616,13 @@ function evaluateDescription(
   const needsRepairHits = serviceIntent ? countCues(combined, NEEDS_REPAIR_CUES) : 0;
   // P1 (HumanTest S4, flaw #22): dealer «خریدار» ads are competitors when
   // the hunter wants seller listings (the default); they ARE the buyers
-  // when the hunter explicitly wants to sell.
-  const huntWantsSellers = (def.direction ?? "buy") === "buy";
+  // when the hunter wants to sell. R7: the query's speech-act role
+  // overrides the default when the form didn't answer (bare «خریدار X»).
+  const huntWantsSellers = effectiveWantsSellers(def);
   const dealerHits = countDealerHits(combined);
+  // R7: the ad's speech-act stance — a clear offer ad on a buyer-seeking
+  // hunt is the mirror of a dealer ad on a seller-seeking hunt.
+  const adRole = assessListingRole(combined).role;
   // Defensive: no MUST terms (never happens via resolveHuntDefinition, but
   // old snapshots and direct callers must not crash or pass vacuously).
   if (def.include.length === 0) {
@@ -571,6 +646,7 @@ function evaluateDescription(
       needsRepairHits,
       dealerHits,
       huntWantsSellers,
+    adRole,
     };
   }
   // 3. MUST with UNKNOWN semantics.
@@ -641,6 +717,16 @@ function evaluateDescription(
       assessDemandGoods(def.include, combined);
     const wrongKind =
       cap.wrongItemKind ??
+      // R7 (P1): subject-kind reconciliation — structural wrong-item
+      // rejection. The head kind leads; Divar's category slug corroborates
+      // when the head is unknown. Unknown on either side → no gate.
+      // Service hunts also accept the service target's kind (S3: a
+      // fridge-for-sale on a «تعمیر یخچال» hunt is demoted, not rejected).
+      kindGateRejects(
+        queryKindForDef(def.include, def.serviceIntent ?? false, def.category),
+        adKindForTitle(title) ?? adKindForCategorySlug(categorySlug),
+        (def.serviceIntent ?? false) ? targetKindForDef(def.include) : null
+      ) ??
       (bait ? "bait:title-desc-mismatch" : null) ??
       (demandGoods ? "demand-goods:product-ad" : null);
     if (wrongKind) {
@@ -652,6 +738,7 @@ function evaluateDescription(
         needsRepairHits,
         dealerHits,
         huntWantsSellers,
+    adRole,
         rejectedKind: wrongKind,
       };
     }
@@ -668,6 +755,7 @@ function evaluateDescription(
         needsRepairHits,
         dealerHits,
         huntWantsSellers,
+    adRole,
       };
     }
   }
@@ -683,6 +771,7 @@ function evaluateDescription(
     needsRepairHits,
     dealerHits,
     huntWantsSellers,
+    adRole,
   };
 }
 
@@ -720,6 +809,11 @@ function scoreAd(
   const goodsPenalty = nonServiceHits > 0 && ev.providerHits === 0 ? 4 : 0;
   const dealerPenalty = ev.huntWantsSellers && ev.dealerHits > 0 ? 4 : 0;
   const dealerBoost = !ev.huntWantsSellers && ev.dealerHits > 0 ? 1 : 0;
+  // R7 (2026-10-18): mirror of the dealer penalty — a clear offer
+  // ("product" stance) ad on a buyer-seeking hunt is the wrong side of
+  // the market. Rank penalty only, never a hard drop: most ads are
+  // role-silent ("unknown") and stay fully compatible.
+  const offerPenalty = !ev.huntWantsSellers && ev.adRole === "product" ? 4 : 0;
   const breakdown: ScoreBreakdown = { title, description, priceKnown };
   return {
     score:
@@ -730,7 +824,8 @@ function scoreAd(
       unknownPenalty +
       providerBoost -
       goodsPenalty -
-      dealerPenalty +
+      dealerPenalty -
+      offerPenalty +
       dealerBoost,
     breakdown,
   };
@@ -763,6 +858,7 @@ export async function collectCandidates(
     stale: false,
     nearMiss: 0,
     rejectedNoMatch: 0,
+    rejectedSample: [],
   };
 
   emit({ type: "started", query: def.query });
@@ -910,6 +1006,7 @@ export async function confirmCandidates(
       stats.detailsChecked += 1;
       let description = "";
       let detailUnknown = false;
+      let categorySlug = "";
       try {
         const detail = await divarProvider.getDetail(c.sourceAdId);
         if (detail.stale === true) {
@@ -921,6 +1018,9 @@ export async function confirmCandidates(
           detailUnknown = true;
         } else {
           description = detail.description;
+          // R7 (P1): the provider's leaf category corroborates the ad's
+          // subject kind when the title head is unknown.
+          categorySlug = detail.categorySlug ?? "";
         }
       } catch {
         // Invariant: failed detail = "unknown", never a silent drop.
@@ -930,9 +1030,17 @@ export async function confirmCandidates(
       // failed/stale detail evaluates title-only (description = "") — the
       // ad is never silently dropped for a fetch failure; unmatched MUST
       // terms become UNKNOWN (missingInfo), not a rejection.
-      const ev = evaluateDescription(description, c.title, def);
+      const ev = evaluateDescription(description, c.title, def, categorySlug);
       if (ev.verdict === "rejected") {
         stats.rejectedNoMatch += 1;
+        // R7: feed the false-rejection audit — sample the rejects.
+        if (stats.rejectedSample.length < 12) {
+          stats.rejectedSample.push({
+            title: c.title,
+            kind: ev.rejectedKind ?? "no-match",
+            price: c.price,
+          });
+        }
         continue;
       }
       if (ev.verdict === "near") stats.nearMiss += 1;

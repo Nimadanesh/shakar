@@ -4,6 +4,7 @@ import type { HuntDefinition } from "./pipeline";
 import {
   detectCategoryFromText,
   detectServiceIntent,
+  detectRoleMode,
   interpretQuery,
   DEMAND_VERBS,
   KNOWN_CITIES,
@@ -200,6 +201,11 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   // detectServiceIntent.
   const serviceIntent = detectServiceIntent(def.query);
 
+  // 6b. Speech-act role (R7, 2026-10-18): whose ads the hunter wants.
+  // Bare «خریدار X» = seek-buyer (navid's R6 product decision) — overrides
+  // the direction default downstream when the form didn't answer.
+  const roleMode = detectRoleMode(def.query);
+
   return {
     ...def,
     include,
@@ -213,6 +219,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     priceMax,
     transaction,
     serviceIntent,
+    roleMode,
   };
 }
 

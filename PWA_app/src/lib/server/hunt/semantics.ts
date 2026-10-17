@@ -85,86 +85,183 @@ const ABSENT_SYNONYMS: Record<string, readonly string[]> = {
   "تصادف": ["رنگ", "ضربه"],
 };
 
+/**
+ * R7 (2026-10-18): defeasible absence — clause-level attribute claims with
+ * counter-evidence (DeepSeek P2, adopted). The old per-word single polarity
+ * found positive absence-evidence but never weighed counter-evidence: in
+ * «دو تیکه رنگ و باقیش بی رنگ» the absent span for «رنگ» swallowed «دو
+ * تیکه رنگ» (the filler let «بدون ضربه دور رنگ» match as one absent span
+ * for «رنگ») — a false exact (R6 h7/h12).
+ *
+ * Model: per attribute word (plus its synonym bridge), find absent spans;
+ * everything OUTSIDE those spans is counter-evidence territory. A
+ * present-direct assertion («رنگ شده»، «دو تیکه رنگ»، «تصادف کرده»)
+ * defeats the universal negative → "present" (rejected). A
+ * present-implied assertion («دور رنگ»، «صافکاری»، «نقاشی» — evidence the
+ * positive holds, tiered below direct) defeats exactness → "implied"
+ * (capped to near, never exact). Otherwise an absent span satisfies →
+ * "absent"; nothing at all → "unknown".
+ *
+ * The absent span owns its words (an old invariant, kept): a present
+ * marker inside the SAME span is the absence claim itself («بدون رنگ»),
+ * not counter-evidence. Implied words governed by بدون/بی («بدون نیاز
+ * به صافکاری») are stripped before the implied check — negated bodywork
+ * is not bodywork.
+ */
+export type AbsencePolarity = "absent" | "present" | "implied" | "unknown";
+
+/** Attribute families for present-implied evidence (closed classes). */
+const ABSENCE_FAMILY: Record<string, "paint" | "scratch"> = {
+  "رنگ": "paint",
+  "تصادف": "paint",
+  "ضربه": "paint",
+  "خط": "scratch",
+  "خش": "scratch",
+};
+const IMPLIED_PATTERNS: Record<"paint" | "scratch", RegExp[]> = {
+  // «دور رنگ» = full repaint; «صافکاری»/«نقاشی» = bodywork happened.
+  paint: [/دور\s*رنگ/, /صافکاری/, /نقاشی/],
+  scratch: [],
+};
+/** Negation-governed implied words («بدون نیاز به صافکاری» ≠ bodywork). */
+const IMPLIED_TOKENS = new Set(["صافکاری", "نقاشی"]);
+const NEGATION_TOKENS = new Set(["بدون", "بی"]);
+
+/**
+ * Drop بدون/بی-governed implied words at the token level (no regex):
+ * «بدون نیاز به صافکاری» must not read as counter-evidence.
+ * «دور رنگ» is a two-token phrase (دور + رنگ).
+ */
+function stripNegatedImplied(clause: string): string {
+  const toks = clause.split(" ").filter(Boolean);
+  const out: string[] = [];
+  let i = 0;
+  while (i < toks.length) {
+    if (NEGATION_TOKENS.has(toks[i])) {
+      let drop = 0;
+      for (let k = 1; k <= 3 && i + k < toks.length; k++) {
+        const t = toks[i + k];
+        if (IMPLIED_TOKENS.has(t)) {
+          drop = k + 1;
+          break;
+        }
+        if (t === "دور" && toks[i + k + 1] === "رنگ") {
+          drop = k + 2;
+          break;
+        }
+      }
+      if (drop > 0) {
+        i += drop;
+        continue;
+      }
+    }
+    out.push(toks[i]);
+    i++;
+  }
+  return out.join(" ");
+}
+
 function assessAbsenceOneWord(
   text: string,
   word: string
 ): {
-  readonly polarity: RepairPolarity;
+  readonly polarity: AbsencePolarity;
   readonly reason: string;
 } {
   const norm = normalizeForMatch(text);
   if (norm === "") return { polarity: "unknown", reason: "empty-text" };
   const w = escRe(normalizeForMatch(word));
   if (w === "") return { polarity: "unknown", reason: "empty-word" };
-  // Filler guard mirrors the original repair FILLER: any word EXCEPT the
-  // attribute itself and polarity words. Without it, «بدون رنگ ولی رنگ
-  // شده» would match as one absent span and swallow a genuine conflict.
+  // Filler guard (kept from the original): any word EXCEPT the attribute
+  // itself and polarity words. «بدون رنگ ولی رنگ شده» must not match as
+  // one absent span.
   const filler = String.raw`((?:\s+(?!${w}|بدون|نشده|شده)\S+)){0,2}`;
   const absentRes: readonly RegExp[] = [
     new RegExp(`بدون${filler}\\s+${w}(ات|ی)?`),
-    // «بی‌رنگ»/«بیرنگ»/«بی رنگ» — normalization turns ZWNJ into space.
     new RegExp(`بی\\s*${w}`),
     new RegExp(`${w}(ات)?\\s+نشده`),
     new RegExp(`${w}نشده`),
     new RegExp(`${w}\\s+نکرده`),
   ];
-  const presentRes: readonly RegExp[] = [
+  const directRes: readonly RegExp[] = [
+    new RegExp(`(\\d+|[۰-۹]+|یک|یه|دو|سه|چهار|پنج|چند)\\s*(تیکه|تکه)\\s+${w}`),
     new RegExp(`${w}(ات)?${filler}\\s+شده`),
     new RegExp(`${w}شده`),
-    new RegExp(`${w}ی`),
-    new RegExp(`نیاز\\s+به\\s+${w}`),
+    new RegExp(`${w}\\s+کرده`),
   ];
-  const absentHit = absentRes.find((re) => re.test(norm))?.source ?? null;
-  if (!absentHit) {
-    const presentOnly = presentRes.find((re) => re.test(norm))?.source ?? null;
-    if (presentOnly)
-      return { polarity: "present", reason: `absent-present:${presentOnly}` };
-    return { polarity: "unknown", reason: "no-absence-polarity-mark" };
-  }
-  // An absent span owns its words: a present marker inside the same span
-  // is the absence claim itself, not counter-evidence. Present markers
-  // OUTSIDE the absent span mean genuinely conflicting marks → unknown.
+  // 1. Absent spans own their words — cut them out first so counter-
+  // evidence is only ever read OUTSIDE the absence claim itself.
   let remainder = ` ${norm} `;
+  let absentHit: string | null = null;
   for (const re of absentRes) {
-    remainder = remainder.replace(new RegExp(re.source, "g"), " ");
+    const g = new RegExp(re.source, "g");
+    remainder = remainder.replace(g, () => {
+      if (absentHit === null) absentHit = re.source;
+      return " ";
+    });
   }
   remainder = remainder.replace(/\s+/g, " ").trim();
-  const presentHit = presentRes.find((re) => re.test(remainder))?.source ?? null;
-  if (presentHit) {
-    return { polarity: "unknown", reason: "conflicting-absence-marks" };
+  // 2. Present-direct OUTSIDE the absent spans defeats the universal
+  // negative — one positive existential wins (logic, not vocabulary).
+  const directHit = directRes.find((re) => re.test(remainder))?.source ?? null;
+  if (directHit) {
+    return { polarity: "present", reason: `absence-defeated:${directHit}` };
   }
-  return { polarity: "absent", reason: `absence-absent:${absentHit}` };
+  // 3. Present-implied (tiered below direct): negated bodywork stripped.
+  const family = ABSENCE_FAMILY[normalizeForMatch(word)];
+  const unnegated = stripNegatedImplied(remainder);
+  const impliedHit =
+    (family ? IMPLIED_PATTERNS[family] : []).find((re) => re.test(unnegated))
+      ?.source ?? null;
+  if (impliedHit) {
+    return { polarity: "implied", reason: `absence-implied:${impliedHit}` };
+  }
+  // 4. An absent span with no counter-evidence satisfies.
+  if (absentHit) {
+    return { polarity: "absent", reason: `absence-absent:${absentHit}` };
+  }
+  return { polarity: "unknown", reason: "no-absence-polarity-mark" };
 }
 
 /**
- * Assess absence polarity with synonym bridging. Contradiction is checked
- * on the word AND its synonyms first («بدون رنگ ولی ضربه خورده» must not
- * satisfy «بدون تصادف»); then direct satisfaction; then synonym
- * satisfaction («بی رنگ» ⇒ «بدون تصادف»).
+ * Absence polarity with the synonym bridge (kept from R4): «بی رنگ» ⇒
+ * «بدون تصادف». Strength order across the word and its synonyms:
+ * present > implied > absent > unknown — a single positive anywhere
+ * defeats the claim.
  */
 export function assessAbsencePolarity(
   text: string,
   word: string
 ): {
-  readonly polarity: RepairPolarity;
+  readonly polarity: AbsencePolarity;
   readonly reason: string;
 } {
   const synonyms = ABSENT_SYNONYMS[normalizeForMatch(word)] ?? [];
+  let best: { readonly polarity: AbsencePolarity; readonly reason: string } = {
+    polarity: "unknown",
+    reason: "no-absence-polarity-mark",
+  };
+  const rank = (p: AbsencePolarity): number =>
+    p === "present" ? 3 : p === "implied" ? 2 : p === "absent" ? 1 : 0;
   for (const w of [word, ...synonyms]) {
     const r = assessAbsenceOneWord(text, w);
-    if (r.polarity === "present") {
-      return { polarity: "present", reason: `absent-present-via:${w}:${r.reason}` };
+    if (rank(r.polarity) > rank(best.polarity)) best = r;
+    if (best.polarity === "present") break;
+  }
+  if (best.polarity === "absent" && best.reason.startsWith("absence-absent:")) {
+    // Disclose the synonym bridge (kept from R4) — «چرا این آگهی؟» shows
+    // the real evidence, never a silent claim.
+    const viaWord = [word, ...synonyms].find(
+      (w) => assessAbsenceOneWord(text, w).polarity === "absent"
+    );
+    if (viaWord && normalizeForMatch(viaWord) !== normalizeForMatch(word)) {
+      return {
+        polarity: "absent",
+        reason: `absence-absent-via-synonym:${viaWord}`,
+      };
     }
   }
-  const direct = assessAbsenceOneWord(text, word);
-  if (direct.polarity === "absent") return direct;
-  for (const w of synonyms) {
-    const s = assessAbsenceOneWord(text, w);
-    if (s.polarity === "absent") {
-      return { polarity: "absent", reason: `absence-absent-via-synonym:${w}` };
-    }
-  }
-  return { polarity: "unknown", reason: "no-absence-polarity-mark" };
+  return best;
 }
 
 /**
@@ -197,7 +294,12 @@ export function assessRepairPolarity(text: string): {
   readonly polarity: RepairPolarity;
   readonly reason: string;
 } {
-  return assessAbsencePolarity(text, "تعمیر");
+  const r = assessAbsencePolarity(text, "تعمیر");
+  // "implied" has no repair-word meaning (no implied family for تعمیر) —
+  // fold it to unknown, the conservative existing behavior.
+  const polarity: RepairPolarity =
+    r.polarity === "implied" ? "unknown" : r.polarity;
+  return { polarity, reason: r.reason };
 }
 
 /**
