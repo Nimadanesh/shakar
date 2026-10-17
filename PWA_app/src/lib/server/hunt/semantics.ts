@@ -6,7 +6,7 @@ import {
   stemToken,
   textMatches,
 } from "@/lib/persianNormalize";
-import { includesWord } from "@/lib/interpret";
+import { includesWord, isServiceDemandTerm, SERVICE_DEMAND_FAMILY } from "@/lib/interpret";
 
 /**
  * Phase-1 semantic assessments (deterministic, rule-based).
@@ -661,10 +661,26 @@ const PART_MARKERS = [
   "یراق",
   "پارچه",
   "گارد",
+  // R6 (2026-10-17) — mined from R5 zero-grades: «اوراقی خودرو پیکان و
+  // پراید» (junkyard — sibling of اسقاط), «ست کامل جلوبندی پراید»
+  // (suspension), «۱۳۲کفپوش‌پراید» (floor mat, digit-glued in stuffing),
+  // «لپازم موتور سیکلت» (لوازم typo — accessories). «لوازم» itself stays
+  // OUT: too broad («لوازم خانگی» can be the item).
+  "اوراقی",
+  "جلوبندی",
+  "کفپوش",
+  "لپازم",
 ];
 const PACKAGING_MARKERS = ["کارتون", "کارتن", "جعبه"];
 const EQUIPMENT_MARKERS = ["دستگاه", "تجهیزات", "یخچال"]; // R4: «یخچال پراید وانت مخصوص حمل بستنی»
-const DERIVED_MARKERS = ["کره", "خلال"];
+const DERIVED_MARKERS = ["کره", "خلال", "کرم"]; // R6: «کرم» = کره typo in the wild («کرم بادوم زمینی پروتئینی»)
+/**
+ * R6 (2026-10-17) — seeker-role words: the ad is a WANTED ad, not an
+ * offering («جویای آموزش تعمیرات موبایل», «مشتری یخچال فریزر»). Mirror of
+ * the S4 dealer logic, opposite direction. First-phrase-position only:
+ * «فروشنده مشتری‌مدار یخچال» (ZWNJ splits مشتری‌مدار) must stay clean.
+ */
+const SEEKER_MARKERS = ["جویای", "مشتری"];
 /**
  * R4 (2026-10-17) — consumables: the supply, not the machine («پودر ماشین
  * لباسشویی» is not a washer). Subject-aware like parts.
@@ -685,7 +701,18 @@ const TRAINING_MARKERS = ["آموزش", "آموزشگاه", "دوره", "کلا�
  * listings; without the clean-subject rule, feature mentions («با رینگ
  * اسپرت») would demote genuine cars.
  */
-const SUBJECT_SKIP_TOKENS = new Set(["فروش", "فروشی", "میفروشم", "می", "فروشم"]);
+const SUBJECT_SKIP_TOKENS = new Set([
+  "فروش",
+  "فروشی",
+  "میفروشم",
+  "می",
+  "فروشم",
+  // R6 (2026-10-17): bundle/sale-shape words that shielded کره —
+  // «فروش عمده کره بادوم زمینی», «تولیدی کره بادوم زمینی».
+  "عمده",
+  "تولیدی",
+  "پخش",
+]);
 
 /**
  * Asymmetric model-identity check.
@@ -706,19 +733,28 @@ const SUBJECT_SKIP_TOKENS = new Set(["فروش", "فروشی", "میفروشم",
  *   marker adjacent to a matched term under a non-clean subject («اقساط
  *   روکش صندلی … باند ماشین») → mismatch.
  */
+/**
+ * Strip digit runs glued to a token's edges («۱۳۲کفپوش» → «کفپوش»).
+ * Keyword stuffing glues model numbers to part names; general substring
+ * matching stays banned (R4 «مه» lesson).
+ */
+function stripEdgeDigits(tok: string): string {
+  return tok.replace(/^[\d۰-۹]+/u, "").replace(/[\d۰-۹]+$/u, "");
+}
+
 export function assessModelSpecificity(
   includeTerms: readonly string[],
   listingText: string,
   category?: string
-): { readonly mismatch: boolean; readonly reason: string } {
-  if (includeTerms.length === 0) return { mismatch: false, reason: "no-must-terms" };
+): { readonly mismatch: boolean; readonly reason: string; readonly tier: "reject" | "near" } {
+  if (includeTerms.length === 0) return { mismatch: false, reason: "no-must-terms", tier: "near" };
   const listingNorm = normalizeForMatch(listingText);
-  if (listingNorm === "") return { mismatch: false, reason: "empty-text" };
+  if (listingNorm === "") return { mismatch: false, reason: "empty-text", tier: "near" };
 
   // Identity reasoning starts only from full lexical evidence; partial
   // matches already resolve to near via MUST-missing.
   const allEvidenced = includeTerms.every((t) => textMatches(listingText, t, category));
-  if (!allEvidenced) return { mismatch: false, reason: "partial-evidence" };
+  if (!allEvidenced) return { mismatch: false, reason: "partial-evidence", tier: "near" };
 
   const listingTokens = listingNorm.split(" ").filter(Boolean);
   const queryTokens = new Set(
@@ -739,6 +775,47 @@ export function assessModelSpecificity(
   ) {
     subjectIdx += 1;
   }
+
+  // R6 (2026-10-17) — the subject PHRASE: everything the ad names BEFORE
+  // the hunted item. «ست کامل جلوبندی پراید» sells جلوبندی; «اقساطی
+  // پراید با روکش صندلی» sells a car (روکش is a با-feature). A wrong-item
+  // marker inside the subject phrase means the ad IS the wrong item —
+  // tier "reject" (navid's R5 product decision: 0 = wrong item, not shown).
+  // Markers after the item stay on the old weak path (tier "near").
+  // Needs a token-exact item anchor; fuzzy-only evidence falls back to
+  // the old path (conservative).
+  const firstQueryIdx = listingTokens.findIndex((t) => queryTokens.has(t));
+  const subjectPhrase: string[] = [];
+  const phraseIdx: number[] = [];
+  if (firstQueryIdx >= 0) {
+    for (let i = subjectIdx; i < firstQueryIdx; i++) {
+      subjectPhrase.push(listingTokens[i]);
+      phraseIdx.push(i);
+    }
+  }
+  // «مخصوص X گیری» purpose-phrase protection (R4 ingredient rule): the
+  // derived word inside it names the purpose, not the offering.
+  const purposeProtected = new Set<number>();
+  listingTokens.forEach((_tok, i) => {
+    if (
+      listingTokens[i] === "مخصوص" &&
+      listingTokens[i + 2] === "گیری" &&
+      DERIVED_MARKERS.some((d) => normalizeForMatch(d) === listingTokens[i + 1])
+    ) {
+      purposeProtected.add(i);
+      purposeProtected.add(i + 1);
+      purposeProtected.add(i + 2);
+    }
+  });
+  const phraseHas = (marker: string): boolean =>
+    phraseIdx.some((gi) => {
+      if (purposeProtected.has(gi)) return false;
+      const tok = listingTokens[gi];
+      return (
+        tok === marker ||
+        (stripEdgeDigits(tok) !== tok && stripEdgeDigits(tok) === marker)
+      );
+    });
 
   const markerSets: ReadonlyArray<{
     readonly markers: readonly string[];
@@ -776,8 +853,52 @@ export function assessModelSpecificity(
       return {
         mismatch: true,
         reason: `derived-product:ingredient-for:"${rawDerived}"`,
+        tier: "reject",
       };
     }
+  }
+  // R6 — wrong-item phrase pass (strong signal → reject). Runs before the
+  // weak adjacency pass below. Sibling variants are EXCLUDED: «پرومکس
+  // آیفون ۱۳» is still the item (near, not rejected — honest spectrum).
+  for (const { markers, kind } of markerSets) {
+    if (kind === "sibling-variant") continue;
+    for (const rawMarker of markers) {
+      const marker = normalizeForMatch(rawMarker);
+      if (marker === "" || queryTokens.has(marker)) continue;
+      if (phraseHas(marker)) {
+        return {
+          mismatch: true,
+          reason: `${kind}:offering:"${rawMarker}"`,
+          tier: "reject",
+        };
+      }
+    }
+  }
+  // R6 — seeker roles: «جویای آموزش …», «مشتری یخچال …» are WANTED ads.
+  // First-phrase-position only: «فروشنده مشتری‌مدار یخچال» (ZWNJ splits
+  // مشتری‌مدار — verified by tokenization probe) must stay clean.
+  for (const rawSeeker of SEEKER_MARKERS) {
+    const seeker = normalizeForMatch(rawSeeker);
+    if (seeker === "" || queryTokens.has(seeker)) continue;
+    if (subjectPhrase[0] === seeker) {
+      return {
+        mismatch: true,
+        reason: `seeker:offering:"${rawSeeker}"`,
+        tier: "reject",
+      };
+    }
+  }
+  // R6 — mixed-role dealer: «فروشنده خریدار یخچال» is a business card,
+  // not a listing. Pure-role dealers stay on the S4 scoring path.
+  if (
+    subjectPhrase.includes(normalizeForMatch("فروشنده")) &&
+    subjectPhrase.includes(normalizeForMatch("خریدار"))
+  ) {
+    return {
+      mismatch: true,
+      reason: `dealer-mixed:offering:"فروشنده خریدار"`,
+      tier: "reject",
+    };
   }
   const subjectClean = queryTokens.has(listingTokens[subjectIdx] ?? "");
   for (const { markers, kind, subjectAware, subjectFirstOnly } of markerSets) {
@@ -793,6 +914,7 @@ export function assessModelSpecificity(
         return {
           mismatch: true,
           reason: `${kind}:subject:"${rawMarker}"`,
+          tier: "near",
         };
       }
       if (subjectFirstOnly) continue;
@@ -807,11 +929,12 @@ export function assessModelSpecificity(
         return {
           mismatch: true,
           reason: `${kind}:listing-adds:"${rawMarker}"`,
+          tier: "near",
         };
       }
     }
   }
-  return { mismatch: false, reason: "no-extra-variant" };
+  return { mismatch: false, reason: "no-extra-variant", tier: "near" };
 }
 
 /**
@@ -833,4 +956,76 @@ export function equipmentBeforeService(text: string): boolean {
   if (equipIdx < 0) return false;
   const serviceIdx = tokens.findIndex((t) => SERVICE_SUBJECT_VOCAB.has(t));
   return serviceIdx < 0 || equipIdx < serviceIdx;
+}
+
+/**
+ * R6 (2026-10-17) — demand-hunt vs goods-ad: on a service-DEMAND hunt
+ * («نصاب کولر گازی می‌خوام»), an ad whose leading phrase names the
+ * PRODUCT («کولرگازی اصلی … (نصب امروز)») is a goods ad borrowing a
+ * service word, not an installer. Fires only when the demand term is
+ * satisfied SOLELY via the morphological family («نصب» for «نصاب») —
+ * a literal service lead («نصب و تعمیر کولر گازی», «تعمیرکار مجاز …»)
+ * stays clean. Callers must gate on def.serviceIntent.
+ */
+export function assessDemandGoods(
+  includeTerms: readonly string[],
+  listingText: string
+): boolean {
+  const demandTerms = includeTerms.filter((t) => isServiceDemandTerm(t));
+  if (demandTerms.length === 0) return false;
+  const familyOnly = demandTerms.some(
+    (t) =>
+      !textMatches(listingText, t) &&
+      SERVICE_DEMAND_FAMILY.some((w) => textMatches(listingText, w))
+  );
+  if (!familyOnly) return false;
+  const tokens = normalizeForMatch(listingText).split(" ").filter(Boolean);
+  let si = 0;
+  while (si < tokens.length && SUBJECT_SKIP_TOKENS.has(tokens[si])) si++;
+  const lead = tokens.slice(si, si + 4);
+  return !lead.some((t) => SERVICE_SUBJECT_VOCAB.has(t));
+}
+
+/**
+ * R6 (2026-10-17) — bait titles: the title claims the full multi-token
+ * item («موتور سیکلت») but the description is about a confusable product
+ * («موتور برق ۳/۵کیلووات …» — never mentions سیکلت). Tight by design:
+ * - multi-token MUST only (single-token items can't bait this way);
+ * - the description must MISS a title-evidenced term (terse-but-honest
+ *   descriptions like «تمیز، مدل ۱۴۰۳» don't fire);
+ * - the description must lead with the same HEAD token + a different,
+ *   non-variant modifier («موتور برق» vs «موتور سیکلت»; «پراید وانت»
+ *   is a variant → sibling-variant near, not bait).
+ */
+export function assessBaitTitle(
+  title: string,
+  description: string,
+  includeTerms: readonly string[]
+): boolean {
+  if (includeTerms.length < 2 || description.trim() === "") return false;
+  const titleTerms = includeTerms.filter((t) => textMatches(title, t));
+  if (titleTerms.length < includeTerms.length) return false;
+  if (!includeTerms.some((t) => !textMatches(description, t))) return false;
+  const normTerms = includeTerms.map(
+    (t) => normalizeForMatch(t).split(" ").filter(Boolean)[0] ?? ""
+  );
+  const head = normTerms[0];
+  const expectedMod = normTerms[1];
+  if (head === "" || expectedMod === "") return false;
+  // Bait = a BARE title claim: the title adds nothing beyond the query
+  // («موتور سیکلت»). Titles with extra descriptors («قاب ایفون ۱۳ پرو»,
+  // «تعمیرات تخصصی موبایل در محل») are normal ads with terse descs —
+  // rejecting those would nuke honest listings.
+  const queryTokSet = new Set(
+    includeTerms.flatMap((t) => normalizeForMatch(t).split(" ").filter(Boolean))
+  );
+  const titleTokens = normalizeForMatch(title).split(" ").filter(Boolean);
+  if (!titleTokens.every((t) => queryTokSet.has(t))) return false;
+  const dTokens = normalizeForMatch(description).split(" ").filter(Boolean);
+  const hi = dTokens.indexOf(head);
+  if (hi < 0 || hi + 1 >= dTokens.length) return false;
+  const mod = dTokens[hi + 1];
+  if (mod === expectedMod) return false;
+  if (VARIANT_MARKERS.some((v) => normalizeForMatch(v) === mod)) return false;
+  return true;
 }

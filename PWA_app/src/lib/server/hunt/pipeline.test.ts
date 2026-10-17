@@ -883,9 +883,9 @@ describe("semantic caps — unified engine (5b)", () => {  function defCap(over:
     expect(kinds["md-max"]).toBe("near");
   });
 
-  it("accessory listing capped at near; the item itself stays exact (S1 live probe)", async () => {
-    // Real probe 2026-10-15: «قاب ایفون ۱۳ پرو» showed as exact for an
-    // «آیفون ۱۳ پرو» hunt. A case is not the phone — cap at near, never drop.
+  it("accessory listing is REJECTED (R6: wrong item, not shown); the item itself stays exact", async () => {
+    // R6 product decision (navid's R5 grades: 0 = wrong item): «قاب» for a
+    // phone hunt is not a near-miss, it's the wrong item — rejected.
     listings([
       { sourceAdId: "acc-case", title: "قاب ایفون ۱۳ پرو" },
       { sourceAdId: "acc-glass", title: "گلس ایفون ۱۳ پرو" },
@@ -896,8 +896,9 @@ describe("semantic caps — unified engine (5b)", () => {  function defCap(over:
       defCap({ query: "آیفون ۱۳ پرو", include: ["آیفون", "۱۳", "پرو"], category: "mobile" })
     );
     const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
-    expect(kinds["acc-case"]).toBe("near");
-    expect(kinds["acc-glass"]).toBe("near");
+    expect(kinds["acc-case"]).toBeUndefined();
+    expect(kinds["acc-glass"]).toBeUndefined();
+    expect(done.stats.rejectedNoMatch).toBe(2);
     expect(kinds["md-exact"]).toBe("exact");
   });
 
@@ -1161,8 +1162,8 @@ describe("R3 fixes — 2026-10-17 grading round", () => {
     expect(byId["plain"].matchKind).toBe("near");
     // Explicit contradiction → rejected.
     expect(byId["repainted"]).toBeUndefined();
-    // «باطری ماشین» is not a car — part subject.
-    expect(byId["battery"].matchKind).toBe("near");
+    // «باطری ماشین» is not a car — R6: wrong item → rejected (was near).
+    expect(byId["battery"]).toBeUndefined();
     // The بدون‌رنگ car outranks the paint-unknown one.
     expect(done.results[0].sourceAdId).toBe("good");
   });
@@ -1192,8 +1193,8 @@ describe("R3 fixes — 2026-10-17 grading round", () => {
     expect(kinds["car"]).toBe("exact");
     // وانت is a marginal variant (R3 graded 1).
     expect(kinds["van"]).toBe("near");
-    // A rim is not a car.
-    expect(kinds["rim"]).toBe("near");
+    // A rim is not a car (R6: rejected, not near).
+    expect(kinds["rim"]).toBeUndefined();
     // …but a car WITH rims is a car (clean subject).
     expect(kinds["feature"]).toBe("exact");
   });
@@ -1211,7 +1212,7 @@ describe("R3 fixes — 2026-10-17 grading round", () => {
     const done = await doneOf(def!);
     const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
     expect(kinds["washer"]).toBe("exact");
-    expect(kinds["box"]).toBe("near");
+    expect(kinds["box"]).toBeUndefined(); // R6: wrong item → rejected
   });
 
   it("P1: derived products («کره») demote only when they lead", async () => {
@@ -1229,8 +1230,8 @@ describe("R3 fixes — 2026-10-17 grading round", () => {
     const done = await doneOf(def!);
     const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
     expect(kinds["nut"]).toBe("exact");
-    expect(kinds["butter"]).toBe("near");
-    expect(kinds["machine"]).toBe("near");
+    expect(kinds["butter"]).toBeUndefined(); // R6: wrong item → rejected
+    expect(kinds["machine"]).toBeUndefined(); // R6: wrong item → rejected
   });
 
   it("P1: equipment-before-service — selling tools is not offering the service", async () => {
@@ -1247,7 +1248,7 @@ describe("R3 fixes — 2026-10-17 grading round", () => {
     const done = await doneOf(def!);
     const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
     expect(kinds["shop"]).toBe("exact");
-    expect(kinds["tools"]).toBe("near");
+    expect(kinds["tools"]).toBeUndefined(); // R6: wrong item → rejected
   });
 });
 
@@ -1314,10 +1315,11 @@ describe("R4 fixes — 2026-10-17 second grading round", () => {
     const done = await doneOf(def!);
     const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
     expect(kinds["car"]).toBe("exact");
-    expect(kinds["clutch"]).toBe("near");
-    expect(kinds["spring"]).toBe("near");
-    expect(kinds["gearbox"]).toBe("near");
-    expect(kinds["door"]).toBe("near");
+    // R6: wrong item → rejected, not near.
+    expect(kinds["clutch"]).toBeUndefined();
+    expect(kinds["spring"]).toBeUndefined();
+    expect(kinds["gearbox"]).toBeUndefined();
+    expect(kinds["door"]).toBeUndefined();
   });
 
   it("R4: «گارد ایفون» is not the phone; a phone WITH a case stays exact", async () => {
@@ -1335,7 +1337,7 @@ describe("R4 fixes — 2026-10-17 second grading round", () => {
     const done = await doneOf(def!);
     const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
     expect(kinds["phone"]).toBe("exact");
-    expect(kinds["case"]).toBe("near");
+    expect(kinds["case"]).toBeUndefined(); // R6: wrong item → rejected
     // Clean subject: the case is a feature, not the offering.
     expect(kinds["withcase"]).toBe("exact");
   });
@@ -1355,8 +1357,8 @@ describe("R4 fixes — 2026-10-17 second grading round", () => {
     const done = await doneOf(def!);
     const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
     expect(kinds["washer"]).toBe("exact");
-    expect(kinds["powder"]).toBe("near");
-    expect(kinds["hose"]).toBe("near");
+    expect(kinds["powder"]).toBeUndefined(); // R6: wrong item → rejected
+    expect(kinds["hose"]).toBeUndefined(); // R6: wrong item → rejected
   });
 
   it("R4: training courses are not the service", async () => {
@@ -1374,7 +1376,7 @@ describe("R4 fixes — 2026-10-17 second grading round", () => {
     const done = await doneOf(def!);
     const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
     expect(kinds["shop"]).toBe("exact");
-    expect(kinds["course"]).toBe("near");
+    expect(kinds["course"]).toBeUndefined(); // R6: wrong item → rejected
     // Clean subject: the course mention is a feature, not the offering.
     expect(kinds["withcourse"]).toBe("exact");
   });
@@ -1392,7 +1394,7 @@ describe("R4 fixes — 2026-10-17 second grading round", () => {
     const done = await doneOf(def!);
     const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
     expect(kinds["van"]).toBe("exact");
-    expect(kinds["fridge"]).toBe("near");
+    expect(kinds["fridge"]).toBeUndefined(); // R6: wrong item → rejected
   });
 
   it("R4: ingredient rule — «مخصوص کره گیری» is not the butter for a کره hunt", async () => {
@@ -1410,7 +1412,7 @@ describe("R4 fixes — 2026-10-17 second grading round", () => {
       doneButter.results.map((r) => [r.sourceAdId, r.matchKind])
     );
     expect(kindsButter["butter"]).toBe("exact");
-    expect(kindsButter["ingredient"]).toBe("near");
+    expect(kindsButter["ingredient"]).toBeUndefined(); // R6: wrong item → rejected
 
     // …but for a «بادوم زمینی» hunt the same ad IS the item (graded 3).
     const defNut = resolveHuntDefinition({ query: "بادوم زمینی" });
@@ -1447,5 +1449,225 @@ describe("R4 fixes — 2026-10-17 second grading round", () => {
   it("R4: «وام» infers buy — rentals never enter a «بدون وام» hunt", async () => {
     const def = resolveHuntDefinition({ query: "آپارتمان بدون وام" });
     expect(def?.transaction).toBe("buy");
+  });
+});
+
+describe("R6 fixes — 2026-10-17 third grading round (wrong-item rejection)", () => {
+  function defCap(over: Partial<HuntDefinition> = {}): HuntDefinition {
+    return {
+      query: "probe",
+      include: [],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+      ...over,
+    };
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  function kindsOf(done: { results: Array<{ sourceAdId: string; matchKind: string }> }) {
+    return Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+  }
+
+  it("R6: junkyard + suspension parts rejected via subject phrase (R5 h3/h4 zeros)", async () => {
+    const def = resolveHuntDefinition({ query: "پراید" });
+    listings([
+      { sourceAdId: "car", title: "پراید ۱۳۱ مدل ۹۶" },
+      { sourceAdId: "junk", title: "اوراقی خودرو پیکان و پراید" },
+      { sourceAdId: "susp", title: "ست کامل جلوبندی پراید" },
+      { sourceAdId: "stuff", title: "بغل در ۱۴۱، ۱۳۲کفپوش پراید" },
+    ]);
+    detail({
+      car: "پراید سالم",
+      junk: "اوراقی خودرو",
+      susp: "جلوبندی پراید",
+      stuff: "کفپوش پراید",
+    });
+    const done = await doneOf(def!);
+    const kinds = kindsOf(done);
+    expect(kinds["car"]).toBe("exact");
+    // Wrong item → rejected, not near (R5 product decision).
+    expect(kinds["junk"]).toBeUndefined();
+    expect(kinds["susp"]).toBeUndefined();
+    expect(kinds["stuff"]).toBeUndefined();
+    expect(done.stats.rejectedNoMatch).toBe(3);
+  });
+
+  it("R6: کره leak — sale-shape shields don't protect the derived product (R5 h8)", async () => {
+    const def = resolveHuntDefinition({ query: "بادوم زمینی" });
+    listings([
+      { sourceAdId: "nut", title: "بادوم زمینی تازه" },
+      { sourceAdId: "bulk", title: "فروش عمده کره بادوم زمینی شکلاتی" },
+      { sourceAdId: "factory", title: "تولیدی کره بادوم زمینی" },
+      { sourceAdId: "typo", title: "کرم بادوم زمینی پروتئینی" },
+      { sourceAdId: "purpose", title: "بادوم زمینی مخصوص کره گیری" },
+      { sourceAdId: "wholesale", title: "فروش عمده بادوم زمینی" },
+    ]);
+    detail({
+      nut: "بادوم زمینی",
+      bulk: "کره بادوم زمینی",
+      factory: "تولیدی کره",
+      typo: "کره بادوم زمینی",
+      purpose: "بادوم زمینی مخصوص کره گیری",
+      wholesale: "بادوم زمینی عمده",
+    });
+    const done = await doneOf(def!);
+    const kinds = kindsOf(done);
+    expect(kinds["nut"]).toBe("exact");
+    expect(kinds["bulk"]).toBeUndefined();
+    expect(kinds["factory"]).toBeUndefined();
+    expect(kinds["typo"]).toBeUndefined();
+    // Purpose phrase: the ad IS peanuts.
+    expect(kinds["purpose"]).toBe("exact");
+    // Legit wholesale peanuts: عمده-skip must not nuke the item.
+    expect(kinds["wholesale"]).toBe("exact");
+    expect(done.stats.rejectedNoMatch).toBe(3);
+  });
+
+  it("R6: seeker roles rejected; «مشتری‌مدار» seller stays (false-positive guard)", async () => {
+    const def = resolveHuntDefinition({ query: "یخچال" });
+    listings([
+      { sourceAdId: "fridge", title: "یخچال فریزر دوقلو" },
+      { sourceAdId: "seeker", title: "مشتری یخچال فریزر کارکرده" },
+      { sourceAdId: "oriented", title: "فروشنده مشتری‌مدار یخچال" },
+    ]);
+    detail({
+      fridge: "یخچال سالم",
+      seeker: "مشتری یخچال",
+      oriented: "فروشنده یخچال",
+    });
+    const done = await doneOf(def!);
+    const kinds = kindsOf(done);
+    expect(kinds["fridge"]).toBe("exact");
+    expect(kinds["seeker"]).toBeUndefined();
+    // ZWNJ splits مشتری‌مدار — first-position rule keeps this seller clean.
+    expect(kinds["oriented"]).toBeDefined();
+  });
+
+  it("R6: mixed-role dealer «فروشنده خریدار» rejected; pure seller stays", async () => {
+    const def = resolveHuntDefinition({ query: "یخچال" });
+    listings([
+      { sourceAdId: "mixed", title: "فروشنده خریدار یخچال فریزر" },
+      { sourceAdId: "seller", title: "فروشنده یخچال فریزر" },
+    ]);
+    detail({ mixed: "خرید و فروش یخچال", seller: "فروش یخچال" });
+    const done = await doneOf(def!);
+    const kinds = kindsOf(done);
+    expect(kinds["mixed"]).toBeUndefined();
+    expect(kinds["seller"]).toBeDefined();
+  });
+
+  it("R6: «لپازم» typo rejected (R5 h24)", async () => {
+    const def = resolveHuntDefinition({ query: "موتور سیکلت" });
+    listings([
+      { sourceAdId: "bike", title: "موتور سیکلت هوندا ۱۲۵" },
+      { sourceAdId: "acc", title: "لپازم موتور سیکلت" },
+    ]);
+    detail({ bike: "موتور سیکلت سالم", acc: "لوازم موتور" });
+    const done = await doneOf(def!);
+    const kinds = kindsOf(done);
+    expect(kinds["bike"]).toBe("exact");
+    expect(kinds["acc"]).toBeUndefined();
+  });
+
+  it("R6: demand-hunt vs goods-ad — family-only service word doesn't save a product ad (R5 h2)", async () => {
+    const def = defCap({
+      query: "نصاب کولر گازی می‌خوام",
+      include: ["نصاب", "کولر", "گازی"],
+      serviceIntent: true,
+    });
+    listings([
+      { sourceAdId: "goods", title: "کولرگازی اصلی کولر گازی inverter (نصب امروز)" },
+      { sourceAdId: "pro", title: "نصب و تعمیر کولر گازی" },
+    ]);
+    detail({ goods: "کولر گازی نو", pro: "نصاب کولر گازی" });
+    const done = await doneOf(def);
+    const kinds = kindsOf(done);
+    // نصب matched only via the morphological family; the ad sells ACs.
+    expect(kinds["goods"]).toBeUndefined();
+    // Literal service lead stays.
+    expect(kinds["pro"]).toBeDefined();
+  });
+
+  it("R6: bait titles rejected; terse-but-honest descriptions stay", async () => {
+    const def = defCap({ query: "موتور سیکلت", include: ["موتور", "سیکلت"] });
+    listings([
+      { sourceAdId: "bait", title: "موتور سیکلت" },
+      { sourceAdId: "honest", title: "موتور سیکلت هوندا" },
+      { sourceAdId: "variant", title: "پراید ۱۳۱" },
+    ]);
+    detail({
+      bait: "موتور برق ۳/۵کیلووات کوباتاژاپن سالم و سرحال",
+      honest: "تمیز، مدل ۱۴۰۳، مدارک کامل",
+      variant: "پراید وانت مدل ۹۰",
+    });
+    // Variant control needs its own definition (different MUST).
+    const done = await doneOf(def);
+    const kinds = kindsOf(done);
+    expect(kinds["bait"]).toBeUndefined();
+    expect(kinds["honest"]).toBeDefined();
+
+    const defV = defCap({ query: "پراید ۱۳۱", include: ["پراید", "۱۳۱"] });
+    listings([{ sourceAdId: "variant", title: "پراید ۱۳۱" }]);
+    detail({ variant: "پراید وانت مدل ۹۰" });
+    const doneV = await doneOf(defV);
+    // وانت is a variant → near (honest spectrum), NOT bait-rejected.
+    expect(kindsOf(doneV)["variant"]).toBe("near");
+  });
+
+  it("R6: sibling variant in lead position stays near (not rejected)", async () => {
+    const def = defCap({ query: "آیفون ۱۳ پرو", include: ["آیفون", "۱۳", "پرو"], category: "mobile" });
+    listings([{ sourceAdId: "rev", title: "مکس آیفون ۱۳ پرو" }]);
+    detail({ rev: "آیفون ۱۳ پرو مکس" });
+    const done = await doneOf(def);
+    expect(kindsOf(done)["rev"]).toBe("near");
+  });
+
+  it("R6: guards — hunting the marker itself is unaffected", async () => {
+    const defT = resolveHuntDefinition({ query: "آموزش تعمیرات موبایل" });
+    listings([{ sourceAdId: "course", title: "آموزش تعمیرات موبایل" }]);
+    detail({ course: "آموزش تعمیرات موبایل" });
+    expect(kindsOf(await doneOf(defT!))["course"]).toBe("exact");
+
+    const defY = resolveHuntDefinition({ query: "یخچال" });
+    listings([{ sourceAdId: "fridge", title: "یخچال فریزر" }]);
+    detail({ fridge: "یخچال سالم" });
+    expect(kindsOf(await doneOf(defY!))["fridge"]).toBe("exact");
+
+    const defB = resolveHuntDefinition({ query: "کره بادوم زمینی" });
+    listings([{ sourceAdId: "butter", title: "کره بادوم زمینی" }]);
+    detail({ butter: "کره بادوم زمینی" });
+    expect(kindsOf(await doneOf(defB!))["butter"]).toBe("exact");
   });
 });

@@ -13,6 +13,8 @@ import {
 } from "@/lib/interpret";
 import {
   assessAbsencePolarity,
+  assessBaitTitle,
+  assessDemandGoods,
   assessListingRole,
   assessModelSpecificity,
   assessQueryIntent,
@@ -344,6 +346,13 @@ export interface DescriptionEvaluation {
    */
   dealerHits: number;
   huntWantsSellers: boolean;
+  /**
+   * R6 (2026-10-17): why a wrong-item ad was rejected
+   * (part:offering:"…", seeker:…, bait:…, demand-goods:…). Feeds the
+   * «گزارش شکار» market report ("X ads seen but not your item") — no
+   * silent filtering. Set only on wrong-item rejections.
+   */
+  rejectedKind?: string;
 }
 
 function rejectedEvaluation(): DescriptionEvaluation {
@@ -416,15 +425,24 @@ function countDealerHits(text: string): number {
  *
  * Contract (never weaken): the semantic layer decides the VERDICT
  * (exact vs near); the scoring signals (P0/P1) decide RANKING.
+ *
+ * R6 (2026-10-17): also surfaces wrongItemKind — a tier-"reject" identity
+ * mismatch (the ad IS the wrong item: part, accessory, derived, seeker…)
+ * rejects the ad instead of capping it to near (navid's R5 product
+ * decision: 0 = wrong item, not shown). Same-item near-misses
+ * (sibling-variant, unknown attributes) keep tier "near".
  */
-function semanticCapFires(def: HuntDefinition, combined: string): boolean {
+function semanticCapFires(
+  def: HuntDefinition,
+  combined: string
+): { fire: boolean; wrongItemKind: string | null } {
   const intent = assessQueryIntent(def.include.join(" "), def.category, def.transaction);
   const role = assessListingRole(combined);
   const explicitBuy =
     def.transaction === "buy" || detectTransaction(def.query) === "buy";
   const clash = rolesClash(intent, role, explicitBuy);
   const identity = clash.clash
-    ? { mismatch: false as const, reason: "skipped:role-clash" }
+    ? { mismatch: false as const, reason: "skipped:role-clash", tier: "near" as const }
     : assessModelSpecificity(def.include, combined, def.category);
   // R3 (2026-10-17): absent-attributes generalize the repair polarity
   // rule — «بدون رنگ» with no paint info is unknown, capped at near
@@ -452,7 +470,7 @@ function semanticCapFires(def: HuntDefinition, combined: string): boolean {
   const targetBound =
     !serviceIntent ||
     assessServiceTarget(def.include, combined, def.category).bound;
-  return (
+  const fire =
     clash.clash ||
     identity.mismatch ||
     absentUnknown ||
@@ -460,8 +478,12 @@ function semanticCapFires(def: HuntDefinition, combined: string): boolean {
     needsRepairMismatch ||
     unsupportedServiceExact ||
     equipmentMismatch ||
-    !targetBound
-  );
+    !targetBound;
+  // R6: wrong-item rejection kind for the verdict stage (null unless the
+  // identity mismatch fired at tier "reject").
+  const wrongItemKind =
+    identity.mismatch && identity.tier === "reject" ? identity.reason : null;
+  return { fire, wrongItemKind };
 }
 
 /**
@@ -604,20 +626,50 @@ function evaluateDescription(
   // 5b. Semantic compatibility caps (unified engine). A would-be exact
   // that the semantic layer contradicts becomes near — kept and ranked,
   // never silently dropped.
-  if (missingInfo.length === 0 && semanticCapFires(def, combined)) {
-    return {
-      verdict: "near",
-      evidence,
-      missingInfo,
-      mustTitle,
-      mustDesc,
-      shouldMatched,
-      providerHits,
-      goodsHits,
-      needsRepairHits,
-      dealerHits,
-      huntWantsSellers,
-    };
+  //
+  // R6 (2026-10-17): wrong-item ads (the ad IS a part / accessory /
+  // derived product / seeker ad / bait / goods-ad-on-a-demand-hunt) are
+  // REJECTED, not capped to near — navid's R5 product decision (0 = wrong
+  // item, not shown). Same-item near-misses (sibling-variant, unknown
+  // attributes) keep the honest near spectrum. Every rejection carries
+  // its kind for the «گزارش شکار» market report.
+  if (missingInfo.length === 0) {
+    const cap = semanticCapFires(def, combined);
+    const bait = assessBaitTitle(title, description, def.include);
+    const demandGoods =
+      (def.serviceIntent ?? false) &&
+      assessDemandGoods(def.include, combined);
+    const wrongKind =
+      cap.wrongItemKind ??
+      (bait ? "bait:title-desc-mismatch" : null) ??
+      (demandGoods ? "demand-goods:product-ad" : null);
+    if (wrongKind) {
+      return {
+        ...rejectedEvaluation(),
+        missingInfo,
+        providerHits,
+        goodsHits,
+        needsRepairHits,
+        dealerHits,
+        huntWantsSellers,
+        rejectedKind: wrongKind,
+      };
+    }
+    if (cap.fire) {
+      return {
+        verdict: "near",
+        evidence,
+        missingInfo,
+        mustTitle,
+        mustDesc,
+        shouldMatched,
+        providerHits,
+        goodsHits,
+        needsRepairHits,
+        dealerHits,
+        huntWantsSellers,
+      };
+    }
   }
   return {
     verdict: missingInfo.length === 0 ? "exact" : "near",
