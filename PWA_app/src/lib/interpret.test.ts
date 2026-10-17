@@ -112,6 +112,16 @@ describe("interpretQuery", () => {
     const { applied } = interpretQuery("خونه ۵۰ متری تهران");
     expect(applied.some((c) => c.kind === "transaction")).toBe(false);
   });
+
+  it("R4: «وام» infers buy — «آپارتمان بدون وام» wants a sale, not a rental", () => {
+    const { applied } = interpretQuery("آپارتمان بدون وام");
+    expect(applied.find((c) => c.kind === "transaction")?.value).toBe("buy");
+  });
+
+  it("R4: «وام ودیعه» stays rent — ودیعه wins over وام", () => {
+    const { applied } = interpretQuery("آپارتمان وام ودیعه");
+    expect(applied.find((c) => c.kind === "transaction")?.value).toBe("rent");
+  });
 });
 
 describe("mentionsRealEstate", () => {

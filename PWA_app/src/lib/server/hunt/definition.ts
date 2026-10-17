@@ -120,7 +120,19 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
       : null;
   const category = textCategory ?? def.category;
 
-  // 3. Price bounds from text when the fields are empty.
+  // 3b. Transaction from text when the form didn't answer it. The
+  // dimension system hides the rent/buy question when the text answers it
+  // («آپارتمان بدون وام» ⇒ buy via «وام») — but the fired body carries
+  // transaction:"", so the provider would scan both leaves and rentals
+  // intrude (R4 h18: «اجاره کوتاه مدت» graded 0 in a بدون‌وام hunt).
+  // Text wins when the explicit answer is empty; a dismissed inference
+  // never reaches `applied`, so dismissal is honored.
+  const txC = applied.find((c) => c.kind === "transaction");
+  const txFromText =
+    txC?.value === "rent" || txC?.value === "buy" ? txC.value : "";
+  const transaction = def.transaction !== "" ? def.transaction : txFromText;
+
+  // 4. Price bounds from text when the fields are empty.
   const minC = applied.find((c) => c.kind === "priceMin");
   const maxC = applied.find((c) => c.kind === "priceMax");
   let priceMin = def.priceMin.trim() === "" && minC ? minC.value : def.priceMin;
@@ -199,6 +211,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     category,
     priceMin,
     priceMax,
+    transaction,
     serviceIntent,
   };
 }

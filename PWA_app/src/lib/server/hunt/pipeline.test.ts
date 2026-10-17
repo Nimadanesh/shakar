@@ -1250,3 +1250,202 @@ describe("R3 fixes — 2026-10-17 grading round", () => {
     expect(kinds["tools"]).toBe("near");
   });
 });
+
+describe("R4 fixes — 2026-10-17 second grading round", () => {
+  function defCap(over: Partial<HuntDefinition> = {}): HuntDefinition {
+    return {
+      query: "probe",
+      include: [],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+      ...over,
+    };
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  it("R4: expanded part subjects (دیسک/کلاچ/فنر/درب/گیربکس) are not the car", async () => {
+    const def = resolveHuntDefinition({ query: "پراید" });
+    listings([
+      { sourceAdId: "car", title: "پراید ۱۳۱ مدل ۹۶" },
+      { sourceAdId: "clutch", title: "دیسک و صحفه کلاچ پراید" },
+      { sourceAdId: "spring", title: "فنر عقب پراید" },
+      { sourceAdId: "gearbox", title: "گیربکس پراید ۲۰۶" },
+      { sourceAdId: "door", title: "درب پراید" },
+    ]);
+    detail({
+      car: "پراید سالم",
+      clutch: "دیسک و صفحه کلاچ پراید",
+      spring: "فنر عقب پراید",
+      gearbox: "گیربکس پراید",
+      door: "درب پراید",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["car"]).toBe("exact");
+    expect(kinds["clutch"]).toBe("near");
+    expect(kinds["spring"]).toBe("near");
+    expect(kinds["gearbox"]).toBe("near");
+    expect(kinds["door"]).toBe("near");
+  });
+
+  it("R4: «گارد ایفون» is not the phone; a phone WITH a case stays exact", async () => {
+    const def = resolveHuntDefinition({ query: "آیفون ۱۳ پرو" });
+    listings([
+      { sourceAdId: "phone", title: "آیفون ۱۳ پرو" },
+      { sourceAdId: "case", title: "گارد ایفون ۱۳ پرو" },
+      { sourceAdId: "withcase", title: "ایفون ۱۳ پرو با گارد رایگان" },
+    ]);
+    detail({
+      phone: "آیفون ۱۳ پرو سالم",
+      case: "گارد ایفون ۱۳ پرو",
+      withcase: "ایفون ۱۳ پرو با گارد رایگان",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["phone"]).toBe("exact");
+    expect(kinds["case"]).toBe("near");
+    // Clean subject: the case is a feature, not the offering.
+    expect(kinds["withcase"]).toBe("exact");
+  });
+
+  it("R4: consumables («پودر») are not the machine", async () => {
+    const def = resolveHuntDefinition({ query: "ماشین لباسشویی" });
+    listings([
+      { sourceAdId: "washer", title: "ماشین لباسشویی پاکشوما" },
+      { sourceAdId: "powder", title: "پودر ماشین لباسشویی" },
+      { sourceAdId: "hose", title: "شلنگ ماشین لباسشویی" },
+    ]);
+    detail({
+      washer: "ماشین لباسشویی سالم",
+      powder: "پودر ماشین لباسشویی",
+      hose: "شلنگ ماشین لباسشویی",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["washer"]).toBe("exact");
+    expect(kinds["powder"]).toBe("near");
+    expect(kinds["hose"]).toBe("near");
+  });
+
+  it("R4: training courses are not the service", async () => {
+    const def = resolveHuntDefinition({ query: "تعمیرات تخصصی موبایل" });
+    listings([
+      { sourceAdId: "shop", title: "تعمیرات تخصصی موبایل در محل" },
+      { sourceAdId: "course", title: "آموزش تخصصی تعمیرات موبایل" },
+      { sourceAdId: "withcourse", title: "تعمیرات تخصصی موبایل با آموزش رایگان" },
+    ]);
+    detail({
+      shop: "تعمیرات موبایل با گارانتی",
+      course: "آموزش تعمیرات موبایل",
+      withcourse: "تعمیرات تخصصی موبایل با آموزش رایگان",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["shop"]).toBe("exact");
+    expect(kinds["course"]).toBe("near");
+    // Clean subject: the course mention is a feature, not the offering.
+    expect(kinds["withcourse"]).toBe("exact");
+  });
+
+  it("R4: «یخچال پراید وانت» equipment subject is not the van", async () => {
+    const def = resolveHuntDefinition({ query: "وانت پراید" });
+    listings([
+      { sourceAdId: "van", title: "پراید وانت مدل ۱۴۰۲" },
+      { sourceAdId: "fridge", title: "یخچال پراید وانت مخصوص حمل بستنی" },
+    ]);
+    detail({
+      van: "پراید وانت سالم",
+      fridge: "یخچال مخصوص حمل بستنی",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["van"]).toBe("exact");
+    expect(kinds["fridge"]).toBe("near");
+  });
+
+  it("R4: ingredient rule — «مخصوص کره گیری» is not the butter for a کره hunt", async () => {
+    const defButter = resolveHuntDefinition({ query: "کره بادوم زمینی" });
+    listings([
+      { sourceAdId: "butter", title: "کره بادوم زمینی اعلا" },
+      { sourceAdId: "ingredient", title: "بادوم زمینی مخصوص کره گیری" },
+    ]);
+    detail({
+      butter: "کره بادوم زمینی",
+      ingredient: "بادوم زمینی مخصوص کره گیری",
+    });
+    const doneButter = await doneOf(defButter!);
+    const kindsButter = Object.fromEntries(
+      doneButter.results.map((r) => [r.sourceAdId, r.matchKind])
+    );
+    expect(kindsButter["butter"]).toBe("exact");
+    expect(kindsButter["ingredient"]).toBe("near");
+
+    // …but for a «بادوم زمینی» hunt the same ad IS the item (graded 3).
+    const defNut = resolveHuntDefinition({ query: "بادوم زمینی" });
+    listings([{ sourceAdId: "ingredient", title: "بادوم زمینی مخصوص کره گیری" }]);
+    detail({ ingredient: "بادوم زمینی مخصوص کره گیری" });
+    const doneNut = await doneOf(defNut!);
+    expect(doneNut.results[0]?.matchKind).toBe("exact");
+  });
+
+  it("R4: absent synonym bridge — «بی رنگ» satisfies «بدون تصادف»", async () => {
+    const def = resolveHuntDefinition({ query: "ماشین بدون تصادف" });
+    expect(def?.absentAttributes).toEqual(["تصادف"]);
+    listings([
+      { sourceAdId: "ok", title: "پراید ۸۶ تمیز" },
+      { sourceAdId: "repainted", title: "پراید رنگ شده" },
+      { sourceAdId: "plain", title: "پراید ۸۶" },
+    ]);
+    detail({
+      ok: "ماشین سالم و بی رنگ",
+      repainted: "ماشین سالم",
+      plain: "ماشین سالم",
+    });
+    const done = await doneOf(def!);
+    const byId = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r]));
+    // The bridge: بی رنگ ⇒ بدون تصادف, disclosed in the evidence.
+    expect(byId["ok"].matchKind).toBe("exact");
+    expect(byId["ok"].evidence).toContain("بدون تصادف (از: بدون رنگ)");
+    // Explicit repaint ⇒ contradiction via the synonym ⇒ rejected.
+    expect(byId["repainted"]).toBeUndefined();
+    // No paint info ⇒ honest near.
+    expect(byId["plain"].matchKind).toBe("near");
+  });
+
+  it("R4: «وام» infers buy — rentals never enter a «بدون وام» hunt", async () => {
+    const def = resolveHuntDefinition({ query: "آپارتمان بدون وام" });
+    expect(def?.transaction).toBe("buy");
+  });
+});

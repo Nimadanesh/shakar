@@ -74,7 +74,18 @@ function escRe(s: string): string {
  * assessRepairPolarity is kept as a thin wrapper: same regexes for
  * word="تعمیر", so the battle-tested repair behavior is unchanged.
  */
-export function assessAbsencePolarity(
+/**
+ * Absent-attribute synonyms (R4, 2026-10-17): sellers don't write the
+ * buyer's words. «ماشین بدون تصادف» fails because ads say «بدون رنگ» /
+ * «بی رنگ» / «بدون ضربه» — in vehicle ads the intent is the same (no
+ * accident history ⇒ original paint). One-way bridge: «بدون رنگ» satisfies
+ * «بدون تصادف», never the reverse beyond this mapping.
+ */
+const ABSENT_SYNONYMS: Record<string, readonly string[]> = {
+  "تصادف": ["رنگ", "ضربه"],
+};
+
+function assessAbsenceOneWord(
   text: string,
   word: string
 ): {
@@ -123,6 +134,37 @@ export function assessAbsencePolarity(
     return { polarity: "unknown", reason: "conflicting-absence-marks" };
   }
   return { polarity: "absent", reason: `absence-absent:${absentHit}` };
+}
+
+/**
+ * Assess absence polarity with synonym bridging. Contradiction is checked
+ * on the word AND its synonyms first («بدون رنگ ولی ضربه خورده» must not
+ * satisfy «بدون تصادف»); then direct satisfaction; then synonym
+ * satisfaction («بی رنگ» ⇒ «بدون تصادف»).
+ */
+export function assessAbsencePolarity(
+  text: string,
+  word: string
+): {
+  readonly polarity: RepairPolarity;
+  readonly reason: string;
+} {
+  const synonyms = ABSENT_SYNONYMS[normalizeForMatch(word)] ?? [];
+  for (const w of [word, ...synonyms]) {
+    const r = assessAbsenceOneWord(text, w);
+    if (r.polarity === "present") {
+      return { polarity: "present", reason: `absent-present-via:${w}:${r.reason}` };
+    }
+  }
+  const direct = assessAbsenceOneWord(text, word);
+  if (direct.polarity === "absent") return direct;
+  for (const w of synonyms) {
+    const s = assessAbsenceOneWord(text, w);
+    if (s.polarity === "absent") {
+      return { polarity: "absent", reason: `absence-absent-via-synonym:${w}` };
+    }
+  }
+  return { polarity: "unknown", reason: "no-absence-polarity-mark" };
 }
 
 /**
@@ -591,10 +633,50 @@ const PART_MARKERS = [
   "ردیاب",
   "ضبط",
   "چادر",
+  // R4 (2026-10-17) — mined from full result sets, every entry earned by a
+  // zero-grade or an exact-labeled parts ad: «دیسک و صحفه کلاچ پراید»,
+  // «فنر عقب پراید», «درب پراید», «استپر موتور پراید», «رادیات/رادیاتور»,
+  // «نمد», «مه» (= مه‌شکن), «برد ایفون» (motherboard), «باربند/کابین/اتاق
+  // پراید وانت», «حواله پراید وانت» (transfer slip), «شلنگ ماشین
+  // لباسشویی», «یراق/پارچه مبل», «گارد ایفون» (case — subject rule, not
+  // adjacency, so «ایفون با گارد رایگان» stays clean).
+  "گیربکس",
+  "دیسک",
+  "صفحه",
+  "صحفه", // wild misspelling of صفحه («دیسک و صحفه کلاچ»)
+  "کلاچ",
+  "فنر",
+  "درب",
+  "استپر",
+  "رادیاتور",
+  "رادیات", // truncated surface form in the wild
+  "نمد",
+  "مه", // مه‌شکن — token-exact only, never substring
+  "برد",
+  "باربند",
+  "کابین",
+  "اتاق", // truck body («اتاق پراید وانت»); a «اتاق خواب» hunt skips it (guard)
+  "حواله", // purchase slip, not the item («حواله پراید وانت»)
+  "شلنگ",
+  "یراق",
+  "پارچه",
+  "گارد",
 ];
 const PACKAGING_MARKERS = ["کارتون", "کارتن", "جعبه"];
-const EQUIPMENT_MARKERS = ["دستگاه", "تجهیزات"];
+const EQUIPMENT_MARKERS = ["دستگاه", "تجهیزات", "یخچال"]; // R4: «یخچال پراید وانت مخصوص حمل بستنی»
 const DERIVED_MARKERS = ["کره", "خلال"];
+/**
+ * R4 (2026-10-17) — consumables: the supply, not the machine («پودر ماشین
+ * لباسشویی» is not a washer). Subject-aware like parts.
+ */
+const CONSUMABLE_MARKERS = ["پودر", "مایع", "قرص", "شوینده"];
+/**
+ * R4 (2026-10-17) — training courses: the course, not the service («آموزش
+ * تخصصی تعمیرات موبایل» ×14 exact-labeled for a «تعمیرات تخصصی موبایل»
+ * service hunt). Subject-aware: «تعمیرات موبایل با آموزش رایگان» (clean
+ * subject) is unaffected. A hunt for «آموزش …» skips via the query guard.
+ */
+const TRAINING_MARKERS = ["آموزش", "آموزشگاه", "دوره", "کلاس"];
 
 /**
  * Leading sale-cue tokens skipped when locating the ad's subject: «فروش
@@ -672,8 +754,9 @@ export function assessModelSpecificity(
     { markers: PART_MARKERS, kind: "part", subjectAware: true },
     { markers: PACKAGING_MARKERS, kind: "packaging", subjectAware: true },
     { markers: EQUIPMENT_MARKERS, kind: "equipment", subjectAware: true },
-    // Derived forms only demote when they LEAD («کره بادوم زمینی»);
-    // «بادوم زمینی مخصوص کره گیری» names the item first and stays exact.
+    { markers: CONSUMABLE_MARKERS, kind: "consumable", subjectAware: true },
+    { markers: TRAINING_MARKERS, kind: "training", subjectAware: true },
+    // Derived forms only demote when they LEAD («کره بادوم زمینی»).
     {
       markers: DERIVED_MARKERS,
       kind: "derived-product",
@@ -681,6 +764,21 @@ export function assessModelSpecificity(
       subjectFirstOnly: true,
     },
   ];
+  // R4 (2026-10-17) — the ingredient rule: «X مخصوص کره گیری» is X (the
+  // ingredient), not the derived product. When the query hunts the derived
+  // product («کره بادوم زمینی») this listing is a near-miss, not exact —
+  // navid graded it 0. For a «بادوم زمینی» hunt the کره guard above skips
+  // (کره ∉ query tokens) and the listing correctly stays exact (graded 3).
+  for (const rawDerived of DERIVED_MARKERS) {
+    const derived = normalizeForMatch(rawDerived);
+    if (derived === "" || !queryTokens.has(derived)) continue;
+    if (new RegExp(`مخصوص\\s+${escRe(derived)}\\s+گیری`).test(listingNorm)) {
+      return {
+        mismatch: true,
+        reason: `derived-product:ingredient-for:"${rawDerived}"`,
+      };
+    }
+  }
   const subjectClean = queryTokens.has(listingTokens[subjectIdx] ?? "");
   for (const { markers, kind, subjectAware, subjectFirstOnly } of markerSets) {
     for (const rawMarker of markers) {

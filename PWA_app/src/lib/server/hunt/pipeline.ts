@@ -570,10 +570,16 @@ function evaluateDescription(
   // 3b. Satisfied absent-attributes join the evidence — «چرا این آگهی؟»
   // should show the condition («بدون رنگ»), not just the item. Polarity
   // was already checked for contradictions in 1b; absent here means the
-  // ad explicitly evidences the desired absence.
+  // ad explicitly evidences the desired absence. A synonym bridge
+  // («بی رنگ» ⇒ «بدون تصادف») is disclosed, not silently claimed.
   for (const attr of absentAttrs) {
-    if (assessAbsencePolarity(combined, attr).polarity === "absent") {
-      evidence.push(`بدون ${attr}`);
+    const r = assessAbsencePolarity(combined, attr);
+    if (r.polarity === "absent") {
+      const viaPrefix = "absence-absent-via-synonym:";
+      const via = r.reason.startsWith(viaPrefix)
+        ? ` (از: بدون ${r.reason.slice(viaPrefix.length)})`
+        : "";
+      evidence.push(`بدون ${attr}${via}`);
     }
   }
   // 4. SHOULD — boost only.

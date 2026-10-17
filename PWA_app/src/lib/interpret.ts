@@ -62,8 +62,12 @@ export const PREFERENCE_CUES = ["ترجیحاً", "ترجیحا", "کاش", "ا�
 
 /** Words that pin a real-estate hunt to rent vs buy. Checked on the
  *  normalized query; «اجاره» also matches «اجاره‌ای». */
-const RENT_WORDS = ["اجاره", "اجاره‌ای", "رهن"];
-const BUY_WORDS = ["خرید", "فروش", "فروشی", "معاوضه"];
+const RENT_WORDS = ["اجاره", "اجاره‌ای", "رهن", "ودیعه"];
+const BUY_WORDS = ["خرید", "فروش", "فروشی", "معاوضه", "وام", "وامدار"];
+// R4 (2026-10-17): «وام» یعنی خرید — «آپارتمان بدون وام» آپارتمان فروشی
+// می‌خواهد نه اجاره‌ای (نمره‌ی انسانی: اجاره‌ای‌ها ۰ گرفتند). «وامدار» هم
+// فروش است («آپارتمان وامدار»). «ودیعه» همیشه اجاره است و چون RENT اول
+// چک می‌شود، «وام ودیعه» درست به rent می‌رسد نه buy.
 
 /** Words that answer the goods «condition» dimension (نو / کارکرده). */
 const CONDITION_NEW_WORDS = ["نو", "آکبند", "صفر"];
