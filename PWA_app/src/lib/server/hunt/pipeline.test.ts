@@ -785,21 +785,7 @@ describe("transaction direction — P1 (HumanTest S4: خریدار یخچال)",
     });
   }
 
-  it("competing dealer sinks below the seller listing (default: hunter wants sellers)", async () => {
-    listings([
-      { sourceAdId: "d1", title: "خریدار یخچال هستیم" },
-      { sourceAdId: "s1", title: "یخچال سامسونگ" },
-    ]);
-    detail({
-      d1: "خریدار انواع یخچال", // dealer — competitor, S4 rubric = 0
-      s1: "یخچال سالم، فروش",
-    });
-    const done = await doneOf(defDir());
-    expect(done.results.map((r) => r.sourceAdId)).toEqual(["s1", "d1"]);
-    expect(done.results[1].score).toBeLessThan(0);
-  });
-
-  it("direction=sell: the dealer is a buyer — no penalty, small boost", async () => {
+  it("seek-buyer («خریدار یخچال»): the buyer ad outranks the offer ad", async () => {
     listings([
       { sourceAdId: "d1", title: "خریدار یخچال هستیم" },
       { sourceAdId: "s1", title: "یخچال سامسونگ" },
@@ -808,12 +794,27 @@ describe("transaction direction — P1 (HumanTest S4: خریدار یخچال)",
       d1: "خریدار انواع یخچال",
       s1: "یخچال سالم، فروش",
     });
-    const done = await doneOf(defDir({ direction: "sell" }));
-    // No penalty for the dealer now; its score beats the plain seller ad.
-    expect(
-      done.results.find((r) => r.sourceAdId === "d1")!.score
-    ).toBeGreaterThan(done.results.find((r) => r.sourceAdId === "s1")!.score);
-    expect(done.results.find((r) => r.sourceAdId === "d1")!.score).toBeGreaterThan(0);
+    // R7 (navid's R6 product decision): bare «خریدار X» seeks BUYERS — the
+    // buyer ad is what the hunter wants; the clear offer sinks (demote).
+    const def = resolveHuntDefinition({ query: "خریدار یخچال" });
+    expect(def!.roleMode).toBe("seek-buyer");
+    const done = await doneOf(def!);
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["d1", "s1"]);
+  });
+
+  it("seek-seller («فروشنده یخچال»): the seller ad outranks the buyer ad", async () => {
+    listings([
+      { sourceAdId: "d1", title: "خریدار یخچال هستیم" },
+      { sourceAdId: "s1", title: "یخچال سامسونگ" },
+    ]);
+    detail({
+      d1: "خریدار انواع یخچال",
+      s1: "یخچال سالم، فروش",
+    });
+    const def = resolveHuntDefinition({ query: "فروشنده یخچال" });
+    expect(def!.roleMode).toBe("seek-seller");
+    const done = await doneOf(def!);
+    expect(done.results.map((r) => r.sourceAdId)).toEqual(["s1", "d1"]);
   });
 
   it("resolveHuntDefinition strips role words from MUST (the S4 inversion)", async () => {
@@ -1698,7 +1699,7 @@ describe("R7 speech-act role — seek-buyer (navid's R6 product decision)", () =
     return done;
   }
 
-  it("effectiveWantsSellers: explicit form wins; roleMode overrides the default", async () => {
+  it("effectiveWantsSellers: roleMode is the single authority (direction was dead)", async () => {
     const { effectiveWantsSellers } = await import("./pipeline");
     const base: HuntDefinition = { ...DEF, include: ["پراید"] };
     expect(effectiveWantsSellers({ ...base })).toBe(true); // default: buyer
@@ -1707,9 +1708,8 @@ describe("R7 speech-act role — seek-buyer (navid's R6 product decision)", () =
     expect(effectiveWantsSellers({ ...base, roleMode: "seek-seller" })).toBe(true);
     expect(effectiveWantsSellers({ ...base, roleMode: "self-buyer" })).toBe(true);
     expect(effectiveWantsSellers({ ...base, roleMode: "none" })).toBe(true);
-    // Explicit form answers always win over the query's role.
-    expect(effectiveWantsSellers({ ...base, direction: "sell", roleMode: "seek-seller" })).toBe(false);
-    expect(effectiveWantsSellers({ ...base, direction: "buy", roleMode: "seek-buyer" })).toBe(true);
+    // R7-redteam: def.direction was never set by any code path — the old
+    // "explicit form wins" assertions tested a fiction. roleMode decides.
   });
 
   it("resolveHuntDefinition carries the query's roleMode", async () => {
@@ -1837,5 +1837,114 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     expect(assessAbsencePolarity("پراید مدل ۹۰", "رنگ").polarity).toBe("unknown");
     expect(assessAbsencePolarity("پراید رنگ شده", "رنگ").polarity).toBe("present");
     expect(assessAbsencePolarity("بی رنگ", "تصادف").polarity).toBe("absent"); // synonym bridge kept
+  });
+});
+
+describe("R7-redteam — adversarial review fixes (2026-10-18)", () => {
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+  function detail(descById: Record<string, string>, slugById: Record<string, string> = {}) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: slugById[id] ?? "",
+    }));
+  }
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+  function kindsOf(done: { results: Array<{ sourceAdId: string; matchKind: string }> }) {
+    return Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+  }
+
+  it("P0: «بدون ضربه دور رنگ» for attr رنگ is implied → near, never exact", async () => {
+    const def = resolveHuntDefinition({ query: "ماشین بدون رنگ" });
+    expect(def!.absentAttributes).toEqual(["رنگ"]);
+    listings([
+      { sourceAdId: "repaint", title: "ماشین پراید ۱۳۱" },
+      { sourceAdId: "clean", title: "ماشین پراید ۱۱۱" },
+    ]);
+    detail({
+      repaint: "ماشین شاسیا سالم بدون ضربه، دور رنگ جهت زیبایی",
+      clean: "ماشین پراید بدون رنگ",
+    });
+    const kinds = kindsOf(await doneOf(def!));
+    // The R7 suite only covered attr تصادف, where the synonym bridge masked
+    // the span swallowing the repaint. For attr رنگ the repaint must cap.
+    expect(kinds["repaint"]).toBe("near");
+    expect(kinds["clean"]).toBe("exact");
+  });
+
+  it("P0: the «خریدار یخچال» buyer ad survives a misleading slug (S4 flagship)", async () => {
+    const def = resolveHuntDefinition({ query: "خریدار یخچال" });
+    expect(def!.roleMode).toBe("seek-buyer");
+    listings([{ sourceAdId: "buyerad", title: "خریدار یخچال هستیم" }]);
+    detail(
+      { buyerad: "خریدار یخچال هستیم قیمت توافقی" },
+      { buyerad: "home-kitchen" }
+    );
+    const kinds = kindsOf(await doneOf(def!));
+    // Old code: head خریدار unknown → slug furniture vs appliance → rejected,
+    // defeating the very ads the seek-buyer product decision wants.
+    expect(kinds["buyerad"]).toBe("exact");
+  });
+
+  it("P1: «بدون رنگ و صافکاری» ≡ «بدون رنگ، بدون صافکاری» (negation distributes)", async () => {
+    const { assessAbsencePolarity } = await import("./semantics");
+    expect(assessAbsencePolarity("ماشین بدون رنگ و صافکاری", "رنگ").polarity).toBe("absent");
+    expect(assessAbsencePolarity("ماشین بدون رنگ، بدون صافکاری", "رنگ").polarity).toBe("absent");
+    // Distribution only fires for implied words after و — «بدون رنگ و شاسی
+    // سالم» keeps its chassis claim (no inversion).
+    expect(assessAbsencePolarity("ماشین بدون رنگ و شاسی سالم", "رنگ").polarity).toBe("absent");
+  });
+
+  it("P1: «بی ضربه دور رنگ» keeps its repaint (negation governs ضربه only)", async () => {
+    const { assessAbsencePolarity } = await import("./semantics");
+    expect(assessAbsencePolarity("ماشین بی ضربه دور رنگ", "رنگ").polarity).toBe("implied");
+    // «بدون دور رنگ» is a no-repaint claim → unknown/near, not false exact.
+    expect(assessAbsencePolarity("ماشین بدون دور رنگ", "رنگ").polarity).toBe("unknown");
+  });
+
+  it("P1: item-first service query («یخچال تعمیر») does not kill the service ad", async () => {
+    const def = resolveHuntDefinition({ query: "یخچال تعمیر" });
+    listings([
+      { sourceAdId: "service", title: "تعمیر یخچال در محل" },
+      { sourceAdId: "goods", title: "یخچال فریزر نو" },
+      { sourceAdId: "unrelated", title: "مبل راحتی" },
+    ]);
+    detail({
+      service: "تعمیر یخچال در محل با ضمانت",
+      goods: "یخچال فریزر نو",
+      unrelated: "مبل راحتی",
+    });
+    const kinds = kindsOf(await doneOf(def!));
+    expect(kinds["service"]).not.toBeUndefined(); // was: kind:domain rejected
+    expect(kinds["goods"]).not.toBeUndefined(); // S3: target goods demoted, not rejected
+    expect(kinds["unrelated"]).toBeUndefined(); // truly unrelated → rejected
+  });
+
+  it("P2: «شش تیکه رنگ» is present-direct (number words through ده)", async () => {
+    const { assessAbsencePolarity } = await import("./semantics");
+    expect(assessAbsencePolarity("ماشین شش تیکه رنگ", "رنگ").polarity).toBe("present");
+    expect(assessAbsencePolarity("ماشین ده تیکه رنگ", "رنگ").polarity).toBe("present");
+  });
+
+  it("P2: «یخچال میخوام قیمت توافقی» is a buyer ad, not an offer", async () => {
+    const { assessListingRole } = await import("./semantics");
+    expect(assessListingRole("یخچال میخوام قیمت توافقی").role).toBe("buyer-seeking");
+    // …but a sell verb keeps it a seller.
+    expect(assessListingRole("یخچال میخوام بفروشم قیمت توافقی").role).toBe("product");
   });
 });

@@ -126,32 +126,74 @@ const IMPLIED_PATTERNS: Record<"paint" | "scratch", RegExp[]> = {
 /** Negation-governed implied words («بدون نیاز به صافکاری» ≠ bodywork). */
 const IMPLIED_TOKENS = new Set(["صافکاری", "نقاشی"]);
 const NEGATION_TOKENS = new Set(["بدون", "بی"]);
+/** Fillers allowed between a negator and its governed word («بدون نیاز به X»). */
+const NEG_FILLERS = new Set(["نیاز", "به", "از", "برای"]);
+
+/** Implied-phrase length at toks[i]: 2 for «دور رنگ», 1 for صافکاری/نقاشی, else 0. */
+function impliedLenAt(toks: string[], i: number): number {
+  if (i < 0 || i >= toks.length) return 0;
+  if (toks[i] === "دور" && toks[i + 1] === "رنگ") return 2;
+  return IMPLIED_TOKENS.has(toks[i]) ? 1 : 0;
+}
 
 /**
- * Drop بدون/بی-governed implied words at the token level (no regex):
- * «بدون نیاز به صافکاری» must not read as counter-evidence.
- * «دور رنگ» is a two-token phrase (دور + رنگ).
+ * Distribute a negator over a و-coordinated implied word:
+ * «بدون رنگ و صافکاری» → «بدون رنگ بدون صافکاری», so genuinely-negated
+ * bodywork never reads as bodywork (R7-redteam P1: both phrasings must agree).
+ * Only fires when the و-phrase holds an implied word — «بدون رنگ و شاسی
+ * سالم» is untouched (the chassis claim must not be inverted).
  */
-function stripNegatedImplied(clause: string): string {
-  const toks = clause.split(" ").filter(Boolean);
+function distributeNegation(toks: string[]): string[] {
+  let cur = toks;
+  for (let pass = 0; pass < 3; pass++) {
+    let changed = false;
+    const out: string[] = [];
+    let i = 0;
+    while (i < cur.length) {
+      if (NEGATION_TOKENS.has(cur[i])) {
+        let wAt = -1;
+        for (let k = i + 1; k < Math.min(i + 6, cur.length); k++) {
+          if (cur[k] === "و" && impliedLenAt(cur, k + 1) > 0) {
+            wAt = k;
+            break;
+          }
+        }
+        if (wAt >= 0) {
+          for (let k = i; k <= wAt; k++) out.push(cur[k]);
+          out[out.length - 1] = cur[i]; // the و becomes the repeated negator
+          i = wAt + 1;
+          changed = true;
+          continue;
+        }
+      }
+      out.push(cur[i]);
+      i++;
+    }
+    cur = out;
+    if (!changed) break;
+  }
+  return cur;
+}
+
+/**
+ * Drop negation-governed implied words at the token level (no regex).
+ * «بدون نیاز به صافکاری» and «بدون دور رنگ» must not read as
+ * counter-evidence. Past the negator ONLY filler words may intervene —
+ * «بی ضربه دور رنگ» keeps its repaint (ضربه governs nothing).
+ * When the implied word IS the attribute itself («بدون نیاز به صافکاری»
+ * for attr صافکاری), it is a genuine absence claim and is kept.
+ */
+function stripNegatedImplied(clause: string, attrWord: string): string {
+  const toks = distributeNegation(clause.split(" ").filter(Boolean));
   const out: string[] = [];
   let i = 0;
   while (i < toks.length) {
     if (NEGATION_TOKENS.has(toks[i])) {
-      let drop = 0;
-      for (let k = 1; k <= 3 && i + k < toks.length; k++) {
-        const t = toks[i + k];
-        if (IMPLIED_TOKENS.has(t)) {
-          drop = k + 1;
-          break;
-        }
-        if (t === "دور" && toks[i + k + 1] === "رنگ") {
-          drop = k + 2;
-          break;
-        }
-      }
-      if (drop > 0) {
-        i += drop;
+      let j = i + 1;
+      while (j < toks.length && NEG_FILLERS.has(toks[j])) j++;
+      const L = impliedLenAt(toks, j);
+      if (L === 2 || (L === 1 && toks[j] !== attrWord)) {
+        i = j + L;
         continue;
       }
     }
@@ -184,14 +226,26 @@ function assessAbsenceOneWord(
     new RegExp(`${w}\\s+نکرده`),
   ];
   const directRes: readonly RegExp[] = [
-    new RegExp(`(\\d+|[۰-۹]+|یک|یه|دو|سه|چهار|پنج|چند)\\s*(تیکه|تکه)\\s+${w}`),
+    new RegExp(`(\\d+|[۰-۹]+|یک|یه|دو|سه|چهار|پنج|شش|هفت|هشت|نه|ده|چند)\\s*(تیکه|تکه)\\s+${w}`),
     new RegExp(`${w}(ات)?${filler}\\s+شده`),
     new RegExp(`${w}شده`),
     new RegExp(`${w}\\s+کرده`),
   ];
-  // 1. Absent spans own their words — cut them out first so counter-
+  // 0. Negation-governed bodywork is not counter-evidence («بدون نیاز به
+  // صافکاری», «بدون دور رنگ»); و-coordinated negations are distributed
+  // («بدون رنگ و صافکاری» → «بدون رنگ بدون صافکاری»).
+  const attrWord = normalizeForMatch(word);
+  const unnegated = stripNegatedImplied(` ${norm} `, attrWord);
+  // 1. Present-implied is read on the FULL text, before absent spans are
+  // cut — a span must never swallow counter-evidence (R7-redteam P0:
+  // «بدون ضربه دور رنگ» for attr رنگ used to read "absent" → false exact).
+  const family = ABSENCE_FAMILY[normalizeForMatch(word)];
+  const impliedHit =
+    (family ? IMPLIED_PATTERNS[family] : []).find((re) => re.test(unnegated))
+      ?.source ?? null;
+  // 2. Absent spans own their words — cut them out first so counter-
   // evidence is only ever read OUTSIDE the absence claim itself.
-  let remainder = ` ${norm} `;
+  let remainder = ` ${unnegated} `;
   let absentHit: string | null = null;
   for (const re of absentRes) {
     const g = new RegExp(re.source, "g");
@@ -201,18 +255,14 @@ function assessAbsenceOneWord(
     });
   }
   remainder = remainder.replace(/\s+/g, " ").trim();
-  // 2. Present-direct OUTSIDE the absent spans defeats the universal
+  // 3. Present-direct OUTSIDE the absent spans defeats the universal
   // negative — one positive existential wins (logic, not vocabulary).
   const directHit = directRes.find((re) => re.test(remainder))?.source ?? null;
+  // Strength order: present > implied > absent > unknown — a single
+  // positive anywhere defeats the claim.
   if (directHit) {
     return { polarity: "present", reason: `absence-defeated:${directHit}` };
   }
-  // 3. Present-implied (tiered below direct): negated bodywork stripped.
-  const family = ABSENCE_FAMILY[normalizeForMatch(word)];
-  const unnegated = stripNegatedImplied(remainder);
-  const impliedHit =
-    (family ? IMPLIED_PATTERNS[family] : []).find((re) => re.test(unnegated))
-      ?.source ?? null;
   if (impliedHit) {
     return { polarity: "implied", reason: `absence-implied:${impliedHit}` };
   }
@@ -420,6 +470,15 @@ export function assessListingRole(text: string): RoleAssessment {
   // Unambiguous buyer markers anywhere («خواهان …», «به دنبال …»).
   const buyer = BUYER_ANYWHERE.find((p) => norm.includes(p));
   if (buyer) return { role: "buyer-seeking", reason: `buyer-cue:"${buyer}"` };
+
+  // R7-redteam P2: «میخوام X» up front is a wanted-to-buy declaration —
+  // «یخچال میخوام قیمت توافقی» is a buyer ad, not an offer (the «قیمت»
+  // sale cue must not outrank the buyer verb). A sell verb present
+  // («میخوام بفروشم») means a seller. Colloquial «میخوام» drops the ه.
+  const lead2 = norm.split(" ").filter(Boolean).slice(0, 2).join(" ");
+  if (/می\s?خوا(ه)?م/.test(` ${lead2} `) && !/فروش/.test(norm)) {
+    return { role: "buyer-seeking", reason: "buyer-verb-first:میخوام" };
+  }
 
   // A confident product offer needs a sale cue and no competing role cue.
   const sale = SALE_CUES.find((p) => norm.includes(p));

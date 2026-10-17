@@ -348,6 +348,10 @@ export const DEALER_FIRST_PERSON = ["هستیم", "هستم", "می‌باشیم
  */
 export type RoleMode = "seek-buyer" | "seek-seller" | "self-buyer" | "self-seller" | "none";
 
+/** First-person possessive forms of «فروشنده» (ZWNJ + joined). */
+const SELLER_SELF_FORMS = ["فروشنده‌ام", "فروشندهام", "فروشنده‌ایم", "فروشندهایم"];
+/** Spaced possessive: «فروشنده ام» / «فروشنده ایم». */
+const SELLER_SELF_SPACED = /فروشنده\s+ای?م(\s|$)/;
 /** First-person verb forms that declare the hunter's own side. */
 const SELF_BUYER_VERBS = ["میخرم", "می خرم"];
 const SELF_SELLER_VERBS = ["میفروشم", "می فروشم"];
@@ -365,14 +369,20 @@ export function detectRoleMode(raw: string): RoleMode {
     includesWordSmart(normalized, "خریدار") ||
     includesWordSmart(normalized, "خریدارم") ||
     includesWordSmart(normalized, "خریداریم");
-  const hasSeller = includesWordSmart(normalized, "فروشنده");
+  // R7-redteam P2: the possessive lives in hasSeller itself, not only in
+  // selfDeclared — «یخچال فروشندهام» and «یخچال فروشنده ام» are self-sellers,
+  // not seek-sellers.
+  const hasSeller =
+    includesWordSmart(normalized, "فروشنده") ||
+    SELLER_SELF_FORMS.some((f) => normalized.includes(f)) ||
+    SELLER_SELF_SPACED.test(normalized);
   if (hasBuyer && hasSeller) return "none";
   const selfDeclared =
     SELF_COPULA.some((w) => includesWordSmart(normalized, w)) ||
     includesWordSmart(normalized, "خریدارم") ||
     includesWordSmart(normalized, "خریداریم") ||
-    normalized.includes("فروشنده‌ام") ||
-    normalized.includes("فروشنده‌ایم");
+    SELLER_SELF_FORMS.some((f) => normalized.includes(f)) ||
+    SELLER_SELF_SPACED.test(normalized);
   const selfBuys = SELF_BUYER_VERBS.some((w) => includesWordSmart(normalized, w));
   const selfSells = SELF_SELLER_VERBS.some((w) => includesWordSmart(normalized, w));
   if ((hasBuyer && selfDeclared) || selfBuys) return "self-buyer";

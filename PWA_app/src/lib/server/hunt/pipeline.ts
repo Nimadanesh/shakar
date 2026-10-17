@@ -28,7 +28,6 @@ import {
   rolesClash,
 } from "./semantics";
 import {
-  adKindForCategorySlug,
   adKindForTitle,
   kindGateRejects,
   queryKindForDef,
@@ -141,13 +140,16 @@ export interface ScoreBreakdown {
 
 /**
  * R7 (2026-10-18): which side of the market the hunt wants.
- * Explicit form answer wins; otherwise the query's speech-act role
- * decides (bare «خریدار X» = seek-buyer → wants buyers); otherwise the
- * default ("buy" — the common hunter is a buyer).
+ * The query's speech-act role decides (bare «خریدار X» = seek-buyer →
+ * wants buyers); otherwise the default ("buy" — the common hunter is a
+ * buyer).
+ *
+ * R7-redteam: def.direction was never set by any code path (no form,
+ * route, or definition ever assigned it) — the "explicit form wins"
+ * branch was dead code asserting a fiction. roleMode is the single live
+ * authority (navid's R6 product decision).
  */
 export function effectiveWantsSellers(def: HuntDefinition): boolean {
-  if (def.direction === "sell") return false;
-  if (def.direction === "buy") return true;
   const mode = def.roleMode ?? "none";
   if (mode === "seek-buyer" || mode === "self-seller") return false;
   return true;
@@ -574,8 +576,10 @@ function evaluateDescription(
   def: HuntDefinition,
   /**
    * R7 (P1): Divar's leaf category slug for the ad (from the detail
-   * fetch). Corroborates the head-kind when the title head is unknown —
-   * never a hard gate alone.
+   * fetch). R7-redteam P0: no longer a hard-gate source — as the SOLE kind
+   * signal for unknown heads it mass-rejected home hunts and buyer ads.
+   * Kept plumbed (not fetched-then-dropped) for a future soft-demote
+   * signal; the gate fires on head-kind only.
    */
   categorySlug: string = ""
 ): DescriptionEvaluation {
@@ -715,18 +719,23 @@ function evaluateDescription(
     const demandGoods =
       (def.serviceIntent ?? false) &&
       assessDemandGoods(def.include, combined);
+    // R7 (P1): subject-kind reconciliation — structural wrong-item rejection.
+    // R7-redteam P0: Divar's category slug no longer hard-gates — it was the
+    // SOLE kind source for unknown heads and mass-rejected home hunts («میز»)
+    // and the «خریدار یخچال» buyer ads. Unknown head → no gate.
+    // R7-redteam P1: on service hunts the gate compares against the service
+    // TARGET («یخچال تعمیر» must not kill «تعمیر یخچال در محل»).
+    const qKind = queryKindForDef(def.include, def.serviceIntent ?? false, def.category);
+    const svcHunt = (def.serviceIntent ?? false) || qKind === "service";
+    const kindReject = kindGateRejects(
+      qKind,
+      adKindForTitle(title),
+      svcHunt ? targetKindForDef(def.include) : null,
+      svcHunt
+    );
     const wrongKind =
       cap.wrongItemKind ??
-      // R7 (P1): subject-kind reconciliation — structural wrong-item
-      // rejection. The head kind leads; Divar's category slug corroborates
-      // when the head is unknown. Unknown on either side → no gate.
-      // Service hunts also accept the service target's kind (S3: a
-      // fridge-for-sale on a «تعمیر یخچال» hunt is demoted, not rejected).
-      kindGateRejects(
-        queryKindForDef(def.include, def.serviceIntent ?? false, def.category),
-        adKindForTitle(title) ?? adKindForCategorySlug(categorySlug),
-        (def.serviceIntent ?? false) ? targetKindForDef(def.include) : null
-      ) ??
+      kindReject ??
       (bait ? "bait:title-desc-mismatch" : null) ??
       (demandGoods ? "demand-goods:product-ad" : null);
     if (wrongKind) {

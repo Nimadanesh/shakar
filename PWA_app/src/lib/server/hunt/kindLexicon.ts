@@ -15,6 +15,8 @@
  * be enumerated; open lexical classes may not, ever.
  */
 
+import { normalizeForMatch } from "@/lib/persianNormalize";
+
 /** Head-NP → kind. Longest match wins («ماشین لباسشویی» beats «ماشین»). */
 export const HEAD_KIND: Record<string, string> = {
   // Vehicles
@@ -55,6 +57,13 @@ export const HEAD_KIND: Record<string, string> = {
   "تلویزیون": "appliance",
   "مبل": "furniture",
   "مبلمان": "furniture",
+  "میز": "furniture",
+  "تخت": "furniture",
+  "کمد": "furniture",
+  "صندلی": "furniture",
+  "صندلی ماشین": "vehicle-part",
+  "سرویس خواب": "furniture",
+  "لوستر": "home-goods",
   "فرش": "home-goods",
   // Food
   "بادام": "food",
@@ -108,33 +117,21 @@ export const HEAD_SKIP_TOKENS = new Set([
  * The ad's subject kind from its title: skip sale cues, then longest
  * head-NP match (2 tokens, then 1). Returns null when unknown — the gate
  * never fires on unknown (anti-overfilter law).
+ *
+ * R7-redteam P0: the title is normalized before lookup (ZWNJ → space), so
+ * «ماشین‌لباسشویی» reads as «ماشین لباسشویی».
  */
 export function adKindForTitle(title: string): string | null {
-  const toks = title.split(/\s+/).filter(Boolean).filter((t) => !HEAD_SKIP_TOKENS.has(t));
+  const toks = normalizeForMatch(title)
+    .split(" ")
+    .filter(Boolean)
+    .filter((t) => !HEAD_SKIP_TOKENS.has(t));
   if (toks.length === 0) return null;
   if (toks.length >= 2) {
     const two = `${toks[0]} ${toks[1]}`;
     if (HEAD_KIND[two] !== undefined) return HEAD_KIND[two];
   }
   if (HEAD_KIND[toks[0]] !== undefined) return HEAD_KIND[toks[0]];
-  return null;
-}
-
-/** Divar category slug → kind fallback (used only when the head is unknown). */
-const CATEGORY_KIND: Array<[RegExp, string]> = [
-  [/car|vehicle|ماشین/, "vehicle"],
-  [/mobile|phone|گوشی/, "mobile"],
-  [/real-estate|apartment|املاک/, "realestate"],
-  [/home|furniture|مبلمان/, "furniture"],
-  [/service|خدمات/, "service"],
-];
-
-/** Kind from Divar's category slug — corroboration only, never a hard gate alone. */
-export function adKindForCategorySlug(slug: string): string | null {
-  if (!slug) return null;
-  for (const [re, kind] of CATEGORY_KIND) {
-    if (re.test(slug)) return kind;
-  }
   return null;
 }
 
@@ -153,18 +150,29 @@ function splitKind(kind: string): [string, string] {
  *   accessory / derived / consumable / equipment → reject;
  * - hunting a SUB-KIND («کره بادوم زمینی») → the ad must be the SAME
  *   sub-kind (navid's symmetric بادوم rule: neither direction leaks).
- * - service hunts: the service TARGET's kind is compatible too — a
- *   fridge-for-sale ad on a «تعمیر یخچال» hunt is demoted (S3), not
- *   rejected; only truly unrelated kinds are rejected.
+ * - service hunts (serviceHunt): the hunt is about a service — service ads
+ *   pass; the service TARGET's kind is compatible too (S3: a fridge-for-sale
+ *   ad on a «تعمیر یخچال» hunt is demoted, not rejected); only truly
+ *   unrelated kinds (compared against the TARGET) are rejected. This also
+ *   covers word-order variants («یخچال تعمیر», R7-redteam P1).
  * Unknown on either side → null (no gate, never over-filter).
  */
 export function kindGateRejects(
   queryKind: string | null,
   adKind: string | null,
-  targetKind: string | null = null
+  targetKind: string | null = null,
+  serviceHunt: boolean = false
 ): string | null {
   if (!queryKind || !adKind) return null;
   if (queryKind === adKind) return null;
+  if (serviceHunt && targetKind) {
+    if (adKind === "service" || adKind === targetKind) return null;
+    const [tDom, tRole] = splitKind(targetKind);
+    const [aDom, aRole] = splitKind(adKind);
+    if (aDom !== tDom) return `kind:domain:${adKind}-not-${targetKind}`;
+    if (aRole !== tRole) return `kind:role:${adKind}-not-${targetKind}`;
+    return null;
+  }
   // S3: the service target's goods stay (demoted, not rejected).
   if (queryKind === "service" && targetKind && adKind === targetKind) return null;
   const [qDom, qRole] = splitKind(queryKind);

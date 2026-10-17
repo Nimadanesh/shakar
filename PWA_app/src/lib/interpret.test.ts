@@ -460,6 +460,10 @@ describe("detectRoleMode — R7 speech-act role (HumanTest S4)", () => {
     ["پراید میخرم", "self-buyer"],
     ["فروشنده پراید هستم", "self-seller"],
     ["پراید میفروشم", "self-seller"],
+    // R7-redteam P2: possessive forms are self-declarations, not role-seeking.
+    ["یخچال فروشندهام", "self-seller"], // joined (no ZWNJ)
+    ["یخچال فروشنده‌ام", "self-seller"], // ZWNJ
+    ["یخچال فروشنده ام", "self-seller"], // spaced — was: seek-seller (wrong side)
     ["خریدار و فروشنده پراید", "none"], // ambiguous: never silently resolved
     ["پراید مدل 88", "none"], // plain goods hunt
     ["ماشین بدون رنگ", "none"],

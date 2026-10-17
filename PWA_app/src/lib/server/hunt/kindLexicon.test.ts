@@ -64,3 +64,28 @@ describe("kindLexicon — R7 subject-kind gate (DeepSeek P1)", () => {
     expect(kindGateRejects("service", "signage", "mobile")).toMatch(/^kind:/);
   });
 });
+
+describe("kindLexicon — R7-redteam fixes (2026-10-18)", () => {
+  it("home heads resolve (no more home-goods↔furniture mass-reject)", () => {
+    expect(adKindForTitle("میز غذاخوری چوبی")).toBe("furniture");
+    expect(adKindForTitle("تخت خواب دو نفره")).toBe("furniture");
+    expect(adKindForTitle("کمد لباس")).toBe("furniture");
+    expect(adKindForTitle("سرویس خواب")).toBe("furniture"); // not service!
+    expect(adKindForTitle("صندلی ماشین کودک")).toBe("vehicle-part"); // longest wins
+    expect(adKindForTitle("لوستر پذیرایی")).toBe("home-goods");
+  });
+
+  it("ZWNJ-joined heads read through normalization", () => {
+    expect(adKindForTitle("ماشین‌لباسشویی سامسونگ")).toBe("appliance");
+  });
+
+  it("serviceHunt gate: service ads pass on item-first service queries", () => {
+    // «یخچال تعمیر»: queryKind appliance (lexicon-first), serviceHunt true.
+    expect(kindGateRejects("appliance", "service", "appliance", true)).toBeNull();
+    // target goods pass (S3 demote, not reject)…
+    expect(kindGateRejects("appliance", "appliance", "appliance", true)).toBeNull();
+    // …truly unrelated kinds still reject, compared against the TARGET.
+    expect(kindGateRejects("appliance", "furniture", "appliance", true)).toMatch(/^kind:/);
+    expect(kindGateRejects("appliance", "signage", "appliance", true)).toMatch(/^kind:/);
+  });
+});
