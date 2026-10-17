@@ -48,6 +48,13 @@ export const PRICE_STRUCTURAL_WORDS = [
 ];
 /** Negation verbs («نه», «نمی‌خوام»…) — cue words, never content. Exported for the server query resolver. */
 export const NEGATION_VERBS = ["نمی‌خوام", "نمیخوام", "نمی‌خواهم", "نمیخواهم", "نمی‌خواد", "نمیخواد", "نه"];
+/**
+ * Demand verbs («می‌خوام»…) — the WANT, never the wanted item. R3
+ * (2026-10-17): «نصاب کولر گازی می‌خوام» left a stray «می» MUST term that
+ * capped 8 exact-worthy results to near (missingInfo=["می"]). Structural,
+ * never content — the positive mirror of NEGATION_VERBS.
+ */
+export const DEMAND_VERBS = ["می‌خوام", "میخوام", "می‌خواهم", "میخواهم", "می‌خواهد", "میخواهد"];
 /** Prefixes that turn the rest of a segment into an exclude term. Exported for the server query resolver. */
 export const EXCLUDE_PREFIXES = ["بدون", "به‌جز", "بجز", "غیر از", "غیراز"];
 /** Cue words that turn the rest of a segment into a preference (ranking-only). Exported for the server query resolver. */
@@ -600,12 +607,23 @@ function pushUnique(list: InterpretedConstraint[], item: InterpretedConstraint):
   if (!list.some((c) => c.id === item.id)) list.push(item);
 }
 
-function addExcludeTerm(list: InterpretedConstraint[], rawTerm: string): void {
+function addExcludeTerm(
+  list: InterpretedConstraint[],
+  rawTerm: string,
+  opts?: { absent?: boolean }
+): void {
   const push = (term: string) => {
     const words = term.split(" ").filter(Boolean);
     if (term !== "" && words.length <= 3) {
+      // R3 (2026-10-17): «بدون X» is NOT a search exclusion — it names a
+      // desired ABSENCE («ماشین بدون رنگ» wants unpainted cars; banning
+      // «رنگ» murdered exactly those ads). The id carries the provenance
+      // (`exclude:absent:`) so the resolver can apply absence semantics
+      // (polarity-scoped) instead of a hard ban. «نه»/«بجز»/negation verbs
+      // stay true exclusions.
+      const id = opts?.absent ? `exclude:absent:${term}` : `exclude:${term}`;
       pushUnique(list, {
-        id: `exclude:${term}`,
+        id,
         kind: "exclude",
         value: term,
         display: term,
@@ -721,7 +739,10 @@ export function interpretQuery(raw: string): Interpretation {
       const marker = `${prefix} `;
       const at = segment.indexOf(marker);
       if (at >= 0) {
-        addExcludeTerm(applied, segment.slice(at + marker.length));
+        // «بدون» names an absence-attribute, not a ban (see addExcludeTerm).
+        addExcludeTerm(applied, segment.slice(at + marker.length), {
+          absent: prefix === "بدون",
+        });
         break;
       }
     }

@@ -69,8 +69,8 @@ export function stemToken(token: string): string {
   return t;
 }
 
-/** Bare affixes / particles that carry no matching meaning on their own. */
-const AFFIX_ONLY = new Set(["ها", "های", "می", "نمی", "تر", "ترین", "را"]);
+/** Bare affixes / particles that carry no matching meaning on their own. Exported: the query resolver's surface-term filter uses the same set so a stray «می» can never become a MUST term (R3 2026-10-17). */
+export const AFFIX_ONLY = new Set(["ها", "های", "می", "نمی", "تر", "ترین", "را"]);
 
 /** Tokenize normalized text into stemmed tokens. */
 export function tokenize(text: string): string[] {

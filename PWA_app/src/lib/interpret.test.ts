@@ -69,9 +69,9 @@ describe("interpretQuery", () => {
     );
   });
 
-  it("detects بدون exclusion", () => {
+  it("detects بدون as an absent-attribute, not a hard exclusion (R3)", () => {
     const { applied } = interpretQuery("مبل راحتی بدون لکه");
-    expect(applied.map((c) => c.id)).toContain("exclude:لکه");
+    expect(applied.map((c) => c.id)).toContain("exclude:absent:لکه");
   });
 
   it("detects trailing negation exclusion as a whole phrase", () => {

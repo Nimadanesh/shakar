@@ -5,6 +5,7 @@ import {
   detectCategoryFromText,
   detectServiceIntent,
   interpretQuery,
+  DEMAND_VERBS,
   KNOWN_CITIES,
   PREFERENCE_CUES,
   NEGATION_VERBS,
@@ -12,7 +13,7 @@ import {
   PRICE_STRUCTURAL_WORDS,
   ROLE_WORDS,
 } from "@/lib/interpret";
-import { normalizeForMatch, stemToken, tokenize } from "@/lib/persianNormalize";
+import { normalizeForMatch, stemToken, tokenize, AFFIX_ONLY } from "@/lib/persianNormalize";
 import type { InterpretedConstraint } from "@/types/search";
 
 /**
@@ -133,18 +134,38 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     priceMax = "";
   }
 
-  // 4. Inline «نه» excludes from text.
+  // 4. Inline «نه» excludes from text. Absent-attributes («بدون رنگ»)
+  // are partitioned out below — they are conditions, not bans.
   const seenEx = new Set<string>();
   for (const t of def.exclude) seenEx.add(tokenize(t).join(" "));
-  const exclude = [...def.exclude];
+  const trueExcludes = [...def.exclude];
   for (const c of applied) {
-    if (c.kind !== "exclude") continue;
+    if (c.kind !== "exclude" || c.id.startsWith("exclude:absent:")) continue;
     const key = tokenize(c.value).join(" ");
     if (key !== "" && !seenEx.has(key)) {
-      exclude.push(c.value);
+      trueExcludes.push(c.value);
       seenEx.add(key);
     }
   }
+
+  // 4b. Absent-attributes («بدون رنگ» → ["رنگ"]). The query text is the
+  // freshest signal: a base exclude colliding with an absent inference
+  // resolves to ABSENT semantics — the user confirmed «بدون رنگ» (a
+  // desired absence), not a ban on «رنگ». Without this, confirming the
+  // form's بدون-chip would resurrect the R3 inversion (murdered inventory).
+  const absentAttributes: string[] = [];
+  const absentKeys = new Set<string>();
+  for (const c of applied) {
+    if (c.kind !== "exclude" || !c.id.startsWith("exclude:absent:")) continue;
+    const key = tokenize(c.value).join(" ");
+    if (key !== "" && !absentKeys.has(key)) {
+      absentAttributes.push(c.value);
+      absentKeys.add(key);
+    }
+  }
+  const exclude = trueExcludes.filter(
+    (t) => !absentKeys.has(tokenize(t).join(" "))
+  );
 
   // 5. SHOULD terms from preference cues («ترجیحاً تمیز», flaw #19).
   // Ranking boost only — never filters, never penalizes. Deduped against
@@ -171,6 +192,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     ...def,
     include,
     exclude,
+    absentAttributes,
     should,
     city,
     citySource,
@@ -219,6 +241,9 @@ function contentTerms(
   // the future refinement — see docs/output-quality.md flaw #8 note.
   for (const city of KNOWN_CITIES) for (const name of city.names) drop(name);
   for (const w of NEGATION_VERBS) drop(w);
+  // R3 (2026-10-17): demand verbs («می‌خوام») name the want, never the
+  // item — «نصاب کولر گازی می‌خوام» must not MUST «می»/«خوام».
+  for (const w of DEMAND_VERBS) drop(w);
   for (const p of EXCLUDE_PREFIXES) drop(p);
   for (const w of PRICE_STRUCTURAL_WORDS) drop(w);
   // P1 (HumanTest S4, flaw #22): role words name a transaction role, never
@@ -241,7 +266,12 @@ function contentTerms(
     const cue = preferenceCue(p.display, query);
     if (cue) drop(cue);
   }
-  return surface.filter((t) => !structural.has(stemToken(t)));
+  // R3 (2026-10-17): bare particles («می» from «می‌خوام», «را», …) carry no
+  // item meaning — they must never survive as MUST terms even when the
+  // verb-drop above leaves a fragment behind.
+  return surface.filter(
+    (t) => !structural.has(stemToken(t)) && !AFFIX_ONLY.has(stemToken(t))
+  );
 }
 
 /** The cue word («ترجیحاً»…) that introduced a preference wish, if present. */

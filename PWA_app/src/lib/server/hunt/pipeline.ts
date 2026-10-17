@@ -12,12 +12,14 @@ import {
   isServiceDemandTerm,
 } from "@/lib/interpret";
 import {
+  assessAbsencePolarity,
   assessListingRole,
   assessModelSpecificity,
   assessQueryIntent,
   assessRepairPolarity,
   assessRepairService,
   assessServiceTarget,
+  equipmentBeforeService,
   exclusionFires,
   isRepairWord,
   rolesClash,
@@ -94,6 +96,14 @@ export interface HuntDefinition {
    * rubric grades from that side.
    */
   direction?: "buy" | "sell";
+  /**
+   * Absent-attributes (R3, 2026-10-17): «بدون X» constraints from the query
+   * («ماشین بدون رنگ» → ["رنگ"]). NOT excludes — a desired absence is a
+   * condition: explicitly ABSENT in the ad satisfies, explicitly PRESENT
+   * («رنگ شده») contradicts, UNKNOWN caps to near. Optional for backward
+   * compatibility with pre-absent definitions — absent means none.
+   */
+  absentAttributes?: string[];
   /**
    * Second-phase opt-in («می‌خوای برم سراغ قدیمی‌ترها؟»): when true, the
    * list phase starts at page MAX_LIST_PAGES_PER_HUNT instead of 0 — the
@@ -409,6 +419,12 @@ function semanticCapFires(def: HuntDefinition, combined: string): boolean {
   const identity = clash.clash
     ? { mismatch: false as const, reason: "skipped:role-clash" }
     : assessModelSpecificity(def.include, combined, def.category);
+  // R3 (2026-10-17): absent-attributes generalize the repair polarity
+  // rule — «بدون رنگ» with no paint info is unknown, capped at near
+  // (never exact); the نه-sourced repair rule is preserved as-is.
+  const absentUnknown = (def.absentAttributes ?? []).some(
+    (a) => assessAbsencePolarity(combined, a).polarity === "unknown"
+  );
   const repairRequested = def.exclude.some((t) => isRepairWord(t));
   const repairUnknown =
     repairRequested && assessRepairPolarity(combined).polarity === "unknown";
@@ -422,15 +438,21 @@ function semanticCapFires(def: HuntDefinition, combined: string): boolean {
     serviceIntent &&
     role.role === "unknown" &&
     repairService.signal !== "service_offered";
+  // R3 (2026-10-17): equipment-before-service — «فروش فوری تجهیزات
+  // تخصصی تعمیرات موبایل» sells equipment, it doesn't offer the service.
+  const equipmentMismatch =
+    serviceIntent && equipmentBeforeService(combined);
   const targetBound =
     !serviceIntent ||
     assessServiceTarget(def.include, combined, def.category).bound;
   return (
     clash.clash ||
     identity.mismatch ||
+    absentUnknown ||
     repairUnknown ||
     needsRepairMismatch ||
     unsupportedServiceExact ||
+    equipmentMismatch ||
     !targetBound
   );
 }
@@ -463,6 +485,17 @@ function evaluateDescription(
   // being banned by its own vocabulary).
   for (const term of def.exclude) {
     if (exclusionFires(combined, term, def.category)) {
+      return rejectedEvaluation();
+    }
+  }
+  // 1b. Absent-attributes («بدون رنگ») — R3 inversion fix. An explicit
+  // presence-contradiction («رنگ شده») rejects the ad; anything else
+  // flows on (absent satisfies below, unknown caps to near in the
+  // semantic layer). Never a lexical ban: «بدون رنگ» must not murder
+  // «پراید … بدون رنگ».
+  const absentAttrs = def.absentAttributes ?? [];
+  for (const attr of absentAttrs) {
+    if (assessAbsencePolarity(combined, attr).polarity === "present") {
       return rejectedEvaluation();
     }
   }
@@ -532,6 +565,15 @@ function evaluateDescription(
       evidence.push(term);
     } else {
       missingInfo.push(term); // UNKNOWN — penalized in scoring, never dropped
+    }
+  }
+  // 3b. Satisfied absent-attributes join the evidence — «چرا این آگهی؟»
+  // should show the condition («بدون رنگ»), not just the item. Polarity
+  // was already checked for contradictions in 1b; absent here means the
+  // ad explicitly evidences the desired absence.
+  for (const attr of absentAttrs) {
+    if (assessAbsencePolarity(combined, attr).polarity === "absent") {
+      evidence.push(`بدون ${attr}`);
     }
   }
   // 4. SHOULD — boost only.

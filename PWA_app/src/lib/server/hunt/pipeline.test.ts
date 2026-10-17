@@ -26,6 +26,7 @@ vi.mock("../divar/taxonomy", () => ({
 
 import { divarProvider } from "../divar/divarClient";
 import { collapseDupes, runPipeline } from "./pipeline";
+import { resolveHuntDefinition } from "./definition";
 
 const mockSearchLists = vi.mocked(divarProvider.searchLists);
 const mockGetDetail = vi.mocked(divarProvider.getDetail);
@@ -1085,5 +1086,167 @@ describe("S5 goods-intent regression gate (R1a: B 0.8688)", () => {
     // «۹۸» is missing → near via MUST-missing, never exact.
     expect(kinds["wrong-year"]).toBe("near");
     expect(done.results[0].sourceAdId).toBe("right");
+  });
+});
+
+describe("R3 fixes — 2026-10-17 grading round", () => {
+  function defCap(over: Partial<HuntDefinition> = {}): HuntDefinition {
+    return {
+      query: "probe",
+      include: [],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+      ...over,
+    };
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  it("P0: «بدون رنگ» is an absent-attribute, not a ban — the R3 inversion", async () => {
+    const def = resolveHuntDefinition({ query: "ماشین بدون رنگ" });
+    expect(def?.include).toEqual(["ماشین"]);
+    // The killer assertion: «رنگ» must NOT be a hard exclude anymore.
+    expect(def?.exclude).toEqual([]);
+    expect(def?.absentAttributes).toEqual(["رنگ"]);
+
+    listings([
+      { sourceAdId: "good", title: "پراید ۱۳۱ مدل ۹۸ شاسی پلمپ و بدون رنگ" },
+      { sourceAdId: "plain", title: "پراید ۸۶" },
+      { sourceAdId: "repainted", title: "پراید رنگ شده" },
+      { sourceAdId: "battery", title: "باطری ماشین" },
+    ]);
+    detail({
+      good: "ماشین سالم و تمیز",
+      plain: "ماشین سالم",
+      repainted: "ماشین سالم",
+      battery: "باطری ماشین نو",
+    });
+    const done = await doneOf(def!);
+    const byId = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r]));
+    // The بدون‌رنگ car survives (was murdered at the title phase before).
+    expect(byId["good"].matchKind).toBe("exact");
+    expect(byId["good"].evidence).toContain("بدون رنگ");
+    // No paint info → honest near, never exact.
+    expect(byId["plain"].matchKind).toBe("near");
+    // Explicit contradiction → rejected.
+    expect(byId["repainted"]).toBeUndefined();
+    // «باطری ماشین» is not a car — part subject.
+    expect(byId["battery"].matchKind).toBe("near");
+    // The بدون‌رنگ car outranks the paint-unknown one.
+    expect(done.results[0].sourceAdId).toBe("good");
+  });
+
+  it("P1: «می‌خوام» never becomes a MUST term", () => {
+    const def = resolveHuntDefinition({ query: "نصاب کولر گازی می‌خوام" });
+    expect(def?.include).toEqual(["نصاب", "کولر", "گازی"]);
+    expect(def?.include).not.toContain("می");
+  });
+
+  it("P1: parts/packaging subjects cap to near; clean subjects stay exact", async () => {
+    const def = resolveHuntDefinition({ query: "پراید" });
+    listings([
+      { sourceAdId: "car", title: "پراید ۱۳۱ مدل ۹۶" },
+      { sourceAdId: "van", title: "وانت پراید" },
+      { sourceAdId: "rim", title: "رینگ پراید" },
+      { sourceAdId: "feature", title: "پراید ۱۳۱ با رینگ اسپرت" },
+    ]);
+    detail({
+      car: "پراید سالم",
+      van: "وانت پراید سالم",
+      rim: "رینگ پراید نو",
+      feature: "پراید سالم با رینگ اسپرت",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["car"]).toBe("exact");
+    // وانت is a marginal variant (R3 graded 1).
+    expect(kinds["van"]).toBe("near");
+    // A rim is not a car.
+    expect(kinds["rim"]).toBe("near");
+    // …but a car WITH rims is a car (clean subject).
+    expect(kinds["feature"]).toBe("exact");
+  });
+
+  it("P1: packaging subject («کارتون») is not the item", async () => {
+    const def = resolveHuntDefinition({ query: "ماشین لباسشویی" });
+    listings([
+      { sourceAdId: "washer", title: "ماشین لباسشویی پاکشوما" },
+      { sourceAdId: "box", title: "کارتون یخچال فریزر و ماشین لباسشویی" },
+    ]);
+    detail({
+      washer: "ماشین لباسشویی سالم",
+      box: "کارتون ماشین لباسشویی",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["washer"]).toBe("exact");
+    expect(kinds["box"]).toBe("near");
+  });
+
+  it("P1: derived products («کره») demote only when they lead", async () => {
+    const def = resolveHuntDefinition({ query: "بادوم زمینی" });
+    listings([
+      { sourceAdId: "nut", title: "بادوم زمینی مخصوص کره گیری" },
+      { sourceAdId: "butter", title: "کره بادوم زمینی" },
+      { sourceAdId: "machine", title: "دستگاه کره بادوم زمینی" },
+    ]);
+    detail({
+      nut: "بادوم زمینی تازه",
+      butter: "کره بادوم زمینی خوشمزه",
+      machine: "دستگاه کره گیری",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["nut"]).toBe("exact");
+    expect(kinds["butter"]).toBe("near");
+    expect(kinds["machine"]).toBe("near");
+  });
+
+  it("P1: equipment-before-service — selling tools is not offering the service", async () => {
+    const def = resolveHuntDefinition({ query: "تعمیرات تخصصی موبایل" });
+    expect(def?.serviceIntent).toBe(true);
+    listings([
+      { sourceAdId: "shop", title: "تعمیرات تخصصی موبایل در محل" },
+      { sourceAdId: "tools", title: "فروش فوری تجهیزات تخصصی تعمیرات موبایل" },
+    ]);
+    detail({
+      shop: "تعمیرات موبایل با گارانتی",
+      tools: "تجهیزات تعمیرات موبایل نو",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["shop"]).toBe("exact");
+    expect(kinds["tools"]).toBe("near");
   });
 });

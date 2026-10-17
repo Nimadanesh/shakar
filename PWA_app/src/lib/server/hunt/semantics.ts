@@ -55,68 +55,107 @@ export function isRepairWord(term: string): boolean {
   return REPAIR_WORDS.has(normalizeForMatch(term));
 }
 
-/**
- * Filler tokens inside repair patterns: any word EXCEPT repair-scope words
- * themselves. Without the guard, «بدون تعمیر ولی تعمیر شده» would match as
- * one absent span and swallow a genuine conflict.
- */
-const FILLER = String.raw`((?:\s+(?!تعمیر|بدون|نشده|شده)\S+)){0,2}`;
+function escRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
- * Explicit repair-ABSENT markers (the listing states no repair history).
- * Checked on normalized text, so ZWNJ/spelling variants behave uniformly.
- * The بدون-pattern tolerates up to two filler tokens («بدون هیچ تعمیری»,
- * «بدون رنگ و تعمیر»).
+ * Absence-polarity of a listing text for ANY attribute word — the
+ * generalization of the repair-polarity machinery (R3, 2026-10-17).
+ *
+ * «بدون X» in Persian marketplace language names a desired ABSENCE
+ * («ماشین بدون رنگ» wants unpainted cars), never a search ban — the old
+ * code routed it through EXCLUDE_PREFIXES and murdered exactly the ads
+ * the hunter wanted (R3 hunt 7: 9×0). Now بدون-attributes flow through
+ * here: explicitly ABSENT («بدون رنگ») satisfies, explicitly PRESENT
+ * («رنگ شده») contradicts, UNKNOWN caps to near — never exact, never
+ * dropped.
+ *
+ * assessRepairPolarity is kept as a thin wrapper: same regexes for
+ * word="تعمیر", so the battle-tested repair behavior is unchanged.
  */
-const REPAIR_ABSENT_RES: readonly RegExp[] = [
-  new RegExp(`بدون${FILLER}\\s+تعمیر(ات|ی)?`),
-  /تعمیر(ات)?\s+نشده/,
-  /تعمیرنشده/,
-  /تعمیر\s+نکرده/,
-];
-
-/**
- * Explicit repair-PRESENT markers (the listing states a repair happened or
- * is needed). A bare «تعمیر» is deliberately NOT here: the word alone is
- * not proof of repair history (it may name a service offer instead).
- */
-const REPAIR_PRESENT_RES: readonly RegExp[] = [
-  new RegExp(`تعمیر(ات)?${FILLER}\\s+شده`),
-  /تعمیرشده/,
-  /تعمیری/,
-  /نیاز\s+به\s+تعمیر/,
-];
-
-/**
- * Assess repair-history polarity. Conflicting marks (both absent and
- * present phrasing) resolve to unknown — never invent evidence.
- */
-export function assessRepairPolarity(text: string): {
+export function assessAbsencePolarity(
+  text: string,
+  word: string
+): {
   readonly polarity: RepairPolarity;
   readonly reason: string;
 } {
   const norm = normalizeForMatch(text);
   if (norm === "") return { polarity: "unknown", reason: "empty-text" };
-  const absentHit = REPAIR_ABSENT_RES.find((re) => re.test(norm))?.source ?? null;
+  const w = escRe(normalizeForMatch(word));
+  if (w === "") return { polarity: "unknown", reason: "empty-word" };
+  // Filler guard mirrors the original repair FILLER: any word EXCEPT the
+  // attribute itself and polarity words. Without it, «بدون رنگ ولی رنگ
+  // شده» would match as one absent span and swallow a genuine conflict.
+  const filler = String.raw`((?:\s+(?!${w}|بدون|نشده|شده)\S+)){0,2}`;
+  const absentRes: readonly RegExp[] = [
+    new RegExp(`بدون${filler}\\s+${w}(ات|ی)?`),
+    // «بی‌رنگ»/«بیرنگ»/«بی رنگ» — normalization turns ZWNJ into space.
+    new RegExp(`بی\\s*${w}`),
+    new RegExp(`${w}(ات)?\\s+نشده`),
+    new RegExp(`${w}نشده`),
+    new RegExp(`${w}\\s+نکرده`),
+  ];
+  const presentRes: readonly RegExp[] = [
+    new RegExp(`${w}(ات)?${filler}\\s+شده`),
+    new RegExp(`${w}شده`),
+    new RegExp(`${w}ی`),
+    new RegExp(`نیاز\\s+به\\s+${w}`),
+  ];
+  const absentHit = absentRes.find((re) => re.test(norm))?.source ?? null;
   if (!absentHit) {
-    const presentOnly = REPAIR_PRESENT_RES.find((re) => re.test(norm))?.source ?? null;
-    if (presentOnly) return { polarity: "present", reason: `repair-present:${presentOnly}` };
-    return { polarity: "unknown", reason: "no-repair-polarity-mark" };
+    const presentOnly = presentRes.find((re) => re.test(norm))?.source ?? null;
+    if (presentOnly)
+      return { polarity: "present", reason: `absent-present:${presentOnly}` };
+    return { polarity: "unknown", reason: "no-absence-polarity-mark" };
   }
-  // An absent span (e.g. «بدون هیچ تعمیری») owns its words: a present
-  // marker inside the same span («تعمیری») is the absence claim itself,
-  // not counter-evidence. Present markers OUTSIDE the absent span mean
-  // genuinely conflicting marks → unknown.
+  // An absent span owns its words: a present marker inside the same span
+  // is the absence claim itself, not counter-evidence. Present markers
+  // OUTSIDE the absent span mean genuinely conflicting marks → unknown.
   let remainder = ` ${norm} `;
-  for (const re of REPAIR_ABSENT_RES) {
+  for (const re of absentRes) {
     remainder = remainder.replace(new RegExp(re.source, "g"), " ");
   }
   remainder = remainder.replace(/\s+/g, " ").trim();
-  const presentHit = REPAIR_PRESENT_RES.find((re) => re.test(remainder))?.source ?? null;
+  const presentHit = presentRes.find((re) => re.test(remainder))?.source ?? null;
   if (presentHit) {
-    return { polarity: "unknown", reason: "conflicting-repair-marks" };
+    return { polarity: "unknown", reason: "conflicting-absence-marks" };
   }
-  return { polarity: "absent", reason: `repair-absent:${absentHit}` };
+  return { polarity: "absent", reason: `absence-absent:${absentHit}` };
+}
+
+/**
+ * The original repair pattern sets, kept for stripRepairPolaritySpans
+ * (service-offer assessment must not read «بدون تعمیر» as a service cue).
+ * Rebuilt from the generalized polarity patterns for word="تعمیر" so the
+ * two can never drift apart.
+ */
+function repairPatterns(): readonly RegExp[] {
+  const w = "تعمیر";
+  const filler = String.raw`((?:\s+(?!${w}|بدون|نشده|شده)\S+)){0,2}`;
+  return [
+    new RegExp(`بدون${filler}\\s+${w}(ات|ی)?`),
+    new RegExp(`بی\\s*${w}`),
+    new RegExp(`${w}(ات)?\\s+نشده`),
+    new RegExp(`${w}نشده`),
+    new RegExp(`${w}\\s+نکرده`),
+    new RegExp(`${w}(ات)?${filler}\\s+شده`),
+    new RegExp(`${w}شده`),
+    new RegExp(`${w}ی`),
+    new RegExp(`نیاز\\s+به\\s+${w}`),
+  ];
+}
+
+/**
+ * Assess repair-history polarity — thin wrapper over the generalized
+ * absence polarity (R3, 2026-10-17). Conflicting marks resolve to unknown.
+ */
+export function assessRepairPolarity(text: string): {
+  readonly polarity: RepairPolarity;
+  readonly reason: string;
+} {
+  return assessAbsencePolarity(text, "تعمیر");
 }
 
 /**
@@ -187,7 +226,7 @@ const SALE_CUES = ["فروش", "فروشی", "میفروشم", "می فروشم"
  */
 function stripRepairPolaritySpans(normalized: string): string {
   let out = ` ${normalized} `;
-  for (const re of [...REPAIR_ABSENT_RES, ...REPAIR_PRESENT_RES]) {
+  for (const re of repairPatterns()) {
     out = out.replace(new RegExp(re.source, "g"), " ");
   }
   return out.replace(/\s+/g, " ").trim();
@@ -507,8 +546,11 @@ export function assessServiceTarget(
  * specific SKU («پرو مکس» vs «پرو»). Bounded by design — a marker only
  * matters when every query term already matches AND the marker sits next
  * to a matched query term (longest-phrase locality, ±3 tokens).
+ * R3 (2026-10-17): «وانت» joins — «وانت پراید» is a marginal variant of a
+ * «پراید» hunt (graded 1, not exact), while a «وانت پراید» hunt itself is
+ * unaffected (marker ∈ query tokens → skipped).
  */
-const VARIANT_MARKERS = ["مکس", "اولترا", "الترا", "پلاس", "مینی", "لایت", "اف ای"];
+const VARIANT_MARKERS = ["مکس", "اولترا", "الترا", "پلاس", "مینی", "لایت", "اف ای", "وانت"];
 
 /**
  * Accessory markers: the listing is for an ACCESSORY of the hunted item,
@@ -522,6 +564,48 @@ const VARIANT_MARKERS = ["مکس", "اولترا", "الترا", "پلاس", "م
 const ACCESSORY_MARKERS = ["قاب", "کاور", "گلس"];
 
 /**
+ * R3 (2026-10-17) — listing-subject markers. The ad's SUBJECT (what is
+ * actually offered, usually the first content token) tells whether the
+ * listing is the item or something orbiting it:
+ * - PART_MARKERS: vehicle/device parts («باطری ماشین» is not a car,
+ *   «رینگ پراید» is not a Pride);
+ * - PACKAGING_MARKERS: the box, not the item («کارتون ماشین لباسشویی»);
+ * - EQUIPMENT_MARKERS: the machine/tool, not the item («دستگاه کره
+ *   بادوم زمینی» is not peanuts);
+ * - DERIVED_MARKERS: processed forms («کره بادوم زمینی» is not peanuts —
+ *   subject-first only, so «بادوم زمینی مخصوص کره گیری» stays exact).
+ * Every entry earned by an R3 zero-grade. Same guard as accessories: a
+ * query hunting the marker itself is unaffected.
+ */
+const PART_MARKERS = [
+  "رینگ",
+  "لاستیک",
+  "تایر",
+  "قالپاق",
+  "باطری",
+  "باتری",
+  "چراغ",
+  "روکش",
+  "باند",
+  "دزدگیر",
+  "ردیاب",
+  "ضبط",
+  "چادر",
+];
+const PACKAGING_MARKERS = ["کارتون", "کارتن", "جعبه"];
+const EQUIPMENT_MARKERS = ["دستگاه", "تجهیزات"];
+const DERIVED_MARKERS = ["کره", "خلال"];
+
+/**
+ * Leading sale-cue tokens skipped when locating the ad's subject: «فروش
+ * قاب ایفون» is about the قاب, but «فروش پراید با رینگ اسپرت» is about
+ * the پراید. Without the skip, the sale cue would shield accessory
+ * listings; without the clean-subject rule, feature mentions («با رینگ
+ * اسپرت») would demote genuine cars.
+ */
+const SUBJECT_SKIP_TOKENS = new Set(["فروش", "فروشی", "میفروشم", "می", "فروشم"]);
+
+/**
  * Asymmetric model-identity check.
  *
  * - Specific query («آیفون ۱۳ پرو») vs more specific sibling listing
@@ -533,6 +617,12 @@ const ACCESSORY_MARKERS = ["قاب", "کاور", "گلس"];
  * - Accessory listing («قاب ایفون ۱۳ پرو») vs item query («آیفون ۱۳ پرو»):
  *   MISMATCH — the listing is for an accessory of the item, not the item.
  *   A query hunting the accessory itself («قاب ایفون») is unaffected.
+ * - R3 subject rule: the listing's SUBJECT (first content token, skipping
+ *   sale cues) decides. A clean subject (the item itself — «پراید ۱۳۱ با
+ *   رینگ اسپرت») means accessory words are just features → no mismatch.
+ *   A marker subject («باطری ماشین», «کارتون …», «کره بادوم زمینی») or a
+ *   marker adjacent to a matched term under a non-clean subject («اقساط
+ *   روکش صندلی … باند ماشین») → mismatch.
  */
 export function assessModelSpecificity(
   includeTerms: readonly string[],
@@ -557,10 +647,42 @@ export function assessModelSpecificity(
     if (queryTokens.has(tok)) matchedPositions.add(i);
   });
 
-  for (const [markers, kind] of [
-    [VARIANT_MARKERS, "sibling-variant"],
-    [ACCESSORY_MARKERS, "accessory"],
-  ] as const) {
+  // The ad's subject: first content token after sale cues. A clean subject
+  // (the hunted item itself) means marker words elsewhere are features,
+  // not the offering — «پراید ۱۳۱ با رینگ اسپرت» is a car.
+  let subjectIdx = 0;
+  while (
+    subjectIdx < listingTokens.length &&
+    SUBJECT_SKIP_TOKENS.has(listingTokens[subjectIdx])
+  ) {
+    subjectIdx += 1;
+  }
+
+  const markerSets: ReadonlyArray<{
+    readonly markers: readonly string[];
+    readonly kind: string;
+    /** Subject-aware sets (R3 parts/packaging/equipment): a clean subject
+     *  (the item itself) means the marker is a feature, not the offering.
+     *  Variant/accessory sets keep the battle-tested adjacency rule. */
+    readonly subjectAware?: boolean;
+    readonly subjectFirstOnly?: boolean;
+  }> = [
+    { markers: VARIANT_MARKERS, kind: "sibling-variant" },
+    { markers: ACCESSORY_MARKERS, kind: "accessory" },
+    { markers: PART_MARKERS, kind: "part", subjectAware: true },
+    { markers: PACKAGING_MARKERS, kind: "packaging", subjectAware: true },
+    { markers: EQUIPMENT_MARKERS, kind: "equipment", subjectAware: true },
+    // Derived forms only demote when they LEAD («کره بادوم زمینی»);
+    // «بادوم زمینی مخصوص کره گیری» names the item first and stays exact.
+    {
+      markers: DERIVED_MARKERS,
+      kind: "derived-product",
+      subjectAware: true,
+      subjectFirstOnly: true,
+    },
+  ];
+  const subjectClean = queryTokens.has(listingTokens[subjectIdx] ?? "");
+  for (const { markers, kind, subjectAware, subjectFirstOnly } of markerSets) {
     for (const rawMarker of markers) {
       const marker = normalizeForMatch(rawMarker);
       if (marker === "" || queryTokens.has(marker)) continue;
@@ -569,6 +691,17 @@ export function assessModelSpecificity(
         if (tok === marker) positions.push(i);
       });
       if (positions.length === 0) continue;
+      if (positions.includes(subjectIdx)) {
+        return {
+          mismatch: true,
+          reason: `${kind}:subject:"${rawMarker}"`,
+        };
+      }
+      if (subjectFirstOnly) continue;
+      // A clean subject means the marker is a feature of the item
+      // («پراید ۱۳۱ با رینگ اسپرت» is a car, not a rim) — but only for
+      // the subject-aware sets; variant/accessory keep the old rule.
+      if (subjectAware && subjectClean) continue;
       const adjacent = positions.some((p) =>
         [...matchedPositions].some((m) => Math.abs(m - p) <= 3)
       );
@@ -581,4 +714,25 @@ export function assessModelSpecificity(
     }
   }
   return { mismatch: false, reason: "no-extra-variant" };
+}
+
+/**
+ * Equipment-before-service (R3, 2026-10-17): on a service-intent hunt, a
+ * listing whose EQUIPMENT word precedes any service word sells equipment,
+ * it doesn't offer the service («فروش فوری تجهیزات تخصصی تعمیرات موبایل»
+ * vs «تعمیرگاه مجهز با تجهیزات پیشرفته» — the latter leads with the
+ * service and is unaffected).
+ */
+const SERVICE_SUBJECT_VOCAB: ReadonlySet<string> = new Set(
+  ["تعمیر", "تعمیرات", "تعمیرکار", "تعمیرگاه", "نصب", "نصاب", "سرویس", "سرویسکار"].map(
+    (w) => normalizeForMatch(w)
+  )
+);
+
+export function equipmentBeforeService(text: string): boolean {
+  const tokens = normalizeForMatch(text).split(" ").filter(Boolean);
+  const equipIdx = tokens.findIndex((t) => EQUIPMENT_MARKERS.includes(t));
+  if (equipIdx < 0) return false;
+  const serviceIdx = tokens.findIndex((t) => SERVICE_SUBJECT_VOCAB.has(t));
+  return serviceIdx < 0 || equipIdx < serviceIdx;
 }
