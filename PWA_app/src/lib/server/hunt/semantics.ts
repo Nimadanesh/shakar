@@ -142,6 +142,10 @@ function impliedLenAt(toks: string[], i: number): number {
  * bodywork never reads as bodywork (R7-redteam P1: both phrasings must agree).
  * Only fires when the و-phrase holds an implied word — «بدون رنگ و شاسی
  * سالم» is untouched (the chassis claim must not be inverted).
+ *
+ * R7-doublecheck: never distribute over a POSITIVE completion —
+ * «بدون رنگ و صافکاری شده» coordinates [بدون رنگ] with [صافکاری شده]
+ * (bodywork DONE, counter-evidence), not with a negated صافکاری.
  */
 function distributeNegation(toks: string[]): string[] {
   let cur = toks;
@@ -153,9 +157,12 @@ function distributeNegation(toks: string[]): string[] {
       if (NEGATION_TOKENS.has(cur[i])) {
         let wAt = -1;
         for (let k = i + 1; k < Math.min(i + 6, cur.length); k++) {
-          if (cur[k] === "و" && impliedLenAt(cur, k + 1) > 0) {
-            wAt = k;
-            break;
+          if (cur[k] === "و") {
+            const L = impliedLenAt(cur, k + 1);
+            if (L > 0 && cur[k + 1 + L] !== "شده") {
+              wAt = k;
+              break;
+            }
           }
         }
         if (wAt >= 0) {
@@ -475,8 +482,10 @@ export function assessListingRole(text: string): RoleAssessment {
   // «یخچال میخوام قیمت توافقی» is a buyer ad, not an offer (the «قیمت»
   // sale cue must not outrank the buyer verb). A sell verb present
   // («میخوام بفروشم») means a seller. Colloquial «میخوام» drops the ه.
+  // R7-doublecheck: the ن- guard keeps «نمیخوام» (I don't want) out;
+  // plural «میخوایم/میخواهیم» counts too.
   const lead2 = norm.split(" ").filter(Boolean).slice(0, 2).join(" ");
-  if (/می\s?خوا(ه)?م/.test(` ${lead2} `) && !/فروش/.test(norm)) {
+  if (/(?<!ن)می\s?خوا(ه)?(ی)?م/.test(` ${lead2} `) && !/فروش/.test(norm)) {
     return { role: "buyer-seeking", reason: "buyer-verb-first:میخوام" };
   }
 

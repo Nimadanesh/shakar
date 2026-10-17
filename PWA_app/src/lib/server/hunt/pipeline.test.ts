@@ -1946,5 +1946,19 @@ describe("R7-redteam — adversarial review fixes (2026-10-18)", () => {
     expect(assessListingRole("یخچال میخوام قیمت توافقی").role).toBe("buyer-seeking");
     // …but a sell verb keeps it a seller.
     expect(assessListingRole("یخچال میخوام بفروشم قیمت توافقی").role).toBe("product");
+    // R7-doublecheck: «نمیخوام» (I don't want) is not a buyer declaration…
+    expect(assessListingRole("یخچال نمیخوام قیمت توافقی").role).not.toBe("buyer-seeking");
+    // …and the plural counts.
+    expect(assessListingRole("یخچال میخوایم قیمت توافقی").role).toBe("buyer-seeking");
+  });
+
+  it("R7-doublecheck: «بدون رنگ و صافکاری شده» keeps its counter-evidence", async () => {
+    const { assessAbsencePolarity } = await import("./semantics");
+    // «صافکاری شده» after و is POSITIVE (done) — the negator must not
+    // distribute over it. Was: false absent → exact. Must be: implied → near.
+    expect(assessAbsencePolarity("ماشین بدون رنگ و صافکاری شده", "رنگ").polarity).toBe("implied");
+    expect(assessAbsencePolarity("ماشین بدون رنگ و نقاشی شده", "رنگ").polarity).toBe("implied");
+    // …while the genuinely-negated form still distributes.
+    expect(assessAbsencePolarity("ماشین بدون رنگ و صافکاری", "رنگ").polarity).toBe("absent");
   });
 });
