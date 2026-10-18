@@ -39,7 +39,7 @@ export function DisambiguationSlot({
     return (
       <div
         aria-hidden="true"
-        className="flex h-20 items-center justify-center overflow-hidden"
+        className="flex h-20 items-center justify-start overflow-hidden"
       >
         <p className="text-[11px] leading-5 text-muted-foreground/80">
           در صورت ابهام، گزینه‌ها رو همین‌جا می‌بینی

@@ -54,9 +54,9 @@ export function SpecChips({
   const positive = tone === "positive";
   const titleColor = positive ? "text-signal" : "text-danger";
   const barColor = positive ? "bg-signal" : "bg-danger";
-  // Teaching placeholder per section — the three-word version of the old
-  // guide paragraph.
-  const placeholder = positive ? "مثلاً حافظه ۱۲۸ گیگ" : "مثلاً تعمیر شده";
+  // Teaching placeholder per section — neutral, product-agnostic until the
+  // contextual qualifier bank lands (see plan-qualifier-suggestions.md).
+  const placeholder = positive ? "مثلاً حتما آکبند" : "مثلاً اصلا دست‌دوم";
 
   function commit() {
     const t = draft.trim();
@@ -150,7 +150,7 @@ export function SpecChips({
           onClick={commit}
           disabled={draft.trim() === ""}
           aria-label={`افزودن به ${title}`}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/[0.04] text-foreground transition-colors hover:border-white/40 hover:bg-white/[0.07] focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40"
         >
           <Plus size={18} aria-hidden="true" />
         </button>
