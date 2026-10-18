@@ -10,6 +10,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { DimensionChips } from "@/components/search/DimensionChips";
 import { LoaderGrid, LoadingState } from "@/components/ui/LoadingState";
 import { SpecChips, type InferredChip } from "@/components/search/SpecChips";
+import { DisambiguationSlot } from "@/components/search/DisambiguationSlot";
 import { SpecRow } from "@/components/search/SpecRow";
 import {
   CATEGORIES,
@@ -433,9 +434,16 @@ export function HuntSetup() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
+          {/* Fixed disambiguation slot (2026-10-18 redesign): reserved at a
+              fixed height under the «چی؟» field — «منظورت کدومه؟» chips fade
+              in only on genuine ambiguity, nothing shifts. options={null}
+              until the disambiguation engine lands (owned by «شکار — هوش
+              مصنوعی»); the idle whisper renders meanwhile. */}
+          <DisambiguationSlot options={null} />
+          <div aria-hidden="true" className="h-px bg-white/[0.07]" />
           <SpecChips
             title="حتماً این‌ها باشد"
-            hint="کلماتی که در «چی؟» نوشتی خودکار لحاظ می‌شن؛ اینجا فقط فیلترِ اضافه بذار."
+            hint="ویژگی‌های ضروری رو اضافه کن"
             explicit={base.include}
             inferred={[]}
             tone="positive"
@@ -446,7 +454,7 @@ export function HuntSetup() {
           />
           <SpecChips
             title="اصلاً این‌ها نباشد"
-            hint="اگر این کلمات در توضیحات باشند، آگهی حذف می‌شود."
+            hint="مواردی که نباید در آگهی باشد"
             explicit={base.exclude}
             inferred={inferred.excludes}
             tone="negative"
@@ -458,6 +466,7 @@ export function HuntSetup() {
             }}
             onDismiss={dismissInferred}
           />
+          <div aria-hidden="true" className="h-px bg-white/[0.07]" />
 
           <div className="flex flex-col gap-2">
             <p className="text-[13px] font-medium leading-5 text-foreground">

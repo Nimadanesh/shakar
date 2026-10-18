@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Plus, X } from "lucide-react";
+import { Plus, X, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { TypoNudge, TYPO_PAUSE_MS } from "@/components/search/TypoNudge";
 import { applyTypoFixToText } from "@/lib/persianTypos";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -14,6 +15,7 @@ export interface InferredChip {
 
 interface SpecChipsProps {
   title: string;
+  /** Single-line subtitle — shows, doesn't explain. */
   hint: string;
   explicit: string[];
   inferred: InferredChip[];
@@ -28,6 +30,11 @@ interface SpecChipsProps {
  * One specs section of the hunt form: explicit chips (solid, × removes)
  * plus inferred readings (dashed, tap to confirm, × dismisses), with an
  * inline add row. The form's chips ARE the interpretation surface.
+ *
+ * Visual (2026-10-18 redesign): flat — no nested box. The section's
+ * identity comes from a 3px colored edge bar (signal/danger) instead of
+ * a tinted header panel. Teaching happens in the input placeholder,
+ * not in a guide paragraph.
  */
 export function SpecChips({
   title,
@@ -45,8 +52,11 @@ export function SpecChips({
   // typed — the nudge fires for finished words, or a paused last word.
   const settledDraft = useDebouncedValue(draft, TYPO_PAUSE_MS);
   const positive = tone === "positive";
-  const headerBg = positive ? "bg-signal-soft" : "bg-danger-soft";
   const titleColor = positive ? "text-signal" : "text-danger";
+  const barColor = positive ? "bg-signal" : "bg-danger";
+  // Teaching placeholder per section — the three-word version of the old
+  // guide paragraph.
+  const placeholder = positive ? "مثلاً حافظه ۱۲۸ گیگ" : "مثلاً تعمیر شده";
 
   function commit() {
     const t = draft.trim();
@@ -59,18 +69,23 @@ export function SpecChips({
   }
 
   return (
-    <section
-      aria-label={title}
-      className="overflow-hidden rounded-lg border border-border"
-    >
-      <div className={`flex flex-col gap-0.5 border-b border-border/60 ${headerBg} px-3.5 pb-2.5 pt-3`}>
-        <p className={`text-[13px] font-medium leading-5 ${titleColor}`}>{title}</p>
-        <p className="text-xs leading-5 text-muted-foreground">{hint}</p>
-      </div>
+    <section aria-label={title} className="relative ps-4">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-y-[3px] start-0 w-[3px] rounded-full",
+          barColor
+        )}
+      />
+      <p className={cn("text-[15px] font-bold leading-6", titleColor)}>
+        {title}
+      </p>
+      <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
+        {hint}
+      </p>
 
-      <div className="flex flex-col gap-2.5 p-3.5">
       {(explicit.length > 0 || inferred.length > 0) && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap gap-2">
           {explicit.map((term) => (
             <span
               key={`explicit:${term}`}
@@ -115,7 +130,7 @@ export function SpecChips({
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="mt-3 flex items-center gap-2.5">
         <input
           type="text"
           value={draft}
@@ -126,20 +141,25 @@ export function SpecChips({
               commit();
             }
           }}
-          placeholder="بنویس و Enter بزن…"
+          placeholder={placeholder}
           aria-label={`افزودن به ${title}`}
-          className="h-10 min-w-0 flex-1 rounded-lg border border-border bg-card px-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+          className="h-12 min-w-0 flex-1 rounded-[14px] border border-border bg-card px-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
         />
         <button
           type="button"
           onClick={commit}
           disabled={draft.trim() === ""}
           aria-label={`افزودن به ${title}`}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40"
         >
-          <Plus size={16} aria-hidden="true" />
+          <Plus size={18} aria-hidden="true" />
         </button>
       </div>
+      {positive && (
+        <p className="mt-2.5 text-[11px] leading-6 text-muted-foreground/80">
+          کلمات «چی؟» خودکار لحاظ می‌شن — اینجا فقط اضافه بذار.
+        </p>
+      )}
       {/* Typo tolerance for the add-row too: typos happen in filters as
           well as in «چی؟». One tap fixes the draft; Enter still adds it. */}
       <TypoNudge
@@ -149,7 +169,6 @@ export function SpecChips({
           setDraft((d) => applyTypoFixToText(d, originalToken, fixed))
         }
       />
-      </div>
     </section>
   );
 }
