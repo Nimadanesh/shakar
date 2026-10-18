@@ -54,9 +54,14 @@ export function SpecChips({
   const positive = tone === "positive";
   const titleColor = positive ? "text-signal" : "text-danger";
   const barColor = positive ? "bg-signal" : "bg-danger";
-  // Teaching placeholder per section — neutral, product-agnostic until the
-  // contextual qualifier bank lands (see plan-qualifier-suggestions.md).
-  const placeholder = positive ? "مثلاً حتما آکبند" : "مثلاً اصلا دست‌دوم";
+  // Interim placeholder (2026-10-18, navid's verdict): instructional and
+  // product-agnostic — «بنویس و + بزن…». Deliberately NOT a product
+  // example: any example qualifier (آکبند، دست‌دوم، …) misleads for
+  // products that don't need it. Unique vs. the subtitles above (no
+  // repeated words), and it names the field's job: the حتما/اصلا words
+  // go here. Becomes contextual per-product when the qualifier bank
+  // lands (see plan-qualifier-suggestions.md).
+  const placeholder = "بنویس و + بزن…";
 
   function commit() {
     const t = draft.trim();
