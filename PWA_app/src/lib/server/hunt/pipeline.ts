@@ -1056,7 +1056,9 @@ export async function confirmCandidates(
     description: string;
     deterministicVerdict: "near" | "exact";
   }> = [];
-  const MIZAN_SHADOW_CAP = 12; // design v2: rank-gated, capped
+  // Double-check C1: cap counts CALLS not ads. Each ad = 2 HTTP POSTs
+  // (Choice + Noul), so 6 ads = 12 calls = design v2 budget.
+  const MIZAN_SHADOW_CAP = 6;
   const huntKind =
     queryKindForDef(def.include, def.serviceIntent ?? false, def.category ?? "") ??
     "general";
@@ -1168,10 +1170,20 @@ export async function confirmCandidates(
   //
   // SKIP in test environment: no Mizan server in vitest, and the 30s
   // fetch timeout would make tests hang. Production/dev only.
+  //
+  // Double-check C2: kill-switch + wall-clock budget. If Mizan is slow or
+  // wedged, we stop dispatching and the deterministic results stand.
+  // Set MIZAN_SHADOW=0 to disable entirely.
   const isTestEnv =
     process.env.NODE_ENV === "test" || process.env.VITEST === "true";
-  if (mizanQueue.length > 0 && !isTestEnv) {
+  const shadowDisabled = process.env.MIZAN_SHADOW === "0";
+  const SHADOW_BUDGET_MS = 60000; // 60s wall-clock max for the shadow block
+  if (mizanQueue.length > 0 && !isTestEnv && !shadowDisabled) {
+    const shadowStart = Date.now();
     for (const q of mizanQueue) {
+      // Budget check: stop if we've exceeded the wall-clock budget.
+      // Deterministic results stand; we just get fewer shadow samples.
+      if (Date.now() - shadowStart > SHADOW_BUDGET_MS) break;
       const t0 = Date.now();
       try {
         const judgment = await adjudicateAd(
@@ -1197,6 +1209,7 @@ export async function confirmCandidates(
             violates: null,
             violateProbability: 0,
             actionable: false,
+            unavailable: true,
           },
           deterministicVerdict: q.deterministicVerdict,
           latencyMs: Date.now() - t0,

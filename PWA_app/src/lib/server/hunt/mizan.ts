@@ -39,6 +39,12 @@ export interface MizanJudgment {
   violateProbability: number;
   /** Should the caller act on this judgment? */
   actionable: boolean;
+  /**
+   * R9 double-check B1: distinguish "Mizan down/transport failure" from
+   * "Mizan had no opinion". When true, the judgment is a transport failure
+   * (server down, timeout, bad response) — NOT a model verdict.
+   */
+  unavailable: boolean;
 }
 
 interface SystemOneResponse {
@@ -139,6 +145,7 @@ export async function adjudicateAd(
     violates: null,
     violateProbability: 0,
     actionable: false,
+    unavailable: true, // transport failure → distinguishable (B1)
   };
 
   const questions: Record<string, unknown> = {
@@ -187,7 +194,7 @@ export async function adjudicateAd(
     itemConfidence >= MIZAN_ACT_THRESHOLD ||
     violateProbability >= MIZAN_ACT_THRESHOLD;
 
-  return { itemKind, itemConfidence, violates, violateProbability, actionable };
+  return { itemKind, itemConfidence, violates, violateProbability, actionable, unavailable: false };
 }
 
 /**
