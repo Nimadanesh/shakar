@@ -1217,11 +1217,18 @@ export async function confirmCandidates(
         // For >=0.9 confidence on part/accessory/derived/service, the ad is
         // obviously wrong (e.g. «شاگرد ماشین سنگین» on a car hunt).
         // This is the "zero stupid" guarantee.
+        // GUARD: don't reject "part"/"accessory" if the hunt itself wants parts
+        // (e.g. «قاب آیفون» hunt — a قاب IS the right item).
+        const huntWantsParts =
+          huntKind === "part" || huntKind === "accessory";
+        const isPartJudgment =
+          judgment.itemKind === "part" || judgment.itemKind === "accessory";
         if (
           judgment.itemKind &&
           WRONG_KINDS.includes(judgment.itemKind) &&
           judgment.itemConfidence >= MIZAN_REJECT_CONF &&
-          !judgment.unavailable
+          !judgment.unavailable &&
+          !(huntWantsParts && isPartJudgment)
         ) {
           toReject.add(q.sourceAdId);
           // Feed the rejected sample for audit (like deterministic rejections).
