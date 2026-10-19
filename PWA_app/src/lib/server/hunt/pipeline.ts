@@ -228,6 +228,11 @@ export interface HuntStats {
     deterministicVerdict: "near" | "exact";
     latencyMs: number;
   }>;
+  /**
+   * R10 (2026-10-20): count of ads rejected by Mizan activation
+   * (high-confidence wrong-item). For the "zero stupid" metric.
+   */
+  mizanRejected: number;
 }
 
 export type HuntEvent =
@@ -907,6 +912,7 @@ export async function collectCandidates(
     rejectedNoMatch: 0,
     rejectedSample: [],
     mizanShadow: [],
+    mizanRejected: 0,
   };
 
   emit({ type: "started", query: def.query });
@@ -1055,6 +1061,7 @@ export async function confirmCandidates(
     title: string;
     description: string;
     deterministicVerdict: "near" | "exact";
+    sourceAdId: string;
   }> = [];
   // Double-check C1: cap counts CALLS not ads. Each ad = 2 HTTP POSTs
   // (Choice + Noul), so 6 ads = 12 calls = design v2 budget.
@@ -1126,6 +1133,7 @@ export async function confirmCandidates(
           title: c.title,
           description,
           deterministicVerdict: "near",
+          sourceAdId: c.sourceAdId,
         });
       }
       const { score, breakdown } = scoreAd(ev, mustCount, shouldCount, c.price);
@@ -1178,11 +1186,17 @@ export async function confirmCandidates(
     process.env.NODE_ENV === "test" || process.env.VITEST === "true";
   const shadowDisabled = process.env.MIZAN_SHADOW === "0";
   const SHADOW_BUDGET_MS = 60000; // 60s wall-clock max for the shadow block
+  // R10: Mizan is ACTIVE (not shadow). The block below judges AND acts.
+  // Rejection criteria (v1): high-confidence wrong-item (>=0.9) — the "stupid" class.
+  // Noul violations with corroboration come in v2.
+  const MIZAN_REJECT_CONF = 0.9;
+  const WRONG_KINDS = ["part", "accessory", "derived", "service"];
   if (mizanQueue.length > 0 && !isTestEnv && !shadowDisabled) {
     const shadowStart = Date.now();
+    const toReject = new Set<string>();
     for (const q of mizanQueue) {
       // Budget check: stop if we've exceeded the wall-clock budget.
-      // Deterministic results stand; we just get fewer shadow samples.
+      // Deterministic results stand; we just get fewer judgments.
       if (Date.now() - shadowStart > SHADOW_BUDGET_MS) break;
       const t0 = Date.now();
       try {
@@ -1198,9 +1212,29 @@ export async function confirmCandidates(
           deterministicVerdict: q.deterministicVerdict,
           latencyMs: Date.now() - t0,
         });
+        // R10 activation: reject high-confidence wrong-items (the "stupid" class).
+        // Design v2 F6 says Choice never rejects — but that was for the general case.
+        // For >=0.9 confidence on part/accessory/derived/service, the ad is
+        // obviously wrong (e.g. «شاگرد ماشین سنگین» on a car hunt).
+        // This is the "zero stupid" guarantee.
+        if (
+          judgment.itemKind &&
+          WRONG_KINDS.includes(judgment.itemKind) &&
+          judgment.itemConfidence >= MIZAN_REJECT_CONF &&
+          !judgment.unavailable
+        ) {
+          toReject.add(q.sourceAdId);
+          // Feed the rejected sample for audit (like deterministic rejections).
+          if (stats.rejectedSample.length < 12) {
+            stats.rejectedSample.push({
+              title: q.title,
+              kind: `mizan:wrong-item:${judgment.itemKind}`,
+              price: null,
+            });
+          }
+        }
       } catch {
-        // Shadow mode must never break the hunt. Log the failure as a
-        // non-actionable judgment and continue.
+        // Mizan failure must never break the hunt. Log and continue.
         stats.mizanShadow.push({
           title: q.title,
           judgment: {
@@ -1215,6 +1249,16 @@ export async function confirmCandidates(
           latencyMs: Date.now() - t0,
         });
       }
+    }
+    // Remove the rejected ads from results (R10 activation).
+    if (toReject.size > 0) {
+      const before = results.length;
+      for (let i = results.length - 1; i >= 0; i--) {
+        if (toReject.has(results[i].sourceAdId)) {
+          results.splice(i, 1);
+        }
+      }
+      stats.mizanRejected = toReject.size;
     }
   }
 
