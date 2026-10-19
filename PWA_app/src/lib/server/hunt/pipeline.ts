@@ -1217,10 +1217,15 @@ export async function confirmCandidates(
         // For >=0.9 confidence on part/accessory/derived/service, the ad is
         // obviously wrong (e.g. «شاگرد ماشین سنگین» on a car hunt).
         // This is the "zero stupid" guarantee.
-        // GUARD: don't reject "part"/"accessory" if the hunt itself wants parts
-        // (e.g. «قاب آیفون» hunt — a قاب IS the right item).
+        // GUARD: don't reject "part"/"accessory" if the hunt itself wants parts.
+        // Check both huntKind AND query words (e.g. «باطری ماشین» hunt wants batteries).
+        // H15 (قاب) and H14 (باطری) both need this.
+        const PART_WORDS = ["باطری", "باتری", "قاب", "کفی", "لاستیک", "فیلتر"];
+        const huntText = (def.include || []).join(" ");
         const huntWantsParts =
-          huntKind === "part" || huntKind === "accessory";
+          huntKind === "part" ||
+          huntKind === "accessory" ||
+          PART_WORDS.some(w => huntText.includes(w));
         const isPartJudgment =
           judgment.itemKind === "part" || judgment.itemKind === "accessory";
         if (
