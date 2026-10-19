@@ -157,17 +157,20 @@ export async function adjudicateAd(
     },
   };
   if (constraintFa) {
-    // Noul gets title+description (design v2: descriptions catch what titles hide)
+    // Noul gets title+description (design v2: descriptions catch what titles hide).
+    // (Description is capped at 800 chars at the call site — see below.)
     questions["violates"] = {
       type: "noul",
       instructions: `شکار: «${constraintFa}». با توجه به عنوان و توضیح آگهی، آیا این آگهی نشان می‌دهد که قید شکار نقض شده است؟`,
     };
   }
 
-  // Choice on title only; Noul on title+description (split-input finding)
+  // Choice on title only; Noul on title+description (split-input finding).
+  // Description capped at 800 chars: full Divar descriptions can exceed
+  // Mizan's 512-token batch (525-token error observed 2026-10-19 laptop run).
   const choiceRes = await callMizan(title, { item_kind: questions["item_kind"] });
   const noulRes = constraintFa
-    ? await callMizan(`${title}\n${description}`, { violates: questions["violates"] })
+    ? await callMizan(`${title}\n${description.slice(0, 800)}`, { violates: questions["violates"] })
     : null;
 
   const itemAns = choiceRes?.answers["item_kind"];
