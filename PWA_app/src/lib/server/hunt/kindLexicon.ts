@@ -189,6 +189,10 @@ export function adKindForTitle(title: string): string | null {
     // «ماشین»/«موتور» alone still resolve to vehicle below.
     if (toks[0] === "ماشین" || toks[0] === "موتور") return null;
   }
+  // R8c (double-check R8b R-E): bare «خدمات» is ambiguous — «خدمات پس از
+  // فروش» is a goods-ad phrase (interpret.ts:269), not a service head.
+  // Only claim service when خدمات actually heads something serviceable.
+  if (toks[0] === "خدمات" && (toks.length < 2 || toks[1] === "پس")) return null;
   if (HEAD_KIND[toks[0]] !== undefined) return HEAD_KIND[toks[0]];
   // R8 (F4c): single-token stemmed fallback.
   const oneStemmed = HEAD_KIND_STEMMED.get(stemFix(toks[0]));

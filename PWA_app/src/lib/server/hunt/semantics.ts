@@ -1236,6 +1236,30 @@ export function equipmentBeforeService(text: string): boolean {
 }
 
 /**
+ * R8c (double-check R8b R-D): goods-offer cues for the demand-goods lead
+ * clause. "Not service-led" ≠ "goods-led" — «کولر گازی - نصب» (installer)
+ * and «کولر گازی ۱۸۰۰۰ - نصب» (shop) are structurally identical until the
+ * lead clause positively reads as a goods offer. Prices (digits) and
+ * condition/sale words are the cheap, closed-class discriminator.
+ * Honest coverage, not intelligence.
+ */
+const GOODS_LEAD_CUES: ReadonlySet<string> = new Set(
+  ["نو", "کارکرده", "سالم", "تمیز", "اصلی", "آکبند", "درحد", "فروش"].map((w) =>
+    normalizeForMatch(w)
+  )
+);
+
+function clauseIsGoodsOffer(clause: string): boolean {
+  if (/[0-9۰-۹]/.test(clause)) return true; // price / model number
+  const toks = normalizeForMatch(clause).split(" ").filter(Boolean);
+  // R8c: a cue followed by negation («سالم نیست») is not a goods signal.
+  const NEG = new Set(["نیست", "نه", "بدون"].map((w) => normalizeForMatch(w)));
+  return toks.some(
+    (t, i) => GOODS_LEAD_CUES.has(t) && !NEG.has(toks[i + 1] ?? "")
+  );
+}
+
+/**
  * R6 (2026-10-17) — demand-hunt vs goods-ad: on a service-DEMAND hunt
  * («نصاب کولر گازی می‌خوام»), an ad whose leading phrase names the
  * PRODUCT («کولرگازی اصلی … (نصب امروز)») is a goods ad borrowing a
@@ -1279,19 +1303,18 @@ export function assessDemandGoods(
       .filter(Boolean)
       .some((t) => SERVICE_SUBJECT_VOCAB.has(t));
   const leadIsService = clauseHasService(clauses[0]);
-  const borrowedService = clauses.some(clauseHasService);
-  return !leadIsService && borrowedService;
+  const leadIsGoods = clauseIsGoodsOffer(clauses[0]);
+  // Pure installer lead: service words, no goods offer → clean.
+  if (leadIsService && !leadIsGoods) return false;
+  const borrowedService = clauses.slice(1).some(clauseHasService);
+  if (clauses.length > 1) {
+    // Multi-clause: goods-led lead + service borrowed later → goods ad.
+    return leadIsGoods && borrowedService;
+  }
+  // Single clause mixing goods signals with service words («کولر گازی
+  // ۱۸۰۰۰ - نصب») is a shop borrowing service, not an installer.
+  return leadIsGoods && leadIsService;
 }
-
-/**
- * R8b: descriptors allowed between head and modifier in the bait check
- * («پراید سالم ۱۳۱»). Honest coverage — small, slow-changing, labeled.
- */
-const BAIT_DESCRIPTOR_SKIP: ReadonlySet<string> = new Set(
-  ["سالم", "تمیز", "نو", "کارکرده", "درحد", "صفر"].map((w) =>
-    normalizeForMatch(w)
-  )
-);
 
 /**
  * R6 (2026-10-17) — bait titles: the title claims the full multi-token
@@ -1325,8 +1348,20 @@ export function assessBaitTitle(
   // (["موتور سیکلت","هوندا"]) the old code compared the description
   // against «هوندا» and hard-rejected perfect ads («موتور سیکلت ۱۲۵ مدل
   // ۹۵» for «موتور سیکلت هوندا»).
-  const phraseSource = queryText ?? includeTerms.join(" ");
-  const phraseTokens = normalizeForMatch(phraseSource).split(" ").filter(Boolean);
+  // R8c (double-check R8b R-C): city/noise words («تهران») live in the
+  // query text but not in the hunt definition — filter the query tokens
+  // to defined terms so the head stays on the item. Chip order still
+  // can't break it (query order wins, include membership filters).
+  const includeTokenSet = new Set(
+    includeTerms.flatMap((t) => normalizeForMatch(t).split(" ").filter(Boolean))
+  );
+  const phraseTokens =
+    queryText !== undefined
+      ? normalizeForMatch(queryText)
+          .split(" ")
+          .filter(Boolean)
+          .filter((t) => includeTokenSet.has(t))
+      : [...includeTokenSet];
   const head = phraseTokens[0] ?? "";
   const expectedMod = phraseTokens[1] ?? "";
   if (head === "" || expectedMod === "") return false;
@@ -1344,15 +1379,15 @@ export function assessBaitTitle(
   if (hi < 0 || hi + 1 >= dTokens.length) return false;
   const mod = dTokens[hi + 1];
   if (mod === expectedMod) return false;
-  // R8b (double-check R4): the one-descriptor window («پراید سالم ۱۳۱»
-  // names the same car) must NOT shield a stuffed bait («موتور برق
-  // سیکلت»). The intervening token has to be a known descriptor — honest
-  // coverage, a small slow-changing set — otherwise a product word at
-  // hi+1 still fires.
-  if (
-    dTokens[hi + 2] === expectedMod &&
-    BAIT_DESCRIPTOR_SKIP.has(dTokens[hi + 1])
-  )
+  // R8c (double-check R8b R-A/R-B): the hi+2 window is gated on the
+  // expected modifier being MODEL-LIKE (contains a digit — Latin or
+  // Persian). A model number («۱۳۱») after any descriptor («سالم»،
+  // «فول»، «اتومات» — no list needed, no whack-a-mole) confirms the
+  // description is about the same item. A WORD there («سیکلت») could be
+  // a different product → still bait. This also closes the padding
+  // loophole («موتور سالم سیکلت برق»): the shield only ever applied to
+  // model numbers.
+  if (dTokens[hi + 2] === expectedMod && /[0-9۰-۹]/.test(expectedMod))
     return false;
   // R8 (F3): a description token that is itself a query token is
   // CONFIRMATION, not bait («پراید ۹۸ سالم» for «پراید ۱۳۱ مدل ۹۸» —

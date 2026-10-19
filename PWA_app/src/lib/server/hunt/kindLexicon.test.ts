@@ -70,6 +70,11 @@ describe("kindLexicon — R7 subject-kind gate (DeepSeek P1)", () => {
     expect(v?.tier).toBe("demote");
   });
 
+  it("R8c: «خدمات پس از فروش» is a goods phrase, not a service head (R-E)", () => {
+    expect(adKindForTitle("خدمات پس از فروش یخچال سامسونگ")).toBeNull();
+    expect(adKindForTitle("خدمات باطری ماشین")).toBe("service");
+  });
+
   it("R8 F4b: ماشین/موتور + unknown modifier → null, bare → vehicle", () => {
     expect(adKindForTitle("ماشین جوجه کشی")).toBeNull();
     expect(adKindForTitle("موتور برق")).toBeNull();

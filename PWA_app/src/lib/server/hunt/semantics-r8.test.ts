@@ -72,17 +72,49 @@ describe("R8 — F3 bait rule (phrase head/mod + query-token guard)", () => {
       assessBaitTitle("پراید ۱۳۱ مدل ۹۸", "پراید ۹۸ سالم", ["پراید", "۱۳۱", "مدل", "۹۸"])
     ).toBe(false);
   });
-  it("descriptor between head and modifier is not bait", () => {
+  it("R8c: model number after any descriptor is not bait (digit gate)", () => {
+    // No allowlist — ANY descriptor before a model NUMBER shields, because
+    // the number confirms same-item. فول/اتومات would have died on a list.
     expect(
       assessBaitTitle("پراید ۱۳۱ مدل ۹۸", "پراید سالم ۱۳۱", ["پراید", "۱۳۱", "مدل", "۹۸"])
     ).toBe(false);
+    expect(
+      assessBaitTitle("پراید ۱۳۱ مدل ۹۸", "پراید فول ۱۳۱", ["پراید", "۱۳۱", "مدل", "۹۸"])
+    ).toBe(false);
+    expect(
+      assessBaitTitle("پراید ۱۳۱ مدل ۹۸", "پراید اتومات ۱۳۱", ["پراید", "۱۳۱", "مدل", "۹۸"])
+    ).toBe(false);
   });
-  it("genuine bait still fires (rule not neutered)", () => {
+  it("R8c: word (non-model) at hi+2 is still bait — incl. padding", () => {
     expect(
-      assessBaitTitle("موتور سیکلت", "موتور برق ۳/۵ کیلووات", ["موتور", "سیکلت"])
+      assessBaitTitle(
+        "موتور سیکلت هوندا",
+        "موتور برق سیکلت",
+        ["موتور", "سیکلت", "هوندا"],
+        "موتور سیکلت هوندا"
+      )
     ).toBe(true);
+    // Padding loophole closed: a descriptor before a WORD modifier
+    // doesn't shield («موتور سالم سیکلت برق»).
     expect(
-      assessBaitTitle("موتور سیکلت", "موتور سالم برق ۳ کیلووات", ["موتور", "سیکلت"])
+      assessBaitTitle(
+        "موتور سیکلت هوندا",
+        "موتور سالم سیکلت برق ۳ کیلووات",
+        ["موتور", "سیکلت", "هوندا"],
+        "موتور سیکلت هوندا"
+      )
+    ).toBe(true);
+  });
+  it("R8c: city-first query keeps head on the item (R-C)", () => {
+    // query «تهران موتور سیکلت»: تهران is not in the hunt definition,
+    // so the head is موتور, not تهران.
+    expect(
+      assessBaitTitle(
+        "موتور سیکلت",
+        "موتور برق ۳ کیلووات",
+        ["موتور", "سیکلت"],
+        "تهران موتور سیکلت"
+      )
     ).toBe(true);
   });
   it("R8b: head/mod from query text — chip order can't break it", () => {
@@ -96,21 +128,13 @@ describe("R8 — F3 bait rule (phrase head/mod + query-token guard)", () => {
       )
     ).toBe(true);
   });
-  it("R8b: stuffed bait escapes no more (descriptor-gated window)", () => {
-    // 3-term shape: the description misses هوندا (guard passes), stuffs
-    // سیکلت at hi+2 behind برق. برق is not a descriptor → still bait.
+  it("genuine bait still fires (rule not neutered)", () => {
     expect(
-      assessBaitTitle(
-        "موتور سیکلت هوندا",
-        "موتور برق سیکلت",
-        ["موتور", "سیکلت", "هوندا"],
-        "موتور سیکلت هوندا"
-      )
+      assessBaitTitle("موتور سیکلت", "موتور برق ۳/۵ کیلووات", ["موتور", "سیکلت"])
     ).toBe(true);
-    // ...but a real descriptor still shields («پراید سالم ۱۳۱»).
     expect(
-      assessBaitTitle("پراید ۱۳۱ مدل ۹۸", "پراید سالم ۱۳۱", ["پراید", "۱۳۱", "مدل", "۹۸"])
-    ).toBe(false);
+      assessBaitTitle("موتور سیکلت", "موتور سالم برق ۳ کیلووات", ["موتور", "سیکلت"])
+    ).toBe(true);
   });
 });
 
@@ -127,6 +151,16 @@ describe("R8 — F5 clause-based demand-goods rule", () => {
   it("R8b: dash/pipe are title separators, not clause boundaries (R2)", () => {
     expect(assessDemandGoods(inc, "کولر گازی - نصب و تعمیر")).toBe(false);
     expect(assessDemandGoods(inc, "کولر گازی | نصب و سرویس")).toBe(false);
+  });
+  it("R8c: lead must be positively goods-led (R-D)", () => {
+    // Shop ad: price in the lead + borrowed service → fires.
+    expect(assessDemandGoods(inc, "کولر گازی ۱۸۰۰۰ - نصب و تعمیر")).toBe(true);
+    // Installer: bare product name + service → clean.
+    expect(assessDemandGoods(inc, "کولر گازی - نصب و تعمیر")).toBe(false);
+    // Comma installer: no goods signal in the lead → clean.
+    expect(assessDemandGoods(inc, "کولر گازی، نصب و تعمیر")).toBe(false);
+    // Comma goods ad: price in the lead → fires.
+    expect(assessDemandGoods(inc, "کولر گازی ۱۸۰۰۰، نصب و تعمیر")).toBe(true);
   });
 });
 
