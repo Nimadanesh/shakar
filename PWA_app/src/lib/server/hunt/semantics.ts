@@ -1142,20 +1142,17 @@ export function assessModelSpecificity(
 
 /**
  * R8 (P5): entity-as-complement — «علف بادام زمینی» is about علف, not
- * بادام. When the query's entity appears in the title only AFTER a
- * different head noun, and that head is unknown to every lexicon, the ad
- * is about something else → reject (navid's symmetric derived rule:
- * associated/derived items are wrong items, both directions — never near).
+ * بادام.
  *
- * Conservative by construction:
- * - callers gate on would-be-exact (missingInfo empty), like the other
- *   wrong-item checks;
- * - a KNOWN head never fires this (kind gate / marker pass own it);
- * - shop/place heads («فروشگاه باطری سپاهان») are exempt — a shop selling
- *   the entity IS a source, not a wrong item (F4a's demote target);
- * - marker heads are exempt (the marker machinery owns them).
- * The SHOP set below is honest coverage, not intelligence — four words
- * with verified wounds behind them.
+ * DISABLED 2026-10-19 (R8b, double-check NO-GO): the predicate ("first
+ * token is not the entity and not in a small blacklist") fires on the most
+ * ordinary title shapes — brand-first («سایپا پراید ۱۳۱»), financing
+ * («فروش اقساطی پراید»), delivery («تحویل فوری پراید»), service heads
+ * («خدمات فنی کولر گازی»). "Conservative by construction" was false;
+ * distinguishing a brand prefix from a product head needs world knowledge
+ * the open-class law forbids enumerating. Kept (not deleted) as the
+ * documented starting point for a positive-signal redesign — do NOT
+ * re-wire without one.
  */
 const SHOP_PLACE_WORDS: ReadonlySet<string> = new Set(
   ["فروشگاه", "مغازه", "نمایندگی", "بنکدار"].map((w) => normalizeForMatch(w))
@@ -1267,8 +1264,12 @@ export function assessDemandGoods(
   // service word: «خدمات فنی کولر گازی نصب و سرویس»); a goods ad BORROWS
   // a service word in a LATER clause («کولرگازی اصلی … (نصب امروز)»).
   // Fire only on the borrowed-word structure.
+  // R8b (double-check R2): dash/pipe/slash are TITLE separators, not
+  // clause boundaries — «کولر گازی - نصب و تعمیر» is how installers write
+  // titles. Splitting on them false-positived genuine service ads. Only
+  // parentheses/brackets and sentence punctuation split.
   const clauses = listingText
-    .split(/[.,،؛:!؟?()«»\[\]{}<>|\/\-–—_+=*~@#$%^&`]+/)
+    .split(/[.,،؛:!؟?()«»\[\]{}]+/)
     .map((c) => c.trim())
     .filter((c) => c !== "");
   if (clauses.length === 0) return false;
@@ -1281,6 +1282,16 @@ export function assessDemandGoods(
   const borrowedService = clauses.some(clauseHasService);
   return !leadIsService && borrowedService;
 }
+
+/**
+ * R8b: descriptors allowed between head and modifier in the bait check
+ * («پراید سالم ۱۳۱»). Honest coverage — small, slow-changing, labeled.
+ */
+const BAIT_DESCRIPTOR_SKIP: ReadonlySet<string> = new Set(
+  ["سالم", "تمیز", "نو", "کارکرده", "درحد", "صفر"].map((w) =>
+    normalizeForMatch(w)
+  )
+);
 
 /**
  * R6 (2026-10-17) — bait titles: the title claims the full multi-token
@@ -1296,7 +1307,14 @@ export function assessDemandGoods(
 export function assessBaitTitle(
   title: string,
   description: string,
-  includeTerms: readonly string[]
+  includeTerms: readonly string[],
+  /**
+   * R8b (double-check chip-order leak): the raw query TEXT, whose token
+   * order is stable. include order is caller-dependent (chips prepend),
+   * so deriving head/mod from include[0]/include[1] breaks when a chip
+   * like «هوندا» lands first. When omitted, falls back to include order.
+   */
+  queryText?: string
 ): boolean {
   if (includeTerms.length < 2 || description.trim() === "") return false;
   const titleTerms = includeTerms.filter((t) => textMatches(title, t));
@@ -1307,9 +1325,8 @@ export function assessBaitTitle(
   // (["موتور سیکلت","هوندا"]) the old code compared the description
   // against «هوندا» and hard-rejected perfect ads («موتور سیکلت ۱۲۵ مدل
   // ۹۵» for «موتور سیکلت هوندا»).
-  const phraseTokens = includeTerms.flatMap((t) =>
-    normalizeForMatch(t).split(" ").filter(Boolean)
-  );
+  const phraseSource = queryText ?? includeTerms.join(" ");
+  const phraseTokens = normalizeForMatch(phraseSource).split(" ").filter(Boolean);
   const head = phraseTokens[0] ?? "";
   const expectedMod = phraseTokens[1] ?? "";
   if (head === "" || expectedMod === "") return false;
@@ -1327,11 +1344,16 @@ export function assessBaitTitle(
   if (hi < 0 || hi + 1 >= dTokens.length) return false;
   const mod = dTokens[hi + 1];
   if (mod === expectedMod) return false;
-  // R8 (F3b): allow ONE descriptor between head and modifier («پراید سالم
-  // ۱۳۱» names the same car — the description confirms, not baits). The
-  // window is deliberately bounded at hi+2: a second product word still
-  // fires («موتور سالم برق» for «موتور سیکلت» → bait).
-  if (dTokens[hi + 2] === expectedMod) return false;
+  // R8b (double-check R4): the one-descriptor window («پراید سالم ۱۳۱»
+  // names the same car) must NOT shield a stuffed bait («موتور برق
+  // سیکلت»). The intervening token has to be a known descriptor — honest
+  // coverage, a small slow-changing set — otherwise a product word at
+  // hi+1 still fires.
+  if (
+    dTokens[hi + 2] === expectedMod &&
+    BAIT_DESCRIPTOR_SKIP.has(dTokens[hi + 1])
+  )
+    return false;
   // R8 (F3): a description token that is itself a query token is
   // CONFIRMATION, not bait («پراید ۹۸ سالم» for «پراید ۱۳۱ مدل ۹۸» —
   // year-as-shorthand, same car). Bait needs a word OUTSIDE the query

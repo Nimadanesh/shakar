@@ -102,6 +102,12 @@ export const HEAD_KIND: Record<string, string> = {
   "نصب": "service",
   "سرویس": "service",
   "امداد": "service",
+  // R8b (double-check F4a gap): «خدمات» is the most common service head
+  // («خدمات باطری ماشین») — without it the ad kind is null and the F4a
+  // demote never applies. 3-reader check: as ad head → service ✓; as
+  // query subject → service hunt ✓; as marker guard → no marker named
+  // خدمات, no-op ✓.
+  "خدمات": "service",
   "آموزش": "training",
   "اموزش": "training", // observed spelling in the wild
   "آموزشگاه": "training",

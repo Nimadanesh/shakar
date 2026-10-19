@@ -85,6 +85,33 @@ describe("R8 — F3 bait rule (phrase head/mod + query-token guard)", () => {
       assessBaitTitle("موتور سیکلت", "موتور سالم برق ۳ کیلووات", ["موتور", "سیکلت"])
     ).toBe(true);
   });
+  it("R8b: head/mod from query text — chip order can't break it", () => {
+    // include ["هوندا","موتور","سیکلت"] (chip prepended) with query text:
+    expect(
+      assessBaitTitle(
+        "موتور سیکلت هوندا",
+        "موتور برق ۳/۵ کیلووات بنزینی",
+        ["هوندا", "موتور", "سیکلت"],
+        "موتور سیکلت هوندا"
+      )
+    ).toBe(true);
+  });
+  it("R8b: stuffed bait escapes no more (descriptor-gated window)", () => {
+    // 3-term shape: the description misses هوندا (guard passes), stuffs
+    // سیکلت at hi+2 behind برق. برق is not a descriptor → still bait.
+    expect(
+      assessBaitTitle(
+        "موتور سیکلت هوندا",
+        "موتور برق سیکلت",
+        ["موتور", "سیکلت", "هوندا"],
+        "موتور سیکلت هوندا"
+      )
+    ).toBe(true);
+    // ...but a real descriptor still shields («پراید سالم ۱۳۱»).
+    expect(
+      assessBaitTitle("پراید ۱۳۱ مدل ۹۸", "پراید سالم ۱۳۱", ["پراید", "۱۳۱", "مدل", "۹۸"])
+    ).toBe(false);
+  });
 });
 
 describe("R8 — F5 clause-based demand-goods rule", () => {
@@ -96,6 +123,10 @@ describe("R8 — F5 clause-based demand-goods rule", () => {
     expect(assessDemandGoods(inc, "خدمات فنی کولر گازی نصب و سرویس تعمیرات")).toBe(false);
     expect(assessDemandGoods(inc, "کانال کولر سازی و نصب و تعمیر کولر گازی")).toBe(false);
     expect(assessDemandGoods(inc, "نصب و تعمیر کولر گازی")).toBe(false);
+  });
+  it("R8b: dash/pipe are title separators, not clause boundaries (R2)", () => {
+    expect(assessDemandGoods(inc, "کولر گازی - نصب و تعمیر")).toBe(false);
+    expect(assessDemandGoods(inc, "کولر گازی | نصب و سرویس")).toBe(false);
   });
 });
 
@@ -110,7 +141,7 @@ describe("R8 — F6 absence polarity (دارد/ندارد)", () => {
   });
 });
 
-describe("R8 — P5 entity-as-complement", () => {
+describe.skip("R8 — P5 entity-as-complement (DISABLED 2026-10-19, R8b — see semantics.ts)", () => {
   it("associated entity as complement → reject", () => {
     expect(assessEntityComplement(["بادام", "زمینی"], "علف بادام زمینی").mismatch).toBe(true);
     expect(assessEntityComplement(["ماشین"], "سیستم ماشین").mismatch).toBe(true);

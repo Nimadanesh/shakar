@@ -64,6 +64,12 @@ describe("kindLexicon — R7 subject-kind gate (DeepSeek P1)", () => {
     expect(kindGateRejects("service", "service")).toBeNull();
   });
 
+  it("R8b: خدمات is the most common service head (F4a gap)", () => {
+    expect(adKindForTitle("خدمات باطری ماشین")).toBe("service");
+    const v = kindGateRejects("vehicle-part", "service");
+    expect(v?.tier).toBe("demote");
+  });
+
   it("R8 F4b: ماشین/موتور + unknown modifier → null, bare → vehicle", () => {
     expect(adKindForTitle("ماشین جوجه کشی")).toBeNull();
     expect(adKindForTitle("موتور برق")).toBeNull();

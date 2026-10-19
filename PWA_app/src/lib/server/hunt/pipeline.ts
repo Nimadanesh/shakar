@@ -16,7 +16,6 @@ import {
   assessAbsencePolarity,
   assessBaitTitle,
   assessDemandGoods,
-  assessEntityComplement,
   assessListingRole,
   assessModelSpecificity,
   assessQueryIntent,
@@ -719,7 +718,7 @@ function evaluateDescription(
   // its kind for the «گزارش شکار» market report.
   if (missingInfo.length === 0) {
     const cap = semanticCapFires(def, combined);
-    const bait = assessBaitTitle(title, description, def.include);
+    const bait = assessBaitTitle(title, description, def.include, def.query);
     const demandGoods =
       (def.serviceIntent ?? false) &&
       assessDemandGoods(def.include, combined);
@@ -739,14 +738,11 @@ function evaluateDescription(
     );
     const kindReject = kindVerdict?.tier === "reject" ? kindVerdict.reason : null;
     const kindDemote = kindVerdict?.tier === "demote" ? kindVerdict.reason : null;
-    // R8 (P5): entity-as-complement — the title is about a different head.
-    const complement = assessEntityComplement(def.include, title);
     const wrongKind =
       cap.wrongItemKind ??
       kindReject ??
       (bait ? "bait:title-desc-mismatch" : null) ??
-      (demandGoods ? "demand-goods:product-ad" : null) ??
-      (complement.mismatch ? complement.reason : null);
+      (demandGoods ? "demand-goods:product-ad" : null);
     if (wrongKind) {
       return {
         ...rejectedEvaluation(),

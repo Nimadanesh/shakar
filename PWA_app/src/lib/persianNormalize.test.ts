@@ -44,6 +44,11 @@ describe("unifyChars", () => {
     // classifieds, and the battery wound is worth more. Revisit only if a
     // real wound appears; do not extend folding without a new audit.
     expect(unifyChars("طور")).toBe(unifyChars("تور"));
+    // R8b (double-check R5): شرط (condition) / شرت (shirt) DO merge —
+    // accepted and recorded: clothing hunts are rare in this engine's
+    // domain, and un-merging needs context the normalizer doesn't have.
+    // If a clothing hunt enters the validation set, revisit.
+    expect(unifyChars("شرط")).toBe(unifyChars("شرت"));
   });
 });
 
