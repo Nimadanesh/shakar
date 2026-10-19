@@ -1,12 +1,14 @@
 /**
  * Mizan adjudication — the decision-model judge for uncertain ads.
  *
- * The deterministic engine decides fast on clear cases. When it produces
- * a "near" verdict (uncertain), Mizan adjudicates BEFORE the expensive
- * detail fetch:
- *   - Choice: "What is this ad?" → wrong-item → REJECT (skip getDetail)
- *   - Noul: "Does this violate the hunt's constraint?" → violates → REJECT
- *   - Low confidence → deterministic stands (current behavior)
+ * Design v2 (after DeepSeek red-team 2026-10-19):
+ * - Hook at B: inside confirmCandidates, AFTER evaluateDescription (post-detail).
+ *   Title-phase hooking would reintroduce flaw #12 (pipeline law).
+ * - Choice (item-kind) is ADVISORY ONLY — it may influence ranking, never membership.
+ *   Choice answers item-kind; the battery grades hunt-fit (different label spaces).
+ * - Noul (violation) is the SOLE rejection channel, and only with corroboration:
+ *   deterministic conflicting signal + conf >= 0.80.
+ * - Shadow mode first: judge, log, apply nothing.
  *
  * Mizan runs locally via llama-server (/v1/systemone, Jev-compatible).
  * If unavailable, all adjudication is skipped — the engine degrades to
@@ -114,14 +116,20 @@ function toItemKind(label: string | undefined): ItemKind | null {
 }
 
 /**
- * Adjudicate an uncertain ad title.
+ * Adjudicate an uncertain ad (design v2: called post-detail at hook B).
  * @param title ad title (Persian)
+ * @param description ad description (Persian) — for Noul (title+description)
  * @param huntKind kind of the hunt (e.g. "vehicle", from queryKindForDef)
  * @param constraintFa Persian description of the hunt's constraint, if any
  *        (e.g. "ماشین نباید تصادف کرده باشد"). Null = no Noul question.
+ *
+ * Returns both judgments:
+ * - Choice (itemKind): ADVISORY ONLY — for ranking, never for rejection.
+ * - Noul (violates): the rejection channel — requires corroboration by caller.
  */
-export async function adjudicateTitle(
+export async function adjudicateAd(
   title: string,
+  description: string,
   huntKind: string,
   constraintFa: string | null
 ): Promise<MizanJudgment> {
@@ -142,16 +150,20 @@ export async function adjudicateTitle(
     },
   };
   if (constraintFa) {
+    // Noul gets title+description (design v2: descriptions catch what titles hide)
     questions["violates"] = {
       type: "noul",
-      instructions: `شکار: «${constraintFa}». آیا این آگهی نشان می‌دهد که قید شکار نقض شده است؟`,
+      instructions: `شکار: «${constraintFa}». با توجه به عنوان و توضیح آگهی، آیا این آگهی نشان می‌دهد که قید شکار نقض شده است؟`,
     };
   }
 
-  const res = await callMizan(title, questions);
-  if (!res) return nope;
+  // Choice on title only; Noul on title+description (split-input finding)
+  const choiceRes = await callMizan(title, { item_kind: questions["item_kind"] });
+  const noulRes = constraintFa
+    ? await callMizan(`${title}\n${description}`, { violates: questions["violates"] })
+    : null;
 
-  const itemAns = res.answers["item_kind"];
+  const itemAns = choiceRes?.answers["item_kind"];
   const itemKind = toItemKind(
     itemAns && "choice" in itemAns ? itemAns.choice ?? itemAns.value : undefined
   );
@@ -160,8 +172,8 @@ export async function adjudicateTitle(
 
   let violates: boolean | null = null;
   let violateProbability = 0;
-  if (constraintFa) {
-    const vAns = res.answers["violates"];
+  if (constraintFa && noulRes) {
+    const vAns = noulRes.answers["violates"];
     if (vAns && "noul" in vAns) {
       violateProbability = vAns.noul ?? vAns.probability ?? 0;
       violates = violateProbability >= 0.5;
@@ -169,6 +181,8 @@ export async function adjudicateTitle(
   }
 
   // Actionable only on high confidence (pilot: all errors were < 0.6)
+  // NOTE (design v2): "actionable" does NOT mean "reject" — Choice is advisory.
+  // Only Noul with corroboration may reject (see mizanSaysReject).
   const actionable =
     itemConfidence >= MIZAN_ACT_THRESHOLD ||
     violateProbability >= MIZAN_ACT_THRESHOLD;
@@ -177,29 +191,40 @@ export async function adjudicateTitle(
 }
 
 /**
+ * @deprecated Use adjudicateAd (design v2). Kept for backward compat.
+ */
+export async function adjudicateTitle(
+  title: string,
+  huntKind: string,
+  constraintFa: string | null
+): Promise<MizanJudgment> {
+  return adjudicateAd(title, "", huntKind, constraintFa);
+}
+
+/**
  * Should this "near" ad be rejected based on Mizan's judgment?
- * Wrong-item (part/accessory/derived/service when hunting whole) → reject.
- * Constraint violation → reject.
+ *
+ * Design v2 (F6): Choice NEVER gates membership — it answers item-kind,
+ * but the battery grades hunt-fit (different label spaces). The «ماشین تیبا»
+ * case (0.90 correct kind, still wrong for hunt) proves this.
+ *
+ * ONLY Noul (constraint violation) may reject, and ONLY with corroboration:
+ * - judgment.violates === true with violateProbability >= 0.80, AND
+ * - hasDeterministicConflict === true (caller must provide: kindGateRejects
+ *   fired, or a violation cue found in text by deterministic rules)
+ *
+ * Doubt = keep. The model alone must never remove a candidate.
  */
 export function mizanSaysReject(
   judgment: MizanJudgment,
-  huntingWhole: boolean
+  hasDeterministicConflict: boolean
 ): { reject: boolean; reason: string | null } {
   if (!judgment.actionable) return { reject: false, reason: null };
-  if (
-    huntingWhole &&
-    judgment.itemKind &&
-    ["part", "accessory", "derived", "service"].includes(judgment.itemKind) &&
-    judgment.itemConfidence >= MIZAN_ACT_THRESHOLD
-  ) {
-    return {
-      reject: true,
-      reason: `mizan:wrong-item:${judgment.itemKind}`,
-    };
-  }
+  // Choice is advisory only — never rejects (design v2, F6).
   if (
     judgment.violates === true &&
-    judgment.violateProbability >= MIZAN_ACT_THRESHOLD
+    judgment.violateProbability >= MIZAN_ACT_THRESHOLD &&
+    hasDeterministicConflict
   ) {
     return { reject: true, reason: "mizan:constraint-violated" };
   }

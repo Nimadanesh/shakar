@@ -33,6 +33,7 @@ import {
   queryKindForDef,
   targetKindForDef,
 } from "./kindLexicon";
+import { adjudicateAd, type MizanJudgment } from "./mizan";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -214,6 +215,19 @@ export interface HuntStats {
    * The grading packet renders them for parallel grading.
    */
   rejectedSample: Array<{ title: string; kind: string; price: number | null }>;
+  /**
+   * R9 (2026-10-19): Mizan shadow-mode judgments. When the deterministic
+   * engine produces "near", Mizan adjudicates in shadow mode: judge, log,
+   * apply nothing. This measures agreement + latency before Mizan is
+   * allowed to influence results. Each entry: the ad, Mizan's judgment,
+   * and what the deterministic engine decided.
+   */
+  mizanShadow: Array<{
+    title: string;
+    judgment: MizanJudgment;
+    deterministicVerdict: "near" | "exact";
+    latencyMs: number;
+  }>;
 }
 
 export type HuntEvent =
@@ -892,6 +906,7 @@ export async function collectCandidates(
     nearMiss: 0,
     rejectedNoMatch: 0,
     rejectedSample: [],
+    mizanShadow: [],
   };
 
   emit({ type: "started", query: def.query });
@@ -1032,6 +1047,25 @@ export async function confirmCandidates(
   const results: ScoredAd[] = [];
   const confirmed: ScoredAd[] = [];
 
+  // R9 (design v2): Mizan shadow-mode queue. Collect "near" candidates
+  // (post-detail, hook B) for offline adjudication. Shadow mode: judge,
+  // log, apply nothing — measures agreement + latency before Mizan
+  // influences results.
+  const mizanQueue: Array<{
+    title: string;
+    description: string;
+    deterministicVerdict: "near" | "exact";
+  }> = [];
+  const MIZAN_SHADOW_CAP = 12; // design v2: rank-gated, capped
+  const huntKind =
+    queryKindForDef(def.include, def.serviceIntent ?? false, def.category ?? "") ??
+    "general";
+  // Build Noul constraint from absentAttributes (e.g. "بدون رنگ" hunts)
+  const constraintFa =
+    def.absentAttributes && def.absentAttributes.length > 0
+      ? `این آگهی نباید این ویژگی‌ها را داشته باشد: ${def.absentAttributes.join("، ")}`
+      : null;
+
   for (let i = 0; i < toCheck.length; i += DETAIL_BATCH) {
     const batch = toCheck.slice(i, i + DETAIL_BATCH);
     const batchConfirmed: ScoredAd[] = [];
@@ -1077,6 +1111,21 @@ export async function confirmCandidates(
         continue;
       }
       if (ev.verdict === "near") stats.nearMiss += 1;
+      // R9 shadow mode: queue "near" candidates for Mizan adjudication.
+      // Hook B: post-detail, only non-unknown details, capped.
+      // (Design v2: Choice is advisory; Noul needs corroboration.
+      //  Shadow mode judges and logs but applies nothing.)
+      if (
+        ev.verdict === "near" &&
+        !detailUnknown &&
+        mizanQueue.length < MIZAN_SHADOW_CAP
+      ) {
+        mizanQueue.push({
+          title: c.title,
+          description,
+          deterministicVerdict: "near",
+        });
+      }
       const { score, breakdown } = scoreAd(ev, mustCount, shouldCount, c.price);
       const ad: ScoredAd = {
         sourceAdId: c.sourceAdId,
@@ -1108,6 +1157,52 @@ export async function confirmCandidates(
       total: toCheck.length,
       confirmed: batchConfirmed,
     });
+  }
+
+  // ---- R9: Mizan shadow mode (design v2) ----------------------------------
+  // Judge the queued "near" candidates, log judgments, apply NOTHING.
+  // This measures: (1) Mizan-deterministic agreement, (2) per-call latency,
+  // (3) how many "near" ads Mizan would flag. Results go to stats.mizanShadow
+  // for the battery harness to analyze. The deterministic results above
+  // are UNCHANGED — shadow mode never modifies them.
+  //
+  // SKIP in test environment: no Mizan server in vitest, and the 30s
+  // fetch timeout would make tests hang. Production/dev only.
+  const isTestEnv =
+    process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+  if (mizanQueue.length > 0 && !isTestEnv) {
+    for (const q of mizanQueue) {
+      const t0 = Date.now();
+      try {
+        const judgment = await adjudicateAd(
+          q.title,
+          q.description,
+          huntKind,
+          constraintFa
+        );
+        stats.mizanShadow.push({
+          title: q.title,
+          judgment,
+          deterministicVerdict: q.deterministicVerdict,
+          latencyMs: Date.now() - t0,
+        });
+      } catch {
+        // Shadow mode must never break the hunt. Log the failure as a
+        // non-actionable judgment and continue.
+        stats.mizanShadow.push({
+          title: q.title,
+          judgment: {
+            itemKind: null,
+            itemConfidence: 0,
+            violates: null,
+            violateProbability: 0,
+            actionable: false,
+          },
+          deterministicVerdict: q.deterministicVerdict,
+          latencyMs: Date.now() - t0,
+        });
+      }
+    }
   }
 
   // ---- Phase 5: ranking ----------------------------------------------------

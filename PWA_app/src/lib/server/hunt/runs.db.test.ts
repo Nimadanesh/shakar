@@ -368,6 +368,7 @@ describe("event log", () => {  it("persists and replays events in id order, with
         detailsChecked: 0, confirmed: 0, stale: false, nearMiss: 0,
         rejectedNoMatch: 0,
         rejectedSample: [],
+        mizanShadow: [],
       },
     });
     const all = await readRunEvents(run.id, 0);
