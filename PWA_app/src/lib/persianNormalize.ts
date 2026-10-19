@@ -30,6 +30,16 @@ export function unifyChars(text: string): string {
       .replace(/آ/g, "ا")
       .replace(/ؤ/g, "و")
       .replace(/ئ/g, "ی")
+      // R8 (2026-10-19, red-team F1): ط/ت are the same phoneme and the wild
+      // mixes them freely («باطری»/«باتری» — verified: the marker guard
+      // compared surface tokens and a BATTERY ad was rejected from a
+      // BATTERY hunt). Folded HERE at the choke point so every membership
+      // test (textMatches, marker guards, kind lexicon) heals at once —
+      // never patched per-callsite.
+      // DELIBERATELY NOT folded: ا/و (بادام/بادوم — distinct phonemes; the
+      // peanut family has dedicated machinery), س/ص، ز/ذ/ض/ظ، ح/ه، ع/ا، غ/ق
+      // (no verified wound; each needs its own collision audit).
+      .replace(/ط/g, "ت")
       // Arabic diacritics (fatha..sukun) + superscript alef
       .replace(/[ً-ْٰ]/g, "")
       // Tatweel (kashida)

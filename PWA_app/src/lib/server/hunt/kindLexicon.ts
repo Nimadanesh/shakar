@@ -13,9 +13,16 @@
  *
  * Methodology law (DeepSeek): closed grammatical/ontological classes may
  * be enumerated; open lexical classes may not, ever.
+ *
+ * R8 contract (2026-10-19): HEAD_KIND now serves THREE readers — the kind
+ * gate (kindGateRejects), the query-kind resolver (queryKindForDef), and
+ * the marker guard (assessModelSpecificity's kind-aware skip). A new entry
+ * must be true in ALL THREE senses: the word's kind as an ad head, as a
+ * query subject, and as a co-offered sibling. When in doubt, don't add —
+ * unknown no-ops everywhere (anti-overfilter law).
  */
 
-import { normalizeForMatch } from "@/lib/persianNormalize";
+import { normalizeForMatch, stemToken } from "@/lib/persianNormalize";
 
 /** Head-NP → kind. Longest match wins («ماشین لباسشویی» beats «ماشین»). */
 export const HEAD_KIND: Record<string, string> = {
@@ -46,6 +53,10 @@ export const HEAD_KIND: Record<string, string> = {
   "قاب": "mobile-accessory",
   "کاور": "mobile-accessory",
   "گلس": "mobile-accessory",
+  // R8 (F2): «گارد و قاب آیفون ۱۳» is a same-kind sibling, not a wrong
+  // item. The R6 rule survives: query kind mobile ≠ mobile-accessory, so
+  // «گارد آیفون ۱۳ پرو» on an «آیفون ۱۳ پرو» hunt still rejects.
+  "گارد": "mobile-accessory",
   // Appliances & home
   "یخچال": "appliance",
   "یخچال فریزر": "appliance",
@@ -94,6 +105,11 @@ export const HEAD_KIND: Record<string, string> = {
   "آموزش": "training",
   "اموزش": "training", // observed spelling in the wild
   "آموزشگاه": "training",
+  // R8 (F2): sibling markers need kinds for the kind-aware marker guard —
+  // «دوره»/«کلاس» co-offered on a training hunt («دوره آموزش تعمیرات
+  // موبایل») are the hunted item, not a wrong item.
+  "دوره": "training",
+  "کلاس": "training",
   // Real estate
   "آپارتمان": "realestate",
   "اپارتمان": "realestate", // observed spelling in the wild
@@ -114,6 +130,32 @@ export const HEAD_SKIP_TOKENS = new Set([
 ]);
 
 /**
+ * Fixpoint stemmer — stemming is NOT idempotent («لباسشویی»→«لباسشوی»→
+ * «لباسشو»), so a single stemToken pass can't bridge «لباسشوی» (ad) and
+ * «لباسشویی» (lexicon key).
+ */
+function stemFix(tok: string): string {
+  let t = tok;
+  for (let i = 0; i < 3; i++) {
+    const s = stemToken(t);
+    if (s === t) return t;
+    t = s;
+  }
+  return t;
+}
+
+/**
+ * HEAD_KIND keyed by fixpoint-stemmed tokens — FALLBACK ONLY (R8 F4c).
+ * Raw lookup always wins; this only rescues ی-dropped spellings
+ * («ماشین لباسشوی» → «ماشین لباسشویی»). First raw key wins on collision.
+ */
+const HEAD_KIND_STEMMED: Map<string, string> = new Map();
+for (const [key, kind] of Object.entries(HEAD_KIND)) {
+  const sk = key.split(" ").map(stemFix).join(" ");
+  if (!HEAD_KIND_STEMMED.has(sk)) HEAD_KIND_STEMMED.set(sk, kind);
+}
+
+/**
  * The ad's subject kind from its title: skip sale cues, then longest
  * head-NP match (2 tokens, then 1). Returns null when unknown — the gate
  * never fires on unknown (anti-overfilter law).
@@ -130,8 +172,21 @@ export function adKindForTitle(title: string): string | null {
   if (toks.length >= 2) {
     const two = `${toks[0]} ${toks[1]}`;
     if (HEAD_KIND[two] !== undefined) return HEAD_KIND[two];
+    // R8 (F4c): stemmed fallback BEFORE the generic-head rule — the raw
+    // lookup uses surface tokens while the pipeline stems («ماشین لباسشوی»
+    // must still find «ماشین لباسشویی»).
+    const twoStemmed = `${stemFix(toks[0])} ${stemFix(toks[1])}`;
+    const stemmedKind = HEAD_KIND_STEMMED.get(twoStemmed);
+    if (stemmedKind !== undefined) return stemmedKind;
+    // R8 (F4b): generic heads (ماشین/موتور) with an unknown modifier are
+    // UNKNOWN, not vehicle («ماشین جوجه کشی» is equipment, not a car).
+    // «ماشین»/«موتور» alone still resolve to vehicle below.
+    if (toks[0] === "ماشین" || toks[0] === "موتور") return null;
   }
   if (HEAD_KIND[toks[0]] !== undefined) return HEAD_KIND[toks[0]];
+  // R8 (F4c): single-token stemmed fallback.
+  const oneStemmed = HEAD_KIND_STEMMED.get(stemFix(toks[0]));
+  if (oneStemmed !== undefined) return oneStemmed;
   return null;
 }
 
@@ -141,9 +196,16 @@ function splitKind(kind: string): [string, string] {
   return [kind.slice(0, i), kind.slice(i + 1)];
 }
 
+/** The kind gate's verdict: reject (wrong item), demote (right area, wrong
+ *  role — capped to near, never shown as exact), or null (compatible). */
+export interface KindGateVerdict {
+  readonly tier: "reject" | "demote";
+  readonly reason: string;
+}
+
 /**
  * The kind gate (DeepSeek P1): does this ad's kind contradict the hunt's?
- * Returns a rejectedKind reason, or null when compatible.
+ * Returns a verdict, or null when compatible.
  *
  * - different domains («تابلو» vs a mobile-repair hunt) → reject;
  * - same domain, hunting the ITEM («ماشین») but the ad is a part /
@@ -155,6 +217,11 @@ function splitKind(kind: string): [string, string] {
  *   ad on a «تعمیر یخچال» hunt is demoted, not rejected); only truly
  *   unrelated kinds (compared against the TARGET) are rejected. This also
  *   covers word-order variants («یخچال تعمیر», R7-redteam P1).
+ * - R8 (F4a): a SERVICE ad on a GOODS hunt («امداد باطری ماشین» on a
+ *   battery hunt) is a ROLE difference, not a kind contradiction — DEMOTE,
+ *   never reject (S3's symmetric completion). Training ads keep the hard
+ *   line (F7). The demote tier exists because rolesClash can't see it:
+ *   «امداد» is role-unknown, so null would wrongly land on exact.
  * Unknown on either side → null (no gate, never over-filter).
  */
 export function kindGateRejects(
@@ -162,23 +229,27 @@ export function kindGateRejects(
   adKind: string | null,
   targetKind: string | null = null,
   serviceHunt: boolean = false
-): string | null {
+): KindGateVerdict | null {
   if (!queryKind || !adKind) return null;
   if (queryKind === adKind) return null;
   if (serviceHunt && targetKind) {
     if (adKind === "service" || adKind === targetKind) return null;
     const [tDom, tRole] = splitKind(targetKind);
     const [aDom, aRole] = splitKind(adKind);
-    if (aDom !== tDom) return `kind:domain:${adKind}-not-${targetKind}`;
-    if (aRole !== tRole) return `kind:role:${adKind}-not-${targetKind}`;
+    if (aDom !== tDom) return { tier: "reject", reason: `kind:domain:${adKind}-not-${targetKind}` };
+    if (aRole !== tRole) return { tier: "reject", reason: `kind:role:${adKind}-not-${targetKind}` };
     return null;
   }
   // S3: the service target's goods stay (demoted, not rejected).
   if (queryKind === "service" && targetKind && adKind === targetKind) return null;
+  // R8 (F4a): service ad on a goods hunt → demote, never reject.
+  if (adKind === "service") {
+    return { tier: "demote", reason: `kind:demote:service-not-${queryKind}` };
+  }
   const [qDom, qRole] = splitKind(queryKind);
   const [aDom, aRole] = splitKind(adKind);
-  if (qDom !== aDom) return `kind:domain:${adKind}-not-${queryKind}`;
-  if (qRole !== aRole) return `kind:role:${adKind}-not-${queryKind}`;
+  if (qDom !== aDom) return { tier: "reject", reason: `kind:domain:${adKind}-not-${queryKind}` };
+  if (qRole !== aRole) return { tier: "reject", reason: `kind:role:${adKind}-not-${queryKind}` };
   return null;
 }
 

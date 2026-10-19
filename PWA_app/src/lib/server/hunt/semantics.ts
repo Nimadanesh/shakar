@@ -6,7 +6,8 @@ import {
   stemToken,
   textMatches,
 } from "@/lib/persianNormalize";
-import { includesWord, isServiceDemandTerm, SERVICE_DEMAND_FAMILY } from "@/lib/interpret";
+import { includesWord, isServiceDemandTerm, SERVICE_DEMAND_FAMILY, ROLE_WORDS } from "@/lib/interpret";
+import { HEAD_KIND, HEAD_SKIP_TOKENS } from "./kindLexicon";
 
 /**
  * Phase-1 semantic assessments (deterministic, rule-based).
@@ -231,12 +232,21 @@ function assessAbsenceOneWord(
     new RegExp(`${w}(ات)?\\s+نشده`),
     new RegExp(`${w}نشده`),
     new RegExp(`${w}\\s+نکرده`),
+    // R8 (F6): explicit possession polarity — «وام ندارد» IS the absence
+    // claim for a «بدون وام» hunt, not unknown (a legitimate «وام ندارد»
+    // ad was capped to near forever).
+    new RegExp(`${w}\\s+ندارد`),
+    new RegExp(`${w}\\s+نداره`),
   ];
   const directRes: readonly RegExp[] = [
     new RegExp(`(\\d+|[۰-۹]+|یک|یه|دو|سه|چهار|پنج|شش|هفت|هشت|نه|ده|چند)\\s*(تیکه|تکه)\\s+${w}`),
     new RegExp(`${w}(ات)?${filler}\\s+شده`),
     new RegExp(`${w}شده`),
     new RegExp(`${w}\\s+کرده`),
+    // R8 (F6): «وام دارد» is present-direct counter-evidence — one positive
+    // existential defeats the «بدون وام» claim.
+    new RegExp(`${w}\\s+دارد`),
+    new RegExp(`${w}\\s+داره`),
   ];
   // 0. Negation-governed bodywork is not counter-evidence («بدون نیاز به
   // صافکاری», «بدون دور رنگ»); و-coordinated negations are distributed
@@ -490,7 +500,10 @@ export function assessListingRole(text: string): RoleAssessment {
   }
 
   // A confident product offer needs a sale cue and no competing role cue.
-  const sale = SALE_CUES.find((p) => norm.includes(p));
+  // R8 (P7): word-boundary match — the old substring test read «فروشگاه»
+  // (shop) as «فروش» (sale) and mislabeled shop ads as product offers,
+  // which made role-based demotion unreliable.
+  const sale = SALE_CUES.find((p) => includesWord(norm, p));
   if (sale) return { role: "product", reason: `sale-cue:"${sale}"` };
 
   return { role: "unknown", reason: "no-role-cue" };
@@ -762,7 +775,10 @@ export function assessServiceTarget(
  * «پراید» hunt (graded 1, not exact), while a «وانت پراید» hunt itself is
  * unaffected (marker ∈ query tokens → skipped).
  */
-const VARIANT_MARKERS = ["مکس", "اولترا", "الترا", "پلاس", "مینی", "لایت", "اف ای", "وانت"];
+const VARIANT_MARKERS = ["مکس", "اولترا", "الترا", "پلاس", "مینی", "لایت", "اف ای", "وانت",
+  // R8 (P6): glued variant spellings — «پرومکس» (not «پرو مکس») escaped the
+  // variant rule and a 13-Pro-Max case showed as exact for «قاب آیفون ۱۳».
+  "پرومکس"];
 
 /**
  * Accessory markers: the listing is for an ACCESSORY of the hunted item,
@@ -915,7 +931,15 @@ function stripEdgeDigits(tok: string): string {
 export function assessModelSpecificity(
   includeTerms: readonly string[],
   listingText: string,
-  category?: string
+  category?: string,
+  /**
+   * R8 (F2): the hunt's subject kind (from queryKindForDef). A marker whose
+   * kind equals the query's kind is a co-offered sibling («مایع و پودر»),
+   * not a wrong item — skipped in BOTH passes (phrase → reject and weak →
+   * near), otherwise the weak pass re-caps the same ad to near.
+   * Unknown/null → guard no-ops (anti-overfilter).
+   */
+  queryKind?: string | null
 ): { readonly mismatch: boolean; readonly reason: string; readonly tier: "reject" | "near" } {
   if (includeTerms.length === 0) return { mismatch: false, reason: "no-must-terms", tier: "near" };
   const listingNorm = normalizeForMatch(listingText);
@@ -1035,6 +1059,8 @@ export function assessModelSpecificity(
     for (const rawMarker of markers) {
       const marker = normalizeForMatch(rawMarker);
       if (marker === "" || queryTokens.has(marker)) continue;
+      // R8 (F2): kind-aware guard — same-kind sibling, not a wrong item.
+      if (queryKind != null && HEAD_KIND[marker] === queryKind) continue;
       if (phraseHas(marker)) {
         return {
           mismatch: true,
@@ -1075,6 +1101,13 @@ export function assessModelSpecificity(
     for (const rawMarker of markers) {
       const marker = normalizeForMatch(rawMarker);
       if (marker === "" || queryTokens.has(marker)) continue;
+      // R8 (F2): the guard must cover the weak pass too — otherwise a
+      // skipped sibling («مایع» at subject position) lands on near via
+      // positions.includes(subjectIdx) instead of the graded exact.
+      // Sibling VARIANTS are excluded from the guard: a same-kind variant
+      // («پراید وانت» — وانت is vehicle) is still a different model, and
+      // the honest verdict is near via the weak pass, never exact.
+      if (kind !== "sibling-variant" && queryKind != null && HEAD_KIND[marker] === queryKind) continue;
       const positions: number[] = [];
       listingTokens.forEach((tok, i) => {
         if (tok === marker) positions.push(i);
@@ -1105,6 +1138,83 @@ export function assessModelSpecificity(
     }
   }
   return { mismatch: false, reason: "no-extra-variant", tier: "near" };
+}
+
+/**
+ * R8 (P5): entity-as-complement — «علف بادام زمینی» is about علف, not
+ * بادام. When the query's entity appears in the title only AFTER a
+ * different head noun, and that head is unknown to every lexicon, the ad
+ * is about something else → reject (navid's symmetric derived rule:
+ * associated/derived items are wrong items, both directions — never near).
+ *
+ * Conservative by construction:
+ * - callers gate on would-be-exact (missingInfo empty), like the other
+ *   wrong-item checks;
+ * - a KNOWN head never fires this (kind gate / marker pass own it);
+ * - shop/place heads («فروشگاه باطری سپاهان») are exempt — a shop selling
+ *   the entity IS a source, not a wrong item (F4a's demote target);
+ * - marker heads are exempt (the marker machinery owns them).
+ * The SHOP set below is honest coverage, not intelligence — four words
+ * with verified wounds behind them.
+ */
+const SHOP_PLACE_WORDS: ReadonlySet<string> = new Set(
+  ["فروشگاه", "مغازه", "نمایندگی", "بنکدار"].map((w) => normalizeForMatch(w))
+);
+
+const ALL_MARKER_WORDS: ReadonlySet<string> = new Set(
+  [
+    ...VARIANT_MARKERS,
+    ...ACCESSORY_MARKERS,
+    ...PART_MARKERS,
+    ...PACKAGING_MARKERS,
+    ...EQUIPMENT_MARKERS,
+    ...CONSUMABLE_MARKERS,
+    ...TRAINING_MARKERS,
+    ...DERIVED_MARKERS,
+    ...SEEKER_MARKERS,
+  ].map((m) => normalizeForMatch(m))
+);
+
+/**
+ * Role-declaration heads («خریدار یخچال هستیم», «فروشنده یخچال») are speech
+ * acts, not product heads — the role machinery (assessListingRole /
+ * rolesClash) owns them. P5 must never fire on them: on a seek-buyer hunt
+ * the buyer ad is exactly what the hunter wants.
+ */
+const ROLE_HEAD_WORDS: ReadonlySet<string> = new Set(
+  ROLE_WORDS.map((w) => normalizeForMatch(w))
+);
+
+export function assessEntityComplement(
+  includeTerms: readonly string[],
+  title: string
+): { readonly mismatch: boolean; readonly reason: string } {
+  const no = { mismatch: false, reason: "no-complement" };
+  const toks = normalizeForMatch(title)
+    .split(" ")
+    .filter(Boolean)
+    .filter((t) => !HEAD_SKIP_TOKENS.has(t));
+  if (toks.length < 2) return no;
+  const queryToks = new Set(
+    includeTerms.flatMap((t) => normalizeForMatch(t).split(" ").filter(Boolean))
+  );
+  if (queryToks.size === 0) return no;
+  const head = toks[0];
+  // The title leads with the hunted item → not a complement.
+  if (queryToks.has(head)) return no;
+  // Known heads belong to their machinery — never this rule.
+  if (HEAD_KIND[head] !== undefined) return no;
+  if (SHOP_PLACE_WORDS.has(head)) return no;
+  if (ALL_MARKER_WORDS.has(head)) return no;
+  // Role declarations («خریدار…», «فروشنده…») are speech acts, not product
+  // heads — the R7 role matrix owns them (a buyer ad on a seek-buyer hunt
+  // is the wanted item, not a complement).
+  if (ROLE_HEAD_WORDS.has(head)) return no;
+  // The entity must actually appear later — otherwise the ad wouldn't be
+  // would-be-exact anyway (and the caller gates on that too).
+  const entityLater = toks.slice(1).some((t) => queryToks.has(t));
+  if (!entityLater) return no;
+  return { mismatch: true, reason: `complement:head-not-entity:"${head}"` };
 }
 
 /**
@@ -1149,11 +1259,27 @@ export function assessDemandGoods(
       SERVICE_DEMAND_FAMILY.some((w) => textMatches(listingText, w))
   );
   if (!familyOnly) return false;
-  const tokens = normalizeForMatch(listingText).split(" ").filter(Boolean);
-  let si = 0;
-  while (si < tokens.length && SUBJECT_SKIP_TOKENS.has(tokens[si])) si++;
-  const lead = tokens.slice(si, si + 4);
-  return !lead.some((t) => SERVICE_SUBJECT_VOCAB.has(t));
+  // R8 (F5): structural, not a wider window. Widening the old 4-token lead
+  // window is provably regressive (a 6-token lead flips the R6 control
+  // «کولرگازی اصلی … (نصب امروز)» to clean). Instead, split into clauses
+  // on punctuation BEFORE normalizing — parentheses are the R6 signal. A
+  // genuine service ad LEADS with service (first clause carries the
+  // service word: «خدمات فنی کولر گازی نصب و سرویس»); a goods ad BORROWS
+  // a service word in a LATER clause («کولرگازی اصلی … (نصب امروز)»).
+  // Fire only on the borrowed-word structure.
+  const clauses = listingText
+    .split(/[.,،؛:!؟?()«»\[\]{}<>|\/\-–—_+=*~@#$%^&`]+/)
+    .map((c) => c.trim())
+    .filter((c) => c !== "");
+  if (clauses.length === 0) return false;
+  const clauseHasService = (c: string): boolean =>
+    normalizeForMatch(c)
+      .split(" ")
+      .filter(Boolean)
+      .some((t) => SERVICE_SUBJECT_VOCAB.has(t));
+  const leadIsService = clauseHasService(clauses[0]);
+  const borrowedService = clauses.some(clauseHasService);
+  return !leadIsService && borrowedService;
 }
 
 /**
@@ -1176,11 +1302,16 @@ export function assessBaitTitle(
   const titleTerms = includeTerms.filter((t) => textMatches(title, t));
   if (titleTerms.length < includeTerms.length) return false;
   if (!includeTerms.some((t) => !textMatches(description, t))) return false;
-  const normTerms = includeTerms.map(
-    (t) => normalizeForMatch(t).split(" ").filter(Boolean)[0] ?? ""
+  // R8 (P2): head/mod come from the QUERY PHRASE's first two tokens, not
+  // from include[0]/include[1]'s first tokens. With phrase includes
+  // (["موتور سیکلت","هوندا"]) the old code compared the description
+  // against «هوندا» and hard-rejected perfect ads («موتور سیکلت ۱۲۵ مدل
+  // ۹۵» for «موتور سیکلت هوندا»).
+  const phraseTokens = includeTerms.flatMap((t) =>
+    normalizeForMatch(t).split(" ").filter(Boolean)
   );
-  const head = normTerms[0];
-  const expectedMod = normTerms[1];
+  const head = phraseTokens[0] ?? "";
+  const expectedMod = phraseTokens[1] ?? "";
   if (head === "" || expectedMod === "") return false;
   // Bait = a BARE title claim: the title adds nothing beyond the query
   // («موتور سیکلت»). Titles with extra descriptors («قاب ایفون ۱۳ پرو»,
@@ -1196,6 +1327,17 @@ export function assessBaitTitle(
   if (hi < 0 || hi + 1 >= dTokens.length) return false;
   const mod = dTokens[hi + 1];
   if (mod === expectedMod) return false;
+  // R8 (F3b): allow ONE descriptor between head and modifier («پراید سالم
+  // ۱۳۱» names the same car — the description confirms, not baits). The
+  // window is deliberately bounded at hi+2: a second product word still
+  // fires («موتور سالم برق» for «موتور سیکلت» → bait).
+  if (dTokens[hi + 2] === expectedMod) return false;
+  // R8 (F3): a description token that is itself a query token is
+  // CONFIRMATION, not bait («پراید ۹۸ سالم» for «پراید ۱۳۱ مدل ۹۸» —
+  // year-as-shorthand, same car). Bait needs a word OUTSIDE the query
+  // vocabulary (verified: the «موتور برق» vs «موتور سیکلت» rule still
+  // fires — برق ∉ query tokens).
+  if (queryTokSet.has(mod)) return false;
   if (VARIANT_MARKERS.some((v) => normalizeForMatch(v) === mod)) return false;
   return true;
 }

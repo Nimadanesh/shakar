@@ -38,14 +38,15 @@ describe("kindLexicon — R7 subject-kind gate (DeepSeek P1)", () => {
 
   it("gate: mismatches reject, unknowns never gate", () => {
     // h1: signboard on a service hunt
-    expect(kindGateRejects("service", "signage")).toMatch(/^kind:/);
+    expect(kindGateRejects("service", "signage")?.reason).toMatch(/^kind:/);
+    expect(kindGateRejects("service", "signage")?.tier).toBe("reject");
     // part on an item hunt
-    expect(kindGateRejects("vehicle", "vehicle-part")).toMatch(/^kind:/);
+    expect(kindGateRejects("vehicle", "vehicle-part")?.reason).toMatch(/^kind:/);
     // symmetric بادوم rule: neither direction leaks
-    expect(kindGateRejects("food", "food-derived")).toMatch(/^kind:/);
-    expect(kindGateRejects("food-derived", "food")).toMatch(/^kind:/);
+    expect(kindGateRejects("food", "food-derived")?.reason).toMatch(/^kind:/);
+    expect(kindGateRejects("food-derived", "food")?.reason).toMatch(/^kind:/);
     // consumable on an appliance hunt
-    expect(kindGateRejects("appliance", "consumable")).toMatch(/^kind:/);
+    expect(kindGateRejects("appliance", "consumable")?.reason).toMatch(/^kind:/);
     // same kind passes
     expect(kindGateRejects("vehicle", "vehicle")).toBeNull();
     expect(kindGateRejects("food-derived", "food-derived")).toBeNull();
@@ -55,13 +56,38 @@ describe("kindLexicon — R7 subject-kind gate (DeepSeek P1)", () => {
     expect(kindGateRejects(null, null)).toBeNull();
   });
 
+  it("R8 F4a: service ad on a goods hunt demotes, never rejects", () => {
+    const v = kindGateRejects("vehicle-part", "service");
+    expect(v?.tier).toBe("demote");
+    expect(v?.reason).toMatch(/^kind:demote:/);
+    // service-on-service still passes (unchanged)
+    expect(kindGateRejects("service", "service")).toBeNull();
+  });
+
+  it("R8 F4b: ماشین/موتور + unknown modifier → null, bare → vehicle", () => {
+    expect(adKindForTitle("ماشین جوجه کشی")).toBeNull();
+    expect(adKindForTitle("موتور برق")).toBeNull();
+    expect(adKindForTitle("ماشین")).toBe("vehicle");
+    expect(adKindForTitle("موتور")).toBe("vehicle");
+    // known two-token compounds still win
+    expect(adKindForTitle("ماشین لباسشویی")).toBe("appliance");
+    expect(adKindForTitle("موتور سیکلت")).toBe("vehicle");
+  });
+
+  it("R8 F4c: ی-dropped spellings find the lexicon via stemmed fallback", () => {
+    expect(adKindForTitle("ماشین لباسشوی ۱۰ کیلویی ال جی")).toBe("appliance");
+    // raw behavior preserved everywhere else
+    expect(adKindForTitle("امداد باطری ماشین")).toBe("service");
+    expect(adKindForTitle("پراید ۱۳۱")).toBe("vehicle");
+  });
+
   it("service hunts: target kind is compatible (S3 demote, not reject)", () => {
     expect(targetKindForDef(["تعمیر", "یخچال"])).toBe("appliance");
     expect(targetKindForDef(["تعمیرات", "تخصصی", "موبایل"])).toBe("mobile");
     // target goods pass the gate…
     expect(kindGateRejects("service", "appliance", "appliance")).toBeNull();
     // …but truly unrelated kinds are still rejected
-    expect(kindGateRejects("service", "signage", "mobile")).toMatch(/^kind:/);
+    expect(kindGateRejects("service", "signage", "mobile")?.reason).toMatch(/^kind:/);
   });
 });
 
@@ -85,7 +111,7 @@ describe("kindLexicon — R7-redteam fixes (2026-10-18)", () => {
     // target goods pass (S3 demote, not reject)…
     expect(kindGateRejects("appliance", "appliance", "appliance", true)).toBeNull();
     // …truly unrelated kinds still reject, compared against the TARGET.
-    expect(kindGateRejects("appliance", "furniture", "appliance", true)).toMatch(/^kind:/);
-    expect(kindGateRejects("appliance", "signage", "appliance", true)).toMatch(/^kind:/);
+    expect(kindGateRejects("appliance", "furniture", "appliance", true)?.reason).toMatch(/^kind:/);
+    expect(kindGateRejects("appliance", "signage", "appliance", true)?.reason).toMatch(/^kind:/);
   });
 });

@@ -14,6 +14,7 @@ import {
   PRICE_STRUCTURAL_WORDS,
   ROLE_WORDS,
 } from "@/lib/interpret";
+import type { RoleMode } from "@/lib/interpret";
 import { normalizeForMatch, stemToken, tokenize, AFFIX_ONLY } from "@/lib/persianNormalize";
 import type { InterpretedConstraint } from "@/types/search";
 
@@ -35,6 +36,24 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
     b.condition === "new" || b.condition === "used" || b.condition === "any"
       ? b.condition
       : "";
+  // R8 (P3): the kamin replay path (kamins/[id]/run) rebuilds the definition
+  // through THIS choke point from the stored (fully resolved) definition.
+  // These semantic fields must survive the round-trip — dropping them made
+  // every scheduled hunt run degraded (بدون-X became exact-capable, service
+  // hunts lost demand-goods/target binding, role direction reverted).
+  // resolveHuntDefinition recomputes them fresh for live hunts, so passing
+  // validated values through is safe in both directions.
+  const ROLE_MODES: readonly string[] = [
+    "seek-buyer",
+    "seek-seller",
+    "self-buyer",
+    "self-seller",
+    "none",
+  ];
+  const roleMode: RoleMode =
+    typeof b.roleMode === "string" && (ROLE_MODES as readonly string[]).includes(b.roleMode)
+      ? (b.roleMode as RoleMode)
+      : "none";
   return {
     query,
     include: strArr(b.include),
@@ -47,6 +66,9 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
     transaction,
     condition,
     deepHistory: b.deepHistory === true,
+    serviceIntent: b.serviceIntent === true,
+    roleMode,
+    absentAttributes: strArr(b.absentAttributes),
   };
 }
 

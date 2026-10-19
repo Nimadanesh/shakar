@@ -30,6 +30,21 @@ describe("unifyChars", () => {
     expect(textMatches("تعمیر لباسشویی در محل", "لباسشویی", "home")).toBe(true);
     expect(expandSynonyms("لباسشویی", "home")).toContain("لباسشوی");
   });
+
+  it("folds ط/ت (R8 F1 — باطری/باتری share one token now)", () => {
+    expect(unifyChars("باطری")).toBe("باتری");
+    expect(textMatches("باتری ماشین نو", "باطری")).toBe(true);
+    expect(textMatches("باطری ماشین نو", "باتری")).toBe(true);
+  });
+
+  it("ط/ت folding collision audit — documents accepted merges", () => {
+    // طلب (demand) vs تب (fever): ط→ت gives تلب ≠ تب — no merge. Good.
+    expect(unifyChars("طلب")).not.toBe(unifyChars("تب"));
+    // طور (manner) / تور (net) DO merge — accepted: vanishingly rare in
+    // classifieds, and the battery wound is worth more. Revisit only if a
+    // real wound appears; do not extend folding without a new audit.
+    expect(unifyChars("طور")).toBe(unifyChars("تور"));
+  });
 });
 
 describe("normalizeForMatch", () => {

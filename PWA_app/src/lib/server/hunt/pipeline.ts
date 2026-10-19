@@ -16,6 +16,7 @@ import {
   assessAbsencePolarity,
   assessBaitTitle,
   assessDemandGoods,
+  assessEntityComplement,
   assessListingRole,
   assessModelSpecificity,
   assessQueryIntent,
@@ -505,9 +506,12 @@ function semanticCapFires(
   const explicitBuy =
     def.transaction === "buy" || detectTransaction(def.query) === "buy";
   const clash = rolesClash(intent, role, explicitBuy);
+  // R8 (F2): the hunt's subject kind for the kind-aware marker guard
+  // (sibling markers of the same kind are co-offered, not wrong items).
+  const qKind = queryKindForDef(def.include, def.serviceIntent ?? false, def.category);
   const identity = clash.clash
     ? { mismatch: false as const, reason: "skipped:role-clash", tier: "near" as const }
-    : assessModelSpecificity(def.include, combined, def.category);
+    : assessModelSpecificity(def.include, combined, def.category, qKind);
   // R3 (2026-10-17): absent-attributes generalize the repair polarity
   // rule — «بدون رنگ» with no paint info is unknown, capped at near
   // (never exact); the نه-sourced repair rule is preserved as-is.
@@ -727,17 +731,22 @@ function evaluateDescription(
     // TARGET («یخچال تعمیر» must not kill «تعمیر یخچال در محل»).
     const qKind = queryKindForDef(def.include, def.serviceIntent ?? false, def.category);
     const svcHunt = (def.serviceIntent ?? false) || qKind === "service";
-    const kindReject = kindGateRejects(
+    const kindVerdict = kindGateRejects(
       qKind,
       adKindForTitle(title),
       svcHunt ? targetKindForDef(def.include) : null,
       svcHunt
     );
+    const kindReject = kindVerdict?.tier === "reject" ? kindVerdict.reason : null;
+    const kindDemote = kindVerdict?.tier === "demote" ? kindVerdict.reason : null;
+    // R8 (P5): entity-as-complement — the title is about a different head.
+    const complement = assessEntityComplement(def.include, title);
     const wrongKind =
       cap.wrongItemKind ??
       kindReject ??
       (bait ? "bait:title-desc-mismatch" : null) ??
-      (demandGoods ? "demand-goods:product-ad" : null);
+      (demandGoods ? "demand-goods:product-ad" : null) ??
+      (complement.mismatch ? complement.reason : null);
     if (wrongKind) {
       return {
         ...rejectedEvaluation(),
@@ -749,6 +758,25 @@ function evaluateDescription(
         huntWantsSellers,
     adRole,
         rejectedKind: wrongKind,
+      };
+    }
+    // R8 (F4a): demote — right area, wrong role. Capped to near, never
+    // exact, never rejected («امداد باطری ماشین» on a battery hunt is a
+    // battery source, not a wrong item).
+    if (kindDemote) {
+      return {
+        verdict: "near",
+        evidence,
+        missingInfo,
+        mustTitle,
+        mustDesc,
+        shouldMatched,
+        providerHits,
+        goodsHits,
+        needsRepairHits,
+        dealerHits,
+        huntWantsSellers,
+    adRole,
       };
     }
     if (cap.fire) {
