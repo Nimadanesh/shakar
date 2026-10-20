@@ -86,8 +86,8 @@ function choiceCriteriaFor(huntKind: string): Record<string, string> {
   const k = huntKind.toLowerCase();
   if (k.includes("vehicle") || k.includes("car") || k.includes("ماشین")) {
     return {
-      whole: "یک خودروی سواری کامل برای فروش (مثل پراید، پژو، سمند) — نه ماشین‌آلات راهسازی یا سنگین",
-      part: "قطعه یا جزء خودرو، مثل کفی، دینام، باطری، لنت",
+      whole: "یک خودروی سواری کامل یا یک موتور سیکلت کامل برای فروش (مثل پراید، پژو، هوندا ۱۲۵) — نه ماشین‌آلات راهسازی یا سنگین",
+      part: "قطعه یا جزء خودرو، مثل کفی، دینام، باطری، لنت، ایسیو (کامپیوتر خودرو)، گیربکس، کمک فنر",
       accessory: "لوازم جانبی خودرو که ضروری نیست، مثل چادر، سیستم صوتی",
       other: "هر چیز دیگری، از جمله ماشین‌آلات راهسازی (بیل مکانیکی، بلدزر) و خودروهای سنگین",
     };
@@ -109,16 +109,21 @@ function choiceCriteriaFor(huntKind: string): Record<string, string> {
   };
 }
 
-/** Map Mizan's choice label to our ItemKind. */
+/** Map Mizan's choice label to our ItemKind. STRICT: unrecognized labels
+ *  return null, NOT "other" — "other" is a rejection class (R11), so it
+ *  must only fire when the model explicitly chose the "other" key.
+ *  (DeepSeek double-check R11: the old catch-all promoted any unparsable
+ *  or Persian label to "other" at full reported confidence.) */
 function toItemKind(label: string | undefined): ItemKind | null {
   if (!label) return null;
-  const l = label.toLowerCase();
+  const l = label.trim().toLowerCase();
+  if (l === "other") return "other";
   if (l.includes("whole") || l.includes("complete")) return "whole";
   if (l.includes("part")) return "part";
   if (l.includes("accessor")) return "accessory";
   if (l.includes("derived")) return "derived";
   if (l.includes("service")) return "service";
-  return "other";
+  return null;
 }
 
 /**

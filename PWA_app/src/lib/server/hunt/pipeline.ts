@@ -1246,15 +1246,22 @@ export async function confirmCandidates(
             });
           }
         }
-        // R11 fix 2: Noul violation rejection.
-        // If Mizan says the ad VIOLATES the hunt constraint (e.g. crashed
-        // car on a «بدون تصادف» hunt) with high probability, reject it.
-        // The Noul question is only asked when a constraint exists, so
-        // violates=true at >=0.8 is a strong, specific signal.
+        // R11 fix 2: Noul violation rejection — WITH corroboration
+        // (design v2 law, reinstated after the R11 double-check).
+        // Mizan alone never rejects: the deterministic engine must ALSO
+        // see a forbidden attribute as "present" (assessAbsencePolarity).
+        // This protects negated/favourable mentions Noul misreads
+        // («تصادف نداشته», «رنگ اصلی کارخانه»).
         const NOUL_REJECT_PROB = 0.8;
+        const hasDetConflict = (def.absentAttributes ?? []).some(
+          (attr) =>
+            assessAbsencePolarity(`${q.title} ${q.description}`, attr)
+              .polarity === "present"
+        );
         if (
           judgment.violates === true &&
           judgment.violateProbability >= NOUL_REJECT_PROB &&
+          hasDetConflict &&
           !judgment.unavailable &&
           !toReject.has(q.sourceAdId)
         ) {
