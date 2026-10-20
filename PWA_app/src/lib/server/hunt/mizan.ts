@@ -1,14 +1,16 @@
 /**
  * Mizan adjudication — the decision-model judge for uncertain ads.
  *
- * Design v2 (after DeepSeek red-team 2026-10-19):
- * - Hook at B: inside confirmCandidates, AFTER evaluateDescription (post-detail).
- *   Title-phase hooking would reintroduce flaw #12 (pipeline law).
- * - Choice (item-kind) is ADVISORY ONLY — it may influence ranking, never membership.
- *   Choice answers item-kind; the battery grades hunt-fit (different label spaces).
- * - Noul (violation) is the SOLE rejection channel, and only with corroboration:
- *   deterministic conflicting signal + conf >= 0.80.
- * - Shadow mode first: judge, log, apply nothing.
+ * Decision v2 (2026-10-20) — CURRENT LAW:
+ * - Mizan has NO deletion authority. It judges in log-only mode; its
+ *   would-be decisions are recorded as features (stats.mizanShadow) for
+ *   the learned ranker. Deletion authority returns only per-channel,
+ *   through the Decision v2 §3 reinstatement trial (frozen threshold,
+ *   >=80 held-out deletions, failure <=5% with Wilson bound).
+ * - Historical (R10–R12, now revoked): Choice wrong-kind rejection at
+ *   >=0.9 behind the hunt-intent guard + title-evidence shield; Noul
+ *   rejection at >=0.80 with deterministic corroboration. Those
+ *   predicates still run — they compute the would-be features.
  *
  * Mizan runs locally via llama-server (/v1/systemone, Jev-compatible).
  * If unavailable, all adjudication is skipped — the engine degrades to

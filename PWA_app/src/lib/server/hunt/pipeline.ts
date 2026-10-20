@@ -237,21 +237,27 @@ export interface HuntStats {
     descSnippet?: string;
   }>;
   /**
-   * R9 (2026-10-19): Mizan shadow-mode judgments. When the deterministic
-   * engine produces "near", Mizan adjudicates in shadow mode: judge, log,
-   * apply nothing. This measures agreement + latency before Mizan is
-   * allowed to influence results. Each entry: the ad, Mizan's judgment,
-   * and what the deterministic engine decided.
+   * Mizan judgments, log-only (R9 shadow → R10–R12 active → Decision v2
+   * log-only again, 2026-10-20). Each entry: the ad, Mizan's judgment,
+   * what the deterministic engine decided, and the would-be rejection
+   * features. Nothing here ever modifies results.
    */
   mizanShadow: Array<{
     title: string;
     judgment: MizanJudgment;
     deterministicVerdict: "near" | "exact";
     latencyMs: number;
+    /**
+     * Decision v2 (2026-10-20): what the R10–R12 rules WOULD have
+     * rejected. Features for the learned ranker — never applied.
+     */
+    wouldRejectWrongKind?: boolean;
+    wouldRejectViolation?: boolean;
   }>;
   /**
-   * R10 (2026-10-20): count of ads rejected by Mizan activation
-   * (high-confidence wrong-item). For the "zero stupid" metric.
+   * Count of ads actually rejected by Mizan. Decision v2 revoked
+   * Mizan's deletion authority, so this stays 0; would-be decisions
+   * live in mizanShadow as features. Kept for stats-shape compatibility.
    */
   mizanRejected: number;
 }
@@ -1244,29 +1250,29 @@ export async function confirmCandidates(
     if (jd) mizanQueue.push({ ...jd, sourceAdId: r.sourceAdId });
   }
 
-  // ---- R9: Mizan shadow mode (design v2) ----------------------------------
-  // Judge the queued "near" candidates, log judgments, apply NOTHING.
-  // This measures: (1) Mizan-deterministic agreement, (2) per-call latency,
-  // (3) how many "near" ads Mizan would flag. Results go to stats.mizanShadow
-  // for the battery harness to analyze. The deterministic results above
-  // are UNCHANGED — shadow mode never modifies them.
+  // ---- Mizan judging — LOG-ONLY (Decision v2, 2026-10-20) ----------------
+  // Mizan judges the ranked queue and its would-be decisions are recorded
+  // as features in stats.mizanShadow. It deletes NOTHING: Decision v2 §3
+  // revoked judge deletion authority (R11 audit: 20% of graded rejections
+  // were misses). The R10–R12 predicates below still compute what Mizan
+  // WOULD have rejected — that is the feature, and the baseline for any
+  // §3 reinstatement trial. Deterministic results are never modified here.
   //
   // SKIP in test environment: no Mizan server in vitest, and the 30s
   // fetch timeout would make tests hang. Production/dev only.
   //
-  // Double-check C2: kill-switch + wall-clock budget. If Mizan is slow or
-  // wedged, we stop dispatching and the deterministic results stand.
+  // Kill-switch + wall-clock budget: if Mizan is slow or wedged, we stop
+  // dispatching and the deterministic results stand.
   // Set MIZAN_SHADOW=0 to disable entirely.
   const isTestEnv =
     process.env.NODE_ENV === "test" || process.env.VITEST === "true";
   const shadowDisabled = process.env.MIZAN_SHADOW === "0";
   const SHADOW_BUDGET_MS = 60000; // 60s wall-clock max for the shadow block
-  // R10: Mizan is ACTIVE (not shadow). The block below judges AND acts.
-  // Rejection criteria (v1): high-confidence wrong-item (>=0.9) — the "stupid" class.
-  // Noul violations with corroboration come in v2.
-  // R12: the hunt's own target kinds — judgments naming these never reject
-  // (see huntTargetKinds in mizan.ts; the R11 wrong-rejection hole).
-  // R12b: the rejection threshold + predicate live in mizan.ts
+  // The hunt's own target kinds (R12) — judgments naming these would
+  // never have rejected (see huntTargetKinds in mizan.ts; the R11
+  // wrong-rejection hole). Still computed: they define the would-be
+  // features and sit above any future §3 reinstatement channel.
+  // R12b: the threshold + predicate live in mizan.ts
   // (MIZAN_WRONG_KIND_CONF / mizanWrongKindRejects) — one source, tested.
   const targetKinds = huntTargetKinds(
     huntKind,
@@ -1275,7 +1281,6 @@ export async function confirmCandidates(
   );
   if (mizanQueue.length > 0 && !isTestEnv && !shadowDisabled) {
     const shadowStart = Date.now();
-    const toReject = new Set<string>();
     for (const q of mizanQueue) {
       // Budget check: stop if we've exceeded the wall-clock budget.
       // Deterministic results stand; we just get fewer judgments.
@@ -1288,49 +1293,26 @@ export async function confirmCandidates(
           huntKind,
           constraintFa
         );
-        stats.mizanShadow.push({
-          title: q.title,
-          judgment,
-          deterministicVerdict: q.deterministicVerdict,
-          latencyMs: Date.now() - t0,
-        });
-        // R10 activation: reject high-confidence wrong-items (the "stupid" class).
-        // Design v2 F6 says Choice never rejects — but that was for the general case.
-        // For >=0.9 confidence on part/accessory/derived/service, the ad is
-        // obviously wrong (e.g. «شاگرد ماشین سنگین» on a car hunt).
-        // This is the "zero stupid" guarantee.
-        // R12 GUARD (generalized): never reject a kind that is the hunt's
-        // own target — for EVERY kind, computed structurally by
-        // huntTargetKinds (hoisted above). R11's bug: the old guard
-        // protected only part/accessory (via a PART_WORDS list), so
-        // "service" judgments killed repair ads on repair hunts and
-        // "derived" judgments killed peanut-butter ads on the
-        // peanut-butter hunt (13 wrong rejections).
-        // R12b SHIELD (double-check F1): a title that itself evidences
-        // every MUST term of a multi-term hunt IS the hunted item by the
-        // engine's own evidence — a model kind label cannot overrule it
-        // (open-class subjects like «پیانو U3», where targets are empty).
-        // Single-term hunts excluded: one shared word is weak evidence.
+        // Would-be features (Decision v2): what the R10–R12 rules WOULD
+        // have rejected — computed and logged, never applied.
+        // Wrong-kind: mizanWrongKindRejects encodes the R12 generalized
+        // hunt-intent guard (a judgment naming the hunt's own target kind
+        // never rejected — R11's 13 wrong rejections) and the R12b
+        // title-evidence shield (a title evidencing every MUST term of a
+        // multi-term hunt IS the hunted item by the engine's own
+        // evidence; a model kind label cannot overrule it).
         const titleEvidencesHunt =
           (def.include?.length ?? 0) >= 2 &&
           (def.include ?? []).every((t) => textMatches(q.title, t));
-        if (mizanWrongKindRejects(judgment, targetKinds, titleEvidencesHunt)) {
-          toReject.add(q.sourceAdId);
-          // Feed the rejected sample for audit (like deterministic rejections).
-          if (stats.rejectedSample.length < 12) {
-            stats.rejectedSample.push({
-              title: q.title,
-              kind: `mizan:wrong-item:${judgment.itemKind}`,
-              price: null,
-              descSnippet: q.description.replace(/\s+/g, " ").trim().slice(0, 200),
-            });
-          }
-        }
-        // R11 fix 2: Noul violation rejection — WITH corroboration
-        // (design v2 law, reinstated after the R11 double-check).
-        // Mizan alone never rejects: the deterministic engine must ALSO
-        // see a forbidden attribute as "present" (assessAbsencePolarity).
-        // This protects negated/favourable mentions Noul misreads
+        const wouldRejectWrongKind = mizanWrongKindRejects(
+          judgment,
+          targetKinds,
+          titleEvidencesHunt
+        );
+        // Violation: Noul >= 0.8 WITH deterministic corroboration — the
+        // deterministic engine must ALSO see a forbidden attribute as
+        // "present" (assessAbsencePolarity). This protected
+        // negated/favourable mentions Noul misreads
         // («تصادف نداشته», «رنگ اصلی کارخانه»).
         const NOUL_REJECT_PROB = 0.8;
         const hasDetConflict = (def.absentAttributes ?? []).some(
@@ -1338,23 +1320,19 @@ export async function confirmCandidates(
             assessAbsencePolarity(`${q.title} ${q.description}`, attr)
               .polarity === "present"
         );
-        if (
+        const wouldRejectViolation =
           judgment.violates === true &&
           judgment.violateProbability >= NOUL_REJECT_PROB &&
           hasDetConflict &&
-          !judgment.unavailable &&
-          !toReject.has(q.sourceAdId)
-        ) {
-          toReject.add(q.sourceAdId);
-          if (stats.rejectedSample.length < 12) {
-            stats.rejectedSample.push({
-              title: q.title,
-              kind: "mizan:violation",
-              price: null,
-              descSnippet: q.description.replace(/\s+/g, " ").trim().slice(0, 200),
-            });
-          }
-        }
+          !judgment.unavailable;
+        stats.mizanShadow.push({
+          title: q.title,
+          judgment,
+          deterministicVerdict: q.deterministicVerdict,
+          latencyMs: Date.now() - t0,
+          wouldRejectWrongKind,
+          wouldRejectViolation,
+        });
       } catch {
         // Mizan failure must never break the hunt. Log and continue.
         stats.mizanShadow.push({
@@ -1369,18 +1347,10 @@ export async function confirmCandidates(
           },
           deterministicVerdict: q.deterministicVerdict,
           latencyMs: Date.now() - t0,
+          wouldRejectWrongKind: false,
+          wouldRejectViolation: false,
         });
       }
-    }
-    // Remove the rejected ads from results (R10 activation).
-    if (toReject.size > 0) {
-      const before = results.length;
-      for (let i = results.length - 1; i >= 0; i--) {
-        if (toReject.has(results[i].sourceAdId)) {
-          results.splice(i, 1);
-        }
-      }
-      stats.mizanRejected = toReject.size;
     }
   }
 
