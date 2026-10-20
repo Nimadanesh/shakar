@@ -22,9 +22,11 @@ import {
   interpretQuery,
   KNOWN_CITIES,
   DEMAND_VERBS,
+  PREFERENCE_CUES,
   detectServiceIntent,
 } from "@/lib/interpret";
-import { tokenize, normalizeForMatch } from "@/lib/persianNormalize";
+import { normalizeForMatch, stemToken } from "@/lib/persianNormalize";
+import { normalizePersian } from "@/lib/normalizePersian";
 
 export interface ContractTerm {
   text: string;
@@ -108,7 +110,22 @@ export function buildContract(raw: string): IntentContract {
   const liftedMin = applied.find((c) => c.kind === "priceMin");
   const liftedCity = applied.find((c) => c.kind === "city");
 
-  const tokens = tokenize(raw);
+  // SURFACE tokens (normalizePersian + split) — never tokenize(), which
+  // stems (تخصصی→تخصص, خط→خت) and would corrupt the contract's phrases:
+  // downstream consumers display these forms and match with their own
+  // normalization, exactly like the legacy definition layer.
+  // normalizePersian folds Latin case, but case is load-bearing for
+  // Latin model tokens (textMatches is case-sensitive: «U3» ≠ «u3» —
+  // the piano incident), so Latin-bearing tokens restore the raw case
+  // by position alignment with the raw split.
+  const splitSurface = (s: string) =>
+    s.split(/[\s‌،,.!؟?]+/).filter((t) => t.length > 0);
+  const rawTokens = splitSurface(raw);
+  const normTokens = splitSurface(normalizePersian(raw));
+  const tokens = normTokens.map((t, idx) => {
+    const r = rawTokens[idx];
+    return r && /[a-zA-Z]/.test(r) && r.toLowerCase() === t ? r : t;
+  });
   const n = tokens.length;
   const bucket: string[] = new Array(n).fill("");
   const cities = cityTokenMap();
@@ -266,6 +283,45 @@ export function buildContract(raw: string): IntentContract {
       }
       continue;
     }
+    if (t === "نه") {
+      // True ban (not an absence): «نه X» excludes what follows; a
+      // trailing «X نه» excludes the contiguous subject run before it.
+      let j = i + 1;
+      if (j < n && !bucket[j] && !isClauseStarter(j)) {
+        const start = j;
+        while (j < n && !bucket[j] && !isClauseStarter(j) && j - start < 4)
+          j++;
+        out.exclude.push(term(start, j));
+        claim(start, j, "exclude");
+        bucket[i] = "dropped";
+        out.dropped.push(term(i, i + 1));
+        i = j;
+      } else {
+        let k = i - 1;
+        while (k >= 0 && bucket[k] === "subject") k--;
+        if (k + 1 < i) {
+          out.exclude.push(term(k + 1, i));
+          claim(k + 1, i, "exclude");
+        }
+        bucket[i] = "dropped";
+        out.dropped.push(term(i, i + 1));
+        i++;
+      }
+      continue;
+    }
+    if (PREFERENCE_CUES.includes(t)) {
+      // «ترجیحاً X» — the wish is SHOULD, the cue is dropped on record.
+      let j = i + 1;
+      while (j < n && !bucket[j] && !isClauseStarter(j)) j++;
+      if (j > i + 1) {
+        out.should.push(term(i + 1, j));
+        claim(i + 1, j, "should");
+      }
+      bucket[i] = "dropped";
+      out.dropped.push(term(i, i + 1));
+      i = j > i + 1 ? j : i + 1;
+      continue;
+    }
     if (t === "برای") {
       let j = i + 1;
       while (j < n && !bucket[j] && !isClauseStarter(j)) j++;
@@ -335,7 +391,10 @@ export function buildContract(raw: string): IntentContract {
     };
   }
   for (const p of interp.preferences) {
-    out.should.push({ text: p.value, span: [-1, -1] });
+    // The walk already routes «ترجیحاً» wishes to SHOULD — don't double.
+    const key = stemToken(p.value);
+    if (!out.should.some((s) => stemToken(s.text) === key))
+      out.should.push({ text: p.value, span: [-1, -1] });
   }
   if (!out.direction && detectServiceIntent(raw))
     out.direction = "seeking-service";

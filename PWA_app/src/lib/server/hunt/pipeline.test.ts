@@ -1171,8 +1171,11 @@ describe("R3 fixes — 2026-10-17 grading round", () => {
 
   it("P1: «می‌خوام» never becomes a MUST term", () => {
     const def = resolveHuntDefinition({ query: "نصاب کولر گازی می‌خوام" });
-    expect(def?.include).toEqual(["نصاب", "کولر", "گازی"]);
+    // Decision v2 (intent contract): the agent noun «نصاب» resolves to
+    // its ACTION term «نصب» — ads offer نصب, hunters want the service.
+    expect(def?.include).toEqual(["کولر", "گازی", "نصب"]);
     expect(def?.include).not.toContain("می");
+    expect(def?.include).not.toContain("نصاب");
   });
 
   it("P1: parts/packaging subjects cap to near; clean subjects stay exact", async () => {

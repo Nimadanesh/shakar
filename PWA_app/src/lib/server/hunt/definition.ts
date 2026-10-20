@@ -16,6 +16,7 @@ import {
 } from "@/lib/interpret";
 import type { RoleMode } from "@/lib/interpret";
 import { normalizeForMatch, stemToken, tokenize, AFFIX_ONLY } from "@/lib/persianNormalize";
+import { buildContract } from "./contract";
 import type { InterpretedConstraint } from "@/types/search";
 
 /**
@@ -107,12 +108,39 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
 
   const dismissed = getDismissedIds(body);
   const interp = interpretQuery(def.query);
+  // Absence inferences the user dismissed, by normalized value — the
+  // contract below must honor the same dismissals the applied list does.
+  const dismissedAbsent = new Set(
+    interp.applied
+      .filter(
+        (c) => c.id.startsWith("exclude:absent:") && dismissed.includes(c.id)
+      )
+      .map((c) => tokenize(c.value).join(" "))
+  );
   const applied = interp.applied.filter(
     (c) => c.applied && !dismissed.includes(c.id)
   );
 
-  // 1. Mandatory content terms from the query text.
-  const terms = contentTerms(def.query, applied, interp.preferences);
+  // 1. Mandatory content terms from the query text — via the intent
+  // contract (Decision v2, Experiment B). Token-level parity with the
+  // legacy contentTerms stream, with the contract's exact deltas:
+  // absence attributes never become content (the R3/B01/B02 inversion),
+  // fillers/command words are dropped on record, purpose clauses route
+  // to SHOULD. Form-provided include terms still merge first below.
+  const contract = buildContract(def.query);
+  const absentStems = new Set(
+    contract.mustNot.flatMap((t) => tokenize(t.text).map(stemToken))
+  );
+  // Contract phrases are surface-token strings — split on the space the
+  // contract joined with, NEVER tokenize() (it stems). Floor markers
+  // («به بالا») are structural, mirroring contentTerms' structural drops.
+  const FLOOR_MARKERS = new Set(["به", "بالا"]);
+  const phraseTokens = (text: string) =>
+    text.split(" ").filter((t) => t !== "" && !FLOOR_MARKERS.has(t));
+  const terms = [
+    ...(contract.subject ? phraseTokens(contract.subject.text) : []),
+    ...contract.must.flatMap((t) => phraseTokens(t.text)),
+  ].filter((t) => !absentStems.has(stemToken(t)));
   const seenTerms = new Set<string>();
   for (const t of def.include) for (const s of tokenize(t)) seenTerms.add(s);
   const include = [...def.include];
@@ -188,15 +216,22 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   // resolves to ABSENT semantics — the user confirmed «بدون رنگ» (a
   // desired absence), not a ban on «رنگ». Without this, confirming the
   // form's بدون-chip would resurrect the R3 inversion (murdered inventory).
+  // Decision v2: the values now come from the intent contract's clause
+  // scanner (multi-clause safe, prefix-free); form-provided attributes
+  // still apply, and dismissed inferences stay dismissed.
   const absentAttributes: string[] = [];
   const absentKeys = new Set<string>();
-  for (const c of applied) {
-    if (c.kind !== "exclude" || !c.id.startsWith("exclude:absent:")) continue;
-    const key = tokenize(c.value).join(" ");
+  const pushAbsent = (v: string) => {
+    const key = tokenize(v).join(" ");
     if (key !== "" && !absentKeys.has(key)) {
-      absentAttributes.push(c.value);
+      absentAttributes.push(v);
       absentKeys.add(key);
     }
+  };
+  for (const t of def.absentAttributes ?? []) pushAbsent(t);
+  for (const t of contract.mustNot) {
+    if (dismissedAbsent.has(tokenize(t.text).join(" "))) continue;
+    pushAbsent(t.text);
   }
   const exclude = trueExcludes.filter(
     (t) => !absentKeys.has(tokenize(t).join(" "))
@@ -213,6 +248,14 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     const key = stemToken(p.value);
     if (p.value !== "" && !seenShould.has(key)) {
       should.push(p.value);
+      seenShould.add(key);
+    }
+  }
+  // Contract SHOULD additions (purpose clauses — «لپ‌تاپ برای برنامه‌نویسی»).
+  for (const t of contract.should) {
+    const key = stemToken(t.text);
+    if (t.text !== "" && !seenShould.has(key)) {
+      should.push(t.text);
       seenShould.add(key);
     }
   }
@@ -252,78 +295,6 @@ function getDismissedIds(body: unknown): string[] {
   return Array.isArray(d)
     ? d.filter((x): x is string => typeof x === "string")
     : [];
-}
-
-/**
- * The query's content words: everything that names the wanted item.
- * Structural words are removed: city names, price expressions («زیر ۲۰۰
- * میلیون»), preference cues + wishes («ترجیحاً تمیز»), exclude terms and
- * their cue words («نه», «بدون»).
- *
- * Returns SURFACE forms («گوشی», not «گوش») — textMatches normalizes
- * internally, and surface forms read correctly in «چرا این آگهی؟».
- */
-function contentTerms(
-  query: string,
-  applied: InterpretedConstraint[],
-  preferences: InterpretedConstraint[]
-): string[] {
-  const surface = normalizeForMatch(query)
-    .split(" ")
-    .filter((t) => t !== "");
-  if (surface.length === 0) return [];
-  const structural = new Set<string>();
-  const drop = (text: string) => {
-    for (const t of tokenize(text)) structural.add(t);
-  };
-  // NOTE: city names drop at TOKEN level («خرم آباد» drops both «خرم» and
-  // «آباد»), so «آباد» never becomes a content term. That's recall-safe
-  // (place suffixes are weak terms) but slightly imprecise for X+آباد
-  // place queries («شهرک آباد» vs «شهرک غرب»). Phrase-level dropping is
-  // the future refinement — see docs/output-quality.md flaw #8 note.
-  for (const city of KNOWN_CITIES) for (const name of city.names) drop(name);
-  for (const w of NEGATION_VERBS) drop(w);
-  // R3 (2026-10-17): demand verbs («می‌خوام») name the want, never the
-  // item — «نصاب کولر گازی می‌خوام» must not MUST «می»/«خوام».
-  for (const w of DEMAND_VERBS) drop(w);
-  for (const p of EXCLUDE_PREFIXES) drop(p);
-  for (const w of PRICE_STRUCTURAL_WORDS) drop(w);
-  // P1 (HumanTest S4, flaw #22): role words name a transaction role, never
-  // the wanted item — «خریدار یخچال» must not REQUIRE ads to say خریدار.
-  for (const w of ROLE_WORDS) drop(w);
-  for (const c of applied) {
-    if (
-      c.kind === "city" ||
-      c.kind === "priceMin" ||
-      c.kind === "priceMax" ||
-      c.kind === "exclude" ||
-      c.kind === "transaction" ||
-      c.kind === "condition"
-    ) {
-      drop(c.display);
-    }
-  }
-  for (const p of preferences) {
-    drop(p.display);
-    const cue = preferenceCue(p.display, query);
-    if (cue) drop(cue);
-  }
-  // R3 (2026-10-17): bare particles («می» from «می‌خوام», «را», …) carry no
-  // item meaning — they must never survive as MUST terms even when the
-  // verb-drop above leaves a fragment behind.
-  return surface.filter(
-    (t) => !structural.has(stemToken(t)) && !AFFIX_ONLY.has(stemToken(t))
-  );
-}
-
-/** The cue word («ترجیحاً»…) that introduced a preference wish, if present. */
-function preferenceCue(wish: string, query: string): string | null {
-  for (const cue of PREFERENCE_CUES) {
-    if (query.includes(cue) && query.indexOf(wish) > query.indexOf(cue)) {
-      return cue;
-    }
-  }
-  return null;
 }
 
 /**
