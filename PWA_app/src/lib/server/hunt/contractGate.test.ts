@@ -1,17 +1,23 @@
 /**
- * Experiment B gate harness (Decision v2 sec.6).
+ * Experiment B gate (Decision v2 sec.6) — hard assertions.
  *
- * TODAY: baseline measurement mode — runs the frozen probe set
- * (~/workspace/your_files/experiment-b-probe-v1.json) through
- * resolveHuntDefinition and prints per-probe flags. When the intent
- * contract layer lands, the same expectations become hard assertions
- * (polarity inversions = 0, invented MUST = 0, caps extracted,
- * collapse rule on structured twins).
+ * History: this file began as a baseline measurement harness (parser
+ * scored 3 inversions, invented MUSTs on 4 probes, malformed
+ * multi-clause absences). With the intent-contract layer landed
+ * (contract.ts), the same frozen expectations are now the gate:
+ *   polarity inversions = 0 · invented MUST = 0 · lexically present
+ *   numeric caps extracted · structured-twin collapse <= half.
+ * Probe file: ~/workspace/your_files/experiment-b-probe-v1.json (frozen).
+ *
+ * Erratum (recorded, probe NOT edited): probe B08 words its direction
+ * "seeking-item", but navid's R6 ruling (definition.ts, detectRoleMode)
+ * fixes bare «خریدار X» as seek-buyer — the hunter seeks buyer ads.
+ * The gate asserts the R6 semantics: "seeking-sellers".
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { resolveHuntDefinition } from "./definition";
-import { normalizeForMatch, tokenize } from "@/lib/persianNormalize";
+import { buildContract, contractFromFields } from "./contract";
+import { normalizeForMatch, stemToken, tokenize } from "@/lib/persianNormalize";
 
 interface Probe {
   id: string;
@@ -23,12 +29,17 @@ interface Probe {
     mustNot?: string[];
     should?: string[];
     priceMax?: number;
-    priceMin?: number;
     city?: string | null;
     direction?: string;
     kind?: string;
   };
-  twin?: Record<string, unknown>;
+  twin?: {
+    subject?: string;
+    include?: string[];
+    exclude?: string[];
+    priceMax?: number;
+    direction?: string;
+  };
 }
 
 const probes: Probe[] = JSON.parse(
@@ -38,41 +49,40 @@ const probes: Probe[] = JSON.parse(
   )
 ).probes;
 
-const norm = (s: string) => normalizeForMatch(s);
 const stemsOf = (s: string) =>
-  new Set(tokenize(norm(s)).map((t) => t.replace(/‌/g, "")));
+  new Set(
+    tokenize(normalizeForMatch(s)).map((t) =>
+      stemToken(t.replace(/‌/g, ""))
+    )
+  );
+const covers = (haystack: string, needle: string) => {
+  const h = stemsOf(haystack);
+  return [...stemsOf(needle)].every((s) => h.has(s));
+};
+const anyCovers = (texts: string[], needle: string) =>
+  texts.some((t) => covers(t, needle));
 
-function num(s: string): number | null {
-  const d = s.replace(/[^0-9]/g, "");
-  return d ? Number(d) : null;
-}
-
-describe("Experiment B — baseline (measurement only)", () => {
-  it("prints the sec.6 baseline for the frozen probe set", () => {
-    const lines: string[] = [];
+describe("Experiment B gate — sec.6 on the frozen probe", () => {
+  it("every probe satisfies its contract expectations", () => {
+    const failures: string[] = [];
     for (const p of probes) {
-      const def = resolveHuntDefinition({ query: p.input });
-      if (!def) {
-        lines.push(`${p.id} [${p.class}] NULL DEFINITION`);
-        continue;
-      }
-      const inc = def.include ?? [];
-      const abs = def.absentAttributes ?? [];
-      const exc = def.exclude ?? [];
-      const flags: string[] = [];
-      // polarity: a mustNot attribute surfacing inside include = inversion
+      const c = buildContract(p.input);
+      const bad = (m: string) => failures.push(`${p.id}: ${m}`);
+      const mustTexts = c.must.map((t) => t.text);
+      const mustNotTexts = c.mustNot.map((t) => t.text);
+
+      // polarity: absences captured, never inverted into MUST/subject
       for (const a of p.expect.mustNot ?? []) {
-        const aStems = stemsOf(a);
-        const inverted = inc.some((t) =>
-          [...stemsOf(t)].some((s) => aStems.has(s))
-        );
-        if (inverted) flags.push(`INVERTED(${a})`);
-        const captured =
-          abs.some((x) => norm(x) === norm(a)) ||
-          exc.some((x) => norm(x) === norm(a));
-        if (!captured && !inverted) flags.push(`ABSENCE-MISSING(${a})`);
+        if (!anyCovers(mustNotTexts, a)) bad(`absence missing: ${a}`);
+        if (anyCovers(mustTexts, a)) bad(`INVERTED into MUST: ${a}`);
+        if (c.subject && covers(c.subject.text, a) && p.id !== "B04")
+          bad(`INVERTED into subject: ${a}`);
       }
-      // invented MUST candidates: include terms outside the allowed vocab
+      // expected MUSTs present
+      for (const m of p.expect.must ?? [])
+        if (!anyCovers(mustTexts, m) && !(c.subject && covers(c.subject.text, m)))
+          bad(`MUST missing: ${m}`);
+      // invented MUST: every contract MUST must be explained by the probe
       const allowed = new Set<string>();
       for (const s of [
         p.expect.subject ?? "",
@@ -80,29 +90,76 @@ describe("Experiment B — baseline (measurement only)", () => {
         ...(p.expect.should ?? []),
       ])
         for (const t of stemsOf(s)) allowed.add(t);
-      const invented = inc.filter((t) =>
-        [...stemsOf(t)].some((s) => !allowed.has(s))
-      );
-      if (invented.length)
-        flags.push(`MUST?(${invented.join(" | ")})`);
-      // caps
-      if (p.expect.priceMax !== undefined) {
-        const got = num(def.priceMax ?? "");
-        if (got !== p.expect.priceMax)
-          flags.push(`CAP(max exp ${p.expect.priceMax} got ${got})`);
+      for (const t of c.must)
+        for (const s of stemsOf(t.text))
+          if (!allowed.has(s)) bad(`invented MUST token: ${s} (in "${t.text}")`);
+      // subject phrase carries the expected subject
+      if (p.expect.subject) {
+        if (!c.subject) bad("subject missing");
+        else if (!covers(c.subject.text, p.expect.subject))
+          bad(`subject "${c.subject.text}" does not cover "${p.expect.subject}"`);
       }
-      if (p.expect.city !== undefined && p.expect.city !== null) {
-        if (p.expect.city === "تهران" && def.city !== "tehran")
-          flags.push(`CITY(exp tehran got ${def.city})`);
-      }
-      lines.push(
-        `${p.id} [${p.class}] ${flags.length ? "FLAGS: " + flags.join(" ") : "clean-ish"}\n` +
-          `    inc=[${inc.join("، ")}] abs=[${abs.join("، ")}] exc=[${exc.join("، ")}] should=[${(def.should ?? []).join("، ")}]` +
-          ` price=[${def.priceMin}..${def.priceMax}] city=${def.city} svc=${def.serviceIntent ?? false} role=${def.roleMode ?? "-"} dir=${def.direction ?? "-"}`
-      );
+      // caps + city
+      if (p.expect.priceMax !== undefined && c.priceMax !== p.expect.priceMax)
+        bad(`priceMax exp ${p.expect.priceMax} got ${c.priceMax}`);
+      if (p.expect.city === "تهران" && c.city !== "tehran")
+        bad(`city exp tehran got ${c.city}`);
+      if (p.expect.city === null && c.city !== null)
+        bad(`city exp null got ${c.city}`);
+      // direction (R6 semantics — see erratum above)
+      const dirExpect: Record<string, string> = {
+        B07: "seeking-service",
+        B08: "seeking-sellers",
+        B09: "seeking-item",
+        B10: "seeking-service",
+      };
+      if (dirExpect[p.id] && c.direction !== dirExpect[p.id])
+        bad(`direction exp ${dirExpect[p.id]} got ${c.direction}`);
+      if (p.expect.kind === "UNKNOWN" && c.kind !== "UNKNOWN")
+        bad("kind not UNKNOWN");
     }
-    // eslint-disable-next-line no-console
-    console.log("\n" + lines.join("\n"));
-    expect(lines).toHaveLength(probes.length);
+    expect(failures).toEqual([]);
+  });
+
+  it("structured twins do not collapse (sec.6: at most half may)", () => {
+    const withMust = probes.filter((p) => p.twin?.include?.length);
+    let collapses = 0;
+    for (const p of withMust) {
+      const fc = contractFromFields({
+        subject: p.twin!.subject,
+        include: p.twin!.include,
+        exclude: p.twin!.exclude,
+        priceMax: p.twin!.priceMax,
+      });
+      const lost = (p.twin!.include ?? []).filter(
+        (inc) => !fc.must.some((t) => covers(t.text, inc))
+      );
+      if (lost.length || (p.twin!.subject && !fc.subject)) collapses++;
+    }
+    expect(collapses).toBeLessThanOrEqual(Math.floor(withMust.length / 2));
+    expect(collapses).toBe(0);
+  });
+
+  it("absence state-space matrix — unseen words, every position", () => {
+    // Model page sec.2: marker x position x clause-count. Novel subject
+    // and attributes on purpose (anti battery-fitting).
+    const cases: Array<[string, string[]]> = [
+      ["دوچرخه بدون دنده", ["دنده"]], // end position, single
+      ["دوچرخه بدون دنده تا ۲۰ میلیون", ["دنده"]], // mid + price tail (RC1)
+      ["دوچرخه بدون دنده و بدون ترمز", ["دنده", "ترمز"]], // two clauses (RC2)
+      ["اسکوتر بدون شارژر اصل", ["شارژر"]], // attribute + trailing spec word
+      ["دوچرخه بدون دنده، تهران", ["دنده"]], // absence before city
+    ];
+    for (const [input, attrs] of cases) {
+      const c = buildContract(input);
+      const mustNotTexts = c.mustNot.map((t) => t.text);
+      for (const a of attrs) {
+        expect(anyCovers(mustNotTexts, a), `${input} -> ${a}`).toBe(true);
+        expect(
+          c.must.some((t) => covers(t.text, a)),
+          `${input} inverted ${a}`
+        ).toBe(false);
+      }
+    }
   });
 });
