@@ -33,7 +33,7 @@ import {
   queryKindForDef,
   targetKindForDef,
 } from "./kindLexicon";
-import { adjudicateAd, type MizanJudgment } from "./mizan";
+import { adjudicateAd, huntTargetKinds, type MizanJudgment } from "./mizan";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -214,7 +214,16 @@ export interface HuntStats {
    * title-strength order, so these are the most likely false rejections).
    * The grading packet renders them for parallel grading.
    */
-  rejectedSample: Array<{ title: string; kind: string; price: number | null }>;
+  // R12: descSnippet (first 200 chars) rides along — the R11 audit found
+  // 18/19 bait+demand-goods rejections wrong but could not trace WHY:
+  // rejected samples stored no description, so the firing text was lost.
+  // Never audit blind again.
+  rejectedSample: Array<{
+    title: string;
+    kind: string;
+    price: number | null;
+    descSnippet?: string;
+  }>;
   /**
    * R9 (2026-10-19): Mizan shadow-mode judgments. When the deterministic
    * engine produces "near", Mizan adjudicates in shadow mode: judge, log,
@@ -757,11 +766,7 @@ function evaluateDescription(
     );
     const kindReject = kindVerdict?.tier === "reject" ? kindVerdict.reason : null;
     const kindDemote = kindVerdict?.tier === "demote" ? kindVerdict.reason : null;
-    const wrongKind =
-      cap.wrongItemKind ??
-      kindReject ??
-      (bait ? "bait:title-desc-mismatch" : null) ??
-      (demandGoods ? "demand-goods:product-ad" : null);
+    const wrongKind = cap.wrongItemKind ?? kindReject;
     if (wrongKind) {
       return {
         ...rejectedEvaluation(),
@@ -773,6 +778,30 @@ function evaluateDescription(
         huntWantsSellers,
     adRole,
         rejectedKind: wrongKind,
+      };
+    }
+    // R12 (desc-level audit): bait + demand-goods DEMOTED from reject to
+    // near. The R11 audit (161 human-graded rejects) found 18 of their 19
+    // sampled rejections WRONG (every one grade 3): bait 11/11,
+    // demand-goods 7/8 — over half of ALL wrong rejections in R11. A rule
+    // whose measured output is only misses may not reject — doubt = keep,
+    // the engine's own law. The rules still fire as a cap (never exact)
+    // until the R12 battery — which now stores rejected descriptions —
+    // lets us re-derive them from real firing text, not guesses.
+    if (bait || demandGoods) {
+      return {
+        verdict: "near",
+        evidence,
+        missingInfo,
+        mustTitle,
+        mustDesc,
+        shouldMatched,
+        providerHits,
+        goodsHits,
+        needsRepairHits,
+        dealerHits,
+        huntWantsSellers,
+    adRole,
       };
     }
     // R8 (F4a): demote — right area, wrong role. Capped to near, never
@@ -1053,19 +1082,19 @@ export async function confirmCandidates(
   const results: ScoredAd[] = [];
   const confirmed: ScoredAd[] = [];
 
-  // R9 (design v2): Mizan shadow-mode queue. Collect "near" candidates
-  // (post-detail, hook B) for offline adjudication. Shadow mode: judge,
-  // log, apply nothing — measures agreement + latency before Mizan
-  // influences results.
-  const mizanQueue: Array<{
-    title: string;
-    description: string;
-    deterministicVerdict: "near" | "exact";
-    sourceAdId: string;
-  }> = [];
-  // Double-check C1: cap counts CALLS not ads. Each ad = 2 HTTP POSTs
-  // (Choice + Noul), so 6 ads = 12 calls = design v2 budget.
-  const MIZAN_SHADOW_CAP = 12;
+  // R12 (judge-after-rank): collect judge data for EVERY surviving
+  // candidate here; the queue itself is built AFTER the Phase-5 sort,
+  // from the final ranked list. R9-R11 built the queue in arrival order
+  // (cap 12) — the coverage hole: on H8 only 4 of 91 results were ever
+  // judged, and unjudged wrong ads ranked into the top-10 untouched.
+  const judgeData = new Map<
+    string,
+    {
+      title: string;
+      description: string;
+      deterministicVerdict: "near" | "exact";
+    }
+  >();
   const huntKind =
     queryKindForDef(def.include, def.serviceIntent ?? false, def.category ?? "") ??
     "general";
@@ -1115,26 +1144,22 @@ export async function confirmCandidates(
             title: c.title,
             kind: ev.rejectedKind ?? "no-match",
             price: c.price,
+            descSnippet: description.replace(/\s+/g, " ").trim().slice(0, 200),
           });
         }
         continue;
       }
       if (ev.verdict === "near") stats.nearMiss += 1;
-      // R11: queue BOTH "near" AND "exact" candidates for Mizan.
+      // R11: judge BOTH "near" AND "exact" candidates.
       // R10 bug: only "near" was queued — stupid ads the deterministic
       // engine confidently called "exact" (e.g. «لوازم ماشین» on a car
-      // hunt) never reached Mizan. Now all surviving candidates are
-      // eligible; the cap keeps latency bounded.
-      if (
-        (ev.verdict === "near" || ev.verdict === "exact") &&
-        !detailUnknown &&
-        mizanQueue.length < MIZAN_SHADOW_CAP
-      ) {
-        mizanQueue.push({
+      // hunt) never reached Mizan. R12: no arrival-order cap here — the
+      // queue is cut from the ranked list below.
+      if ((ev.verdict === "near" || ev.verdict === "exact") && !detailUnknown) {
+        judgeData.set(c.sourceAdId, {
           title: c.title,
           description,
-          deterministicVerdict: "near",
-          sourceAdId: c.sourceAdId,
+          deterministicVerdict: ev.verdict,
         });
       }
       const { score, breakdown } = scoreAd(ev, mustCount, shouldCount, c.price);
@@ -1170,6 +1195,32 @@ export async function confirmCandidates(
     });
   }
 
+  // ---- Phase 5: ranking (R12: moved BEFORE the Mizan block) ---------------
+  // Exact matches outrank near-misses; near-misses order by score.
+  results.sort((a, b) =>
+    a.matchKind === b.matchKind
+      ? b.score - a.score
+      : a.matchKind === "exact"
+        ? -1
+        : 1
+  );
+
+  // R12 judge-after-rank: the judge queue is the top of the FINAL ranked
+  // list (visible zone + backfill margin), not the first arrivals.
+  // The 60s wall-clock budget in the block below still bounds total calls.
+  const JUDGE_AFTER_RANK_CAP = 24;
+  const mizanQueue: Array<{
+    title: string;
+    description: string;
+    deterministicVerdict: "near" | "exact";
+    sourceAdId: string;
+  }> = [];
+  for (const r of results) {
+    if (mizanQueue.length >= JUDGE_AFTER_RANK_CAP) break;
+    const jd = judgeData.get(r.sourceAdId);
+    if (jd) mizanQueue.push({ ...jd, sourceAdId: r.sourceAdId });
+  }
+
   // ---- R9: Mizan shadow mode (design v2) ----------------------------------
   // Judge the queued "near" candidates, log judgments, apply NOTHING.
   // This measures: (1) Mizan-deterministic agreement, (2) per-call latency,
@@ -1192,6 +1243,13 @@ export async function confirmCandidates(
   // Noul violations with corroboration come in v2.
   const MIZAN_REJECT_CONF = 0.9;
   const WRONG_KINDS = ["part", "accessory", "derived", "service", "other"];
+  // R12: the hunt's own target kinds — judgments naming these never reject
+  // (see huntTargetKinds in mizan.ts; the R11 wrong-rejection hole).
+  const targetKinds = huntTargetKinds(
+    huntKind,
+    def.serviceIntent ?? false,
+    def.include ?? []
+  );
   if (mizanQueue.length > 0 && !isTestEnv && !shadowDisabled) {
     const shadowStart = Date.now();
     const toReject = new Set<string>();
@@ -1218,23 +1276,19 @@ export async function confirmCandidates(
         // For >=0.9 confidence on part/accessory/derived/service, the ad is
         // obviously wrong (e.g. «شاگرد ماشین سنگین» on a car hunt).
         // This is the "zero stupid" guarantee.
-        // GUARD: don't reject "part"/"accessory" if the hunt itself wants parts.
-        // Check both huntKind AND query words (e.g. «باطری ماشین» hunt wants batteries).
-        // H15 (قاب) and H14 (باطری) both need this.
-        const PART_WORDS = ["باطری", "باتری", "قاب", "کفی", "لاستیک", "فیلتر"];
-        const huntText = (def.include || []).join(" ");
-        const huntWantsParts =
-          huntKind === "part" ||
-          huntKind === "accessory" ||
-          PART_WORDS.some(w => huntText.includes(w));
-        const isPartJudgment =
-          judgment.itemKind === "part" || judgment.itemKind === "accessory";
+        // R12 GUARD (generalized): never reject a kind that is the hunt's
+        // own target — for EVERY kind, computed structurally by
+        // huntTargetKinds (hoisted above). R11's bug: the old guard
+        // protected only part/accessory (via a PART_WORDS list), so
+        // "service" judgments killed repair ads on repair hunts and
+        // "derived" judgments killed peanut-butter ads on the
+        // peanut-butter hunt (13 wrong rejections).
         if (
           judgment.itemKind &&
           WRONG_KINDS.includes(judgment.itemKind) &&
+          !targetKinds.has(judgment.itemKind) &&
           judgment.itemConfidence >= MIZAN_REJECT_CONF &&
-          !judgment.unavailable &&
-          !(huntWantsParts && isPartJudgment)
+          !judgment.unavailable
         ) {
           toReject.add(q.sourceAdId);
           // Feed the rejected sample for audit (like deterministic rejections).
@@ -1243,6 +1297,7 @@ export async function confirmCandidates(
               title: q.title,
               kind: `mizan:wrong-item:${judgment.itemKind}`,
               price: null,
+              descSnippet: q.description.replace(/\s+/g, " ").trim().slice(0, 200),
             });
           }
         }
@@ -1271,6 +1326,7 @@ export async function confirmCandidates(
               title: q.title,
               kind: "mizan:violation",
               price: null,
+              descSnippet: q.description.replace(/\s+/g, " ").trim().slice(0, 200),
             });
           }
         }
@@ -1303,15 +1359,6 @@ export async function confirmCandidates(
     }
   }
 
-  // ---- Phase 5: ranking ----------------------------------------------------
-  // Exact matches outrank near-misses; near-misses order by score.
-  results.sort((a, b) =>
-    a.matchKind === b.matchKind
-      ? b.score - a.score
-      : a.matchKind === "exact"
-        ? -1
-        : 1
-  );
   return results;
 }
 

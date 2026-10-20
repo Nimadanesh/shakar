@@ -245,3 +245,50 @@ export function mizanSaysReject(
   }
   return { reject: false, reason: null };
 }
+
+/** Hunt words that name a part/accessory as the hunt's own target
+ *  («باطری ماشین» hunts batteries). Reads the HUNT's words, never the ad's. */
+const PART_TARGET_WORDS = ["باطری", "باتری", "قاب", "کفی", "لاستیک", "فیلتر"];
+
+/**
+ * R12: the ItemKinds that are the hunt's OWN target. A Mizan judgment naming
+ * one of these must NEVER reject — the R11 structural bug (33 wrong
+ * rejections, 13 from this one hole): "service" judgments killed repair ads
+ * on repair hunts («تعمیرکار یخچال»), "derived" judgments killed
+ * peanut-butter ads on the «کره بادوم زمینی» hunt itself. The labels were
+ * correct; the rejection rule never asked whether the judged kind IS what
+ * the hunt is hunting. The old guard protected only part/accessory.
+ *
+ * Computed structurally from the hunt definition:
+ * - service hunts (serviceIntent or kind "service") target "service";
+ * - training hunts also protect "service": Mizan's label space has no
+ *   "training" — it folds training into service/other, so a training ad on
+ *   a training hunt can be judged "service" (deterministic layer already
+ *   keeps cross-kind ads out of the queue, so this cannot resurrect them);
+ * - derived hunts (kind "*-derived") target "derived";
+ * - part hunts (kind "*-part") target "part"; accessory hunts
+ *   (kind "*-accessory") target "accessory";
+ * - a hunt whose own words name a part/accessory targets part+accessory
+ *   (the R10/R11 word check, kept and generalized into the set).
+ *
+ * "whole" is never a rejection class; "other" is never a hunt target —
+ * neither is ever protected.
+ */
+export function huntTargetKinds(
+  huntKind: string,
+  serviceIntent: boolean,
+  includeTerms: readonly string[]
+): ReadonlySet<ItemKind> {
+  const targets = new Set<ItemKind>();
+  if (serviceIntent || huntKind === "service") targets.add("service");
+  if (huntKind === "training") targets.add("service");
+  if (huntKind.endsWith("-derived")) targets.add("derived");
+  if (huntKind.endsWith("-part")) targets.add("part");
+  if (huntKind.endsWith("-accessory")) targets.add("accessory");
+  const huntText = includeTerms.join(" ");
+  if (PART_TARGET_WORDS.some((w) => huntText.includes(w))) {
+    targets.add("part");
+    targets.add("accessory");
+  }
+  return targets;
+}

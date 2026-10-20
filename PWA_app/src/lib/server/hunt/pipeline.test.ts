@@ -1602,7 +1602,7 @@ describe("R6 fixes — 2026-10-17 third grading round (wrong-item rejection)", (
     expect(kinds["acc"]).toBeUndefined();
   });
 
-  it("R6: demand-hunt vs goods-ad — family-only service word doesn't save a product ad (R5 h2)", async () => {
+  it("R6/R12: demand-goods caps a product ad to near (reject demoted by the R11 audit)", async () => {
     const def = defCap({
       query: "نصاب کولر گازی می‌خوام",
       include: ["نصاب", "کولر", "گازی"],
@@ -1616,12 +1616,15 @@ describe("R6 fixes — 2026-10-17 third grading round (wrong-item rejection)", (
     const done = await doneOf(def);
     const kinds = kindsOf(done);
     // نصب matched only via the morphological family; the ad sells ACs.
-    expect(kinds["goods"]).toBeUndefined();
+    // R6 rejected it; R11's human audit found 7/8 demand-goods rejections
+    // WRONG (grade 3 genuine installers) — R12 demotes the rule to a
+    // near-cap (doubt = keep) until re-derived from real firing text.
+    expect(kinds["goods"]).toBe("near");
     // Literal service lead stays.
     expect(kinds["pro"]).toBeDefined();
   });
 
-  it("R6: bait titles rejected; terse-but-honest descriptions stay", async () => {
+  it("R6/R12: bait titles capped to near; terse-but-honest descriptions stay", async () => {
     const def = defCap({ query: "موتور سیکلت", include: ["موتور", "سیکلت"] });
     listings([
       { sourceAdId: "bait", title: "موتور سیکلت" },
@@ -1636,7 +1639,9 @@ describe("R6 fixes — 2026-10-17 third grading round (wrong-item rejection)", (
     // Variant control needs its own definition (different MUST).
     const done = await doneOf(def);
     const kinds = kindsOf(done);
-    expect(kinds["bait"]).toBeUndefined();
+    // R6 rejected the bait title; R11's audit found 11/11 bait rejections
+    // WRONG (grade 3) — R12 demotes bait to a near-cap (never exact).
+    expect(kinds["bait"]).toBe("near");
     expect(kinds["honest"]).toBeDefined();
 
     const defV = defCap({ query: "پراید ۱۳۱", include: ["پراید", "۱۳۱"] });
