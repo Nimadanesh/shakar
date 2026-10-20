@@ -1102,7 +1102,14 @@ export async function confirmCandidates(
 ): Promise<ScoredAd[]> {
   // ---- Phase 4: details in prioritized batches of 10 ----------------------
   candidates.sort((a, b) => b.titleStrength - a.titleStrength);
-  const toCheck = candidates.slice(0, MAX_DETAILS_PER_HUNT);
+  // Decision v2 sec.5.2 experiment knob: HUNT_MAX_DETAILS overrides the
+  // per-hunt detail cap (used by the Snapshot v1 50/50 dual-query split).
+  // Unset/invalid in production — the constant rules. shortcut: env-only,
+  // no per-request plumbing; remove when the retrieval experiment closes.
+  const envCap = Number(process.env.HUNT_MAX_DETAILS);
+  const detailCap =
+    Number.isFinite(envCap) && envCap > 0 ? envCap : MAX_DETAILS_PER_HUNT;
+  const toCheck = candidates.slice(0, detailCap);
   const mustCount = def.include.length;
   // Pre-#19 snapshots lack the SHOULD bucket — normalize, never crash.
   const shouldCount = def.should?.length ?? 0;
