@@ -10,6 +10,8 @@ import { describe, expect, it } from "vitest";
 import {
   huntTargetKinds,
   mizanSaysReject,
+  mizanWrongKindRejects,
+  type ItemKind,
   type MizanJudgment,
 } from "./mizan";
 
@@ -121,5 +123,46 @@ describe("mizanSaysReject (Noul channel)", () => {
       actionable: false,
     };
     expect(mizanSaysReject(j, true).reject).toBe(false);
+  });
+});
+
+describe("mizanWrongKindRejects (R12b — the shipping predicate)", () => {
+  const j = (over: Partial<MizanJudgment>): MizanJudgment => ({
+    itemKind: "part",
+    itemConfidence: 0.95,
+    violates: null,
+    violateProbability: 0,
+    actionable: true,
+    unavailable: false,
+    ...over,
+  });
+  const none: ReadonlySet<ItemKind> = new Set();
+
+  it("rejects an unprotected high-confidence wrong kind", () => {
+    expect(mizanWrongKindRejects(j({}), none, false)).toBe(true);
+    expect(mizanWrongKindRejects(j({ itemKind: "other" }), none, false)).toBe(true);
+  });
+
+  it("never rejects the hunt's own target kind (R12 guard)", () => {
+    const svc: ReadonlySet<ItemKind> = new Set(["service"]);
+    expect(mizanWrongKindRejects(j({ itemKind: "service" }), svc, false)).toBe(false);
+    const drv: ReadonlySet<ItemKind> = new Set(["derived"]);
+    expect(mizanWrongKindRejects(j({ itemKind: "derived" }), drv, false)).toBe(false);
+  });
+
+  it("never rejects when the title itself evidences the hunt (F1 shield)", () => {
+    expect(mizanWrongKindRejects(j({ itemKind: "other" }), none, true)).toBe(false);
+    expect(mizanWrongKindRejects(j({}), none, true)).toBe(false);
+  });
+
+  it("respects the confidence floor and transport failures", () => {
+    expect(mizanWrongKindRejects(j({ itemConfidence: 0.89 }), none, false)).toBe(false);
+    expect(mizanWrongKindRejects(j({ itemConfidence: 0.9 }), none, false)).toBe(true);
+    expect(mizanWrongKindRejects(j({ unavailable: true }), none, false)).toBe(false);
+  });
+
+  it("whole and null kinds never reject", () => {
+    expect(mizanWrongKindRejects(j({ itemKind: "whole" }), none, false)).toBe(false);
+    expect(mizanWrongKindRejects(j({ itemKind: null }), none, false)).toBe(false);
   });
 });

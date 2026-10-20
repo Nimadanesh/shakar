@@ -292,3 +292,46 @@ export function huntTargetKinds(
   }
   return targets;
 }
+
+/** Confidence floor for the ACTIVE wrong-kind rejection (R10). Single
+ *  source (double-check F5): the pipeline must not fork its own copy. */
+export const MIZAN_WRONG_KIND_CONF = 0.9;
+
+/** Kinds that may reject when they are NOT the hunt's target. "whole" is
+ *  the hunted item itself — never a rejection class. */
+const MIZAN_WRONG_KINDS: ReadonlySet<ItemKind> = new Set([
+  "part",
+  "accessory",
+  "derived",
+  "service",
+  "other",
+]);
+
+/**
+ * R12/R12b: may this Choice judgment reject the ad as a wrong item?
+ * Pure predicate — the shipping decision, unit-tested directly
+ * (double-check F4: the inline pipeline copy had no direct test).
+ *
+ * Guards (any one blocks rejection):
+ * - transport failure (unavailable) or no kind opinion;
+ * - confidence below MIZAN_WRONG_KIND_CONF;
+ * - the judged kind IS the hunt's own target (huntTargetKinds — R12);
+ * - the ad's TITLE itself evidences the hunt (titleEvidencesHunt,
+ *   computed by the caller for multi-term hunts): the hunted item named
+ *   in full in the title is stronger evidence than a model kind label —
+ *   the R11 open-class hole (a «پیانو U3» ad judged "other" on its own
+ *   hunt, where the lexicon is blind and targets are empty). Doubt = keep.
+ */
+export function mizanWrongKindRejects(
+  judgment: MizanJudgment,
+  targetKinds: ReadonlySet<ItemKind>,
+  titleEvidencesHunt: boolean
+): boolean {
+  if (judgment.unavailable) return false;
+  if (!judgment.itemKind || !MIZAN_WRONG_KINDS.has(judgment.itemKind))
+    return false;
+  if (judgment.itemConfidence < MIZAN_WRONG_KIND_CONF) return false;
+  if (targetKinds.has(judgment.itemKind)) return false;
+  if (titleEvidencesHunt) return false;
+  return true;
+}

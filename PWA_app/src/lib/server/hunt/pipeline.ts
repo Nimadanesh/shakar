@@ -33,7 +33,12 @@ import {
   queryKindForDef,
   targetKindForDef,
 } from "./kindLexicon";
-import { adjudicateAd, huntTargetKinds, type MizanJudgment } from "./mizan";
+import {
+  adjudicateAd,
+  huntTargetKinds,
+  mizanWrongKindRejects,
+  type MizanJudgment,
+} from "./mizan";
 import { dupKey } from "@/lib/nearDup";
 import {
   MAX_DETAILS_PER_HUNT,
@@ -184,6 +189,13 @@ export interface ScoredAd {
    * never scored.
    */
   descSnippet?: string;
+  /**
+   * R12b (double-check F3): why this ad was capped to "near" by a demote
+   * rule (bait / demand-goods / kind-gate / semantic cap). Without the
+   * label, demoted firings are invisible in battery output and the rules
+   * can never be re-derived from real firing text. Display/audit only.
+   */
+  demotedBy?: "bait" | "demand-goods" | "kind" | "cap";
 }
 
 export interface HuntStats {
@@ -434,6 +446,12 @@ export interface DescriptionEvaluation {
    * silent filtering. Set only on wrong-item rejections.
    */
   rejectedKind?: string;
+  /**
+   * R12b (double-check F3): which demote rule capped this ad to "near"
+   * ("bait" | "demand-goods" | "kind" | "cap"). Set only on demote
+   * branches; carried onto ScoredAd so battery audits can find firings.
+   */
+  demotedBy?: "bait" | "demand-goods" | "kind" | "cap";
 }
 
 function rejectedEvaluation(): DescriptionEvaluation {
@@ -790,6 +808,7 @@ function evaluateDescription(
     // lets us re-derive them from real firing text, not guesses.
     if (bait || demandGoods) {
       return {
+        demotedBy: bait ? "bait" : "demand-goods",
         verdict: "near",
         evidence,
         missingInfo,
@@ -809,6 +828,7 @@ function evaluateDescription(
     // battery source, not a wrong item).
     if (kindDemote) {
       return {
+        demotedBy: "kind",
         verdict: "near",
         evidence,
         missingInfo,
@@ -825,6 +845,7 @@ function evaluateDescription(
     }
     if (cap.fire) {
       return {
+        demotedBy: "cap",
         verdict: "near",
         evidence,
         missingInfo,
@@ -1179,6 +1200,8 @@ export async function confirmCandidates(
         matchKind: !detailUnknown && ev.verdict === "exact" ? "exact" : "near",
         missingInfo: ev.missingInfo,
         ...(detailUnknown ? { detailUnknown: true } : {}),
+        // R12b (F3): carry the demote label onto the result card data.
+        ...(ev.demotedBy ? { demotedBy: ev.demotedBy } : {}),
         // R5 grading packets show this so condition claims are verifiable.
         descSnippet: description.replace(/\s+/g, " ").trim().slice(0, 200),
       };
@@ -1241,10 +1264,10 @@ export async function confirmCandidates(
   // R10: Mizan is ACTIVE (not shadow). The block below judges AND acts.
   // Rejection criteria (v1): high-confidence wrong-item (>=0.9) — the "stupid" class.
   // Noul violations with corroboration come in v2.
-  const MIZAN_REJECT_CONF = 0.9;
-  const WRONG_KINDS = ["part", "accessory", "derived", "service", "other"];
   // R12: the hunt's own target kinds — judgments naming these never reject
   // (see huntTargetKinds in mizan.ts; the R11 wrong-rejection hole).
+  // R12b: the rejection threshold + predicate live in mizan.ts
+  // (MIZAN_WRONG_KIND_CONF / mizanWrongKindRejects) — one source, tested.
   const targetKinds = huntTargetKinds(
     huntKind,
     def.serviceIntent ?? false,
@@ -1283,13 +1306,15 @@ export async function confirmCandidates(
         // "service" judgments killed repair ads on repair hunts and
         // "derived" judgments killed peanut-butter ads on the
         // peanut-butter hunt (13 wrong rejections).
-        if (
-          judgment.itemKind &&
-          WRONG_KINDS.includes(judgment.itemKind) &&
-          !targetKinds.has(judgment.itemKind) &&
-          judgment.itemConfidence >= MIZAN_REJECT_CONF &&
-          !judgment.unavailable
-        ) {
+        // R12b SHIELD (double-check F1): a title that itself evidences
+        // every MUST term of a multi-term hunt IS the hunted item by the
+        // engine's own evidence — a model kind label cannot overrule it
+        // (open-class subjects like «پیانو U3», where targets are empty).
+        // Single-term hunts excluded: one shared word is weak evidence.
+        const titleEvidencesHunt =
+          (def.include?.length ?? 0) >= 2 &&
+          (def.include ?? []).every((t) => textMatches(q.title, t));
+        if (mizanWrongKindRejects(judgment, targetKinds, titleEvidencesHunt)) {
           toReject.add(q.sourceAdId);
           // Feed the rejected sample for audit (like deterministic rejections).
           if (stats.rejectedSample.length < 12) {

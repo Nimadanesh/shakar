@@ -1622,6 +1622,10 @@ describe("R6 fixes — 2026-10-17 third grading round (wrong-item rejection)", (
     expect(kinds["goods"]).toBe("near");
     // Literal service lead stays.
     expect(kinds["pro"]).toBeDefined();
+    // R12b (F3): the demote is labelled on the result for battery audits.
+    expect(done.results.find((r) => r.sourceAdId === "goods")?.demotedBy).toBe(
+      "demand-goods"
+    );
   });
 
   it("R6/R12: bait titles capped to near; terse-but-honest descriptions stay", async () => {
@@ -1643,6 +1647,10 @@ describe("R6 fixes — 2026-10-17 third grading round (wrong-item rejection)", (
     // WRONG (grade 3) — R12 demotes bait to a near-cap (never exact).
     expect(kinds["bait"]).toBe("near");
     expect(kinds["honest"]).toBeDefined();
+    // R12b (F3): the demote is labelled on the result for battery audits.
+    expect(done.results.find((r) => r.sourceAdId === "bait")?.demotedBy).toBe(
+      "bait"
+    );
 
     const defV = defCap({ query: "پراید ۱۳۱", include: ["پراید", "۱۳۱"] });
     listings([{ sourceAdId: "variant", title: "پراید ۱۳۱" }]);
