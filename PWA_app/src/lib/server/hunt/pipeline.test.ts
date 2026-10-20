@@ -601,6 +601,172 @@ describe("intent buckets — flaw #19 (MUST/SHOULD/MUST-NOT/UNKNOWN)", () => {
     expect(done.stats.rejectedNoMatch).toBe(1); // s3
     expect(done.stats.nearMiss).toBe(0);
   });
+
+  it("keeps a standalone freezer as a near-match, not an exact refrigerator match", async () => {
+    const def = def19({
+      query: "یخچال",
+      category: "home",
+      include: ["یخچال"],
+    });
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "fridge", title: "یخچال فریزر سالم" }),
+        summary({ sourceAdId: "freezer", title: "فریزر صندوقی بدون برفک" }),
+      ],
+      hasMore: false,
+    });
+    detail({
+      fridge: "یخچال فریزر سالم",
+      freezer: "فریزر صندوقی بدون برفک مناسب مغازه",
+    });
+    const done = await doneOf(def);
+
+    expect(done.results.map((ad) => ad.sourceAdId)).toEqual(["fridge", "freezer"]);
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results[1].matchKind).toBe("near");
+    expect(done.results[1].missingInfo).toEqual(["یخچال"]);
+    expect(done.stats.nearMiss).toBe(1);
+    expect(done.stats.rejectedNoMatch).toBe(0);
+  });
+
+  it("ranks a real acoustic piano above design/digital acoustic claims", async () => {
+    const def = def19({
+      query: "پیانو آکوستیک",
+      category: "music",
+      include: ["پیانو", "آکوستیک"],
+    });
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "real", title: "پیانو آکوستیک یاماها" }),
+        summary({ sourceAdId: "design", title: "پیانو طرح آکوستیک" }),
+        summary({ sourceAdId: "digital", title: "پیانو دیجیتال آکوستیک" }),
+      ],
+      hasMore: false,
+    });
+    detail({
+      real: "پیانو آکوستیک واقعی یاماها",
+      design: "پیانو طرح آکوستیک با رنگ‌بندی سفارشی",
+      digital: "پیانو دیجیتال با صدای آکوستیک",
+    });
+    const done = await doneOf(def);
+
+    expect(done.results[0].sourceAdId).toBe("real");
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results.find((ad) => ad.sourceAdId === "design")?.matchKind).toBe("near");
+    expect(done.results.find((ad) => ad.sourceAdId === "digital")?.matchKind).toBe("near");
+    expect(done.results.find((ad) => ad.sourceAdId === "design")?.missingInfo).toContain("آکوستیک");
+    expect(done.results.find((ad) => ad.sourceAdId === "digital")?.missingInfo).toContain("آکوستیک");
+  });
+
+  it("keeps genuine acoustic evidence when a natural sound phrase co-occurs", async () => {
+    // Guard must not over-filter: "صدای آکوستیک" alone is insufficient,
+    // but "پیانو آکوستیک" elsewhere in the same text still proves the subtype.
+    const def = def19({
+      query: "پیانو آکوستیک",
+      category: "music",
+      include: ["پیانو", "آکوستیک"],
+    });
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "g1", title: "پیانو یاماها" })],
+      hasMore: false,
+    });
+    detail({
+      g1: "پیانو آکوستیک با صدای آکوستیک گرم",
+    });
+    const done = await doneOf(def);
+
+    expect(done.results.map((ad) => ad.sourceAdId)).toEqual(["g1"]);
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results[0].missingInfo).toEqual([]);
+  });
+
+  it("keeps a keyboard-only listing as near, not exact, for a piano query", async () => {
+    const def = def19({
+      query: "پیانو",
+      category: "music",
+      include: ["پیانو"],
+    });
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "piano", title: "پیانو یاماها" }),
+        summary({ sourceAdId: "keyboard", title: "کیبورد آموزشی" }),
+      ],
+      hasMore: false,
+    });
+    detail({
+      piano: "پیانو سالم",
+      keyboard: "کیبورد آموزشی مناسب شروع",
+    });
+    const done = await doneOf(def);
+
+    expect(done.results.map((ad) => ad.sourceAdId)).toEqual(["piano", "keyboard"]);
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results[1].matchKind).toBe("near");
+    expect(done.results[1].missingInfo).toEqual(["پیانو"]);
+  });
+
+  it("preserves the apartment positive control, including واحد alias listings", async () => {
+    // Case C: آپارتمان نوساز سعادت‌آباد must keep ranking relevant results.
+    // loc-a-live3/live5 name واحد instead of آپارتمان; the real-estate
+    // alias must still match end-to-end.
+    const def = def19({
+      query: "آپارتمان نوساز سعادت‌آباد",
+      category: "real-estate",
+      include: ["آپارتمان", "نوساز", "سعادت", "آباد"],
+    });
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "live1", title: "آپارتمان سعادت آباد ۵۴۵ متر نوساز، مشاعات هتلینگ" }),
+        summary({ sourceAdId: "live3", title: "فروش 108 متر نوساز کم واحد در سعادت آباد" }),
+        summary({ sourceAdId: "live5", title: "107 متر، نوساز کلید نخورده، تک واحدی، سعادت آباد" }),
+      ],
+      hasMore: false,
+    });
+    detail({
+      live1: "آپارتمان سعادت آباد ۵۴۵ متر نوساز",
+      live3: "فروش 108 متر نوساز کم واحد در سعادت آباد",
+      live5: "107 متر، نوساز کلید نخورده، تک واحدی، سعادت آباد",
+    });
+    const done = await doneOf(def);
+
+    expect(done.results).toHaveLength(3);
+    for (const ad of done.results) {
+      expect(ad.matchKind).toBe("exact");
+      expect(ad.missingInfo).toEqual([]);
+    }
+  });
+
+  it("documents current repair/buyer-side behavior: MUST evidence still counts as exact", async () => {
+    // The pipeline has no service-vs-product or buyer-vs-seller distinction
+    // (flaw #7, future M4b). These listings contain یخچال, so they satisfy
+    // the MUST textually. matchKind "exact" here means MUST-evidenced, not
+    // a transaction-direction claim. If service/intent logic is added later,
+    // this test must be revisited.
+    const def = def19({
+      query: "یخچال",
+      category: "home",
+      include: ["یخچال"],
+    });
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "repair", title: "تعمیر یخچال" }),
+        summary({ sourceAdId: "buyer", title: "خریدار یخچال سالم خراب سوخته" }),
+      ],
+      hasMore: false,
+    });
+    detail({
+      repair: "تعمیر یخچال در محل",
+      buyer: "خریدار یخچال سالم خراب سوخته",
+    });
+    const done = await doneOf(def);
+
+    expect(done.results).toHaveLength(2);
+    // Current behavior: textual MUST match → exact. No silent transaction
+    // claim is made; the limitation is documented, not hidden.
+    for (const ad of done.results) {
+      expect(ad.matchKind).toBe("exact");
+    }
+  });
 });
 
 describe("collapseDupes — bug #19 (dedupe before sort, keep newest)", () => {

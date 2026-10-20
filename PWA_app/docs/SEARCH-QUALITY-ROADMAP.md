@@ -6,7 +6,7 @@ Scope: `PWA_app/src/lib/server/hunt/**`, search-only normalization/interpretatio
 
 ## Operating contract
 
-- Every implementation step is isolated on `feat/search-quality-engine-v1`; `main` remains the rollback point.
+- Every implementation step is isolated on a task-specific feature branch; `main` remains the rollback point. Current Step 3 prototype branch: `feat/context-aware-search-concepts-v1`.
 - Keep each step small, testable, and independently revertible.
 - Do not add Laya or make an LLM a required dependency. No OpenRouter key is needed for the initial deterministic phases.
 - Preserve public API shapes, streaming event contracts, cache/settlement behavior, hunt quotas, and UI behavior.
@@ -31,7 +31,7 @@ Scope: `PWA_app/src/lib/server/hunt/**`, search-only normalization/interpretatio
 - Identify high-risk quality defects and define the evaluation protocol.
 - Exit gate: roadmap committed; no production code changed; rollback is simply returning to main.
 
-### Step 2 — Build a repeatable search-quality benchmark (implemented; execution pending) (implemented; execution pending)
+### Step 2 — Build a repeatable search-quality benchmark (implemented; execution pending)
 - Added `src/lib/server/hunt/search-quality-benchmark.ts`, version `2026-10-09-v1`, with 13 deterministic Persian query cases and human-authored graded candidate labels (0–3).
 - Coverage: Persian spelling/Arabic-keyboard variants, plural/ZWNJ, exact model identifiers, category collisions, negation, preference-vs-MUST, city/district, price, condition, transaction, unknown attributes, ambiguity, and reposts.
 - Added metric helpers for Precision@K, Recall@K (with the judged-pool denominator explicit), and nDCG@K; added tests for metric arithmetic, dataset integrity, slice coverage, and current normalization anchors.
@@ -39,11 +39,12 @@ Scope: `PWA_app/src/lib/server/hunt/**`, search-only normalization/interpretatio
 - Exit gate: run focused test, full test, typecheck and lint in a real Node environment; intentionally perturb metric/fixture behavior to confirm regression tests fail. Then record a baseline report before Step 3 changes.
 
 ### Step 3 — Fix synonym semantics without sacrificing recall
-- Replace global synonym equivalence with explicit concept metadata: canonical concept, aliases, related-but-not-equivalent concepts, applicable categories, and confidence/expansion policy.
-- Exact aliases may normalize to one concept. Related concepts (e.g. suite vs apartment, fridge vs freezer, piano vs keyboard) must not become bidirectional exact matches by default.
+- Replace global synonym equivalence with explicit concept metadata: canonical concept, exact aliases, related-but-not-equivalent concepts, and applicable categories.
+- Exact aliases may normalize to one concept only in a reliable applicable category. Related concepts (e.g. suite vs apartment, freezer vs refrigerator, piano vs keyboard, split AC vs generic cooler) must not become bidirectional exact matches by default. Related terms may preserve a candidate as a low-priority near-match, but must remain in UNKNOWN/MUST-missing evidence and cannot satisfy an exact-match requirement.
 - Keep expansion for candidate retrieval distinct from mandatory matching. An expanded retrieval term must not automatically become a MUST requirement or proof of exact relevance.
-- Add tests for both positive aliases and hard negatives, including category-sensitive keyboard meanings.
+- Add tests for both positive aliases and hard negatives, including category-sensitive keyboard meanings and descriptive phrases such as «طرح آکوستیک».
 - Exit gate: known false-positive fixtures are rejected while spelling/morphology recall fixtures still pass.
+- **Prototype status (2026-10-09):** isolated branch `feat/context-aware-search-concepts-v1` now contains concept metadata, category-aware matching, an acoustic-design evidence guard, regression tests, and reviewed live-result labels in benchmark v2. This is a proposal, not a completed step: focused/full tests, typecheck, lint, and baseline execution are not yet run in a real Node environment. Do not merge or deploy it until that validation is completed.
 
 ### Step 4 — Canonical intent and deterministic constraint audit
 - Verify parsing of MUST, SHOULD, MUST-NOT, UNKNOWN; city/district; price min/max; transaction; condition; category; model identifiers; and negation scope.
@@ -87,5 +88,8 @@ Scope: `PWA_app/src/lib/server/hunt/**`, search-only normalization/interpretatio
 
 ## Session handoff
 
-Current completed work: Step 1 source audit and roadmap; Step 2 benchmark fixture, metric helpers, and tests committed on `feat/search-quality-engine-v1`. Baseline commit: `bb27c76928602572a525b8ea0b61378ea475f0ab`.
-Step 2 validation still requires running focused/full tests, typecheck, and lint in a Node environment. Do not change production ranking or synonym behavior until the benchmark's execution results are recorded.
+- Live deployment baseline last reported by the user at /api/version: main SHA `5e73991aa2a52a2c3612dcd05c1b97c0603d4a2b`. This identifies the deployed build only; it does not demonstrate search-quality improvement.
+- User-reviewed live hunts (2026-10-09): `پیانو آکوستیک` returned the right broad item family but mixed true acoustic-piano listings with design/digital-acoustic claims; `یخچال` returned related product/service/buy-side ads and one suspicious 1,000-toman listed price; `آپارتمان نوساز سعادت‌آباد` had five relevant top results and is a preserve-as-positive regression case.
+- Step 2 benchmark fixtures and metrics exist on main, but execution validation is still pending. The benchmark was expanded to v2 on the isolated Step 3 branch with user-reviewed live examples; it does not yet provide a measured production Precision/Recall score.
+- Step 3 prototype commits on `feat/context-aware-search-concepts-v1`: category-scoped exact-alias metadata, related-concept hard negatives, normalized descriptor evidence guard, and regression tests. The branch is not merged or deployed.
+- Verification blocker: this session's container cannot resolve GitHub to clone/install the project, and the repo has no GitHub Actions workflow. Therefore no actual Vitest, full test suite, typecheck, lint, or build has run for the prototype. Do not claim PASS or merge/deploy before a real Node environment runs those checks.

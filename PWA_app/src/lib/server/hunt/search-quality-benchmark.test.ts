@@ -45,7 +45,9 @@ describe("search quality metric calculations", () => {
   });
 
   it("rewards better ordering with nDCG@K", () => {
-    const ideal = evaluateRanking(["a", "b", "c"], labels, 3).ndcgAtK;
+    // Labels a=3,b=2,c=0,d=1: the true ideal top-3 is a,b,d (3,2,1).
+    // Using c (0) in third place is measurably sub-ideal (nDCG ~0.947).
+    const ideal = evaluateRanking(["a", "b", "d"], labels, 3).ndcgAtK;
     const poor = evaluateRanking(["c", "b", "a"], labels, 3).ndcgAtK;
     expect(ideal).toBeGreaterThan(poor);
     expect(ideal).toBeCloseTo(1);
@@ -59,7 +61,7 @@ describe("search quality metric calculations", () => {
 describe("benchmark fixture smoke checks against current Persian matching", () => {
   it("keeps core spelling and token-normalization positives as regression anchors", () => {
     expect(textMatches("اپارتمان ۹۰ متری نوساز", "آپارتمان")).toBe(true);
-    expect(textMatches("فروش موبايل‌ها", "موبایل")).toBe(true);
+    expect(textMatches("فروش موبايل‌ها", "موبایل", "mobile")).toBe(true);
     expect(normalizeForMatch("می‌روم، تهران!")).toBe("می روم تهران");
     expect(tokenize("ماشین‌ها")).toContain("ماشین");
   });
