@@ -8,7 +8,7 @@
  * 0 = irrelevant. "expectedTerms" are human-authored evidence cues for
  * fixture interpretation, not an assertion that current matching is correct.
  */
-export const SEARCH_QUALITY_BENCHMARK_VERSION = "2026-10-09-v1" as const;
+export const SEARCH_QUALITY_BENCHMARK_VERSION = "2026-10-10-v3" as const;
 
 export type RelevanceGrade = 0 | 1 | 2 | 3;
 export type BenchmarkSlice =
@@ -212,6 +212,52 @@ export const SEARCH_QUALITY_BENCHMARK: readonly SearchQualityCase[] = [
       { id: "dup-a1", title: "آیفون ۱۳ تمیز", description: "۲۵۶ گیگ", relevance: 3, note: "Canonical relevant listing." },
       { id: "dup-a1-repost", title: "آیفون ۱۳ تمیز", description: "۲۵۶ گیگ", relevance: 3, note: "Same listing reposted; relevance label retained but metric should deduplicate IDs only if production does." },
       { id: "dup-a2", title: "آیفون ۱۳ پرو", description: "۱۲۸ گیگ", relevance: 1, note: "Different model variant." },
+      { id: "dup-a3", title: "ماشین لباسشویی", description: "کم‌کارکرد", relevance: 0, note: "Wrong entity; hard negative for the duplicates slice (human-reviewed)." },
+    ],
+  },
+  {
+    id: "service-product-fridge",
+    slice: "entity-collision",
+    query: "یخچال",
+    intent: { category: "home-appliances", must: ["یخچال"], should: [], mustNot: [], unknown: ["freezer-compartment"] },
+    candidates: [
+      { id: "srv-p1", title: "یخچال ساید سالم", description: "فروش", relevance: 3, note: "Seller product listing; exact item (human-reviewed)." },
+      { id: "srv-p2", title: "تعمیر یخچال در محل", description: "سرویس فوری", relevance: 0, note: "Service listing, not a product; hard negative for product-vs-service (human-reviewed)." },
+      { id: "srv-p3", title: "فریزر صندوقی", description: "مناسب مغازه", relevance: 1, note: "Related appliance, not equivalent (human-reviewed)." },
+      { id: "srv-p4", title: "ماشین لباسشویی", description: "کم‌کارکرد", relevance: 0, note: "Wrong appliance (human-reviewed)." },
+    ],
+  },
+  {
+    id: "direction-buyer-seller-fridge",
+    slice: "transaction",
+    query: "یخچال",
+    intent: { category: "home-appliances", transaction: "unknown", must: ["یخچال"], should: [], mustNot: [], unknown: ["direction"] },
+    candidates: [
+      { id: "dir-s1", title: "فروش یخچال سالم", description: "قیمت مناسب", relevance: 3, note: "Seller-side product listing (human-reviewed)." },
+      { id: "dir-b1", title: "خریدار یخچال سالم خراب سوخته", description: "نقدی", relevance: 0, note: "Buyer-side ad; wrong transaction direction as a product result (human-reviewed hard negative)." },
+      { id: "dir-u1", title: "یخچال", description: "تماس بگیرید", relevance: 2, note: "Direction unstated; relevant but uncertain (human-reviewed)." },
+    ],
+  },
+  {
+    id: "exact-related-cooler",
+    slice: "entity-collision",
+    query: "کولر",
+    intent: { category: "home-appliances", must: ["کولر"], should: [], mustNot: [], unknown: ["capacity"] },
+    candidates: [
+      { id: "cool-e1", title: "کولر آبی سالم", description: "فروش", relevance: 3, note: "Exact item (human-reviewed)." },
+      { id: "cool-r1", title: "اسپیلت ۲۴ هزار", description: "کم‌مصرف", relevance: 1, note: "Related cooling appliance, not an exact cooler match (human-reviewed)." },
+      { id: "cool-w1", title: "بخاری گازی", description: "سالم", relevance: 0, note: "Wrong appliance; hard negative (human-reviewed)." },
+    ],
+  },
+  {
+    id: "negation-digital-piano",
+    slice: "negation",
+    query: "پیانو آکوستیک نه دیجیتال",
+    intent: { category: "musical-instruments", must: ["پیانو", "آکوستیک"], should: [], mustNot: ["دیجیتال"], unknown: ["brand"] },
+    candidates: [
+      { id: "negp-e1", title: "پیانو آکوستیک یاماها", description: "مدل دیواری", relevance: 3, note: "Exact target, no excluded term (human-reviewed)." },
+      { id: "negp-h1", title: "پیانو دیجیتال آکوستیک", description: "صدای آکوستیک", relevance: 0, note: "Explicit MUST-NOT contradiction; hard negative (human-reviewed)." },
+      { id: "negp-n1", title: "پیانو طرح آکوستیک", description: "رنگ سفارشی", relevance: 1, note: "Ambiguous design wording; not digital, but not proven exact (human-reviewed)." },
     ],
   },
 ] as const;
