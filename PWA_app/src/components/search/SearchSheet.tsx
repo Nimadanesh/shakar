@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { BellRing, Bookmark, Heart, History, Radar, Search, X } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import {
@@ -43,9 +43,14 @@ export function SearchSheet({
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    if (open) setQuery("");
-  }, [open ]);
+  // Clear the query each time the sheet opens. Render-phase update via
+  // prev-open state (not a ref, not an effect), so no synchronous setState
+  // runs inside an effect body. Typing while open is untouched.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
+    if (open && query !== "") setQuery("");
+  }
 
   const results = useMemo(
     () => sortSearchItems(filterSearchItems(items, query)),

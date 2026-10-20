@@ -111,7 +111,12 @@ export function useProfile() {
   useEffect(() => {
     let cancelled = false;
     const isLoggedIn = getSession() !== null;
-    setLoggedIn(isLoggedIn);
+    // Defer to a microtask — the effect body itself never calls setState
+    // synchronously. Initial render stays null on server and client
+    // (hydration-safe); the known value lands right after mount.
+    queueMicrotask(() => {
+      if (!cancelled) setLoggedIn(isLoggedIn);
+    });
     const apply = (name: string, backed: boolean) => {
       if (cancelled) return;
       const next = { name };
