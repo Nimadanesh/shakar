@@ -1065,7 +1065,7 @@ export async function confirmCandidates(
   }> = [];
   // Double-check C1: cap counts CALLS not ads. Each ad = 2 HTTP POSTs
   // (Choice + Noul), so 6 ads = 12 calls = design v2 budget.
-  const MIZAN_SHADOW_CAP = 6;
+  const MIZAN_SHADOW_CAP = 12;
   const huntKind =
     queryKindForDef(def.include, def.serviceIntent ?? false, def.category ?? "") ??
     "general";
@@ -1120,12 +1120,13 @@ export async function confirmCandidates(
         continue;
       }
       if (ev.verdict === "near") stats.nearMiss += 1;
-      // R9 shadow mode: queue "near" candidates for Mizan adjudication.
-      // Hook B: post-detail, only non-unknown details, capped.
-      // (Design v2: Choice is advisory; Noul needs corroboration.
-      //  Shadow mode judges and logs but applies nothing.)
+      // R11: queue BOTH "near" AND "exact" candidates for Mizan.
+      // R10 bug: only "near" was queued — stupid ads the deterministic
+      // engine confidently called "exact" (e.g. «لوازم ماشین» on a car
+      // hunt) never reached Mizan. Now all surviving candidates are
+      // eligible; the cap keeps latency bounded.
       if (
-        ev.verdict === "near" &&
+        (ev.verdict === "near" || ev.verdict === "exact") &&
         !detailUnknown &&
         mizanQueue.length < MIZAN_SHADOW_CAP
       ) {
@@ -1241,6 +1242,27 @@ export async function confirmCandidates(
             stats.rejectedSample.push({
               title: q.title,
               kind: `mizan:wrong-item:${judgment.itemKind}`,
+              price: null,
+            });
+          }
+        }
+        // R11 fix 2: Noul violation rejection.
+        // If Mizan says the ad VIOLATES the hunt constraint (e.g. crashed
+        // car on a «بدون تصادف» hunt) with high probability, reject it.
+        // The Noul question is only asked when a constraint exists, so
+        // violates=true at >=0.8 is a strong, specific signal.
+        const NOUL_REJECT_PROB = 0.8;
+        if (
+          judgment.violates === true &&
+          judgment.violateProbability >= NOUL_REJECT_PROB &&
+          !judgment.unavailable &&
+          !toReject.has(q.sourceAdId)
+        ) {
+          toReject.add(q.sourceAdId);
+          if (stats.rejectedSample.length < 12) {
+            stats.rejectedSample.push({
+              title: q.title,
+              kind: "mizan:violation",
               price: null,
             });
           }

@@ -86,10 +86,10 @@ function choiceCriteriaFor(huntKind: string): Record<string, string> {
   const k = huntKind.toLowerCase();
   if (k.includes("vehicle") || k.includes("car") || k.includes("ماشین")) {
     return {
-      whole: "یک خودروی کامل و سالم برای فروش",
+      whole: "یک خودروی سواری کامل برای فروش (مثل پراید، پژو، سمند) — نه ماشین‌آلات راهسازی یا سنگین",
       part: "قطعه یا جزء خودرو، مثل کفی، دینام، باطری، لنت",
       accessory: "لوازم جانبی خودرو که ضروری نیست، مثل چادر، سیستم صوتی",
-      other: "هر چیز دیگری",
+      other: "هر چیز دیگری، از جمله ماشین‌آلات راهسازی (بیل مکانیکی، بلدزر) و خودروهای سنگین",
     };
   }
   if (k.includes("food") || k.includes("بادام") || k.includes("غذا")) {
