@@ -1191,7 +1191,7 @@ export async function confirmCandidates(
   // Rejection criteria (v1): high-confidence wrong-item (>=0.9) — the "stupid" class.
   // Noul violations with corroboration come in v2.
   const MIZAN_REJECT_CONF = 0.9;
-  const WRONG_KINDS = ["part", "accessory", "derived", "service"];
+  const WRONG_KINDS = ["part", "accessory", "derived", "service", "other"];
   if (mizanQueue.length > 0 && !isTestEnv && !shadowDisabled) {
     const shadowStart = Date.now();
     const toReject = new Set<string>();
