@@ -8,7 +8,9 @@ This directory is the durable source of truth for the autonomous Engine V3 works
 2. [DECISIONS.md](./DECISIONS.md) — binding technical decisions and rationale.
 3. [ROADMAP.md](./ROADMAP.md) — staged plan and exit gates.
 4. [EVALUATION.md](./EVALUATION.md) — benchmark protocol, measurements, and human-judge feedback.
-5. [HANDOFF.md](./HANDOFF.md) — compact continuation packet for a new chat.
+5. [BASELINE_AUDIT.md](./BASELINE_AUDIT.md) — exact hosted-run results and current evidence limits.
+6. [FAILURE_REGISTER.md](./FAILURE_REGISTER.md) — ranked hypotheses and the first evidence-gated experiment.
+7. [HANDOFF.md](./HANDOFF.md) — compact continuation packet for a new chat.
 
 ## Authority and scope
 
@@ -16,7 +18,7 @@ This directory is the durable source of truth for the autonomous Engine V3 works
 - Baseline at branch creation: `main` commit `10f3c40d70748ff27d6928eaed0875e10dab1c56` (2026-10-21; merge of `feat/engine-v2`).
 - `main` is not a work target. Do not merge, deploy, mutate services, or modify evaluation captures as part of this work unless separately and explicitly authorized.
 - Existing contest/evaluation artifacts are evidence. Preserve them; never rewrite history to make a result look better.
-- This branch initially contains documentation only. No engine code was changed in the setup commit.
+- The only source change so far is a behavior-preserving `let` → `const` cleanup in `contract.ts`; no engine behavior or product feature was changed.
 
 ## Session protocol
 
