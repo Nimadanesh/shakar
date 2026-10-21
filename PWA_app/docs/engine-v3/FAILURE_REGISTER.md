@@ -1,50 +1,39 @@
 # Engine V3 — Prioritized Failure Register
 
 Updated: 2026-10-22
-Scope: hypotheses for the current source baseline, not claims of confirmed defects.
+Scope: current-source/live-observation findings. Live samples are bounded and ungraded; they are not population estimates.
 
 ## Operating rule
 
-Every entry starts as a hypothesis. Promote it to a confirmed failure only with a reproducible current-code/live-output trace. Do not change the engine merely because a historical report named the area. Use small reversible experiments, same candidate pools for before/after, and explicit counter-risk checks. Frozen R1 captures, grades, mappings, and pinned candidates remain read-only.
+Every entry starts as a hypothesis. Promote it to a confirmed failure only with a reproducible current-code/live-output trace. Keep the same query intent and use counterexamples to control over-filtering. Frozen R1 captures, pinned candidates, grades, mappings, and denominators remain read-only.
 
-## Ranked hypotheses
+## Ranked findings
 
-| Priority | Failure family | Evidence signal | Why it matters | Next proof |
-|---|---|---|---|---|
-| P0 | Service intent / wrong listing role | Last-known R2 review targeted S3 because service-intent grades were weak for both engines; current repo source has deterministic service, role-clash, repair-service, and service-target checks. Current behavior has not yet been revalidated against a fixed adversarial set. | A query like «تعمیر یخچال» must find service offers, not rank broken appliances for sale as exact service matches. | Run current deterministic pipeline against a fixed set of service offers, broken-item listings, buyer-collecting-broken listings, wrong-appliance offers, and ambiguous listings. Inspect verdict reasons and top-K, not only test exit status. |
-| P1 | Transaction direction | Last-known R2 review targeted S4; direction had been weak in both engines. Current code contains role/direction logic, but no fresh paired evaluation was run in CI. | A user seeking buyers must not be shown sellers as if they satisfy the hunt, and vice versa. | Fixed paired cases for seeking buyer/seller, offering goods, seeking service, and ambiguous role; assert direction and candidate eligibility separately. |
-| P1 | Product identity / sibling variant | Prior R2 review described S1 variant detection as an A-side strength; it is a valuable regression guard, not evidence that all variant cases are solved. | «پیانو اکوستیک» must not treat «پیانوی طرح اکوستیک» as exact acoustic identity; similar part/whole confusions can swamp top results. | Pair positive acoustic-piano ads with explicit design/simulated variants and inspect top-5, exact/near verdict, and false rejection. Add «کفی ماشین» vs whole-car adversarial pair. |
-| P1 | Hard constraints under UNKNOWN evidence | Project contract requires UNKNOWN to remain distinct from satisfied/violated; CI currently does not run three external-data research harnesses. | Missing detail must not satisfy a MUST or prove a MUST-NOT; hard constraints cannot be silently softened. | Portable tests for missing/stale detail and absence ambiguity; only run the historical gates after their frozen inputs are safely available. |
-| P2 | Recall and detail-budget starvation | Pipeline docs describe shortlist/detail budgets and title-first candidate allocation. No current CI test establishes recall below the retained shortlist. | A relevant ad with weak title evidence may never reach detail verification. | Fixed candidate pool with relevant ads deliberately placed at low title scores; measure candidate coverage and top-5 before changing budgets. |
-| P2 | Global synonym overreach | Historical roadmap flags bidirectional global synonym groups such as piano/keyboard and fridge/freezer; current normalizer must be checked against actual active groups. | Recall improvements can become false-positive explosions when related products are treated as identities. | Context-specific paired tests: positive synonym case plus near-neighbor negative for each proposed group. No global synonym additions without an ablation. |
-| P2 | Mizan runtime/decision role | Current mizan.ts documents log-only/shadow authority; effective behavior depends on runtime configuration and service availability. | A model that silently changes deletions or adds latency without repeatable gain would violate the architecture contract. | Inspect current route/config and runtime traces; verify no deletion authority. Do not make Mizan a required dependency. |
+| Priority | Failure family | Current evidence | Action/status |
+|---|---|---|---|
+| P0 | Styled sibling variant treated as exact | Live `پیانو اکوستیک` observation initially ranked `پیانو دیجیتال یاماها طرح آکوستیک` as `exact`. A subsequent live observation on the patched code kept the same title as `near`, with real acoustic pianos still `exact`. | **Patch + regression tests added.** The style-prefix guard is title-scoped, respects explicit `طرح X` queries, and does not demote a clean title merely because the description compares it with a styled variant. |
+| P0 | Whole-car hunt admits car parts as near-misses | Live `ماشین بدون رنگ` observation showed `جک ماشین` and `چهار عدد کمک ماشین پراید` in the top results as `near`, even though the user sought a whole car. | **Patch + pipeline regression test added.** `جک` and vehicle `کمک` are now part markers. Test asserts part listings are rejected and a real car that mentions a jack stays exact. Latest bounded live observation after the patch did not show those two part listings in the top 8. |
+| P1 | Service intent / wrong listing role | Two bounded live samples for `تعمیر یخچال` placed explicit service offers at the top; no clear non-service exact was observed. Historical R2 notes had weak S3 scores, but the old 10-record diagnosis found no defect in its retained pool. | No service heuristic added. Keep monitoring with a larger, human-judged sample; do not infer general correctness from eight details. |
+| P1 | Hard constraints / UNKNOWN evidence | In `ماشین بدون رنگ`, an explicitly `بی‌رنگ` car was `exact`; descriptions without paint evidence stayed `near`. A separate sample had explicit repaint evidence and the result was demoted. | Current bounded evidence is consistent with the contract. Add no change absent a reproducible violation. |
+| P1 | Retrieval/detail-budget starvation | Live observation deliberately used only 2 list pages and 8 detail fetches per query. Production default is 20 pages and up to 100 details. Current human grades do not cover candidates below the retained detail shortlist. | **Open.** Next technical experiment: use one fixed query/candidate pool to compare production title-only top-100 allocation with a controlled alternative allocation; keep the same detail budget and record which candidates receive detail verification. |
+| P2 | Global synonym overreach | Existing architecture warns that related products must not become aliases. No new synonym groups were added. | Keep frozen. Test context-specific positive and negative pairs before any future expansion. |
+| P2 | Mizan runtime/decision role | Live observation explicitly set `MIZAN_SHADOW=0`; deterministic results were captured without model calls. Current architecture keeps Mizan log-only/shadow. | No model authority changes. Evaluate only via ablation after deterministic baseline is stable. |
 
-## First experiment recommendation
+## Evidence and links
 
-**Start with P0 service-intent correctness, but do not add more unit fixtures reflexively.**
+- [Latest portable baseline](https://github.com/Nimadanesh/shakar/actions/runs/39682413600): focused tests, full portable suite, typecheck, build PASS; ESLint FAIL due to eight existing UI errors.
+- [Latest bounded live observation](https://github.com/Nimadanesh/shakar/actions/runs/39682408569): four query families; max 2 list pages and 8 details per query; read-only; Mizan disabled.
+- [Prior live observation before the styled-variant fix](https://github.com/Nimadanesh/shakar/actions/runs/39678990763).
+- [First live observation showing the style guard working](https://github.com/Nimadanesh/shakar/actions/runs/39679635361).
 
-The current code already has mocked-provider pipeline tests for repairer-vs-fridge-for-sale ranking, provider-form morphology, a fridge needing repair, false service cues such as «در محل», «نیازمند تعمیرکار», the «تعمیری» query guard, and wrong-appliance service-target binding. Those tests passed in the portable suite. The historical R2 concern is therefore not a missing basic unit test; it is whether live retrieval, the candidate/detail budget, or current real listing language still defeats the intended behavior.
+## Next experiment
 
-### Experiment E3-SERVICE-ROLE-01
+**E3-DETAIL-ALLOCATION-01 — candidate coverage under the production detail cap.**
 
-1. First read the latest available R2 handoff/results and map any observed bad top results to the existing service-intent tests and pipeline stages. The public evaluation repo currently exposes only the older Phase 1 artifacts, so use the last-known R2 notes cautiously.
-2. Preserve all frozen R1 captures, pinned candidates, grades, mappings, and denominators. Do not rerun a completed cell.
-3. If the R2 artifacts identify a concrete failure, trace whether it is query intent, provider candidate recall, title-phase prioritization, detail verification, service-target binding, or final ranking. Avoid changing the layer that is not responsible.
-4. If the existing R2 evidence cannot be recovered, first use the current portable tests and source trace to define one new, separately versioned read-only observation plan; do not overwrite historical artifacts or imply it is paired with the old candidate pool.
-5. If a deterministic failure reproduces, make the smallest patch at the responsible stage and rerun the same fixtures plus the full portable suite.
-6. Only after the failure is localized, plan a fresh human comparison on a separately identified sample. Do not rerun or alter frozen R1 cells, pins, grades, mappings, or denominators.
+1. Use one critical query and one fixed, read-only candidate pool.
+2. Record titleStrength, fetch order, dedupe result, and which candidates fall inside/outside the production top-100 detail cap.
+3. Where safe and available, retrieve details for the same fixed pool to estimate how many below-cap candidates would be relevant; do not use model-generated relevance labels.
+4. Compare the existing top-100 title-strength allocation with one alternative that reserves a small exploration budget for weaker-title candidates. Keep total detail requests equal and use the same candidate pool.
+5. Do not change production allocation unless a measured recall gain exists without a critical false-positive regression. Any real quality claim requires fresh human grades.
 
-### Evidence required to accept a fix
-
-- Targeted fixture assertions pass.
-- Full portable test suite, typecheck, and build pass.
-- Any lint debt is reported separately; unrelated UI errors are not swept into this experiment.
-- Before/after use the same candidates and the same scoring denominator.
-- No increase in critical false positives on the paired negative cases.
-- Human top-5 grades are required before claiming real-world quality improvement.
-
-## Current limits
-
-- Run #6 proves portable test/typecheck/build execution only; it does not prove search quality.
-- Three historical data-dependent harnesses remain NOT RUN because their frozen inputs are outside the repo.
-- Last-known project context says R1a grades were joined 138/138 with mean nDCG@5 A=0.5007, B=0.5539; R1b had not been started/reported. A later R2 review had 12 questions around S3, S4, and S1. Verify latest handoff before acting on these numbers.
+Frozen evaluation artifacts are not inputs to overwrite or rerun for this experiment.
