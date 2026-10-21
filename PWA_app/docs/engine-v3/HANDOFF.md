@@ -3,43 +3,33 @@
 Updated: 2026-10-22
 Branch: `engine_v3`
 Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Latest source fix: `49656d583c43bc8bd7fe3478e0ee4ad5ab5c225e`
+Current source/test head: `b8327e033b96ab40f3568051dcdfaae107de50a0`
 
 ## Mission
 
-Improve real Divar search result quality for professional users. The human owner evaluates product output; the technical agent independently owns investigation, architecture, experiments, and implementation decisions.
+Improve real Divar search result quality for professional users. The human owner is the independent product evaluator; the technical agent owns the implementation decisions and evidence process.
 
 ## Verified state
-- Branch `engine_v3` remains isolated from `main`.
-- The only product-source change so far is a behavior-preserving lint cleanup in `src/lib/server/hunt/contract.ts`: `let j = i - 1` → `const j = i - 1`.
-- [Baseline run #6](https://github.com/Nimadanesh/shakar/actions/runs/39676945092) checked that source SHA on hosted Node `v24.21.0`.
-- `npm ci`, focused portable hunt/search tests, full portable test suite, typecheck, and production build: PASS.
-- ESLint: FAIL — 8 errors and 38 warnings; all eight errors are `react-hooks/set-state-in-effect` in UI files, not the engine. The prior `prefer-const` issue in `contract.ts` is fixed.
-- Three historical research harnesses are NOT RUN because their frozen inputs are external to the repo. They are explicitly excluded from portable CI, not represented as passing.
-- Dependency installation reported 30 vulnerabilities (2 low, 6 moderate, 20 high, 2 critical). No dependency upgrades were applied.
-- No live Divar hunt or paired human-quality comparison has been run by this workflow. Build/test success is not search-quality evidence.
-- The evaluation repo's current main branch only shows Phase 1 review/packet artifacts. Last-known R1a status is 138/138 grades joined; A mean nDCG@5 0.5007, B 0.5539; R1b was not started/reported. A later R2 review had 12 questions around S3 service intent, S4 transaction direction, and S1 variant detection. Treat these as last-known notes and verify before new eval action.
-- [FAILURE_REGISTER.md](./FAILURE_REGISTER.md) ranks current hypotheses. Existing mocked-provider tests already cover basic service-intent cases; the remaining question is whether live retrieval/candidate allocation/current real listing language still fails.
-- Frozen candidates, captures, grades and mappings remain immutable.
+- `engine_v3` is isolated from `main`; no merge/deploy.
+- Latest portable baseline [run](https://github.com/Nimadanesh/shakar/actions/runs/39682413600): focused tests PASS, full portable suite PASS, typecheck PASS, build PASS, ESLint FAIL (8 unrelated UI errors, 38 warnings).
+- The three external-data historical research harnesses are still NOT RUN; their frozen inputs are not in the repository. Do not call them passed.
+- Latest bounded read-only live observation [run](https://github.com/Nimadanesh/shakar/actions/runs/39682408569) completed successfully on Node 24.21.0, with four queries, at most two list pages and eight detail fetches per query, Mizan disabled.
+- Confirmed fix 1: `پیانو دیجیتال یاماها طرح آکوستیک` changed from `exact` to `near` for `پیانو اکوستیک`; real acoustic-piano listings remained exact. Added a style-prefix check that is based on the listing title and respects the original query if the user explicitly asks for `طرح آکوستیک`. Tests cover both positive and counterexamples.
+- Confirmed fix 2: `جک ماشین` and `کمک ماشین پراید` were live near-miss false positives for a whole-car hunt. Added these as bounded part markers. Pipeline test ensures these are rejected while a whole-car listing mentioning a jack stays eligible/exact. Latest live sample no longer shows those two part listings in the top results.
+- The `کفی ماشین` bounded sample had three correct floor-mat exact results; some unrelated electronics were only near. The `تعمیر یخچال` sample showed service offers at the top. These observations do not prove general production quality.
+- The explicit-absence sample correctly showed an explicitly `بی‌رنگ` car as exact and under-described paint cases as near.
+- No human-grade comparison has been run for the new fixes. Do not claim contest-quality gains until fresh, consistent human top-K grades exist.
+- Frozen R1 captures, pinned candidates, grades, mappings, and denominators remain immutable.
 
 ## Must preserve
-- Do not change `main` or deploy without explicit authorization.
-- Do not alter, overwrite, or rerun completed frozen human-evaluation captures just to improve results.
-- Keep unknown evidence distinct from satisfied/violated.
-- Do not claim live quality improvement without paired human-judged evidence.
-- Treat user grades as evidence, not as technical instructions.
-- Do not treat source review or synthetic tests as proof of production quality.
+- No `main` changes, merge, deployment, or service mutation without explicit authorization.
+- No mutation or rerun of completed frozen evaluation artifacts.
+- UNKNOWN remains distinct from satisfied/violated.
+- No global synonym expansion or broad rewrite without paired evidence.
+- Live observations are ungraded snapshots, not nDCG/precision metrics.
 
 ## Current phase
-Phase 0 — portable execution evidence is available; formal exit is pending evaluation/source reconciliation and a deliberate go/no-go.
+Phase 1 — two critical false-positive families have narrow fixes and deterministic regression tests. Portable tests/typecheck/build pass. Lint debt is unrelated UI work.
 
 ## Next action
-Follow FAILURE_REGISTER.md: trace latest R2 evidence or define a separate read-only observation plan for service-intent live retrieval/candidate allocation. Do not add duplicate unit fixtures or another heuristic until a current failure is reproduced. Keep frozen artifacts untouched and avoid unrelated UI refactors.
-
-## Session close checklist
-- [x] Branch/head and changed files verified
-- [x] Portable tests, typecheck, lint and build outcomes recorded
-- [ ] Current R1/R2 handoff verified without artifact mutation
-- [ ] Architecture/quality docs reconciled against source beyond status banners
-- [x] First experiment hypothesis and acceptance gate recorded
-- [ ] Next observation and go/no-go completed
+Prepare a fresh, separately identified human evaluation of the current top results; preserve all frozen R1 data. Then run a controlled candidate/detail-budget experiment to quantify whether relevant candidates below the production cap are missed. Keep technical direction autonomous and ask the human evaluator only for result grades/observations when needed.
