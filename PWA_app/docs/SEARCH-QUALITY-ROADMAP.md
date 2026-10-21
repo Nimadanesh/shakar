@@ -1,5 +1,7 @@
 # Search Quality Engine Roadmap
 
+> **Historical plan, not current execution status.** Status below is frozen to 2026-10-09 and its original branch/SHA context. Current `engine_v3` baseline execution and next gates are tracked in [`docs/engine-v3/PROJECT_STATE.md`](./engine-v3/PROJECT_STATE.md), with the actual hosted-run evidence in [`docs/engine-v3/BASELINE_AUDIT.md`](./engine-v3/BASELINE_AUDIT.md).
+
 Status date: 2026-10-09
 Repository: `Nimadanesh/shakar`
 Scope: `PWA_app/src/lib/server/hunt/**`, search-only normalization/interpretation/provider code, and directly related search tests/docs. No UI, non-search product behavior, auth, billing, quotas, Radar/Kamin semantics, or deployment configuration changes unless a search-quality fix demonstrably requires a narrowly scoped change and is explicitly reviewed.
