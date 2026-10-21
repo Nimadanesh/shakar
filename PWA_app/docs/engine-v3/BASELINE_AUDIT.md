@@ -4,7 +4,7 @@ Audit date: 2026-10-22
 Audited repository: `Nimadanesh/shakar`
 Audited main SHA: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
 V3 branch: `engine_v3`
-Current source/test head: `b8327e033b96ab40f3568051dcdfaae107de50a0`
+Current source/test head: `dd58188f09d7c0806f116d49a3b005ff1ba8e408`
 
 ## Executive finding
 
@@ -12,7 +12,7 @@ The hosted Node 24 path is working. The latest portable run passes focused tests
 
 ## Latest portable baseline
 
-[Run on SHA `b8327e033b96ab40f3568051dcdfaae107de50a0`](https://github.com/Nimadanesh/shakar/actions/runs/39682413600)
+[Run #19 on SHA `dd58188f09d7c0806f116d49a3b005ff1ba8e408`](https://github.com/Nimadanesh/shakar/actions/runs/39682990792)
 - Runtime: Node `v24.21.0`, npm `11.19.0`
 - `npm ci`: PASS
 - Focused hunt/search tests: PASS
@@ -42,14 +42,25 @@ The hosted Node 24 path is working. The latest portable run passes focused tests
 4. **Service-intent sanity check.** The top exact results for `تعمیر یخچال` were service offers. This is a positive bounded observation, not evidence that service intent is solved for all language/roles.
 5. **Explicit absence sanity check.** A listing explicitly marked `بی‌رنگ` was exact for `ماشین بدون رنگ`; listings with insufficient paint evidence stayed near.
 
+## Detail-allocation experiment
+
+[Run #1](https://github.com/Nimadanesh/shakar/actions/runs/39683008360) completed successfully.
+
+- One live query (`ماشین بدون رنگ`), 20 list pages, 482 candidates, 120 detail fetches, no stale details.
+- The title-strength distribution collapses to zero by rank 80 and stays zero through rank 200 in the sampled checkpoints. Thus, much of the production top-100 detail shortlist is effectively selected by provider order among zero-title-strength candidates.
+- Current allocation (top 100): 1 exact, 39 near, 60 not returned in scored output.
+- Counterfactual allocation (top 80 + 20 evenly spaced ranks 101–200): 3 exact, 41 near, 56 not returned.
+- The alternative includes two additional engine-exact car ads with explicit `بی‌رنگ` evidence, at title ranks 128 and 138. Both arms use a 100-candidate allocation; 120 details were fetched only to evaluate the union on the same pool.
+- Internal exact/near verdicts are not human grades. The allocation change remains a hypothesis until blinded human grading checks the new candidates and the remaining top results.
+
 ## Still open
 
 - Current R1/R2 artifact status is not independently recoverable from the public evaluation repo; last-known R1a figures are historical context only. Frozen artifacts remain untouched.
 - The golden harness has not been run because exact frozen inputs/mappings have not been safely established in the repo.
-- Production candidate coverage below the 100-detail cap is unmeasured. The live observation used only 8 details/query.
+- Candidate coverage now has one bounded, read-only 120-detail counterfactual on a single query; it is not yet human-graded or representative across query families.
 - No paired human-grade comparison for the new fixes exists.
 - Dependency installation previously reported 30 vulnerabilities (2 low, 6 moderate, 20 high, 2 critical); no dependency upgrades were applied.
 
 ## Next gate
 
-Run `E3-DETAIL-ALLOCATION-01` from [FAILURE_REGISTER.md](./FAILURE_REGISTER.md): one fixed query/candidate pool, same detail budget, current top-100 allocation versus a small exploration-budget alternative. Do not alter frozen human evaluation data, change `main`, deploy, or claim overall quality gains without fresh human grades.
+Human-grade the blinded packet from `E3-DETAIL-ALLOCATION-01` in [FAILURE_REGISTER.md](./FAILURE_REGISTER.md). Only then decide whether to prototype an opt-in deterministic exploration allocation. Do not alter frozen human evaluation data, change `main`, deploy, or claim overall quality gains without fresh human grades.
