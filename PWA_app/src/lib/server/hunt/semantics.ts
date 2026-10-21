@@ -805,6 +805,8 @@ const ACCESSORY_MARKERS = ["قاب", "کاور", "گلس"];
  */
 const PART_MARKERS = [
   "رینگ",
+  "جک", // live false positives: «جک ماشین» is a part, not the car
+  "کمک", // vehicle shock absorber («کمک ماشین پراید»), not the whole car
   "لاستیک",
   "تایر",
   "قالپاق",
