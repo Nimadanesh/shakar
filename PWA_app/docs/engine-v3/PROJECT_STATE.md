@@ -3,8 +3,8 @@
 Last verified: 2026-10-22
 Work branch: `engine_v3`
 Branch base: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Latest workflow configuration commit: `c1e4ee15af972d5f31d3225f9f29b77ec93008e4`
-Latest completed baseline run: [Run #4](https://github.com/Nimadanesh/shakar/actions/runs/39676527704), tested commit `76216d62017afbaa23820afc85e0c34885a95fc9`.
+Latest source fix: `49656d583c43bc8bd7fe3478e0ee4ad5ab5c225e` (single-token lint cleanup in `contract.ts`)
+Latest completed baseline run: [Run #6](https://github.com/Nimadanesh/shakar/actions/runs/39676945092), tested commit `49656d583c43bc8bd7fe3478e0ee4ad5ab5c225e`.
 
 ## Mission
 
@@ -20,26 +20,26 @@ The technical agent owns code investigation, architecture, test design, implemen
 ## Verified repository state
 
 - `engine_v3` was created from current `main` SHA `10f3c40d70748ff27d6928eaed0875e10dab1c56`.
-- No engine or product source files have been changed in V3. Changes so far are control documentation and the isolated GitHub Actions baseline workflow.
-- Hosted runner executed Node `v24.21.0` with npm `11.19.0`; `npm ci` succeeded.
-- First three runs failed because three historical research harnesses hard-code files outside the repository. Run #4 explicitly excluded only these three files from portable CI and reports their missing inputs as NOT RUN:
+- No engine/product feature changes have been made in V3. One minimal static cleanup changed `let j = i - 1` to `const j = i - 1` in `src/lib/server/hunt/contract.ts`; this is behavior-preserving and removed one lint error.
+- Hosted runner used Node `v24.21.0` with npm `11.19.0`; `npm ci` succeeded.
+- First three runs failed because three historical research harnesses hard-code files outside the repository. Run #4 and #6 exclude only these three files from portable CI and explicitly report their inputs as NOT RUN:
   - `src/lib/server/hunt/contractDeleteAudit.test.ts` needs `/home/hatch/workspace/ge2-ads.json`
   - `src/lib/server/hunt/contractGate.test.ts` needs `/home/hatch/workspace/your_files/experiment-b-probe-v1.json`
   - `src/lib/server/hunt/expAFeatures.test.ts` needs intended contracts plus historical round captures/grades and snapshot data under `/home/hatch/workspace`
-- Run #4 outcomes:
+- Run #6 outcomes:
   - focused portable hunt/search suite: PASS
   - full portable test suite: PASS
   - TypeScript typecheck: PASS
   - production build: PASS
-  - ESLint: FAIL (9 errors, 38 warnings)
+  - ESLint: FAIL (8 errors, 38 warnings)
   - overall job: FAIL because ESLint failed
-- The 9 lint errors comprise eight `react-hooks/set-state-in-effect` errors in UI files (`KaminDetailSheet.tsx`, `BottomTabBar.tsx`, `MarketSheet.tsx`, `HomeCityUpdateNudge.tsx`, `HuntProgress.tsx`, `SearchSheet.tsx`, `HomeCityRow.tsx`, `useProfile.ts`) and one `prefer-const` error in `src/lib/server/hunt/contract.ts:163`.
-- The build compiled successfully and generated 38 static pages. This verifies buildability at that SHA, not live Divar retrieval or relevance quality.
+- The remaining eight lint errors are `react-hooks/set-state-in-effect` in UI files: `KaminDetailSheet.tsx:77`, `BottomTabBar.tsx:23`, `MarketSheet.tsx:45`, `HomeCityUpdateNudge.tsx:87`, `HuntProgress.tsx:110`, `SearchSheet.tsx:47`, `HomeCityRow.tsx:26`, and `useProfile.ts:114`. The engine-file `prefer-const` error is fixed. Do not broaden V3 into unrelated UI cleanup.
+- The build compiled successfully and generated 38 static pages in run #4; run #6 also passed build. This verifies buildability at those SHAs, not live Divar retrieval or relevance quality.
 - `npm ci` reported 30 dependency vulnerabilities (2 low, 6 moderate, 20 high, 2 critical). No automated dependency upgrade/audit fix was applied.
-- Workflow triggers are now scoped to workflow, package/lockfile, source, scripts, and build/lint/typecheck config changes, avoiding repeated runs for control-doc-only updates.
-- Existing synthetic benchmark remains 16 cases (`2026-10-09-v1`), documented as a seed benchmark rather than representative live-market evidence.
-- Human-evaluation packets/replay artifacts in `Nimadanesh/shakar-eval-tmp-20261012` remain protected; current R1/R2 status still needs verification before further evaluation.
-- Architecture/roadmap docs contain stale baseline pointers and still need reconciliation against current code.
+- Workflow triggers are scoped to workflow, package/lockfile, source, scripts, and build/lint/typecheck config changes, avoiding repeated runs for control-doc-only updates.
+- Synthetic benchmark remains 16 cases (`2026-10-09-v1`), documented as a seed benchmark rather than representative live-market evidence.
+- The evaluation artifact repo `Nimadanesh/shakar-eval-tmp-20261012` currently exposes only Phase 1 review/packet artifacts on its main branch (latest commit recorded there is 2026-10-12); it does not contain current R1/R2 handoff artifacts. Last known status from prior project work: R1 capture complete, R1a metrics joined 138/138 grades with A mean nDCG@5 0.5007 and B 0.5539; R1b not started/reported. A later R2 review discussed 12 questions focused on service intent (S3), transaction direction (S4), and variant detection (S1). Treat this as last-known context, not proof of present artifact status. Do not rerun or mutate frozen captures.
+- Existing architecture/roadmap docs contain stale baseline pointers and need reconciliation against current code.
 
 ## Important quality risks to verify
 
@@ -54,22 +54,21 @@ These remain hypotheses, not proven current defects:
 
 ## Current phase
 
-**Phase 0 — baseline trustworthiness: execution checks now have real results, but phase exit is not yet approved.**
+**Phase 0 — baseline trustworthiness: portable execution evidence is now available; formal exit is pending documentation reconciliation and an explicit go/no-go.**
 
 Completed:
 - branch isolation and control documents;
 - hosted Node 24 workflow;
-- portable focused tests, full portable test suite, typecheck and build all run and pass;
-- exact lint failure inventory recorded;
-- three research harnesses and their unavailable frozen inputs explicitly distinguished from passing tests.
+- portable focused tests, full portable test suite, typecheck and build pass;
+- lint failures classified; the one engine-file style issue fixed narrowly;
+- three data-dependent research harnesses explicitly distinguished from passing tests.
 
 Still required before Phase 0 exit:
-- verify current R1/R2 evaluation status and pinned candidates without modifying them;
+- reconcile stale architecture/quality docs against current source;
+- verify evaluation artifact status without rerunning or mutating frozen work;
 - run the golden harness only after its exact frozen inputs and expected mappings are identified;
-- reconcile stale architecture/quality documentation against current source;
-- record a code-level prioritized failure register and select the first measurable search-quality experiment;
-- decide how to address lint errors. Avoid unrelated UI refactors; the one engine lint error is `prefer-const` in `contract.ts:163`.
+- produce a code-level prioritized failure register and select the first measurable search-quality experiment.
 
 ## Next action
 
-Inspect the precise `contract.ts` lint context and current evaluation handoff, reconcile stale architecture docs, and define a minimal first quality experiment with a measurable acceptance gate. Do not change `main`, deploy, alter frozen human-evaluation artifacts, or claim live quality gains without paired human-judged evidence.
+Reconcile current architecture docs against source, verify the latest available R1/R2 handoff without touching frozen artifacts, and define one narrow quality experiment with a measurable acceptance gate. Do not change `main`, deploy, or claim live quality gains without paired human-judged evidence.
