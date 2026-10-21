@@ -49,22 +49,44 @@ jobs:
         id: install
         run: npm ci
 
-      - name: Focused hunt/search tests
-        if: steps.install.outcome == 'success'
-        run: npm test -- src/lib/server/hunt
+      # These three historical research harnesses read frozen, user-specific
+      # files from /home/hatch/workspace or /home/hatch/workspace/your_files.
+      # Those artifacts are intentionally not copied into this public repo.
+      # Exclude only these exact files from portable CI and report their
+      # unavailable evidence explicitly below; do not silently call them passed.
+      - name: Report external research fixtures unavailable in hosted runner
+        if: always() && steps.install.outcome == 'success'
+        run: |
+          echo "::warning::Three research harnesses require external frozen files not present in the repository."
+          echo "NOT RUN: src/lib/server/hunt/contractDeleteAudit.test.ts (requires /home/hatch/workspace/ge2-ads.json)"
+          echo "NOT RUN: src/lib/server/hunt/contractGate.test.ts (requires /home/hatch/workspace/your_files/experiment-b-probe-v1.json)"
+          echo "NOT RUN: src/lib/server/hunt/expAFeatures.test.ts (requires intended-contracts, round captures/grades, and snapshot artifacts under /home/hatch/workspace)"
+          echo "These are unavailable-evidence items, not passing tests."
 
-      - name: Full test suite
-        if: steps.install.outcome == 'success'
-        run: npm test
+      - name: Focused hunt/search tests (portable suite)
+        if: always() && steps.install.outcome == 'success'
+        run: >-
+          npx vitest run src/lib/server/hunt
+          --exclude src/lib/server/hunt/contractDeleteAudit.test.ts
+          --exclude src/lib/server/hunt/contractGate.test.ts
+          --exclude src/lib/server/hunt/expAFeatures.test.ts
+
+      - name: Full portable test suite
+        if: always() && steps.install.outcome == 'success'
+        run: >-
+          npx vitest run
+          --exclude src/lib/server/hunt/contractDeleteAudit.test.ts
+          --exclude src/lib/server/hunt/contractGate.test.ts
+          --exclude src/lib/server/hunt/expAFeatures.test.ts
 
       - name: TypeScript typecheck
-        if: steps.install.outcome == 'success'
+        if: always() && steps.install.outcome == 'success'
         run: npm run typecheck
 
       - name: ESLint
-        if: steps.install.outcome == 'success'
+        if: always() && steps.install.outcome == 'success'
         run: npm run lint
 
       - name: Production build
-        if: steps.install.outcome == 'success'
+        if: always() && steps.install.outcome == 'success'
         run: npm run build
