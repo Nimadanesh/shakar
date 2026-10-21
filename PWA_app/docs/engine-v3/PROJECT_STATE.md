@@ -15,38 +15,46 @@ The human owner acts primarily as a blinded/consistent end-user evaluator:
 - report observed output and unexpected behavior.
 The technical agent owns code investigation, architecture, test design, implementation choices, measurement, and go/no-go recommendations. User feedback is evidence, not an instruction to adopt a particular technical solution.
 
-## Verified starting facts
+## Verified repository state
 
-- `engine_v3` was created from the then-current `main` SHA above.
-- Existing engine implementation lives under `PWA_app/src/lib/server/hunt/` and `PWA_app/src/lib/server/divar/`.
-- The current main-branch architecture docs describe a deterministic retrieval/confirmation/ranking pipeline; Mizan is a shadow/log-only judge in the documented production path, not an active result re-ranker.
-- The current repository contains engine architecture and output-quality documentation. These are historical/project documents and must be reconciled with code before treating every statement as current truth.
-- The most recent main commit merged `feat/engine-v2`; therefore V3 must begin with an audit of the actual merged state rather than assumptions based on older chats.
-- No tests, builds, or live Divar hunts were run during V3 branch creation.
-- Initial V3 changes are documentation only. No source code was modified.
+- `engine_v3` was created from current `main` SHA above.
+- The branch is isolated: the current comparison against `main` showed six initial commits containing only new V3 control documents. No source files were modified during setup.
+- Existing engine code lives under `PWA_app/src/lib/server/hunt/` and `PWA_app/src/lib/server/divar/`.
+- A deterministic synthetic benchmark exists at `PWA_app/src/lib/server/hunt/search-quality-benchmark.ts`, version `2026-10-09-v1`, with 16 cases. Its documentation says it is a seed benchmark, not a representative live-market benchmark.
+- A golden benchmark and a harness integrity gate exist under `PWA_app/scripts/`; they have not been run by this audit.
+- Human-evaluation packets and replay artifacts exist in the separate repository `Nimadanesh/shakar-eval-tmp-20261012`. See `BASELINE_AUDIT.md`; protect all frozen captures, pinned versions, grades, and mappings.
+- The current engine architecture document points to an older main commit (`4fe671e`) than the audited current main SHA. The 2026-10-09 search-quality roadmap is also historical. Reconcile docs against code rather than assuming either is current.
+- No tests, builds, live Divar hunts, or deployments were run in V3 setup/audit.
+- A local clone attempt failed because the execution container could not resolve GitHub; the container Node version is 22.16.0, below the package's declared Node >=24. No execution result may be inferred from this.
 
-## Important known contest risks to re-verify
+## Important quality risks to verify
 
-These are audit hypotheses, not yet re-proven against this branch:
-1. Relevant ads may be missed due to retrieval coverage or candidate-budget allocation.
-2. Explicit constraints can be mishandled when evidence is missing, stale, or ambiguous.
-3. Entity/kind confusion (e.g. a part/accessory vs the whole item) can produce high-confidence irrelevant results.
-4. Service intent and transaction direction can be confused.
-5. A local Mizan endpoint may not exist in production; its current effect must be confirmed from code and runtime configuration.
-6. Card-level data and detail-level evidence may disagree or be incomplete.
-7. Ranking quality cannot be inferred from code review or unit tests alone.
+These remain audit hypotheses, not proven current defects:
+1. Relevant ads may be missed because of retrieval coverage, query construction, pagination, deduplication, or detail-budget allocation.
+2. Explicit constraints may be mishandled when evidence is missing, stale, or ambiguous.
+3. Entity/kind confusion (e.g. a part/accessory vs the whole item) may produce irrelevant results.
+4. Service intent and transaction direction may be confused.
+5. Global synonym expansion may collapse related-but-distinct concepts.
+6. Mizan's effective role may differ by runtime configuration; inspect code/config before assuming it affects ranking.
+7. Code correctness and synthetic tests do not establish human top-result quality.
 
 ## Current phase
 
-**Phase 0 — Establish a trustworthy baseline.**
+**Phase 0 — Establish a trustworthy baseline (in progress).**
 
-No feature implementation until:
-- the branch and source tree are audited;
-- test/build/lint/typecheck results are recorded accurately;
-- the existing human-evaluation benchmark and pinned versions are identified without changing them;
-- a small, fixed, repeatable query set and scoring rubric are defined or linked to existing artifacts;
-- high-severity quality risks are ranked by expected impact and evidence.
+Completed:
+- branch created from current main;
+- durable control documents added;
+- source tree, docs, benchmark and human-evaluation artifacts inspected remotely;
+- initial baseline audit written in `BASELINE_AUDIT.md`.
+
+Not complete:
+- execute tests/build/typecheck/lint in a compatible Node >=24 environment;
+- run the golden harness gate with the correct frozen inputs where available;
+- verify current R1/R2 status and exact candidate pins without modifying them;
+- reconcile the architecture/quality docs with the current code;
+- produce a code-level prioritized failure register with testable hypotheses.
 
 ## Next action
 
-Perform a read-only audit of the current `engine_v3` source tree and the existing evaluation artifacts. Produce a baseline report with exact file/commit references, commands and outcomes where available, plus explicit unknowns. Do not deploy or modify any external service. Do not alter existing evaluation captures.
+Get an authorized execution environment with Node >=24 and the branch checked out; run focused search tests, full tests, typecheck, lint, build, and the golden harness gate only with correct inputs. Record exact command output and failures. Do not implement engine features until Phase 0's exit gate is met. No deployment or external service mutation.
