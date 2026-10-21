@@ -3,44 +3,40 @@
 Last verified: 2026-10-22
 Work branch: `engine_v3`
 Branch base: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Latest source fix: `49656d583c43bc8bd7fe3478e0ee4ad5ab5c225e` (single-token lint cleanup in `contract.ts`)
-Latest completed baseline run: [Run #6](https://github.com/Nimadanesh/shakar/actions/runs/39676945092), tested commit `49656d583c43bc8bd7fe3478e0ee4ad5ab5c225e`.
+Current source/test head: `b8327e033b96ab40f3568051dcdfaae107de50a0`
+Latest portable baseline: [Run #? — SHA `b8327e0`](https://github.com/Nimadanesh/shakar/actions/runs/39682413600)
+Latest live observation: [Run #? — SHA `f2d9484`](https://github.com/Nimadanesh/shakar/actions/runs/39682408569)
 
 ## Mission
 
 Maximize the probability that a professional Divar user reaches the best genuinely relevant ads quickly. Optimize real-user result quality, not model sophistication, code volume, or passing synthetic tests alone.
 
-The human owner acts primarily as a blinded/consistent end-user evaluator: run requested hunt scenarios, grade actual top-result relevance and critical constraint behavior, and report unexpected output. The technical agent owns code investigation, architecture, experiments, implementation, measurement, and go/no-go decisions.
+The human owner is the independent product evaluator; the technical agent owns code investigation, architecture, experiments, implementation, measurement, and go/no-go decisions. Ask the user for grades only when a concrete fresh sample is ready; never ask them to choose the technical fix.
 
 ## Verified repository state
 
-- `engine_v3` was created from current `main` SHA `10f3c40d70748ff27d6928eaed0875e10dab1c56`.
-- No engine/product feature changes have been made in V3. One minimal static cleanup changed `let j = i - 1` to `const j = i - 1` in `src/lib/server/hunt/contract.ts`; this is behavior-preserving and removed one lint error.
-- Hosted runner used Node `v24.21.0` with npm `11.19.0`; `npm ci` succeeded.
-- Run #6 outcomes: focused portable hunt/search suite PASS; full portable test suite PASS; TypeScript typecheck PASS; production build PASS; ESLint FAIL (8 errors, 38 warnings); overall job FAIL because ESLint failed.
-- Remaining lint errors are `react-hooks/set-state-in-effect` in eight UI files: `KaminDetailSheet.tsx:77`, `BottomTabBar.tsx:23`, `MarketSheet.tsx:45`, `HomeCityUpdateNudge.tsx:87`, `HuntProgress.tsx:110`, `SearchSheet.tsx:47`, `HomeCityRow.tsx:26`, and `useProfile.ts:114`. Do not broaden V3 into unrelated UI cleanup.
-- `npm ci` reported 30 dependency vulnerabilities (2 low, 6 moderate, 20 high, 2 critical). No automated dependency upgrade/audit fix was applied.
-- Three historical research harnesses are explicitly NOT RUN because frozen inputs are external to the repo: `ge2-ads.json`, `experiment-b-probe-v1.json`, and Experiment A contracts/captures/grades/snapshot data under `/home/hatch/workspace`. They are excluded from portable CI, not counted as passing.
-- Synthetic benchmark remains 16 cases (`2026-10-09-v1`), a seed benchmark rather than representative live-market evidence.
-- The public evaluation repo `Nimadanesh/shakar-eval-tmp-20261012` currently exposes only Phase 1 review/packet artifacts on main; no current R1/R2 handoff files were found there. Last-known project context: R1 capture complete, R1a joined 138/138 grades (mean nDCG@5 A=0.5007, B=0.5539), R1b not started/reported; a later R2 review discussed 12 questions around service intent (S3), transaction direction (S4), and variant detection (S1). These are last-known notes, not proof of current artifact state. Frozen artifacts must remain immutable.
-- Historical architecture and quality docs now clearly label stale status as historical and point to V3 controls. Full code-level reconciliation remains pending.
+- `engine_v3` remains isolated from `main`. No merge or deployment occurred.
+- The earlier behavior-preserving `let` → `const` cleanup remains in `contract.ts`.
+- Hosted Node 24 execution is working (`v24.21.0`).
+- Latest portable baseline on SHA `b8327e033b96ab40f3568051dcdfaae107de50a0`:
+  - focused hunt/search tests: PASS;
+  - full portable test suite: PASS;
+  - TypeScript typecheck: PASS;
+  - production build: PASS;
+  - ESLint: FAIL due to 8 existing `react-hooks/set-state-in-effect` errors in unrelated UI files and 38 warnings.
+- The three historical research harnesses remain explicitly NOT RUN because their frozen inputs are outside the repo. No result is represented as passing when its data is unavailable.
+- The opt-in live workflow uses read-only Divar retrieval, max 2 list pages per query, max 8 detail fetches per query, and disables Mizan shadow calls. It writes a short-lived report artifact; slug captures are buffered only in the runner's temp directory, not written to Supabase.
+- Latest live observation on SHA `f2d94846a24b272616d27b442454d9b2de42ecdb` completed successfully across four query families: `پیانو اکوستیک`, `کفی ماشین`, `تعمیر یخچال`, and `ماشین بدون رنگ`. It is a bounded observation, not a human relevance score.
+- Confirmed live defect and fix: for `پیانو اکوستیک`, a title `پیانو دیجیتال یاماها طرح آکوستیک` was initially ranked `exact`; after the new style-prefix guard, the same title is `near`, while real acoustic pianos remain `exact`. Deterministic semantic and pipeline tests cover the false-positive, a clean acoustic control, explicit request for a styled piano, and description-only mention protection.
+- Confirmed live defect and fix: for `ماشین بدون رنگ`, `جک ماشین` and `چهار عدد کمک ماشین پراید` appeared as near-misses in the initial bounded sample. The part lexicon now recognizes `جک` and `کمک` as part subjects. The portable pipeline test asserts both are rejected while a real car listing that mentions a jack remains exact. In the latest live observation after the code change, the top returned results no longer include those two parts; this is a small live sample, not a full-recall claim.
+- Other bounded observations: the first three `کفی ماشین` results were actual floor-mat listings marked exact; unrelated electronics were near. The `تعمیر یخچال` sample's top exact results were service offers. A car explicitly described as `بی‌رنگ` was exact for `ماشین بدون رنگ`, while listings without sufficient paint evidence stayed near.
+- The public evaluation repo still exposes the Phase 1 packet/review artifacts, not a current R1/R2 handoff. Last-known R1a context (138/138 grades joined; mean nDCG@5 A=0.5007, B=0.5539) remains historical context only. Frozen captures, pins, grades, mappings, and denominators remain immutable.
+- Existing architecture/quality docs have been marked historical where their pointers are stale. Full source reconciliation and a larger candidate-coverage experiment remain open.
 
 ## Current phase
 
-**Phase 0 — portable execution baseline established; formal exit pending source/evaluation reconciliation.**
-
-Verified:
-- focused and full portable tests pass;
-- typecheck and production build pass;
-- lint debt is localized and documented;
-- no product behavior changes were made;
-- failure hypotheses are ranked in [FAILURE_REGISTER.md](./FAILURE_REGISTER.md).
-
-Not yet verified:
-- current R1/R2 handoff beyond last-known context;
-- golden harness execution with the exact frozen inputs/mapping;
-- live Divar candidate recall and current human top-result quality.
+**Phase 1 — evidence-backed critical correctness fixes.** The first two observed false-positive families have narrow patches and deterministic regression coverage. Portable tests/typecheck/build pass; lint remains red for unrelated UI debt.
 
 ## Next action
 
-Follow [FAILURE_REGISTER.md](./FAILURE_REGISTER.md): service intent is already covered by mocked-provider tests, so do not add duplicate fixtures or heuristics. Recover/trace the latest R2 evidence if available; otherwise define a separate, read-only observation plan to determine whether any current failure is in retrieval, detail allocation, or ranking. Keep frozen R1 artifacts untouched. Do not change `main`, deploy, or claim live quality gains without paired human-judged evidence.
+Run a fresh, separately versioned human-judged top-result sample after the two fixes, without touching frozen R1 artifacts. In parallel, plan one controlled retrieval/detail-budget experiment to determine whether relevant candidates are starved below the production detail cap. Do not change global synonyms, increase model authority, change `main`, or deploy without explicit authorization.
