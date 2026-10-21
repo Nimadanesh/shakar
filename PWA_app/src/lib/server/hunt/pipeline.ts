@@ -40,6 +40,7 @@ import {
   type MizanJudgment,
 } from "./mizan";
 import { dupKey } from "@/lib/nearDup";
+import { flushSlugCaptures, type SlugCaptureStats } from "./slugCapture";
 import {
   MAX_DETAILS_PER_HUNT,
   MAX_LIST_PAGES_PER_HUNT,
@@ -196,6 +197,14 @@ export interface ScoredAd {
    * can never be re-derived from real firing text. Display/audit only.
    */
   demotedBy?: "bait" | "demand-goods" | "kind" | "cap";
+  /**
+   * Step 0.5 (Smart Engine Plan v5): Divar's leaf category for this ad,
+   * copied verbatim from the verified detail. Carried on the result so
+   * downstream consumers (knowledge layer, harvest gap analysis) stop
+   * re-deriving what the provider already told us. Absent when the
+   * detail was stale/failed or carried no slug.
+   */
+  categorySlug?: string;
 }
 
 export interface HuntStats {
@@ -260,6 +269,14 @@ export interface HuntStats {
    * live in mizanShadow as features. Kept for stats-shape compatibility.
    */
   mizanRejected: number;
+  /**
+   * Step 0.5 (Smart Engine Plan v5): breadcrumb-capture outcome for this
+   * run — how many (ad, leaf-category) pairs were persisted, buffered
+   * (no DB configured), or lost. Fail-open by design: a capture failure
+   * never affects results, but it is always counted here so corpus
+   * completeness is measurable instead of silently assumed.
+   */
+  slugCapture?: SlugCaptureStats;
 }
 
 export type HuntEvent =
@@ -1110,6 +1127,10 @@ export async function confirmCandidates(
   const detailCap =
     Number.isFinite(envCap) && envCap > 0 ? envCap : MAX_DETAILS_PER_HUNT;
   const toCheck = candidates.slice(0, detailCap);
+  // Step 0.5: breadcrumb pairs from FRESH details only (a stale detail's
+  // slug is unverified data — the same invariant that marks it
+  // detailUnknown). Flushed once at the end of this function, fail-open.
+  const slugPairs = new Map<string, string>();
   const mustCount = def.include.length;
   // Pre-#19 snapshots lack the SHOULD bucket — normalize, never crash.
   const shouldCount = def.should?.length ?? 0;
@@ -1160,6 +1181,7 @@ export async function confirmCandidates(
           // R7 (P1): the provider's leaf category corroborates the ad's
           // subject kind when the title head is unknown.
           categorySlug = detail.categorySlug ?? "";
+          if (categorySlug) slugPairs.set(c.sourceAdId, categorySlug);
         }
       } catch {
         // Invariant: failed detail = "unknown", never a silent drop.
@@ -1217,6 +1239,8 @@ export async function confirmCandidates(
         ...(ev.demotedBy ? { demotedBy: ev.demotedBy } : {}),
         // R5 grading packets show this so condition claims are verifiable.
         descSnippet: description.replace(/\s+/g, " ").trim().slice(0, 200),
+        // Step 0.5: carry the verified leaf category on the result.
+        ...(categorySlug ? { categorySlug } : {}),
       };
       results.push(ad);
       batchConfirmed.push(ad);
@@ -1361,6 +1385,10 @@ export async function confirmCandidates(
     }
   }
 
+  // Step 0.5: persist the breadcrumb pairs (fail-open, counted in stats).
+  // Runs after ranking/judging, on already-computed results — capture is
+  // observation-only and can never change what the user sees.
+  stats.slugCapture = await flushSlugCaptures(slugPairs);
   return results;
 }
 
