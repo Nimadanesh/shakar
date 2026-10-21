@@ -14,6 +14,46 @@ import { queryKindForDef } from "./kindLexicon";
  * (Freebuff session) of the author's 7 diagnoses. Each test pins a
  * verified wound: the exact query/ad shape, the expected verdict.
  */
+describe("R9 — styled sibling variants", () => {
+  const qk = (inc: string[]) => queryKindForDef(inc, false, "music");
+
+  it("«طرح آکوستیک» is a near-miss for a real acoustic-piano hunt", () => {
+    const r = assessModelSpecificity(
+      ["پیانو", "اکوستیک"],
+      "پیانو دیجیتال یاماها طرح آکوستیک",
+      "music",
+      qk(["پیانو", "اکوستیک"]),
+      "پیانو اکوستیک"
+    );
+    expect(r.mismatch).toBe(true);
+    expect(r.tier).toBe("near");
+    expect(r.reason).toContain("style-prefix");
+  });
+
+  it("a clean acoustic piano remains eligible for exact", () => {
+    const r = assessModelSpecificity(
+      ["پیانو", "اکوستیک"],
+      "پیانو آکوستیک کاوایی",
+      "music",
+      qk(["پیانو", "اکوستیک"]),
+      "پیانو اکوستیک"
+    );
+    expect(r.mismatch).toBe(false);
+  });
+
+  it("a user who explicitly asks for a styled acoustic piano can still match it", () => {
+    const include = ["پیانو", "اکوستیک"];
+    const r = assessModelSpecificity(
+      include,
+      "پیانو طرح آکوستیک",
+      "music",
+      qk(include),
+      "پیانو طرح اکوستیک"
+    );
+    expect(r.mismatch).toBe(false);
+  });
+});
+
 describe("R8 — F2 kind-aware marker guard (both passes)", () => {
   const qk = (inc: string[]) => queryKindForDef(inc, false, "all");
   it("دوره on a training hunt is the item, not a wrong item", () => {
