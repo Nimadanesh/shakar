@@ -341,17 +341,3 @@ class FirstPartyDivarProvider implements ListingProvider {
 
 export const divarProvider: ListingProvider = new FirstPartyDivarProvider();
 
-/**
- * Translate a Shekaar hunt category/city into a provider query.
- * Exported for M4's pipeline; resolves Divar's numeric city id.
- */
-export async function toListingQuery(opts: {
-  category: string;
-  citySlug: string;
-  page?: number;
-}): Promise<ListingQuery> {
-  const categorySlug = CATEGORY_API_VALUE[opts.category] ?? "";
-  const cityId =
-    opts.citySlug === "all" ? "" : ((await resolveCityId(opts.citySlug)) ?? "");
-  return { categorySlug, cityId, keywords: [], page: opts.page ?? 0 };
-}

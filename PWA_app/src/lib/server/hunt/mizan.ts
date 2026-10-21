@@ -22,7 +22,6 @@ const MIZAN_URL =
 const MIZAN_TIMEOUT_MS = Number(process.env.MIZAN_TIMEOUT_MS ?? 30000);
 // Confidence thresholds (calibrated on 2026-10-19 pilot: all 3 errors < 0.6)
 const MIZAN_ACT_THRESHOLD = 0.8;
-const MIZAN_IGNORE_THRESHOLD = 0.6;
 
 export type ItemKind =
   | "whole"
@@ -205,17 +204,6 @@ export async function adjudicateAd(
     violateProbability >= MIZAN_ACT_THRESHOLD;
 
   return { itemKind, itemConfidence, violates, violateProbability, actionable, unavailable: false };
-}
-
-/**
- * @deprecated Use adjudicateAd (design v2). Kept for backward compat.
- */
-export async function adjudicateTitle(
-  title: string,
-  huntKind: string,
-  constraintFa: string | null
-): Promise<MizanJudgment> {
-  return adjudicateAd(title, "", huntKind, constraintFa);
 }
 
 /**

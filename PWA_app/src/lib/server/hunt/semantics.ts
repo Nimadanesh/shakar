@@ -36,8 +36,6 @@ export type ListingRole =
   | "exchange"
   | "unknown";
 
-/** What the hunter wants — assessed from the query (plus category/transaction). */
-export type QueryIntent = ListingRole;
 
 export interface RoleAssessment {
   readonly role: ListingRole;
