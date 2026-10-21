@@ -6,7 +6,16 @@ on:
       - engine_v3
     paths:
       - ".github/workflows/engine-v3-baseline.yml"
-      - "PWA_app/**"
+      - "PWA_app/package.json"
+      - "PWA_app/package-lock.json"
+      - "PWA_app/src/**"
+      - "PWA_app/scripts/**"
+      - "PWA_app/next.config.*"
+      - "PWA_app/eslint.config.*"
+      - "PWA_app/tsconfig.json"
+      - "PWA_app/vitest.config.*"
+      - "PWA_app/postcss.config.*"
+      - "PWA_app/tailwind.config.*"
   workflow_dispatch:
 
 permissions:
