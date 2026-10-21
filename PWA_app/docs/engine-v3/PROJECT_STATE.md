@@ -3,7 +3,8 @@
 Last verified: 2026-10-22
 Work branch: `engine_v3`
 Branch base: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Baseline workflow commit: `84bb3591677e8d8c0f364292fd9b801d59d4a929`
+Latest workflow configuration commit: `c1e4ee15af972d5f31d3225f9f29b77ec93008e4`
+Latest completed baseline run: [Run #4](https://github.com/Nimadanesh/shakar/actions/runs/39676527704), tested commit `76216d62017afbaa23820afc85e0c34885a95fc9`.
 
 ## Mission
 
@@ -18,46 +19,57 @@ The technical agent owns code investigation, architecture, test design, implemen
 
 ## Verified repository state
 
-- `engine_v3` was created from current `main` SHA above.
-- Source code has not been modified in V3; the only new non-documentation file is an isolated GitHub Actions workflow at `.github/workflows/engine-v3-baseline.yml`.
-- The workflow pins Node.js 24, runs in `PWA_app`, installs from the lockfile with `npm ci`, then attempts focused hunt tests, full tests, typecheck, lint, and production build.
-- The workflow file was committed as `84bb3591677e8d8c0f364292fd9b801d59d4a929`.
-- GitHub Actions API currently reports zero workflow runs for `engine_v3` and for that commit. Therefore no workflow step has been observed running yet; do not report tests/build as run or passed.
-- A deterministic synthetic benchmark exists at `PWA_app/src/lib/server/hunt/search-quality-benchmark.ts`, version `2026-10-09-v1`, with 16 cases. Its documentation says it is a seed benchmark, not a representative live-market benchmark.
-- A golden benchmark and harness integrity gate exist under `PWA_app/scripts/`; they have not been run. Do not run the gate without identifying its exact frozen inputs and expected grade mapping.
-- Human-evaluation packets and replay artifacts exist in `Nimadanesh/shakar-eval-tmp-20261012`. Protect all frozen captures, pinned versions, grades, and mappings.
-- Existing architecture/roadmap docs contain stale baseline pointers; reconcile against code rather than assuming either is current.
-- The previous local clone limitation remains true for the local container (GitHub DNS unavailable; Node 22.16.0), but hosted Node 24 execution is now prepared through the new workflow. The unresolved immediate issue is that no Actions run has been created/observed.
+- `engine_v3` was created from current `main` SHA `10f3c40d70748ff27d6928eaed0875e10dab1c56`.
+- No engine or product source files have been changed in V3. Changes so far are control documentation and the isolated GitHub Actions baseline workflow.
+- Hosted runner executed Node `v24.21.0` with npm `11.19.0`; `npm ci` succeeded.
+- First three runs failed because three historical research harnesses hard-code files outside the repository. Run #4 explicitly excluded only these three files from portable CI and reports their missing inputs as NOT RUN:
+  - `src/lib/server/hunt/contractDeleteAudit.test.ts` needs `/home/hatch/workspace/ge2-ads.json`
+  - `src/lib/server/hunt/contractGate.test.ts` needs `/home/hatch/workspace/your_files/experiment-b-probe-v1.json`
+  - `src/lib/server/hunt/expAFeatures.test.ts` needs intended contracts plus historical round captures/grades and snapshot data under `/home/hatch/workspace`
+- Run #4 outcomes:
+  - focused portable hunt/search suite: PASS
+  - full portable test suite: PASS
+  - TypeScript typecheck: PASS
+  - production build: PASS
+  - ESLint: FAIL (9 errors, 38 warnings)
+  - overall job: FAIL because ESLint failed
+- The 9 lint errors comprise eight `react-hooks/set-state-in-effect` errors in UI files (`KaminDetailSheet.tsx`, `BottomTabBar.tsx`, `MarketSheet.tsx`, `HomeCityUpdateNudge.tsx`, `HuntProgress.tsx`, `SearchSheet.tsx`, `HomeCityRow.tsx`, `useProfile.ts`) and one `prefer-const` error in `src/lib/server/hunt/contract.ts:163`.
+- The build compiled successfully and generated 38 static pages. This verifies buildability at that SHA, not live Divar retrieval or relevance quality.
+- `npm ci` reported 30 dependency vulnerabilities (2 low, 6 moderate, 20 high, 2 critical). No automated dependency upgrade/audit fix was applied.
+- Workflow triggers are now scoped to workflow, package/lockfile, source, scripts, and build/lint/typecheck config changes, avoiding repeated runs for control-doc-only updates.
+- Existing synthetic benchmark remains 16 cases (`2026-10-09-v1`), documented as a seed benchmark rather than representative live-market evidence.
+- Human-evaluation packets/replay artifacts in `Nimadanesh/shakar-eval-tmp-20261012` remain protected; current R1/R2 status still needs verification before further evaluation.
+- Architecture/roadmap docs contain stale baseline pointers and still need reconciliation against current code.
 
 ## Important quality risks to verify
 
-These remain audit hypotheses, not proven current defects:
-1. Relevant ads may be missed because of retrieval coverage, query construction, pagination, deduplication, or detail-budget allocation.
+These remain hypotheses, not proven current defects:
+1. Relevant ads may be missed due to query construction, pagination, deduplication, or detail-budget allocation.
 2. Explicit constraints may be mishandled when evidence is missing, stale, or ambiguous.
-3. Entity/kind confusion (e.g. a part/accessory vs the whole item) may produce irrelevant results.
+3. Entity/kind confusion (e.g. part/accessory vs whole item) may produce irrelevant results.
 4. Service intent and transaction direction may be confused.
 5. Global synonym expansion may collapse related-but-distinct concepts.
-6. Mizan's effective role may differ by runtime configuration; inspect code/config before assuming it affects ranking.
-7. Code correctness and synthetic tests do not establish human top-result quality.
+6. Mizan's effective role may differ by runtime configuration.
+7. Passing unit tests/typecheck/build does not establish human top-result quality.
 
 ## Current phase
 
-**Phase 0 — Establish a trustworthy baseline (in progress).**
+**Phase 0 — baseline trustworthiness: execution checks now have real results, but phase exit is not yet approved.**
 
 Completed:
-- branch created from current main;
-- durable control documents and initial baseline audit added;
-- source tree, docs, benchmark and human-evaluation artifacts inspected remotely;
-- Node 24 baseline workflow added to the isolated branch.
+- branch isolation and control documents;
+- hosted Node 24 workflow;
+- portable focused tests, full portable test suite, typecheck and build all run and pass;
+- exact lint failure inventory recorded;
+- three research harnesses and their unavailable frozen inputs explicitly distinguished from passing tests.
 
-Not complete:
-- observe a real Actions run and record exact outputs;
-- execute tests/build/typecheck/lint in Node >=24;
-- run the golden harness gate with correct frozen inputs where available;
-- verify current R1/R2 status and exact candidate pins without modifying them;
-- reconcile architecture/quality docs with current code;
-- produce a code-level prioritized failure register with testable hypotheses.
+Still required before Phase 0 exit:
+- verify current R1/R2 evaluation status and pinned candidates without modifying them;
+- run the golden harness only after its exact frozen inputs and expected mappings are identified;
+- reconcile stale architecture/quality documentation against current source;
+- record a code-level prioritized failure register and select the first measurable search-quality experiment;
+- decide how to address lint errors. Avoid unrelated UI refactors; the one engine lint error is `prefer-const` in `contract.ts:163`.
 
 ## Next action
 
-Trigger or enable the new workflow using a supported GitHub Actions path, then inspect the actual run and fix any workflow/environment issue without touching `main`, deployment, secrets, or frozen evaluation artifacts. Once the baseline commands have genuine outputs, record exact failures and only then decide whether Phase 0 exit criteria are met. Do not implement engine features before that gate.
+Inspect the precise `contract.ts` lint context and current evaluation handoff, reconcile stale architecture docs, and define a minimal first quality experiment with a measurable acceptance gate. Do not change `main`, deploy, alter frozen human-evaluation artifacts, or claim live quality gains without paired human-judged evidence.
