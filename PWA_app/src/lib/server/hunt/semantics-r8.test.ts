@@ -48,7 +48,21 @@ describe("R9 — styled sibling variants", () => {
       "پیانو طرح آکوستیک",
       "music",
       qk(include),
-      "پیانو طرح اکوستیک"
+      "پیانو طرح اکوستیک",
+      "پیانو طرح آکوستیک"
+    );
+    expect(r.mismatch).toBe(false);
+  });
+
+  it("a description-only mention cannot override a clean advertised title", () => {
+    const include = ["پیانو", "اکوستیک"];
+    const r = assessModelSpecificity(
+      include,
+      "پیانو آکوستیک کاوایی — در مقایسه با پیانوهای طرح آکوستیک",
+      "music",
+      qk(include),
+      "پیانو اکوستیک",
+      "پیانو آکوستیک کاوایی"
     );
     expect(r.mismatch).toBe(false);
   });
