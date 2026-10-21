@@ -1,11 +1,6 @@
 # Shekar Search Engine — Architecture & Logic
 
-**Scope:** the engine as deployed to production (main @ `4fe671e`, the
-merge of `feat/engine-v2` @ `d2205c4`, 2026-10-21). This document
-describes what the code *is*: read it and you should be able to picture
-the code's shape — modules, data flow, decision order, and the exact
-points where ads live or die. Where the shape is known to be poor, the
-document says so instead of tidying it up.
+**Scope:** repository source snapshot at `main` @ `10f3c40d70748ff27d6928eaed0875e10dab1c56` (engine-v2 merge, 2026-10-21), also used as the code baseline for the isolated `engine_v3` branch. V3's only source change so far is a behavior-preserving `let` → `const` cleanup in `contract.ts`; no engine behavior has changed. This is a source-code description, **not a fresh verification of the deployed production runtime**. It describes what the code is: modules, data flow, decision order, and where ads live or die. Where the shape is known to be poor, the document says so instead of tidying it up.
 
 ---
 
