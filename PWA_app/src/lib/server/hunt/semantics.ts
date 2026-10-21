@@ -939,7 +939,9 @@ export function assessModelSpecificity(
    */
   queryKind?: string | null,
   /** Original user query; used to distinguish a requested «طرح X» from a misleading sibling variant. */
-  queryText?: string
+  queryText?: string,
+  /** Listing title, when available; description-only mentions must not override the advertised subject. */
+  listingTitle?: string
 ): { readonly mismatch: boolean; readonly reason: string; readonly tier: "reject" | "near" } {
   if (includeTerms.length === 0) return { mismatch: false, reason: "no-must-terms", tier: "near" };
   const listingNorm = normalizeForMatch(listingText);
@@ -977,9 +979,12 @@ export function assessModelSpecificity(
         includeTerms.some((term) => textMatches(queryTextTokens[index + 1], term, category))
     );
   };
-  for (let i = 0; i < listingTokens.length - 1; i++) {
-    if (listingTokens[i] !== stylePrefix) continue;
-    const styledTerm = listingTokens[i + 1];
+  const styleSubjectTokens = normalizeForMatch(listingTitle ?? listingText)
+    .split(" ")
+    .filter(Boolean);
+  for (let i = 0; i < styleSubjectTokens.length - 1; i++) {
+    if (styleSubjectTokens[i] !== stylePrefix) continue;
+    const styledTerm = styleSubjectTokens[i + 1];
     if (!includeTerms.some((term) => textMatches(styledTerm, term, category))) continue;
     if (explicitlyRequestsThisStyle(styledTerm)) continue;
     return {
