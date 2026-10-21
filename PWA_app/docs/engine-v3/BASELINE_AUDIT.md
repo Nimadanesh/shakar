@@ -4,73 +4,52 @@ Audit date: 2026-10-22
 Audited repository: `Nimadanesh/shakar`
 Audited main SHA: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
 V3 branch: `engine_v3`
+Current source/test head: `b8327e033b96ab40f3568051dcdfaae107de50a0`
 
 ## Executive finding
 
-V3 should not begin with a rewrite. The repo already has a deterministic search pipeline, semantic assessments, synthetic benchmark, golden-evaluation harness and separate human-evaluation artifacts. Hosted Node 24 execution is now established. Portable tests, typecheck and production build pass. ESLint still fails on eight existing UI issues. Three historical research harnesses require frozen files not included in the repo. No live Divar or human-judged quality comparison has been run.
+The hosted Node 24 path is working. The latest portable run passes focused tests, full portable tests, typecheck, and production build; ESLint remains red on eight unrelated UI errors and 38 warnings. A bounded read-only live observation has now been run on four critical query families. It exposed two high-severity false-positive patterns, both patched with regression tests. No human-grade paired comparison has been run, so these are verified code/output corrections, not a claim of overall search-quality improvement.
 
-## Hosted baseline run
+## Latest portable baseline
 
-Workflow: [Engine V3 Baseline run #6](https://github.com/Nimadanesh/shakar/actions/runs/39676945092)
-- Tested SHA: `49656d583c43bc8bd7fe3478e0ee4ad5ab5c225e`
-- Branch: `engine_v3`
-- Runtime: Node `v24.21.0`, npm `11.19.0`, Python `3.12.3`
-- `npm ci`: PASS (665 packages added; audit reported 30 vulnerabilities: 2 low, 6 moderate, 20 high, 2 critical)
-- Focused portable hunt/search tests: PASS
+[Run on SHA `b8327e033b96ab40f3568051dcdfaae107de50a0`](https://github.com/Nimadanesh/shakar/actions/runs/39682413600)
+- Runtime: Node `v24.21.0`, npm `11.19.0`
+- `npm ci`: PASS
+- Focused hunt/search tests: PASS
 - Full portable test suite: PASS
 - TypeScript typecheck: PASS
-- ESLint: FAIL — 8 errors, 38 warnings
-- Production build: PASS (Next.js 16.2.1; compiled successfully and generated 38 static pages in run #4; run #6 build also passed)
-- Overall run: FAIL due to ESLint
-- No live Divar hunts or human-judged quality comparisons were run.
+- Production build: PASS
+- ESLint: FAIL — 8 `react-hooks/set-state-in-effect` errors and 38 warnings
+- Overall workflow: FAIL due to ESLint only
+- The eight errors are in `KaminDetailSheet.tsx:77`, `BottomTabBar.tsx:23`, `MarketSheet.tsx:45`, `HomeCityUpdateNudge.tsx:87`, `HuntProgress.tsx:110`, `SearchSheet.tsx:47`, `HomeCityRow.tsx:26`, and `useProfile.ts:114`. No unrelated UI cleanup was included.
+- The three historical research harnesses remain NOT RUN because their frozen files are external to the repository.
 
-### Why the first three runs failed
+## Bounded live observation
 
-Three test files read hard-coded local paths absent from a clean hosted runner:
-1. `contractDeleteAudit.test.ts` → `/home/hatch/workspace/ge2-ads.json`
-2. `contractGate.test.ts` → `/home/hatch/workspace/your_files/experiment-b-probe-v1.json`
-3. `expAFeatures.test.ts` → `/home/hatch/workspace/your_files/intended-contracts-v1.json` plus historical round captures/grades and snapshot data.
+[Run on SHA `f2d94846a24b272616d27b442454d9b2de42ecdb`](https://github.com/Nimadanesh/shakar/actions/runs/39682408569)
+- Node `v24.21.0`
+- Queries: `پیانو اکوستیک`, `کفی ماشین`, `تعمیر یخچال`, `ماشین بدون رنگ`
+- Limits: max 2 list pages and 8 detail fetches per query
+- Mizan disabled; no model judging calls
+- No Supabase writes: slug-capture data was buffered only to the runner temp directory
+- The report is an ungraded observation; it does not compute precision/nDCG or represent a paired candidate pool.
 
-The workflow excludes only these three tests from portable CI and explicitly labels them NOT RUN / unavailable evidence. It does not claim those checks passed, and it does not copy frozen evaluation data into the public repository. To execute them later, identify an authorized, protected artifact location and add a deliberate reproducible input mechanism without mutating the existing frozen artifacts.
+### Findings and patches
 
-### ESLint inventory
+1. **Styled acoustic piano false positive.** In the initial observation, `پیانو دیجیتال یاماها طرح آکوستیک` was `exact` for `پیانو اکوستیک`. The new title-scoped style-prefix guard moves that listing to `near`; real acoustic listings remain `exact`. Tests cover the variant, a clean acoustic control, explicit requests for the styled product, and a description-only comparison that must not demote a clean title.
+2. **Car parts in a whole-car hunt.** The initial `ماشین بدون رنگ` sample showed `جک ماشین` and `چهار عدد کمک ماشین پراید` as near-misses. The bounded part lexicon now recognizes `جک` and vehicle `کمک` as parts. Pipeline tests assert those are rejected while a whole-car listing mentioning a jack remains exact. In the latest live observation after this patch, neither of those two part listings appeared in the top eight.
+3. **Part hunt sanity check.** The first three `کفی ماشین` results were actual floor-mat listings marked exact; unrelated electronics were near, not exact.
+4. **Service-intent sanity check.** The top exact results for `تعمیر یخچال` were service offers. This is a positive bounded observation, not evidence that service intent is solved for all language/roles.
+5. **Explicit absence sanity check.** A listing explicitly marked `بی‌رنگ` was exact for `ماشین بدون رنگ`; listings with insufficient paint evidence stayed near.
 
-Run #4 had 9 errors; the engine-file `prefer-const` issue was fixed in commit `49656d583c43bc8bd7fe3478e0ee4ad5ab5c225e`. Run #6 reports 8 errors, all `react-hooks/set-state-in-effect`:
-- `src/components/kamin/KaminDetailSheet.tsx:77`
-- `src/components/layout/BottomTabBar.tsx:23`
-- `src/components/market/MarketSheet.tsx:45`
-- `src/components/search/HomeCityUpdateNudge.tsx:87`
-- `src/components/search/HuntProgress.tsx:110`
-- `src/components/search/SearchSheet.tsx:47`
-- `src/components/settings/HomeCityRow.tsx:26`
-- `src/hooks/useProfile.ts:114`
+## Still open
 
-Run #6 also reports 38 warnings, including unused imports/variables and unused eslint-disable directives. Do not perform broad unrelated UI cleanup as part of search-quality work.
+- Current R1/R2 artifact status is not independently recoverable from the public evaluation repo; last-known R1a figures are historical context only. Frozen artifacts remain untouched.
+- The golden harness has not been run because exact frozen inputs/mappings have not been safely established in the repo.
+- Production candidate coverage below the 100-detail cap is unmeasured. The live observation used only 8 details/query.
+- No paired human-grade comparison for the new fixes exists.
+- Dependency installation previously reported 30 vulnerabilities (2 low, 6 moderate, 20 high, 2 critical); no dependency upgrades were applied.
 
-## Existing code and evaluation assets
+## Next gate
 
-- Core engine: `PWA_app/src/lib/server/hunt/pipeline.ts`, `definition.ts`, `contract.ts`, `semantics.ts`, `kindLexicon.ts`, `mizan.ts`.
-- Divar retrieval boundary: `PWA_app/src/lib/server/divar/provider.ts`, `divarClient.ts`, `taxonomy.ts`, plus cache/throttle modules.
-- Synthetic benchmark: `PWA_app/src/lib/server/hunt/search-quality-benchmark.ts`, version `2026-10-09-v1`, 16 cases; source comments say it is a seed benchmark, not representative live-market evidence.
-- Golden harness scripts: `PWA_app/scripts/golden-benchmark.py`, `golden-benchmark-gate.py`, `grades-to-idkeyed.py`, plus experiment-specific scripts. The golden gate has not been run because its precise frozen inputs/grade mapping must first be confirmed.
-- Evaluation web app/API: `PWA_app/src/app/eval` and `PWA_app/src/lib/server/eval`.
-- The public evaluation repo `Nimadanesh/shakar-eval-tmp-20261012` currently has only the Phase 1 packet/review artifacts on its main branch; latest commit visible there is dated 2026-10-12. Prior project context records R1 capture complete and R1a metrics joined 138/138 grades (A mean nDCG@5 0.5007, B 0.5539), R1b not started/reported, and a later R2 review draft with 12 questions around service intent (S3), transaction direction (S4), and variant detection (S1). These are last-known notes; verify before new evaluation action. Preserve all frozen captures/pins.
-
-## Documentation and quality risks
-
-- `PWA_app/docs/engine-architecture.md` identifies its scope as main @ `4fe671e`, so its baseline pointer is stale.
-- `PWA_app/docs/SEARCH-QUALITY-ROADMAP.md` is dated 2026-10-09 and records older branch/SHA context; treat as historical strategy.
-- `PWA_app/docs/output-quality.md` is a useful historical flaw/fix ledger, but “done” claims must be verified against current source/tests.
-- Still unverified: actual-route enforcement of category/city/price/transaction/MUST/MUST-NOT when detail is missing/stale; retrieval budget and below-shortlist recall; concept conflation; kind/service/transaction-role over/under-fire; Mizan's effective runtime role; human top-result quality.
-
-## Phase 0 status and next gate
-
-**Phase 0 is still in progress.** Portable tests, typecheck and build pass at run #6. Lint remains red for unrelated UI issues. Three research harnesses are unavailable due to absent external frozen inputs. No live Divar or paired human-judged test was run.
-
-Next:
-1. Reconcile stale architecture/quality docs against current source.
-2. Verify latest R1/R2 status and candidate pins without mutation.
-3. Establish a safe, reproducible path for frozen inputs before running the golden harness.
-4. Build a prioritized failure register and select the first narrow quality experiment with a measurable acceptance gate.
-
-Do not start a broad rewrite, change `main`, deploy, mutate external services, or claim quality gains without paired human-judged evidence.
+Run `E3-DETAIL-ALLOCATION-01` from [FAILURE_REGISTER.md](./FAILURE_REGISTER.md): one fixed query/candidate pool, same detail budget, current top-100 allocation versus a small exploration-budget alternative. Do not alter frozen human evaluation data, change `main`, deploy, or claim overall quality gains without fresh human grades.
