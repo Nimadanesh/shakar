@@ -7,11 +7,13 @@ Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
 ## Mission
 Improve real Divar search result quality for professional users. The human owner evaluates product output; the technical agent independently owns investigation, architecture, experiments, and implementation decisions.
 
-## Current verified state
-- Branch `engine_v3` has been created from current `main`.
-- Initial commit(s) in this workstream add control documentation only.
-- No engine source changes, tests, builds, live searches, deployments, or service mutations have been performed in V3 setup.
-- Existing source and evaluation artifacts still need a fresh read-only audit.
+## Verified state
+- Branch `engine_v3` exists from current `main`.
+- V3 contains control docs only; no engine source changes have been made.
+- Remote inspection found an existing 16-case synthetic benchmark (`2026-10-09-v1`), golden-benchmark scripts/gate, and separate human-evaluation artifacts in `Nimadanesh/shakar-eval-tmp-20261012`.
+- Existing architecture/roadmap docs contain stale baseline pointers; they must be reconciled against current code.
+- The separate human-evaluation repo includes a 60-observation real-ad packet/replay. Its artifacts and prior pinned candidates must remain immutable. Verify current R1/R2 state before any new evaluation action.
+- No tests/build/typecheck/lint/live hunts were executed. Local clone failed due to unavailable GitHub DNS from the container; its Node 22.16.0 also fails the package's declared Node >=24 prerequisite.
 
 ## Must preserve
 - Do not change `main` or deploy without explicit authorization.
@@ -19,9 +21,13 @@ Improve real Divar search result quality for professional users. The human owner
 - Keep unknown evidence distinct from satisfied/violated.
 - Do not claim live quality improvement without paired human-judged evidence.
 - Treat user grades as evidence, not as technical instructions.
+- Do not treat source review or synthetic tests as proof of production quality.
+
+## Current phase
+Phase 0 — baseline trustworthiness, in progress. See `PROJECT_STATE.md`, `BASELINE_AUDIT.md`, and `ROADMAP.md`.
 
 ## Next action
-Read `PROJECT_STATE.md`, then audit current code/tests/evaluation assets read-only. Record exact baseline and test status. Do not implement features until Phase 0 exit criteria are met.
+Obtain an authorized Node >=24 execution environment, verify the exact checked-out SHA, and run the existing checks with outputs recorded. Do not implement features before the baseline gate. Do not deploy or mutate external services.
 
 ## Session close checklist
 - [ ] Branch/head and changed files verified
