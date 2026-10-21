@@ -579,7 +579,7 @@ function semanticCapFires(
   const qKind = queryKindForDef(def.include, def.serviceIntent ?? false, def.category);
   const identity = clash.clash
     ? { mismatch: false as const, reason: "skipped:role-clash", tier: "near" as const }
-    : assessModelSpecificity(def.include, combined, def.category, qKind);
+    : assessModelSpecificity(def.include, combined, def.category, qKind, def.query);
   // R3 (2026-10-17): absent-attributes generalize the repair polarity
   // rule — «بدون رنگ» with no paint info is unknown, capped at near
   // (never exact); the نه-sourced repair rule is preserved as-is.
