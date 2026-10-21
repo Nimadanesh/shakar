@@ -3,12 +3,12 @@ import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { resolveHuntDefinition } from "../src/lib/server/hunt/definition";
+import { resolveHuntDefinition } from "./definition";
 import {
   collectCandidates,
   confirmCandidates,
   type HuntEvent,
-} from "../src/lib/server/hunt/pipeline";
+} from "./pipeline";
 
 /**
  * Read-only live observation. Intentionally excluded from ordinary CI unless
