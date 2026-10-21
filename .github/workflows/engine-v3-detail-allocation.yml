@@ -1,0 +1,57 @@
+name: Engine V3 Detail Allocation Experiment
+
+on:
+  push:
+    branches:
+      - engine_v3
+    paths:
+      - ".github/workflows/engine-v3-detail-allocation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-v3-detail-allocation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    name: Read-only 120-detail allocation comparison
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: PWA_app
+    env:
+      LIVE_DETAIL_ALLOCATION: "1"
+      HUNT_MAX_DETAILS: "120"
+      MIZAN_SHADOW: "0"
+      SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-detail-allocation-slugs.jsonl
+    steps:
+      - name: Checkout engine_v3
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run controlled detail-allocation comparison
+        run: npx vitest run src/lib/server/hunt/live-detail-allocation.test.ts --reporter=verbose
+
+      - name: Upload experiment report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-v3-detail-allocation-${{ github.run_number }}
+          path: ${{ runner.temp }}/engine-v3-detail-allocation.json
+          if-no-files-found: warn
+          retention-days: 14
