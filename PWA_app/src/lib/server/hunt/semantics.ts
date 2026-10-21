@@ -937,7 +937,9 @@ export function assessModelSpecificity(
    * near), otherwise the weak pass re-caps the same ad to near.
    * Unknown/null → guard no-ops (anti-overfilter).
    */
-  queryKind?: string | null
+  queryKind?: string | null,
+  /** Original user query; used to distinguish a requested «طرح X» from a misleading sibling variant. */
+  queryText?: string
 ): { readonly mismatch: boolean; readonly reason: string; readonly tier: "reject" | "near" } {
   if (includeTerms.length === 0) return { mismatch: false, reason: "no-must-terms", tier: "near" };
   const listingNorm = normalizeForMatch(listingText);
@@ -956,6 +958,36 @@ export function assessModelSpecificity(
   listingTokens.forEach((tok, i) => {
     if (queryTokens.has(tok)) matchedPositions.add(i);
   });
+
+  // A listing that says «طرح X» offers a styled imitation of X, not
+  // necessarily the real X («پیانو دیجیتال ... طرح آکوستیک»). This must
+  // be a near-miss, never exact. Use the original query so a user who
+  // explicitly asks for «پیانو طرح آکوستیک» can still get that item exactly.
+  const stylePrefix = normalizeForMatch("طرح");
+  const queryTextTokens = queryText
+    ? normalizeForMatch(queryText).split(" ").filter(Boolean)
+    : [];
+  const explicitlyRequestsThisStyle = (listingTerm: string): boolean => {
+    if (!queryText) return queryTokens.has(stylePrefix);
+    return queryTextTokens.some(
+      (token, index) =>
+        token === stylePrefix &&
+        queryTextTokens[index + 1] !== undefined &&
+        textMatches(queryTextTokens[index + 1], listingTerm, category) &&
+        includeTerms.some((term) => textMatches(queryTextTokens[index + 1], term, category))
+    );
+  };
+  for (let i = 0; i < listingTokens.length - 1; i++) {
+    if (listingTokens[i] !== stylePrefix) continue;
+    const styledTerm = listingTokens[i + 1];
+    if (!includeTerms.some((term) => textMatches(styledTerm, term, category))) continue;
+    if (explicitlyRequestsThisStyle(styledTerm)) continue;
+    return {
+      mismatch: true,
+      reason: `sibling-variant:style-prefix:"طرح ${styledTerm}"`,
+      tier: "near",
+    };
+  }
 
   // The ad's subject: first content token after sale cues. A clean subject
   // (the hunted item itself) means marker words elsewhere are features,
