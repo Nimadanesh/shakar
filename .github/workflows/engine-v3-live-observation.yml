@@ -27,7 +27,7 @@ jobs:
       LIVE_DIVAR_OBSERVATION: "1"
       HUNT_MAX_DETAILS: "8"
       MIZAN_SHADOW: "0"
-      SLUG_CAPTURE_BUFFER_PATH: ${{ runner.temp }}/engine-v3-live-observation-slugs.jsonl
+      SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-live-observation-slugs.jsonl
     steps:
       - name: Checkout engine_v3
         uses: actions/checkout@v4
