@@ -71,7 +71,7 @@ const conditionDef: DimensionDef = {
   ],
   neutral: { value: "any", label: "فرقی نداره" },
   detectInText: (text) => detectCondition(text),
-  categories: ["vehicles", "mobile", "home", "music", "personal"],
+  categories: ["vehicles", "mobile", "home", "music", "personal", "industrial"],
 };
 
 export const DIMENSION_DEFS: DimensionDef[] = [transactionDef, conditionDef];

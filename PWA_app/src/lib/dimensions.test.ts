@@ -81,4 +81,21 @@ describe("getDimensionStatuses", () => {
     const s = getDimensionStatuses(q({ query: "خونه و ماشین" }));
     expect(ids(s)).toEqual(["transaction"]);
   });
+
+  it("stays silent for services and jobs — no dimension fits them", () => {
+    // «تعمیر یخچال» used to hit home and ask «نو یا کارکرده؟» — nonsense
+    // for a repairman hunt. Services/jobs get no dimensions at all.
+    expect(ids(getDimensionStatuses(q({ query: "تعمیر یخچال" })))).toEqual([]);
+    expect(ids(getDimensionStatuses(q({ query: "نصاب کولر گازی" })))).toEqual([]);
+    expect(ids(getDimensionStatuses(q({ query: "استخدام منشی" })))).toEqual([]);
+  });
+
+  it("asks condition for industrial equipment", () => {
+    const s = getDimensionStatuses(q({ query: "ماشین‌آلات صنعتی" }));
+    expect(ids(s)).toEqual(["condition"]);
+  });
+
+  it("asks condition for leisure via the widened words", () => {
+    expect(ids(getDimensionStatuses(q({ query: "دوچرخه" })))).toEqual(["condition"]);
+  });
 });

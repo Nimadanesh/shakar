@@ -34,8 +34,25 @@ const mockTierKey = vi.mocked(activeTierKey);
 const UID = "11111111-1111-4111-8111-111111111111";
 const DID = "22222222-2222-4222-8222-222222222222";
 
-function event(hoursAgo: number): { fired_at: string } {
-  return { fired_at: new Date(Date.now() - hoursAgo * 3_600_000).toISOString() };
+/**
+ * Midnight-robust factories: the hours-ago helper breaks when the suite
+ * runs just after midnight (1h ago is yesterday). These anchor to calendar
+ * days instead.
+ */
+function eventTodayAt(hour: number, minute = 0): { fired_at: string } {
+  const d = new Date();
+  d.setHours(hour, minute, 0, 0);
+  // If that wall-clock time hasn't happened yet today, fall back to one
+  // minute after midnight — still "today".
+  if (d.getTime() > Date.now()) d.setHours(0, 1, 0, 0);
+  return { fired_at: d.toISOString() };
+}
+
+function eventDaysAgo(n: number, hour = 12): { fired_at: string } {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  d.setHours(hour, 0, 0, 0);
+  return { fired_at: d.toISOString() };
 }
 
 /**
@@ -92,7 +109,14 @@ describe("subscribed user", () => {
     mockServer.mockReturnValue(fakeSb({
       quota_counters: [{ hunts_used: 5 }],
       // 3 hunts today, 1 yesterday, 1 in the oldest bucket (edge of window).
-      hunt_events: [event(1), event(2), event(3), event(26), eventInOldestBucket()],
+      // Anchored to calendar days (midnight-robust — hours-ago breaks at 00:xx).
+      hunt_events: [
+        eventTodayAt(9),
+        eventTodayAt(10),
+        eventTodayAt(11),
+        eventDaysAgo(1, 15),
+        eventInOldestBucket(),
+      ],
       kamins: [{ id: "k1" }, { id: "k2" }],
     }) as never);
 
@@ -163,7 +187,8 @@ describe("guest", () => {
   it("returns device grant truth", async () => {
     mockServer.mockReturnValue(fakeSb({
       devices: [{ free_hunts_used: 2, free_hunts_granted: 3 }],
-      hunt_events: [event(1), event(50)],
+      // today + 2 days ago (midnight-robust).
+      hunt_events: [eventTodayAt(9), eventDaysAgo(2)],
     }) as never);
 
     const json = await (await get({ "x-device-id": DID })).json();

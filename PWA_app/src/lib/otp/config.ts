@@ -9,6 +9,11 @@ export type OtpProviderName = "kavenegar" | "mock";
 
 export interface OtpConfig {
   isProd: boolean;
+  /** Explicit dev-auth opt-in. The dev backdoor (any 5-digit code logs in)
+   *  is gated on this — NEVER on the mere absence of NODE_ENV=production
+   *  (M2 fix, 2026-10-15: a misconfigured deploy must not silently open
+   *  account takeover). */
+  allowDevAuth: boolean;
   providerName: OtpProviderName;
   kavenegarApiKey: string | null;
   kavenegarTemplate: string | null;
@@ -35,6 +40,7 @@ function devSecret(): string {
 
 export function getOtpConfig(): OtpConfig {
   const isProd = process.env.NODE_ENV === "production";
+  const allowDevAuth = process.env.ALLOW_DEV_AUTH === "1";
   const missing: string[] = [];
 
   const providerRaw = (process.env.OTP_PROVIDER ?? "").toLowerCase();
@@ -68,6 +74,7 @@ export function getOtpConfig(): OtpConfig {
 
   return {
     isProd,
+    allowDevAuth,
     providerName,
     kavenegarApiKey,
     kavenegarTemplate,

@@ -25,7 +25,7 @@ describe("search quality benchmark dataset", () => {
     for (const slice of [
       "normalization", "entity-collision", "model-identifier", "negation",
       "preference", "location", "price", "condition", "transaction",
-      "unknown", "ambiguity", "duplicates",
+      "unknown", "ambiguity", "duplicates", "service-intent", "transaction-direction",
     ]) expect(slices.has(slice as never)).toBe(true);
   });
 });
@@ -45,8 +45,11 @@ describe("search quality metric calculations", () => {
   });
 
   it("rewards better ordering with nDCG@K", () => {
-    const ideal = evaluateRanking(["a", "b", "c"], labels, 3).ndcgAtK;
-    const poor = evaluateRanking(["c", "b", "a"], labels, 3).ndcgAtK;
+    // NOTE: labels here intentionally exclude "d" — with d in the judged pool the
+    // true ideal@3 would be ["a","b","d"], so ["a","b","c"] must not be asserted as 1.0.
+    const ndcgLabels = { a: 3, b: 2, c: 0 };
+    const ideal = evaluateRanking(["a", "b", "c"], ndcgLabels, 3).ndcgAtK;
+    const poor = evaluateRanking(["c", "b", "a"], ndcgLabels, 3).ndcgAtK;
     expect(ideal).toBeGreaterThan(poor);
     expect(ideal).toBeCloseTo(1);
   });

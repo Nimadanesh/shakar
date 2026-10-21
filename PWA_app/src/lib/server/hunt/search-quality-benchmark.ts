@@ -23,7 +23,9 @@ export type BenchmarkSlice =
   | "transaction"
   | "unknown"
   | "ambiguity"
-  | "duplicates";
+  | "duplicates"
+  | "service-intent"
+  | "transaction-direction";
 
 export interface BenchmarkCandidate {
   id: string;
@@ -212,6 +214,33 @@ export const SEARCH_QUALITY_BENCHMARK: readonly SearchQualityCase[] = [
       { id: "dup-a1", title: "آیفون ۱۳ تمیز", description: "۲۵۶ گیگ", relevance: 3, note: "Canonical relevant listing." },
       { id: "dup-a1-repost", title: "آیفون ۱۳ تمیز", description: "۲۵۶ گیگ", relevance: 3, note: "Same listing reposted; relevance label retained but metric should deduplicate IDs only if production does." },
       { id: "dup-a2", title: "آیفون ۱۳ پرو", description: "۱۲۸ گیگ", relevance: 1, note: "Different model variant." },
+      { id: "dup-a3", title: "گوشی سامسونگ گلکسی", description: "سالم", relevance: 0, note: "Wrong brand entirely; hard negative." },
+    ],
+  },
+  {
+    id: "service-fridge-repair",
+    slice: "service-intent",
+    query: "تعمیر یخچال",
+    intent: { category: "all", must: ["تعمیر", "یخچال"], should: [], mustNot: [], unknown: [] },
+    candidates: [
+      { id: "srv-a1", title: "تعمیرکار یخچال در منزل", description: "تعمیرات انواع یخچال در محل", relevance: 3, note: "Service provider; exact intent (HumanTest S3)." },
+      { id: "srv-a2", title: "یخچال سامسونگ", description: "تعمیرشده، آماده فروش", relevance: 0, note: "Refrigerator for sale; S3 rubric = 0." },
+      { id: "srv-a3", title: "یخچال فریزر نو", description: "با گارانتی، فروش", relevance: 0, note: "Goods for sale; S3 rubric = 0." },
+      { id: "srv-a4", title: "ابزار تعمیر یخچال", description: "فروش عمده ابزار", relevance: 1, note: "Parts/tools; S3 rubric = 1." },
+    ],
+  },
+  {
+    id: "direction-buyer-hunter",
+    slice: "transaction-direction",
+    query: "خریدار یخچال",
+    // R7 (2026-10-18): bare «خریدار X» = seek-buyer — the hunter is a
+    // seller looking for BUYERS (navid's R6 product decision), NOT the
+    // goods. This supersedes the S4-era reading (seller listings = 3).
+    intent: { category: "home", must: ["یخچال"], should: [], mustNot: [], unknown: [] },
+    candidates: [
+      { id: "dir-a1", title: "یخچال سامسونگ", description: "سالم، فروش", relevance: 0, note: "Seller listing; wrong side for a buyer-seeking hunt (R7)." },
+      { id: "dir-a2", title: "خریدار یخچال هستیم", description: "خریدار انواع یخچال", relevance: 3, note: "Buyer ad; exactly what the buyer-seeking hunter wants (R7)." },
+      { id: "dir-a3", title: "یخچال فریزر", description: "نو", relevance: 0, note: "Seller listing; wrong side for a buyer-seeking hunt (R7)." },
     ],
   },
 ] as const;
