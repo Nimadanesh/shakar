@@ -3,26 +3,27 @@
 Updated: 2026-10-22
 Branch: `engine_v3`
 Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Latest workflow configuration commit: `c1e4ee15af972d5f31d3225f9f29b77ec93008e4`
+Latest source fix: `49656d583c43bc8bd7fe3478e0ee4ad5ab5c225e`
 
 ## Mission
 
 Improve real Divar search result quality for professional users. The human owner evaluates product output; the technical agent independently owns investigation, architecture, experiments, and implementation decisions.
 
 ## Verified state
-- Branch `engine_v3` remains isolated from `main`; no product or engine source files have been changed in V3.
-- The hosted Node 24 workflow has now run. [Run #4](https://github.com/Nimadanesh/shakar/actions/runs/39676527704) checked commit `76216d62017afbaa23820afc85e0c34885a95fc9`.
-- `npm ci`: PASS. Runtime was Node `v24.21.0`, npm `11.19.0`.
+- Branch `engine_v3` remains isolated from `main`.
+- The only product-source change so far is a behavior-preserving lint cleanup in `src/lib/server/hunt/contract.ts`: `let j = i - 1` → `const j = i - 1`.
+- [Baseline run #6](https://github.com/Nimadanesh/shakar/actions/runs/39676945092) checked that source SHA on hosted Node `v24.21.0`.
+- `npm ci`: PASS.
 - Focused portable hunt/search tests: PASS.
 - Full portable test suite: PASS.
 - TypeScript typecheck: PASS.
 - Production build: PASS.
-- ESLint: FAIL — 9 errors and 38 warnings; overall job is failed. Eight errors are `react-hooks/set-state-in-effect` in UI files; one is `prefer-const` in `src/lib/server/hunt/contract.ts:163`.
-- Three historical research harnesses are NOT RUN because their frozen inputs are external to the repo: `ge2-ads.json`, `experiment-b-probe-v1.json`, and Experiment A contracts/captures/grades/snapshot files under `/home/hatch/workspace`. They are explicitly excluded from portable CI, not represented as passing.
+- ESLint: FAIL — 8 errors and 38 warnings; all eight errors are `react-hooks/set-state-in-effect` in UI files, not the engine. The prior `prefer-const` issue in `contract.ts` is fixed.
+- Three historical research harnesses are NOT RUN because their frozen inputs are external to the repo. They are explicitly excluded from portable CI, not represented as passing.
 - Dependency installation reported 30 vulnerabilities (2 low, 6 moderate, 20 high, 2 critical). No dependency upgrades were applied.
-- Latest workflow trigger paths are scoped to code/build inputs so edits to these control documents do not cause unnecessary repeated CI runs.
 - No live Divar hunt or paired human-quality comparison has been run by this workflow. Build/test success is not search-quality evidence.
-- Existing architecture/roadmap docs have stale baseline pointers. Verify current R1/R2 status before any new evaluation action; frozen candidates, captures, grades and mappings remain immutable.
+- The evaluation repo's current main branch only shows Phase 1 review/packet artifacts. Last known R1a status is 138/138 grades joined; A mean nDCG@5 0.5007, B 0.5539; R1b was not started/reported. A later R2 review had 12 questions around S3 service intent, S4 transaction direction, and S1 variant detection. These are last-known notes; current artifact status must be verified before any new eval action.
+- Frozen candidates, captures, grades and mappings remain immutable.
 
 ## Must preserve
 - Do not change `main` or deploy without explicit authorization.
@@ -33,10 +34,10 @@ Improve real Divar search result quality for professional users. The human owner
 - Do not treat source review or synthetic tests as proof of production quality.
 
 ## Current phase
-Phase 0 — baseline trustworthiness. Execution has produced useful results, but phase exit is not approved while evaluation artifact status and stale documentation remain unreconciled and lint failures remain recorded.
+Phase 0 — baseline trustworthiness. Portable checks have genuine results, but the phase exit gate is not yet signed off: stale architecture docs and current evaluation-artifact status must be reconciled, and the golden harness inputs need a safe reproducibility plan.
 
 ## Next action
-Inspect `contract.ts:163` and the current evaluation handoff, reconcile architecture/quality docs against current code, and create a prioritized failure register with one narrow, measurable first search-quality experiment. Avoid unrelated UI refactors. Do not implement a broad rewrite or touch frozen evaluation artifacts.
+Reconcile architecture/quality docs against current source, verify current R1/R2 artifact status without mutation, then create a prioritized failure register and choose one narrow, measurable search-quality experiment. Avoid unrelated UI refactors. Do not implement a broad rewrite.
 
 ## Session close checklist
 - [x] Branch/head and changed files verified
