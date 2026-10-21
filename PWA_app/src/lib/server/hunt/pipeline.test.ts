@@ -884,6 +884,41 @@ describe("semantic caps — unified engine (5b)", () => {  function defCap(over:
     expect(kinds["md-max"]).toBe("near");
   });
 
+  it("«طرح آکوستیک» is not exact for a real acoustic-piano hunt", async () => {
+    listings([
+      { sourceAdId: "acoustic-real", title: "پیانو آکوستیک کاوایی KL-502" },
+      { sourceAdId: "acoustic-style", title: "پیانو دیجیتال یاماها طرح آکوستیک" },
+    ]);
+    detail({
+      "acoustic-real": "پیانو آکوستیک اصل ژاپن",
+      "acoustic-style": "پیانو دیجیتال یاماها طرح آکوستیک",
+    });
+    const done = await doneOf(
+      defCap({
+        query: "پیانو اکوستیک",
+        include: ["پیانو", "اکوستیک"],
+        category: "music",
+      })
+    );
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["acoustic-real"]).toBe("exact");
+    expect(kinds["acoustic-style"]).toBe("near");
+  });
+
+  it("an explicitly requested «طرح آکوستیک» remains exact", async () => {
+    listings([{ sourceAdId: "style-requested", title: "پیانو طرح آکوستیک دیواری" }]);
+    detail({ "style-requested": "پیانو طرح آکوستیک دیواری" });
+    const done = await doneOf(
+      defCap({
+        query: "پیانو طرح اکوستیک",
+        include: ["پیانو", "اکوستیک"],
+        category: "music",
+      })
+    );
+    const result = done.results.find((r) => r.sourceAdId === "style-requested");
+    expect(result?.matchKind).toBe("exact");
+  });
+
   it("accessory listing is REJECTED (R6: wrong item, not shown); the item itself stays exact", async () => {
     // R6 product decision (navid's R5 grades: 0 = wrong item): «قاب» for a
     // phone hunt is not a near-miss, it's the wrong item — rejected.
