@@ -884,6 +884,26 @@ describe("semantic caps — unified engine (5b)", () => {  function defCap(over:
     expect(kinds["md-max"]).toBe("near");
   });
 
+  it("whole-car hunts reject «جک ماشین» and «کمک ماشین» but keep a car with a jack", async () => {
+    const def = resolveHuntDefinition({ query: "ماشین بدون رنگ" });
+    listings([
+      { sourceAdId: "jack-part", title: "جک ماشین ده تنی" },
+      { sourceAdId: "shock-part", title: "چهار عدد کمک ماشین پراید" },
+      { sourceAdId: "car-with-jack", title: "ماشین پراید بدون رنگ با جک" },
+    ]);
+    detail({
+      "jack-part": "جک ده تنی سالم",
+      "shock-part": "چهار عدد کمک پراید سالم",
+      "car-with-jack": "ماشین پراید بی رنگ و سالم، جک هم دارد",
+    });
+    const done = await doneOf(def!);
+    const kinds = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r.matchKind]));
+    expect(kinds["jack-part"]).toBeUndefined();
+    expect(kinds["shock-part"]).toBeUndefined();
+    expect(kinds["car-with-jack"]).toBe("exact");
+    expect(done.stats.rejectedNoMatch).toBe(2);
+  });
+
   it("«طرح آکوستیک» is not exact for a real acoustic-piano hunt", async () => {
     listings([
       { sourceAdId: "acoustic-real", title: "پیانو آکوستیک کاوایی KL-502" },
