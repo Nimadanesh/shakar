@@ -2,7 +2,7 @@
 
 The roadmap is gated: a phase advances only when its exit criteria are met. Calendar time or code completion alone does not justify advancement.
 
-## Phase 0 — Establish baseline (current)
+## Phase 0 — Establish baseline (complete 2026-10-22)
 **Goal:** Know exactly what exists, what is measured, and what must not be disturbed.
 
 Work:
@@ -18,7 +18,9 @@ Exit gate:
 - existing evaluation assets are identified and protected;
 - each P0/P1 risk has evidence, impact, and a next measurement or repair.
 
-## Phase 1 — Critical correctness and evidence contract
+**Exit status (2026-10-22): MET.** Hosted Node 24 baseline is reproducible; focused and full portable tests, typecheck, and build pass. ESLint debt is explicitly localized to unrelated UI files. Three historical data-dependent harnesses and the golden evaluation are recorded as NOT RUN because their exact frozen inputs are unavailable in the repository. Evaluation artifacts and pinned candidates remain protected. The first two P0 false-positive families are now tracked with current live evidence and regression tests in [FAILURE_REGISTER.md](./FAILURE_REGISTER.md).
+
+## Phase 1 — Critical correctness and evidence contract (current)
 **Goal:** Eliminate catastrophic mistakes before tuning relevance.
 
 Audit and test:
