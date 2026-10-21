@@ -79,3 +79,19 @@ One primary hypothesis per experiment where practical. Keep diffs small, testabl
 **Status:** Binding
 
 The user’s grades and notes are ground-truth evidence about perceived output quality, not automatic technical prescriptions. The agent must analyze why a grade changed and choose the technical response independently. Do not cherry-pick only favorable feedback or pressure the judge to approve a preferred design.
+
+
+## D013 — Styled imitation is a near-miss, not an exact match
+**Status:** Binding
+
+When a listing title explicitly says `طرح X` immediately before a term requested by the hunt, the listing represents a styled/imitation sibling and must be capped to `near`, not treated as exact. If the original query explicitly asks for that same `طرح X`, do not demote it. A description-only comparison must not override a clean advertised title. This rule was introduced after live Divar returned `پیانو دیجیتال یاماها طرح آکوستیک` as exact for `پیانو اکوستیک`.
+
+## D014 — Whole-item hunts must not rank part-only listings as near
+**Status:** Binding
+
+A confirmed part/accessory listing is not a relaxed match for a hunt for the whole item. Part markers remain subject-aware: `جک ماشین` and `کمک ماشین پراید` must not enter a whole-car hunt, while a real car listing that merely mentions having a jack remains eligible. Add markers only with a live false-positive and paired clean-subject regression test.
+
+## D015 — Live diagnostics are read-only and bounded
+**Status:** Binding
+
+Live observation workflows may retrieve public Divar lists/details, but must bound page/detail budgets, disable Mizan when testing deterministic behavior, avoid service mutations, and buffer slug-capture data only in runner-local temporary storage. Live observations are ungraded snapshots, never precision/nDCG or human-quality claims. Larger allocation experiments must disclose the extra diagnostic fetches separately from each simulated per-arm budget.
