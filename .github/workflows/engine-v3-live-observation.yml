@@ -6,6 +6,10 @@ on:
       - engine_v3
     paths:
       - ".github/workflows/engine-v3-live-observation.yml"
+      - "PWA_app/src/lib/server/hunt/pipeline.ts"
+      - "PWA_app/src/lib/server/hunt/semantics.ts"
+      - "PWA_app/src/lib/server/hunt/semantics-r8.test.ts"
+      - "PWA_app/src/lib/server/hunt/live-divar-observation.test.ts"
   workflow_dispatch:
 
 permissions:
