@@ -21,28 +21,18 @@ Every entry starts as a hypothesis. Promote it to a confirmed failure only with 
 
 ## First experiment recommendation
 
-**Start with P0 service-intent correctness, but verify before changing code.**
+**Start with P0 service-intent correctness, but do not add more unit fixtures reflexively.**
 
-Why first: it is a high-severity mismatch between what the user asks to find and what the listing actually offers/seeks. The prior R2 review identified it as a weak area, while the current code already contains several targeted deterministic assessments. The right next move is to discover whether the current implementation still fails and at which stage, not to add another heuristic by reflex.
+The current code already has mocked-provider pipeline tests for repairer-vs-fridge-for-sale ranking, provider-form morphology, a fridge needing repair, false service cues such as «در محل», «نیازمند تعمیرکار», the «تعمیری» query guard, and wrong-appliance service-target binding. Those tests passed in the portable suite. The historical R2 concern is therefore not a missing basic unit test; it is whether live retrieval, the candidate/detail budget, or current real listing language still defeats the intended behavior.
 
 ### Experiment E3-SERVICE-ROLE-01
 
-1. Use a small, explicit fixture set with at least these classes:
-   - clearly offered refrigerator repair service;
-   - refrigerator listed for sale with a repair-needed disclosure;
-   - buyer collecting broken refrigerators;
-   - repair service for a different appliance;
-   - ambiguous listing with no explicit service/offer signal.
-2. Run the same fixed inputs through the current pipeline and record query intent, listing role, repair-service assessment, target binding, verdict, score, and reason.
-3. Assert only invariants supported by explicit evidence:
-   - a clearly relevant service offer must remain eligible;
-   - a broken appliance for sale must not be exact for a repair-service hunt;
-   - a wrong-appliance service must not be exact;
-   - ambiguity remains UNKNOWN/near rather than fabricated certainty;
-   - no item is rejected solely because its description is incomplete.
-4. If all pass, do not implement a service heuristic; move to the next failure family or test the actual route/candidate coverage.
-5. If a failure reproduces, make the smallest patch at the responsible stage and rerun the same fixtures plus the full portable suite.
-6. Only after the deterministic failure is localized, plan a fresh, separately identified human comparison. Do not rerun or alter frozen R1 cells, pins, grades, mappings, or denominators.
+1. First read the latest available R2 handoff/results and map any observed bad top results to the existing service-intent tests and pipeline stages. The public evaluation repo currently exposes only the older Phase 1 artifacts, so use the last-known R2 notes cautiously.
+2. Preserve all frozen R1 captures, pinned candidates, grades, mappings, and denominators. Do not rerun a completed cell.
+3. If the R2 artifacts identify a concrete failure, trace whether it is query intent, provider candidate recall, title-phase prioritization, detail verification, service-target binding, or final ranking. Avoid changing the layer that is not responsible.
+4. If the existing R2 evidence cannot be recovered, first use the current portable tests and source trace to define one new, separately versioned read-only observation plan; do not overwrite historical artifacts or imply it is paired with the old candidate pool.
+5. If a deterministic failure reproduces, make the smallest patch at the responsible stage and rerun the same fixtures plus the full portable suite.
+6. Only after the failure is localized, plan a fresh human comparison on a separately identified sample. Do not rerun or alter frozen R1 cells, pins, grades, mappings, or denominators.
 
 ### Evidence required to accept a fix
 
