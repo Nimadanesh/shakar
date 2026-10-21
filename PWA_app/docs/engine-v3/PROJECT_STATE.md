@@ -4,8 +4,8 @@ Last verified: 2026-10-22
 Work branch: `engine_v3`
 Branch base: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
 Current source/test head: `b8327e033b96ab40f3568051dcdfaae107de50a0`
-Latest portable baseline: [Run #? — SHA `b8327e0`](https://github.com/Nimadanesh/shakar/actions/runs/39682413600)
-Latest live observation: [Run #? — SHA `f2d9484`](https://github.com/Nimadanesh/shakar/actions/runs/39682408569)
+Latest portable baseline: [Run #18 — SHA `b8327e0`](https://github.com/Nimadanesh/shakar/actions/runs/39682413600)
+Latest live observation: [Run #9 — SHA `f2d9484`](https://github.com/Nimadanesh/shakar/actions/runs/39682408569)
 
 ## Mission
 
