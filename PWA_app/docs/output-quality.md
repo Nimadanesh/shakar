@@ -1,5 +1,7 @@
 # Output Quality — flaw → fix map (the golden thread)
 
+> **Historical quality ledger.** Status labels in this document were written across earlier implementation phases and must not be treated as freshly verified on the current source snapshot. Current baseline evidence and reconciliation status live in [`docs/engine-v3/BASELINE_AUDIT.md`](./engine-v3/BASELINE_AUDIT.md).
+
 > navid 2026-10-06: «ایرادها شبیه پیشگیری از بیماری لاعلاج می‌مونه.»
 > This doc is the prevention plan. Each flaw has: severity, PREVENTION
 > (built now, in code), CURE (built at the right milestone), the exact
