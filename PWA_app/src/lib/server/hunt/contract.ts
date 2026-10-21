@@ -160,7 +160,7 @@ export function buildContract(raw: string): IntentContract {
   // auxiliary «باشه» is consumed by the pattern, not seen as filler.
   for (let i = 1; i < n; i++) {
     if (!NEGATED_PAST.has(tokens[i]) || bucket[i]) continue;
-    let j = i - 1;
+    const j = i - 1;
     if (bucket[j] || FILLERS.has(tokens[j])) continue;
     let end = i + 1;
     if (end < n && tokens[end] === "باشه") end++;
