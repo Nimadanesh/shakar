@@ -557,7 +557,8 @@ function countDealerHits(text: string): number {
  */
 function semanticCapFires(
   def: HuntDefinition,
-  combined: string
+  combined: string,
+  title: string
 ): { fire: boolean; wrongItemKind: string | null } {
   let intent = assessQueryIntent(def.include.join(" "), def.category, def.transaction);
   // R7 (2026-10-18): the query's speech-act role IS the query intent. A
@@ -786,7 +787,7 @@ function evaluateDescription(
   // attributes) keep the honest near spectrum. Every rejection carries
   // its kind for the «گزارش شکار» market report.
   if (missingInfo.length === 0) {
-    const cap = semanticCapFires(def, combined);
+    const cap = semanticCapFires(def, combined, title);
     const bait = assessBaitTitle(title, description, def.include, def.query);
     const demandGoods =
       (def.serviceIntent ?? false) &&
