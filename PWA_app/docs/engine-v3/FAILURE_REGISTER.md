@@ -15,9 +15,22 @@ Every entry starts as a hypothesis. Promote it to a confirmed failure only with 
 | P0 | Whole-car hunt admits car parts as near-misses | Live `ماشین بدون رنگ` observation showed `جک ماشین` and `چهار عدد کمک ماشین پراید` in the top results as `near`, even though the user sought a whole car. | **Patch + pipeline regression test added.** `جک` and vehicle `کمک` are now part markers. Test asserts part listings are rejected and a real car that mentions a jack stays exact. Latest bounded live observation after the patch did not show those two part listings in the top 8. |
 | P1 | Service intent / wrong listing role | Two bounded live samples for `تعمیر یخچال` placed explicit service offers at the top; no clear non-service exact was observed. Historical R2 notes had weak S3 scores, but the old 10-record diagnosis found no defect in its retained pool. | No service heuristic added. Keep monitoring with a larger, human-judged sample; do not infer general correctness from eight details. |
 | P1 | Hard constraints / UNKNOWN evidence | In `ماشین بدون رنگ`, an explicitly `بی‌رنگ` car was `exact`; descriptions without paint evidence stayed `near`. A separate sample had explicit repaint evidence and the result was demoted. | Current bounded evidence is consistent with the contract. Add no change absent a reproducible violation. |
-| P1 | Retrieval/detail-budget starvation | Live observation deliberately used only 2 list pages and 8 detail fetches per query. Production default is 20 pages and up to 100 details. Current human grades do not cover candidates below the retained detail shortlist. | **Open.** Next technical experiment: use one fixed query/candidate pool to compare production title-only top-100 allocation with a controlled alternative allocation; keep the same detail budget and record which candidates receive detail verification. |
+| P1 | Retrieval/detail-budget starvation | Detail-allocation experiment E3-DETAIL-ALLOCATION-01 fetched 482 candidates across 20 pages for `ماشین بدون رنگ`. `titleStrength` was 0 from rank 80 through at least rank 200. On the same pool, top-100 yielded 1 exact/39 near/60 not-returned; top-80 + 20 evenly spaced ranks 101–200 yielded 3 exact/41 near/56 not-returned. Two additional engine-exact cars at ranks 128 and 138 explicitly described themselves as `بی‌رنگ`. | **Promising, not accepted yet.** Human-grade a small blinded packet. Do not change production allocation based on engine verdicts alone. If grades confirm the gain, prototype a deterministic exploration budget behind an experiment flag and measure critical false positives/latency. |
 | P2 | Global synonym overreach | Existing architecture warns that related products must not become aliases. No new synonym groups were added. | Keep frozen. Test context-specific positive and negative pairs before any future expansion. |
 | P2 | Mizan runtime/decision role | Live observation explicitly set `MIZAN_SHADOW=0`; deterministic results were captured without model calls. Current architecture keeps Mizan log-only/shadow. | No model authority changes. Evaluate only via ablation after deterministic baseline is stable. |
+
+## E3-DETAIL-ALLOCATION-01 — completed
+
+[Run #1](https://github.com/Nimadanesh/shakar/actions/runs/39683008360)
+
+- Query: `ماشین بدون رنگ`
+- Retrieval: 20 pages, 482 ads/candidates, 0 duplicates collapsed, 120 details checked, no stale details.
+- TitleStrength: rank 1 = 2; ranks 80, 100, 101, 120, 150, and 200 = 0. The current order has a large zero-score tie, so source order—not meaningful title evidence—chooses most candidates for detail verification.
+- Arm A (top 100): 1 exact, 39 near, 60 not returned in scored output.
+- Arm B (top 80 + 20 evenly spaced from ranks 101–200): 3 exact, 41 near, 56 not returned.
+- Two additional exact candidates in B: `دنا پلاس ۶ دنده Ef7p مشکی متالیک آبنوس 1404` (rank 128; description says `بی رنگ`) and `تیبا 2مدل96` (rank 138; description says `ماشین بی رنگ`).
+- Both arms use a 100-candidate allocation; the experiment fetched the 120-candidate union only to evaluate both counterfactuals on the same pool.
+- These are deterministic engine verdicts, not human relevance grades. The alternative is **not** accepted for production until blinded human grading confirms the added candidates and checks the rest of the top results.
 
 ## Evidence and links
 
@@ -26,14 +39,14 @@ Every entry starts as a hypothesis. Promote it to a confirmed failure only with 
 - [Prior live observation before the styled-variant fix](https://github.com/Nimadanesh/shakar/actions/runs/39678990763).
 - [First live observation showing the style guard working](https://github.com/Nimadanesh/shakar/actions/runs/39679635361).
 
-## Next experiment
+## Next step
 
-**E3-DETAIL-ALLOCATION-01 — candidate coverage under the production detail cap.**
+**Blind human evaluation of E3-DETAIL-ALLOCATION-01.**
 
-1. Use one critical query and one fixed, read-only candidate pool.
-2. Record titleStrength, fetch order, dedupe result, and which candidates fall inside/outside the production top-100 detail cap.
-3. Where safe and available, retrieve details for the same fixed pool to estimate how many below-cap candidates would be relevant; do not use model-generated relevance labels.
-4. Compare the existing top-100 title-strength allocation with one alternative that reserves a small exploration budget for weaker-title candidates. Keep total detail requests equal and use the same candidate pool.
-5. Do not change production allocation unless a measured recall gain exists without a critical false-positive regression. Any real quality claim requires fresh human grades.
+1. Present a shuffled packet of unique top-result candidates from both arms without labels identifying the allocation or internal verdict.
+2. Ask the human evaluator to grade relevance/constraint correctness only; do not ask for technical solutions.
+3. If the two additional lower-title candidates are judged relevant and no critical errors increase, implement an opt-in deterministic exploration allocation (80 top-title + 20 tail) behind a V3 experiment flag.
+4. Re-run deterministic tests and compare on a fresh, separately identified live sample; keep request budget and candidate pool fixed within each paired comparison.
+5. Do not change production allocation unless human grades support a gain without critical false-positive regression. No main merge/deploy or broad rollout without explicit authorization.
 
 Frozen evaluation artifacts are not inputs to overwrite or rerun for this experiment.
