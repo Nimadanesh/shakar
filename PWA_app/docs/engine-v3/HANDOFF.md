@@ -48,7 +48,7 @@ Collect blinded grades for the small detail-allocation packet, preserving all fr
 
 ## Next action
 
-The allocation comparison is closed: preserve the current allocation; do not promote 80/20 on this evidence. The corrected human grades and source-matching audit are in `evaluations/E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md`. Continue with `evaluations/E3-QUERY-INTENT-KAFI-01.md`: verify source-matched positive and negative controls, then test a narrow Query Understanding distinction for automotive floor mats versus trailer/flatbed listings. Do not globally map `کفی` to a part/accessory kind. No production allocation change, main merge, or deployment.
+The allocation comparison is closed: preserve the current allocation; do not promote 80/20 on this evidence. The corrected human grades and source-matching audit are in `evaluations/E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md`. Continue with `evaluations/E3-QUERY-INTENT-KAFI-01.md`: source records are now pinned and the current code path has been audited. Before changing engine behavior, design an explicit/auditable subject-kind boundary (or clarification decision) because the current contract represents `کفی ماشین` only as lexical subject terms. Then test floor-mat positives, trailer/flatbed negatives, and an explicit trailer-intent counter-control. Do not globally map `کفی` to a part/accessory kind or silently force all ambiguous bare queries to floor mats. No production allocation change, main merge, or deployment.
 
 
 ## Human review received — packet integrity caveat (2026-10-22)
