@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import type { Candidate, HuntDefinition, HuntStats } from "./pipeline";
 import { resolveHuntDefinition } from "./definition";
+import { assessListingRole, assessModelSpecificity, assessQueryIntent, rolesClash } from "./semantics";
+import { queryKindForDef } from "./kindLexicon";
 
 vi.mock("../divar/divarClient", () => ({
   divarProvider: {
@@ -144,9 +146,32 @@ it("replays full detail scoring on the same fixed P01–P06, K01 and AMB01 recor
   for (const scenario of cases) {
     const input = candidates(scenario.ids);
     const stats = emptyStats(input.length);
-    const output = await confirmCandidates(input, definition(scenario.query), stats);
+    const def = definition(scenario.query);
+    const output = await confirmCandidates(input, def, stats);
+    const diagnostics = scenario.ids.map((sourceAdId) => {
+      const fixture = fixtureDetails[sourceAdId];
+      const combined = `${fixture.title} ${fixture.description}`;
+      const queryRole = assessQueryIntent(def.include.join(" "), def.category, def.transaction);
+      const listingRole = assessListingRole(combined);
+      const identity = assessModelSpecificity(
+        def.include,
+        combined,
+        def.category,
+        queryKindForDef(def.include, def.serviceIntent ?? false, def.category),
+        def.query,
+        fixture.title
+      );
+      return {
+        sourceAdId,
+        queryRole,
+        listingRole,
+        roleClash: rolesClash(queryRole, listingRole, def.transaction === "buy"),
+        identity,
+      };
+    });
     results.push({
       query: scenario.query,
+      diagnostics,
       results: output.map((item, index) => ({
         rank: index + 1,
         sourceAdId: item.sourceAdId,
