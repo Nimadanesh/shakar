@@ -144,7 +144,7 @@ The evaluator graded all three retained candidates as **3 (exactly relevant)** f
 
 ### Human grade received — Aafm5Bsf (2026-10-22)
 
-- Source ad `Aafm5Bsf`: `پک کامل روکش صندلی ، کفی ، دورفرمان` — human grade **2 (relevant, not exact)** for the explicitly intended automotive-floor-mat hunt.
+- Source ad `Aafm5Bsf`: `پک کامل روکش صندلی ، کفی ، دورفرمان` — provisional human grade **2 (relevant, not exact; evaluator marked it as a draft)** for the explicitly intended automotive-floor-mat hunt.
 - Evaluator rationale: the 3D floor mat is genuinely included, but it is one of three components in a complete seat-cover / floor-mat / steering-wheel-cover package, rather than the listing's sole or central product. This follows the E34 distinction (a relevant but non-central item receives 2) and contrasts with E17 (`لاستیک و کف پوش ماشین`), where the floor covering is co-present as a titled item in a two-item listing and received 3.
 - Annotation rule: grade the role/salience of the requested product within the listing, not mere token presence. A target product included as one component of a multi-item package can be grade 2; do not automatically call it exact.
 - Existing grade-3 candidates `gaYfODFa`, `gaZjj5GY`, and `gaZftRr4` remain unchanged. The stain on `gaZjj5GY` remains a separate condition annotation, not a relevance penalty.
