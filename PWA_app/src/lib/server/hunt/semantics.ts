@@ -225,26 +225,26 @@ function assessAbsenceOneWord(
   // one absent span.
   const filler = String.raw`((?:\s+(?!${w}|بدون|نشده|شده)\S+)){0,2}`;
   const absentRes: readonly RegExp[] = [
-    new RegExp(`بدون${filler}\\s+${w}(ات|ی)?`),
-    new RegExp(`بی\\s*${w}`),
-    new RegExp(`${w}(ات)?\\s+نشده`),
+    new RegExp(`بدون${filler}\s+${w}(ات|ی)?`),
+    new RegExp(`بی\s*${w}`),
+    new RegExp(`${w}(ات)?\s+نشده`),
     new RegExp(`${w}نشده`),
-    new RegExp(`${w}\\s+نکرده`),
+    new RegExp(`${w}\s+نکرده`),
     // R8 (F6): explicit possession polarity — «وام ندارد» IS the absence
     // claim for a «بدون وام» hunt, not unknown (a legitimate «وام ندارد»
     // ad was capped to near forever).
-    new RegExp(`${w}\\s+ندارد`),
-    new RegExp(`${w}\\s+نداره`),
+    new RegExp(`${w}\s+ندارد`),
+    new RegExp(`${w}\s+نداره`),
   ];
   const directRes: readonly RegExp[] = [
-    new RegExp(`(\\d+|[۰-۹]+|یک|یه|دو|سه|چهار|پنج|شش|هفت|هشت|نه|ده|چند)\\s*(تیکه|تکه)\\s+${w}`),
-    new RegExp(`${w}(ات)?${filler}\\s+شده`),
+    new RegExp(`(\\d+|[۰-۹]+|یک|یه|دو|سه|چهار|پنج|شش|هفت|هشت|نه|ده|چند)\s*(تیکه|تکه)\s+${w}`),
+    new RegExp(`${w}(ات)?${filler}\s+شده`),
     new RegExp(`${w}شده`),
-    new RegExp(`${w}\\s+کرده`),
+    new RegExp(`${w}\s+کرده`),
     // R8 (F6): «وام دارد» is present-direct counter-evidence — one positive
     // existential defeats the «بدون وام» claim.
-    new RegExp(`${w}\\s+دارد`),
-    new RegExp(`${w}\\s+داره`),
+    new RegExp(`${w}\s+دارد`),
+    new RegExp(`${w}\s+داره`),
   ];
   // 0. Negation-governed bodywork is not counter-evidence («بدون نیاز به
   // صافکاری», «بدون دور رنگ»); و-coordinated negations are distributed
@@ -339,15 +339,15 @@ function repairPatterns(): readonly RegExp[] {
   const w = "تعمیر";
   const filler = String.raw`((?:\s+(?!${w}|بدون|نشده|شده)\S+)){0,2}`;
   return [
-    new RegExp(`بدون${filler}\\s+${w}(ات|ی)?`),
-    new RegExp(`بی\\s*${w}`),
-    new RegExp(`${w}(ات)?\\s+نشده`),
+    new RegExp(`بدون${filler}\s+${w}(ات|ی)?`),
+    new RegExp(`بی\s*${w}`),
+    new RegExp(`${w}(ات)?\s+نشده`),
     new RegExp(`${w}نشده`),
-    new RegExp(`${w}\\s+نکرده`),
-    new RegExp(`${w}(ات)?${filler}\\s+شده`),
+    new RegExp(`${w}\s+نکرده`),
+    new RegExp(`${w}(ات)?${filler}\s+شده`),
     new RegExp(`${w}شده`),
     new RegExp(`${w}ی`),
-    new RegExp(`نیاز\\s+به\\s+${w}`),
+    new RegExp(`نیاز\s+به\s+${w}`),
   ];
 }
 
@@ -436,7 +436,7 @@ const SALE_CUES = ["فروش", "فروشی", "میفروشم", "می فروشم"
  */
 function stripNegatedExchangeCues(normalized: string): string {
   return normalized.replace(
-    /(?:^|\\s)(?:تعویض\\s+(?:نشده(?:\\s+است)?|نشد(?:ه)?(?:\\s+است)?|ندارد|نداشته(?:\\s+است)?|نمی\\s?شود|نمی\\s?باشد)|(?:بدون|فاقد)\\s+تعویض)(?=\\s|$)/g,
+    /(?:^|\s)(?:تعویض\s+(?:نشده(?:\s+است)?|نشد(?:ه)?(?:\s+است)?|ندارد|نداشته(?:\s+است)?|نمی\s?شود|نمی\s?باشد)|(?:بدون|فاقد)\s+تعویض)(?=\s|$)/g,
     " "
   );
 }
@@ -1093,7 +1093,7 @@ export function assessModelSpecificity(
   for (const rawDerived of DERIVED_MARKERS) {
     const derived = normalizeForMatch(rawDerived);
     if (derived === "" || !queryTokens.has(derived)) continue;
-    if (new RegExp(`مخصوص\\s+${escRe(derived)}\\s+گیری`).test(listingNorm)) {
+    if (new RegExp(`مخصوص\s+${escRe(derived)}\s+گیری`).test(listingNorm)) {
       return {
         mismatch: true,
         reason: `derived-product:ingredient-for:"${rawDerived}"`,
