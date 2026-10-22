@@ -113,7 +113,7 @@ it.skipIf(process.env.LIVE_DETAIL_ALLOCATION_MULTI !== "1")(
             exact: armResults.filter((result) => result.matchKind === "exact").length,
             near: armResults.filter((result) => result.matchKind === "near").length,
             rejectedOrNotReturned: ids.size - armResults.length,
-            top10: armResults.slice(0, 10).map((result, index) => ({
+            top20: armResults.slice(0, 20).map((result, index) => ({
               rank: index + 1,
               titleRank: rankById.get(result.sourceAdId) ?? null,
               sourceAdId: result.sourceAdId,
