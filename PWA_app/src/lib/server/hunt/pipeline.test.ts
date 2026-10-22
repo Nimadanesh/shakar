@@ -2090,3 +2090,47 @@ describe("E3 — pipeline-level floor-mat vs trailer intent guard", () => {
     expect(done.results.map((r) => r.sourceAdId)).toContain("flatbed");
   });
 });
+
+
+describe("E3 — acoustic piano role replay", () => {
+  it("keeps real acoustic pianos exact when «تعویض نشده» is only condition history", async () => {
+    process.env.MIZAN_SHADOW = "0";
+    const def = resolveHuntDefinition({
+      query: "پیانو اکوستیک",
+      include: [],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+    });
+    expect(def).not.toBeNull();
+    if (!def) return;
+
+    const listings = [
+      summary({ sourceAdId: "piano-m2", title: "پیانو اکوستیک m2 یاماها" }),
+      summary({ sourceAdId: "piano-u10", title: "پیانو اکوستیک ژاپنی یاماها مدل u10" }),
+    ];
+    mockSearchLists.mockResolvedValueOnce({ listings, hasMore: false });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id === "piano-m2" ? "پیانو اکوستیک m2 یاماها" : "پیانو اکوستیک ژاپنی یاماها مدل u10",
+      price: null,
+      city: "تهران",
+      description:
+        "فروشگاه پیانو فروش مرجع تخصصی و حرفه ای در زمینه مشاوره خرید و فروش ادوات موسیقی. پیانو مکانیکی یاماها مدل. قطعات کاملا اورجینال هستش تعمیر یا تعویض نشده است.",
+      images: [],
+      categorySlug: "piano-keyboard",
+    }));
+
+    const { events } = await collect(def);
+    const done = events.find((event) => event.type === "done");
+    if (done?.type !== "done") throw new Error("pipeline did not finish");
+    expect(done.results.map((item) => item.sourceAdId).sort()).toEqual(["piano-m2", "piano-u10"]);
+    expect(done.results.every((item) => item.matchKind === "exact")).toBe(true);
+    expect(done.results.every((item) => item.demotedBy === undefined)).toBe(true);
+  });
+});

@@ -323,3 +323,56 @@ describe("E3 — floor-mat intent rejects trailer/flatbed listings only in that 
     ).toBeNull();
   });
 });
+
+
+describe("E3 — negated replacement history is not an exchange offer", () => {
+  it("does not read «تعمیر یا تعویض نشده است» as an exchange role", () => {
+    const r = assessListingRole(
+      "فروشگاه پیانو فروش مرجع تخصصی خرید و فروش ادوات موسیقی؛ قطعات کاملا اورجینال هستش تعمیر یا تعویض نشده است"
+    );
+    expect(r.role).toBe("product");
+  });
+
+  it("does not read «بدون تعویض» as an exchange offer", () => {
+    const r = assessListingRole("فروش پیانو اکوستیک، قطعات اصلی و بدون تعویض");
+    expect(r.role).toBe("product");
+  });
+
+  it("handles common negated replacement-history variants without inventing an exchange offer", () => {
+    const descriptions = [
+      "پیانو اکوستیک تعویض نشده",
+      "پیانو اکوستیک قطعات تعویض نشد",
+      "پیانو اکوستیک تعویض ندارد",
+      "پیانو اکوستیک تعویض نداشته است",
+      "پیانو اکوستیک فاقد تعویض",
+      "پیانو اکوستیک تعویض نمی شود",
+    ];
+    for (const description of descriptions) {
+      // Negated history must not invent an exchange role; without a positive
+      // sale cue the correct role may remain unknown rather than product.
+      expect(assessListingRole(description).role, description).not.toBe("exchange");
+    }
+  });
+
+  it("preserves positive exchange wording in more than one form", () => {
+    for (const description of [
+      "پیانو اکوستیک معاوضه با پیانو دیجیتال",
+      "پیانو اکوستیک را با کالای دیگر تعویض می‌کنم",
+    ]) {
+      expect(assessListingRole(description).role, description).toBe("exchange");
+    }
+  });
+
+  it("keeps a source-captured real exchange offer classified as exchange", () => {
+    // Live observation artifact engine-v3-live-observation-25,
+    // sourceAdId gaZj__jh; title: «تریلی بیات معاوضه با کفی سه محور».
+    expect(assessListingRole("تریلی بیات معاوضه با کفی سه محور").role).toBe("exchange");
+  });
+
+  it("does not let a negated history clause hide a separate positive exchange offer", () => {
+    const r = assessListingRole(
+      "پیانو اکوستیک؛ قطعات تعویض نشده است؛ معاوضه با پیانو دیجیتال"
+    );
+    expect(r.role).toBe("exchange");
+  });
+});

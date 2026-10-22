@@ -430,6 +430,18 @@ const EXCHANGE_PHRASES = ["معاوضه", "تعویض", "فروش عمده", "ع
 const SALE_CUES = ["فروش", "فروشی", "میفروشم", "می فروشم", "فروش فوری", "قیمت", "تخفیف", "سند آماده"];
 
 /**
+ * A negated replacement-history statement is condition evidence, not an
+ * offer to exchange the item. Keep positive exchange offers intact.
+ * Examples: «تعمیر یا تعویض نشده است», «بدون تعویض».
+ */
+function stripNegatedExchangeCues(normalized: string): string {
+  return normalized.replace(
+    /(?:^|\s)(?:تعویض\s+(?:نشده(?:\s+است)?|نشد(?:ه)?(?:\s+است)?|ندارد|نداشته(?:\s+است)?|نمی\s?شود|نمی\s?باشد)|(?:بدون|فاقد)\s+تعویض)(?=\s|$)/g,
+    " "
+  );
+}
+
+/**
  * Remove spans that already carry repair-polarity meaning, so «بدون تعمیر»
  * and «تعمیر شده» never count as service-offer evidence for «تعمیر».
  */
@@ -466,7 +478,8 @@ export function assessListingRole(text: string): RoleAssessment {
   // Rental and exchange cues are lexically unambiguous.
   const rental = RENTAL_WORDS.find((w) => norm.includes(w));
   if (rental) return { role: "rental", reason: `rental-cue:"${rental}"` };
-  const exchange = EXCHANGE_PHRASES.find((p) => norm.includes(p));
+  const exchangeText = stripNegatedExchangeCues(norm);
+  const exchange = EXCHANGE_PHRASES.find((p) => exchangeText.includes(p));
   if (exchange) return { role: "exchange", reason: `exchange-cue:"${exchange}"` };
 
   // Bare «تعمیر» is service evidence only with offer context or offer
