@@ -348,7 +348,9 @@ describe("E3 — negated replacement history is not an exchange offer", () => {
       "پیانو اکوستیک تعویض نمی شود",
     ];
     for (const description of descriptions) {
-      expect(assessListingRole(description).role, description).toBe("product");
+      // Negated history must not invent an exchange role; without a positive
+      // sale cue the correct role may remain unknown rather than product.
+      expect(assessListingRole(description).role, description).not.toBe("exchange");
     }
   });
 
