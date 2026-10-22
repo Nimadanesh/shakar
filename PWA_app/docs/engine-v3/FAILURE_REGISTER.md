@@ -51,3 +51,13 @@ Every entry starts as a hypothesis. Promote it to a confirmed failure only with 
 5. Do not change production allocation unless human grades support a gain without critical false-positive regression. No main merge/deploy or broad rollout without explicit authorization.
 
 Frozen evaluation artifacts are not inputs to overwrite or rerun for this experiment.
+
+
+## E3 — `کفی ماشین`: narrow intent guard follow-up (2026-10-22)
+
+- Branch: `engine_v3`; latest guard commit observed in the bounded live run: `97bf6101c779f903f613cca0c1a5ae22f89ffa82`.
+- Human graded all three retained live candidates exact (3): `gaYfODFa` (`کفی ماشین کوییک نو`), `gaZjj5GY` (`کفی ماشین`, complete set; driver-side stain recorded as condition only), and `gaZftRr4` (`کفی قالبی یه تیکه پرایدی`). Condition defects must be annotated separately and must not reduce relevance grade.
+- [Bounded live run](https://github.com/Nimadanesh/shakar/actions/runs/39756287700): 49 ads seen, 48 after duplicate collapse, 8 details checked, 3 confirmed, 2 near misses, 5 rejected; no stale data. This is an unpaired, small observation, not a measured quality uplift.
+- Remaining risk: human grading of exact source-ID-matched rejected trailer/flatbed candidates and a fresh live counter-intent check for `کفی تریلی`. Previously graded positive controls `gaYjJe4y` and `gaXjCsU5` and hard negative `gaA3NPYd` remain frozen controls; do not relabel them.
+- CI: [baseline run](https://github.com/Nimadanesh/shakar/actions/runs/39756287701) passed focused tests, portable suite, typecheck, and build, but ESLint failed on eight `react-hooks/set-state-in-effect` errors in unrelated UI files. Keep this separate from search-quality acceptance.
+- Next action: prepare the blinded candidate packet and inspect the explicit-trailer counter-intent before deciding whether to keep/refine the closed cue list. No merge or deployment.
