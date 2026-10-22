@@ -1,0 +1,78 @@
+name: E3 Fixed-Candidate Baseline Replay
+
+on:
+  push:
+    branches:
+      - eval/full-detail-capture-20261022
+    paths:
+      - ".github/workflows/e3-fixed-candidate-baseline-replay.yml"
+      - "PWA_app/src/lib/server/hunt/e3-fixed-candidate-replay.test.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e3-fixed-candidate-baseline-replay
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    name: Replay identical E3 candidates against baseline and current guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout current evaluation branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: current
+
+      - name: Checkout pre-ambiguity-removal baseline
+        uses: actions/checkout@v4
+        with:
+          ref: 554686fa7d58932e0835b5b32475b4ea6dd34435
+          path: baseline
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install current locked dependencies
+        working-directory: current/PWA_app
+        run: npm ci
+
+      - name: Install baseline locked dependencies
+        working-directory: baseline/PWA_app
+        run: npm ci
+
+      - name: Copy identical replay harness into baseline checkout
+        run: |
+          mkdir -p baseline/PWA_app/src/lib/server/hunt
+          cp current/PWA_app/src/lib/server/hunt/e3-fixed-candidate-replay.test.ts baseline/PWA_app/src/lib/server/hunt/e3-fixed-candidate-replay.test.ts
+
+      - name: Replay baseline guard on fixed candidates
+        working-directory: baseline/PWA_app
+        env:
+          E3_REPLAY_MODE: baseline
+          E3_REPLAY_OUTPUT: ${{ runner.temp }}/e3-baseline-replay.json
+        run: npx vitest run src/lib/server/hunt/e3-fixed-candidate-replay.test.ts --reporter=verbose
+
+      - name: Replay current guard on the same fixed candidates
+        working-directory: current/PWA_app
+        env:
+          E3_REPLAY_MODE: current
+          E3_REPLAY_OUTPUT: ${{ runner.temp }}/e3-current-replay.json
+        run: npx vitest run src/lib/server/hunt/e3-fixed-candidate-replay.test.ts --reporter=verbose
+
+      - name: Upload paired replay reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e3-fixed-candidate-baseline-replay-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/e3-baseline-replay.json
+            ${{ runner.temp }}/e3-current-replay.json
+          if-no-files-found: warn
+          retention-days: 30
