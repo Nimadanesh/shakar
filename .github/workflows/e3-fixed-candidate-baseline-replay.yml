@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/e3-fixed-candidate-baseline-replay.yml"
       - "PWA_app/src/lib/server/hunt/e3-fixed-candidate-replay.test.ts"
+      - "PWA_app/src/lib/server/hunt/e3-fixed-candidate-pipeline-replay.test.ts"
   workflow_dispatch:
 
 permissions:
@@ -74,7 +75,7 @@ jobs:
           E3_REPLAY_SOURCE_COMMIT: ${{ github.sha }}
           E3_REPLAY_OUTPUT: ${{ runner.temp }}/e3-current-replay.json
           E3_PIPELINE_REPLAY_OUTPUT: ${{ runner.temp }}/e3-current-pipeline-replay.json
-        run: npx vitest run src/lib/server/hunt/e3-fixed-candidate-replay.test.ts --reporter=verbose
+        run: npx vitest run src/lib/server/hunt/e3-fixed-candidate-replay.test.ts src/lib/server/hunt/e3-fixed-candidate-pipeline-replay.test.ts --reporter=verbose
 
       - name: Upload paired replay reports
         if: always()
