@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - engine_v3
+      - eval/full-detail-capture-20261022
     paths:
       - ".github/workflows/engine-v3-live-observation.yml"
       - "PWA_app/src/lib/server/hunt/pipeline.ts"
