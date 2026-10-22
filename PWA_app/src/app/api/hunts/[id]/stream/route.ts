@@ -14,14 +14,7 @@ import {
 import type { HuntRun } from "@/lib/server/hunt/runs";
 import { runPipeline, type HuntEvent } from "@/lib/server/hunt/pipeline";
 import { getSessionUserId } from "@/lib/server/auth";
-
-/** Tunables for the cross-instance follow loop (tests shrink them). */
-export const streamTuning = {
-  /** ms between event-table polls while following another instance. */
-  pollMs: 1000,
-  /** give up following after this long (client can re-GET to replay). */
-  timeoutMs: 15 * 60_000,
-};
+import { streamTuning } from "@/lib/server/hunt/stream-tuning";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
