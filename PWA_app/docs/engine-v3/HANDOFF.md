@@ -85,3 +85,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - `کفی ماشین` returned four top candidates; the three human-graded candidates remained present and retain grade 3. New ungraded lead: `Aafm5Bsf`, `پک کامل روکش صندلی ، کفی ، دورفرمان` (description indicates a three-piece set including a 3D floor mat).
 - Next: human-grade `Aafm5Bsf` and a blinded source-matched sample of rejected flatbed candidates. Do not infer a population-level gain from the capped sample.
 - Baseline run [39758554980](https://github.com/Nimadanesh/shakar/actions/runs/39758554980) passed focused tests, portable suite, typecheck, and build; ESLint failed with eight unrelated UI `react-hooks/set-state-in-effect` errors. Stay on `engine_v3`; no merge/deploy.
+
+
+## E3 handoff update — `Aafm5Bsf` graded (2026-10-22)
+
+- Human grade for `Aafm5Bsf` (`پک کامل روکش صندلی ، کفی ، دورفرمان`): **2**. The floor mat is truly included, but only as one of three components in a complete package. This is relevant but not exact, consistent with E34; E17 remains 3 because the floor covering is co-titled as an item in a two-item listing.
+- Keep product presence, listing focus, and condition annotations distinct. `gaZjj5GY` remains relevance grade 3 despite a stain.
+- Next: build the source-ID-matched blinded packet from frozen E3 allocation records (exact titles/excerpts), with both floor-mat positives and flatbed/trailer-family controls. Do not infer which records the current guard rejected merely from the old allocation report. Then inspect whether any relevant positive is falsely rejected and whether known flatbed negatives are correctly rejected for this intent.
+- Stay on `engine_v3`; no merge, deployment, production allocation change, or broad quality claim.
