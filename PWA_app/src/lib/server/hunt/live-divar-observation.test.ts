@@ -104,7 +104,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             demotedBy: result.demotedBy ?? null,
             descriptionExcerpt: result.descSnippet,
             ...(process.env.HUNT_CAPTURE_FULL_DETAILS === "1" && result.descriptionSnapshot !== undefined
-              ? { descriptionSnapshot: result.descriptionSnapshot }
+              ? { descriptionSnapshot: result.descriptionSnapshot.replace(/(?<!\d)(?:\+?98|0)?9(?:[\s-]?\d){9}(?!\d)/g, "[REDACTED_PHONE]") }
               : {}),
           })),
         });
