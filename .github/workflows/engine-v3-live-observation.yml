@@ -30,6 +30,7 @@ jobs:
     env:
       LIVE_DIVAR_OBSERVATION: "1"
       HUNT_MAX_DETAILS: "8"
+      HUNT_CAPTURE_FULL_DETAILS: "1"
       MIZAN_SHADOW: "0"
       SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-live-observation-slugs.jsonl
     steps:
