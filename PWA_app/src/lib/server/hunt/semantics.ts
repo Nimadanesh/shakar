@@ -1471,6 +1471,11 @@ const FLOOR_MAT_FLATBED_CUES = [
   // Live observation exposed a concatenated suffix not matched by token-boundary cues.
   "ماشین باری",
   "باربندخاص",
+  // Noisy automotive-audio ads use کفی as an unrelated keyword.
+  "مانیتور",
+  "هدلایت",
+  "صوت تصویر",
+  "سیستم صوتی",
 ] as const;
 
 /**
