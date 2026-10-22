@@ -284,6 +284,14 @@ describe("E3 — floor-mat intent rejects trailer/flatbed listings only in that 
         "دوجفت کفی لاستیکی خودرو تمیز"
       )
     ).toBeNull();
+    // Human-reviewed ambiguous phrase: do not hard-reject without enough context.
+    expect(
+      floorMatFlatbedConflict(
+        floorMatQuery,
+        "کفی مبلی نیسانی",
+        "کفی مبلی مخصوص نیسان دوگانه دستی"
+      )
+    ).toBeNull();
   });
 
   it("flags source-matched flatbed/trailer families for the floor-mat query", () => {
@@ -292,7 +300,6 @@ describe("E3 — floor-mat intent rejects trailer/flatbed listings only in that 
       ["کفی تریلی ۲محور رول کش بالونی ۱۲/۶۰", "تیغه مبارکه سالم بدون شکستگی"],
       ["کفی ایران کاوه", "کفی ایران کاوه مدل 71 سری اول شرکت ایران کاوه"],
       ["کفی مارال ۱۳/۷۰", "کفی مارال لاستیک ۶۰درصد آماده کار"],
-      ["کفی مبلی نیسانی", "کفی مبلی مخصوص نیسان دوگانه دستی"],
       ["آریسان ۲ با کفی و باربند", "دوگانه سوز ۴۰۳ با کفی و باربند روکش صندلی"],
       ["فروش جرثقیل ۱۰ تن کفی اطلس سالم", "جرثقیل ۱۰ تن کفی دستگاه اطلس مدل ۵۵ سالم"],
       ["کفی ماشین باری باربندخاص", "از از جنس ضعیف تا جنس یک بازار فقط ازما بخواهید"],
