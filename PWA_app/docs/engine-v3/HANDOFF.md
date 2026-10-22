@@ -3,7 +3,7 @@
 Updated: 2026-10-22
 Branch: `engine_v3`
 Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: `dd58188f09d7c0806f116d49a3b005ff1ba8e408`
+Current source/test head: `3bf9bc12df7e50bb018950e17c19c6cb08991138`
 
 ## Mission
 
@@ -93,3 +93,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Keep product presence, listing focus, and condition annotations distinct. `gaZjj5GY` remains relevance grade 3 despite a stain.
 - Next: build the source-ID-matched blinded packet from frozen E3 allocation records (exact titles/excerpts), with both floor-mat positives and flatbed/trailer-family controls. Do not infer which records the current guard rejected merely from the old allocation report. Then inspect whether any relevant positive is falsely rejected and whether known flatbed negatives are correctly rejected for this intent.
 - Stay on `engine_v3`; no merge, deployment, production allocation change, or broad quality claim.
+
+
+## Latest handoff — source-matched human grades (2026-10-22)
+
+- The latest human-grade addendum is [E3-HUMAN-GRADE-ADDENDUM-PIANO-KAFI-2026-10-22.md](evaluations/E3-HUMAN-GRADE-ADDENDUM-PIANO-KAFI-2026-10-22.md). P01–P06 and K01 now have exact source ad ID/title/rank matches to live artifact `engine-v3-live-observation-20`, run [39767995345](https://github.com/Nimadanesh/shakar/actions/runs/39767995345).
+- Do not infer quality uplift: this artifact is an unjudged bounded observation, not a paired baseline run. The human grades are separate labels.
+- Evidence gap: the artifact only contains truncated description excerpts, and the repository tree contains no frozen full-detail capture for P02/P05. The baseline check run [39767995269](https://github.com/Nimadanesh/shakar/actions/runs/39767995269) emitted no artifact. The evaluator's grades remain recorded, but the cited acoustic/mechanical identity evidence cannot be independently verified from these immutable sources alone.
+- Next step: search for an existing frozen full-detail source outside this repository. If none exists, stop the source-verification attempt and retain an explicit evidence-gap note; do not reconstruct ad details from memory or treat a fresh live fetch as a frozen record.
+- Code source/test head: `3bf9bc12df7e50bb018950e17c19c6cb08991138`. Latest branch HEAD is documentation-only. Focused tests, full portable suite, typecheck, and build passed on run 39767995269; ESLint remains failing on 8 unrelated UI hook-rule errors. No search behavior changes, allocation changes, main merge, or deployment.
