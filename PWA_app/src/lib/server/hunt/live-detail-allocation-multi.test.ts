@@ -128,8 +128,39 @@ it.skipIf(process.env.LIVE_DETAIL_ALLOCATION_MULTI !== "1")(
           };
         };
 
+        const serializeReviewCandidate = (result: (typeof results)[number]) => ({
+          titleRank: rankById.get(result.sourceAdId) ?? null,
+          sourceAdId: result.sourceAdId,
+          title: result.title,
+          matchKind: result.matchKind,
+          score: result.score,
+          demotedBy: result.demotedBy ?? null,
+          evidence: result.evidence,
+          missingInfo: result.missingInfo,
+          descriptionExcerpt: result.descSnippet,
+        });
+        const baselineOnlyIds = new Set(
+          baselineCandidates
+            .filter((candidate) => !alternativeIds.has(candidate.sourceAdId))
+            .map((candidate) => candidate.sourceAdId)
+        );
+        const alternativeOnlyIds = new Set(
+          explorationCandidates.map((candidate) => candidate.sourceAdId)
+        );
+        const baselineOnly = results
+          .filter((result) => baselineOnlyIds.has(result.sourceAdId))
+          .map(serializeReviewCandidate);
+        const alternativeOnly = results
+          .filter((result) => alternativeOnlyIds.has(result.sourceAdId))
+          .map(serializeReviewCandidate);
+
         queryReports.push({
           query,
+          allocationDisagreements: {
+            baselineOnly,
+            alternativeOnly,
+            note: "Candidates unique to each 100-item allocation; fields are diagnostic and not human labels.",
+          },
           retrieval: {
             pagesRequested: 20,
             pagesCompleted: events.filter(
