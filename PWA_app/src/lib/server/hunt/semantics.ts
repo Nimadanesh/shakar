@@ -1468,6 +1468,9 @@ const FLOOR_MAT_FLATBED_CUES = [
   "تیغه",
   "بالونی",
   "حمل بار",
+  // Live observation exposed a concatenated suffix not matched by token-boundary cues.
+  "ماشین باری",
+  "باربندخاص",
 ] as const;
 
 /**
