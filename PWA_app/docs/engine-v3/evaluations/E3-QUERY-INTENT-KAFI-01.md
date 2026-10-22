@@ -43,6 +43,21 @@ These source records are present in the artifact and should be preserved as exac
 
 The source IDs and original title ranks above identify records from the completed artifact; they do not imply human grades for the ungraded records. Do not generalize from the token `کفی` alone—use the complete listing context.
 
+## Code-path audit (2026-10-22)
+
+Current implementation inspected on `engine_v3`:
+
+- `buildContract("کفی ماشین")` treats the words as an ordinary subject phrase; the contract's `kind` is deliberately `UNKNOWN`.
+- `resolveHuntDefinition` merges that subject into MUST/include terms, so the hunt carries lexical terms but no explicit floor-mat entity kind.
+- `queryKindForDef` only resolves a subject kind from the closed `HEAD_KIND` lexicon, then service intent/category fallbacks. There is no entry for this compound, so the query kind remains unknown when the category does not provide a bridge.
+- The kind gate is evaluated only on a fully MUST-matched candidate. The title-only ad-kind resolver also has no closed kind for the trailer/flatbed family. As a result, partial lexical matches can remain `near` without a wrong-kind verdict.
+
+This means the confirmed failure is not safely fixed by adding `"کفی": "vehicle-part"`: that would classify the trailer's own flatbed as the same kind as a floor mat. Nor is it safe to silently hard-code every bare `کفی ماشین` query to floor mats: the phrase can be ambiguous outside this labeled evaluation.
+
+## Narrow implementation boundary
+
+The next code change must make the intended subject kind explicit and preserve it through `HuntDefinition`/resolution, then compare it against listing kind using title **and detail text** where available. The initial evaluation can use an explicit floor-mat intent fixture derived from the human-labeled task; the counter-control must explicitly request a trailer flatbed. Do not change the meaning of ambiguous live user queries without a product-level confirmation/default decision.
+
 ## Test design
 
 1. **Freeze a source-matched fixture set.** Store exact title, description excerpt, source ad ID, original retrieval rank, and provenance. Keep human grades and source IDs immutable.
