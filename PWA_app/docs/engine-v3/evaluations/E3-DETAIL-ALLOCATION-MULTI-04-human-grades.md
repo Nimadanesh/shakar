@@ -38,13 +38,11 @@ The evaluator explicitly defined the intent for `کفی ماشین` as **automot
 
 For `تعمیر یخچال`, all 10 presented candidates were graded exact (3).
 
-## Important packet-integrity limitation
+## Packet-integrity audit — corrected after source matching
 
-The presented 20-item packet was described as five samples from each allocation-only arm per query. A post-grade audit against the actual report does **not** support that claim: the visible titles map unevenly across `baselineOnly` and `alternativeOnly`, and at least some displayed titles/descriptions were abbreviated or paraphrased. Therefore, these grades are valid human judgments about the presented ads and strongly demonstrate the query-intent ambiguity for `کفی ماشین`, but **must not be used as a balanced paired-arm estimate or as a go/no-go result for the 80/20 allocation**. Do not retroactively infer arm-level precision from this packet.
+The first packet was intended to contain five candidates from each allocation-only arm per query. Matching each displayed example to the experiment artifact shows that `کفی ماشین` was in fact balanced (5 baseline-only / 5 alternative-only in E01–E20), while `تعمیر یخچال` was not balanced in that round (4 / 6). The supplemental packet was balanced for both queries: 3 / 3 for `کفی ماشین` and 4 / 4 for `تعمیر یخچال`.
 
-## Next action
-
-Prepare a corrected, source-matched, blinded balanced packet from the artifact: five `baselineOnly` and five `alternativeOnly` candidates for each query, preserving exact titles and source description excerpts. Reuse prior grades only where the candidate ID and exact source record are unambiguous; ask for fresh grades for missing slots. Keep the arm mapping concealed until all needed grades are collected. No production allocation change is approved by this evaluation.
+Some displayed titles/descriptions were shortened or paraphrased, so arm joins must use the unique matching source record and description—not displayed wording alone. The source-matched combined samples are summarized below. This corrects the initial audit interpretation; the raw grades remain unchanged.
 
 
 ## Supplemental grades (E21–E34), received 2026-10-22
