@@ -90,3 +90,11 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - `کفی تریلی`: 49 ads seen, 48 after duplicate collapse, 8 details checked, 7 confirmed, 0 near misses, 1 rejected, no stale data. Top results included `تریلی کفی و لبه و‌تیغه`, `تریلی کفی سه محور`, and `تریلی کفی`; this supports preservation of the explicit flatbed intent.
 - The same run's `کفی ماشین` top four included the three already human-graded exact candidates plus ungraded positive lead `Aafm5Bsf` (`پک کامل روکش صندلی ، کفی ، دورفرمان`). Keep this as an ungraded candidate for the next packet.
 - This is bounded observation only, not a paired uplift or full recall claim. Next: grade the new positive and a source-matched blinded sample of rejected flatbed cases. No merge or deploy.
+
+
+## E3 human grade update — `Aafm5Bsf` (2026-10-22)
+
+- `Aafm5Bsf` (`پک کامل روکش صندلی ، کفی ، دورفرمان`) received human grade **2** for the explicitly intended automotive-floor-mat hunt: the 3D mat is genuinely included but is one of three components of a complete package, not the listing's central product.
+- This extends the grading contract: grade 3 requires more than literal presence; account for the target product's role in the listing. E34 is the closer analogy (grade 2); E17 remains grade 3 because the floor covering is co-titled as an item in a two-item listing.
+- `gaZjj5GY` remains grade 3 despite a stain; record condition separately.
+- Next: source-ID-match the frozen E3 allocation candidates and prepare a small blinded relevance packet with exact titles and excerpts, sampling both genuine floor-mat controls and flatbed/trailer-family records. No engine changes based on this grade alone; no merge/deploy.
