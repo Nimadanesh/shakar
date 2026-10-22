@@ -1,0 +1,52 @@
+name: Stream Route Export Build Regression
+
+on:
+  push:
+    branches:
+      - fix/next-route-stream-tuning-export-20261022
+    paths:
+      - ".github/workflows/stream-route-export-build-regression.yml"
+      - "PWA_app/src/app/api/hunts/[id]/stream/route.ts"
+      - "PWA_app/src/app/api/hunts/[id]/stream/route.db.test.ts"
+      - "PWA_app/src/lib/server/hunt/stream-tuning.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stream-route-export-build-regression
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate route tests, types, and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: PWA_app
+    steps:
+      - name: Checkout isolated fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Stream route regression tests
+        run: npx vitest run "src/app/api/hunts/[id]/stream/route.test.ts" "src/app/api/hunts/[id]/stream/route.db.test.ts"
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build -- --webpack
