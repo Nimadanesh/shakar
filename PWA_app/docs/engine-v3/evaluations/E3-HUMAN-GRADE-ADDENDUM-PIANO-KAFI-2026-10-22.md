@@ -128,3 +128,34 @@ A deterministic replay now runs the same fixed records against the exact pre-amb
 This is a paired **guard-level replay**, not a full engine replay. It does not calculate matchKind, final score/rank, recall, precision, nDCG, or live result-set overlap. It supports only the narrow conclusion that the ambiguous listing no longer triggers this hard-rejection cue while the tested positives and explicit flatbed controls retain their guard outcomes.
 
 The human grade-2 audio-centred listing family and other mixed-role cases still need a detail-backed false-rejection audit before treating every guard cue as validated. Do not infer human grades for the ungraded controls. No search/ranking behavior was changed by this replay, and no merge to `main`, deployment, or Mizan write occurred.
+
+
+## Fixed-candidate detail-scoring replay — full deterministic detail stage
+
+The replay was extended through `confirmCandidates` using the same fixed records and mocked detail provider, on both source refs. This runs the real deterministic detail evaluation and its final sort; it does not call Divar, Mizan, or Supabase.
+
+- Workflow: [E3 Fixed-Candidate Baseline Replay #5](https://github.com/Nimadanesh/shakar/actions/runs/39789396774)
+- Artifact: `e3-fixed-candidate-baseline-replay-5`, ID `12429304848`
+- Artifact SHA-256: `121348094a79981ac487cb21172dd8e5c4e6aa26a43e5606a03f6686183bbc6c`
+- Baseline source: `554686fa7d58932e0835b5b32475b4ea6dd34435`
+- Current source: `658a38a13d5b29377f4a41fb7eb01a73aa5d2ead`
+- Both refs: 2 replay tests passed (guard-level and detail-scoring). Fixture descriptions are sanitized evidence excerpts, not full raw descriptions. Candidate ranks below are only within this small fixed fixture pool, not live-search ranks.
+
+### Paired detail-stage output
+
+| Query / source record | Human grade | Baseline detail stage | Current detail stage | Finding |
+|---|---:|---|---|---|
+| Piano / P01 `gaiCb1F-` — `طرح آکوستیک` | 0 | near, score 3 | near, score 3 | Correct non-exact outcome preserved |
+| Piano / P02 `gaZze3Z1` — Yamaha M2 | 3 | near, score 3 | near, score 3 | Relevant ad remains under-confident; unchanged by this patch |
+| Piano / P03 `gaZzOCha` — acoustic + digital catalogue | 3 | exact, score 3 | exact, score 3 | Preserved |
+| Piano / P04 `gaZb-8lt` — SLP-48 طرح آکوستیک | 0 | near, score 3 | near, score 3 | Correct non-exact outcome preserved |
+| Piano / P05 `gaZnujck` — Yamaha U10 | 3 | near, score 3 | near, score 3 | Relevant ad remains under-confident; unchanged by this patch |
+| Piano / P06 `Qa0_1GLb` — acoustic + digital importer | 3 | exact, score 3 | exact, score 3 | Preserved |
+| Floor mats / K01 `gaZvu9P8` — TARA floor-mat set | 3 | exact, score 3 | exact, score 3 | Preserved |
+| Floor mats / AMB01 `gaYfZnPP` — `کفی مبلی نیسانی` | insufficient | absent (guard rejection) | near, score 1; missing MUST: `ماشین` | Intended change: no longer silently hard-rejected; correctly remains uncertain/near, not promoted to exact |
+
+### Interpretation and next diagnostic
+
+The baseline/current detail-stage replay confirms the narrow change does exactly what intended on these fixtures: **one ambiguous listing moves from hard-rejected to near**, while all seven source-matched piano/floor-mat controls keep the same verdict and score. It does not establish global search-quality uplift, recall, precision, nDCG, or live result-set improvements.
+
+A separate unresolved quality issue is now visible in the same fixed-pool replay: human-grade-3 P02 (M2) and P05 (U10) remain `near` with `demotedBy: cap`, while P03 and P06 are `exact`. This predates and is independent of the floor-mat cue removal. Investigate the firing reason and listing-role evidence before changing the rule; do not promote them merely because their human grade is 3. No engine behavior change is included in this replay.
