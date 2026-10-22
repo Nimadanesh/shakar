@@ -1,4 +1,5 @@
 name: Engine V3 Live Observation
+# Observation probes include query/listing role diagnostics; detail budget remains capped at eight.
 
 on:
   push:
