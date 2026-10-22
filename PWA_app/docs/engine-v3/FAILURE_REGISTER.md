@@ -61,3 +61,10 @@ Frozen evaluation artifacts are not inputs to overwrite or rerun for this experi
 - Remaining risk: human grading of exact source-ID-matched rejected trailer/flatbed candidates and a fresh live counter-intent check for `کفی تریلی`. Previously graded positive controls `gaYjJe4y` and `gaXjCsU5` and hard negative `gaA3NPYd` remain frozen controls; do not relabel them.
 - CI: [baseline run](https://github.com/Nimadanesh/shakar/actions/runs/39756287701) passed focused tests, portable suite, typecheck, and build, but ESLint failed on eight `react-hooks/set-state-in-effect` errors in unrelated UI files. Keep this separate from search-quality acceptance.
 - Next action: prepare the blinded candidate packet and inspect the explicit-trailer counter-intent before deciding whether to keep/refine the closed cue list. No merge or deployment.
+
+
+### Counter-intent check added — 2026-10-22
+
+- [Fresh bounded observation run 39758555126](https://github.com/Nimadanesh/shakar/actions/runs/39758555126) included explicit query `کفی تریلی`: 49 ads seen, 48 after duplicate collapse, 8 details checked, 7 confirmed, 0 near misses, 1 rejected; no stale data. Confirmed examples include `تریلی کفی و لبه و‌تیغه`, `تریلی کفی سه محور`, and `تریلی کفی`. This supports the intended counter-control: the `کفی ماشین` guard is not a global ban on trailer flatbeds.
+- The same run surfaced a new ungraded positive lead for floor mats: `Aafm5Bsf`, `پک کامل روکش صندلی ، کفی ، دورفرمان`. Human-grade it before using it as a quality metric.
+- This remains a bounded 8-detail sample, not a population recall guarantee or paired quality comparison. Next: human-grade the new positive and a blinded source-matched sample of rejected flatbed candidates.
