@@ -159,3 +159,23 @@ The replay was extended through `confirmCandidates` using the same fixed records
 The baseline/current detail-stage replay confirms the narrow change does exactly what intended on these fixtures: **one ambiguous listing moves from hard-rejected to near**, while all seven source-matched piano/floor-mat controls keep the same verdict and score. It does not establish global search-quality uplift, recall, precision, nDCG, or live result-set improvements.
 
 A separate unresolved quality issue is now visible in the same fixed-pool replay: human-grade-3 P02 (M2) and P05 (U10) remain `near` with `demotedBy: cap`, while P03 and P06 are `exact`. This predates and is independent of the floor-mat cue removal. Investigate the firing reason and listing-role evidence before changing the rule; do not promote them merely because their human grade is 3. No engine behavior change is included in this replay.
+
+
+## Follow-up diagnostic — why P02 and P05 stay near
+
+The replay harness was extended with explicit role/identity diagnostics. Both human-grade-3 acoustic-piano ads (P02 / `gaZze3Z1`, Yamaha M2; P05 / `gaZnujck`, Yamaha U10) share the same misclassification:
+
+- Query role: `product` (implied by the clear music category).
+- Listing role: `exchange`, reason `exchange-cue:"تعویض"`.
+- Role clash: `product` vs `exchange`.
+- The source descriptions contain the condition-history phrase `تعمیر یا تعویض نشده است` (“not repaired or replaced”), not an offer to exchange the piano.
+- The role clash triggers the generic semantic cap, leaving both relevant ads as `near`.
+
+This isolates a specific false role cue; it is not a reason to promote all near results. A separate isolated fix branch adds a narrow negation-aware exchange cue scrub, tests the positive exchange counter-control, and checks both M2/U10 through the deterministic pipeline:
+
+- [Draft PR #14 — Ignore negated replacement history in exchange-role detection](https://github.com/Nimadanesh/shakar/pull/14)
+- [Regression workflow run #3](https://github.com/Nimadanesh/shakar/actions/runs/39792328021)
+- Focused tests: 119 passed, 2 skipped; full portable suite: 820 passed, 6 skipped; TypeScript typecheck passed.
+- Build validation remains red on the existing `src/app/api/hunts/[id]/stream/route.ts` export `streamTuning` (invalid Next.js Route export); default Turbopack also reports an internal `next/font/google` resolution error. No route changes are included.
+
+PR #14 is Draft and targets `engine_v3`. The fix is not merged or deployed, and `main` remains untouched.
