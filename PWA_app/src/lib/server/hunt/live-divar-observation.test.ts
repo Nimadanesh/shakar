@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { resolveHuntDefinition } from "./definition";
+import { assessListingRole, assessQueryIntent } from "./semantics";
 import {
   collectCandidates,
   confirmCandidates,
@@ -22,8 +23,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
     // Explicit total budget: at most eight detail fetches across ALL scenarios.
     // Per-scenario caps sum to eight; do not interpret HUNT_MAX_DETAILS as global.
     const cases = [
-      { id: "piano-negated-replacement", query: "پیانو اکوستیک", detailBudget: 4 },
+      { id: "piano-acoustic-precision", query: "پیانو اکوستیک", detailBudget: 2 },
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
+      { id: "negated-exchange-phrase", query: "تعویض نشده", detailBudget: 2 },
       { id: "parts-replaced-control", query: "قطعات تعویض شده", detailBudget: 2 },
     ] as const;
 
@@ -82,6 +84,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             category: def.category,
             city: def.city,
           },
+          queryRole: assessQueryIntent(def.query, def.category, def.transaction),
           retrieval: {
             pagesRequested: 2,
             pagesCompleted: events.filter((e) => e.type === "lists-progress").length,
@@ -110,6 +113,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             detailUnknown: result.detailUnknown ?? false,
             demotedBy: result.demotedBy ?? null,
             descriptionExcerpt: result.descSnippet,
+            listingRole: assessListingRole(`${result.title} ${result.descSnippet ?? ""}`),
           })),
         });
       }
