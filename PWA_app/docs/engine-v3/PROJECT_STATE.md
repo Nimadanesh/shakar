@@ -55,7 +55,7 @@ Get independent human grades for a small blinded packet from the completed detai
 
 ## Current next action
 
-The E3 allocation question is closed for now: keep the existing allocation; the 80/20 alternative has no demonstrated human-quality advantage. The source-matched audit and grades are recorded in `evaluations/E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md`. Next, execute the design-only query-intent investigation in `evaluations/E3-QUERY-INTENT-KAFI-01.md`: verify exact source records and fixture provenance, then implement only a narrow, test-backed intent distinction if the query representation supports it. Preserve both human-graded floor-mat positives, reject trailer/flatbed hard negatives for floor-mat intent, and keep an explicit trailer-intent counter-control. No production allocation change, main merge, or deployment.
+The E3 allocation question is closed for now: keep the existing allocation; the 80/20 alternative has no demonstrated human-quality advantage. The source-matched audit and grades are recorded in `evaluations/E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md`. Next, validate the narrow floor-mat/flatbed guard added on `engine_v3`: wait for the focused/full CI checks, inspect failures honestly, then run a bounded read-only live replay and blinded human review for both false positives and false rejections. The source records, code-path audit, acceptance gate, and implementation status are in `evaluations/E3-QUERY-INTENT-KAFI-01.md`. No production allocation change, main merge, or deployment.
 
 
 ## Human review received — packet integrity caveat (2026-10-22)
