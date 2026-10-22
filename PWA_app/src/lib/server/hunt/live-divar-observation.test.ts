@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { resolveHuntDefinition } from "./definition";
 import { divarProvider } from "../divar/divarClient";
+import { ProviderError } from "../divar/provider";
 import {
   collectCandidates,
   confirmCandidates,
