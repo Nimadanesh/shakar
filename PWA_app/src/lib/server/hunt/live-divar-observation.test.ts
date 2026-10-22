@@ -19,12 +19,12 @@ import {
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures a bounded live Divar observation for critical query families",
   async () => {
+    // Explicit total budget: at most eight detail fetches across ALL scenarios.
+    // Per-scenario caps sum to eight; do not interpret HUNT_MAX_DETAILS as global.
     const cases = [
-      { id: "piano-identity", query: "پیانو اکوستیک" },
-      { id: "part-vs-whole", query: "کفی ماشین" },
-      { id: "explicit-flatbed-counter-intent", query: "کفی تریلی" },
-      { id: "service-intent", query: "تعمیر یخچال" },
-      { id: "explicit-absence", query: "ماشین بدون رنگ" },
+      { id: "piano-negated-replacement", query: "پیانو اکوستیک", detailBudget: 4 },
+      { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
+      { id: "parts-replaced-control", query: "قطعات تعویض شده", detailBudget: 2 },
     ] as const;
 
     const reports: Array<Record<string, unknown>> = [];
@@ -35,7 +35,13 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
     );
 
     try {
+      let detailsBudgetUsed = 0;
       for (const scenario of cases) {
+        const remainingBudget = 8 - detailsBudgetUsed;
+        if (remainingBudget <= 0) break;
+        // confirmCandidates reads this per-hunt cap. Clamp each scenario to
+        // its assigned share and the remaining experiment-wide budget.
+        process.env.HUNT_MAX_DETAILS = String(Math.min(scenario.detailBudget, remainingBudget));
         const def = resolveHuntDefinition({
           query: scenario.query,
           include: [],
@@ -62,6 +68,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           stats,
           (event) => events.push(event)
         );
+        detailsBudgetUsed += stats.detailsChecked;
 
         reports.push({
           id: scenario.id,
@@ -120,7 +127,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       runtime: process.version,
       limits: {
         maxListPagesPerQuery: 2,
-        maxDetailsPerQuery: Number(process.env.HUNT_MAX_DETAILS ?? "8"),
+        maxDetailsTotal: 8,
+        maxDetailsUsed: reports.reduce((sum, report) => {
+          const retrieval = report.retrieval as Record<string, unknown>;
+          return sum + Number(retrieval.detailsChecked ?? 0);
+        }, 0),
+        perScenarioDetailBudgets: cases.map(({ id, detailBudget }) => ({ id, detailBudget })),
         queries: cases.length,
         mizanShadow: process.env.MIZAN_SHADOW ?? "default",
       },
