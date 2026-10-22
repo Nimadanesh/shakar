@@ -22,25 +22,26 @@ This is a small diagnostic sample, not a population estimate. It demonstrates a 
 
 ### Positive floor-mat controls
 
-Use the exact source records from the completed report; do not reconstruct or paraphrase the titles.
+Use exact source records from the completed artifact; do not reconstruct or paraphrase titles.
 
-- E17: `لاستیک و کف پوش ماشین` — human grade 3.
-- E19: `کفی سه بعدی نمدی فابریکی اطلس` — human grade 3.
-- Additional artifact controls, pending exact-record verification: `کفی لاستیکی خودرو` (baseline-only, title rank 84), `کفی سه بعدی کوییک` (baseline-only, title rank 94), and `کفی سه بعدی نمدی فابریکی اطلس` (alternative-only, title rank 138).
-
-The first two are human-graded controls. The latter three are candidate leads only until exact source identity and details are checked.
+- E17, source ad `gaYjJe4y`, title rank 81: `لاستیک و کف پوش ماشین` — human grade 3. The engine had called this `near`, making it a useful false-negative/under-ranking control.
+- E19, source ad `gaXjCsU5`, title rank 138: `کفی سه بعدی نمدی فابریکی اطلس` — human grade 3. The engine had called this `near`, making it a useful false-negative/under-ranking control.
+- Additional ungraded positive leads: source ad `gaYjY0nM`, rank 84, `کفی لاستیکی خودرو`; and source ad `gaY3VCQ7`, rank 94, `کفی سه بعدی کوییک`. Verify details before assigning gold grades.
 
 ### Hard negatives
 
-Use the exact source records and descriptions from the report/artifact, including these trailer/flatbed-family examples:
-- `کفی ایران کاوه`
-- `کفی تریلی`
-- `کفی تریلی خوزستان شوش`
-- `کفی دو مهور`
-- `کفی مارال ۱۳/۷۰`
-- trailer tarp/service listings and vehicle listings where `کفی` means a flatbed/body rather than a cabin floor mat.
+These source records are present in the artifact and should be preserved as exact fixtures:
 
-Do not generalize from a single token such as `کفی`; confirm the complete listing context. E14 (`آریسان ۲ با کفی و باربند`) is a human-graded negative (0) for the floor-mat intent because the vehicle is being sold with a flatbed/bar, not as a floor-mat product.
+- E14 / source ad `gaA3NPYd`, title rank 90: `آریسان ۲ با کفی و باربند` — human grade 0 for floor-mat intent; the vehicle is being sold with a flatbed/bar.
+- Source ad `gaYDXysD`, rank 91: `کفی تریلر`; excerpt says `سلام تریلی چرخ 24`.
+- Source ad `gaYrmNKn`, rank 92: `کفی تریلی ۲محور رول کش بالونی ۱۲/۶۰`.
+- Source ad `gaY3kLJH`, rank 100: `کفی ایران کاوه`.
+- Source ad `gaWrknHH`, rank 153: `کفی تریلی خوزستان شوش`.
+- Source ad `gaUv8moP`, rank 193: `کفی دو مهور`.
+- Source ad `gaUrqiuA`, rank 198: `کفی مارال ۱۳/۷۰`.
+- Include trailer tarp/service listings and vehicle listings where `کفی` means a flatbed/body rather than a cabin floor mat; retain the exact source excerpt.
+
+The source IDs and original title ranks above identify records from the completed artifact; they do not imply human grades for the ungraded records. Do not generalize from the token `کفی` alone—use the complete listing context.
 
 ## Test design
 
