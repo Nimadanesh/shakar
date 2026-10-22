@@ -33,7 +33,8 @@ import {
   getRunStatus,
   readRunEvents,
 } from "@/lib/server/hunt/runs";
-import { GET, streamTuning } from "@/app/api/hunts/[id]/stream/route";
+import { GET } from "@/app/api/hunts/[id]/stream/route";
+import { streamTuning } from "@/lib/server/hunt/stream-tuning";
 
 const mockConfigured = vi.mocked(supabaseConfigured);
 const mockServer = vi.mocked(supabaseServer);
