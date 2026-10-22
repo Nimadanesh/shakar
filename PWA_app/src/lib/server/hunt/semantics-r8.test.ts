@@ -363,6 +363,12 @@ describe("E3 — negated replacement history is not an exchange offer", () => {
     }
   });
 
+  it("keeps a source-captured real exchange offer classified as exchange", () => {
+    // Live observation artifact engine-v3-live-observation-25,
+    // sourceAdId gaZj__jh; title: «تریلی بیات معاوضه با کفی سه محور».
+    expect(assessListingRole("تریلی بیات معاوضه با کفی سه محور").role).toBe("exchange");
+  });
+
   it("does not let a negated history clause hide a separate positive exchange offer", () => {
     const r = assessListingRole(
       "پیانو اکوستیک؛ قطعات تعویض نشده است؛ معاوضه با پیانو دیجیتال"
