@@ -1435,3 +1435,63 @@ export function assessBaitTitle(
   if (VARIANT_MARKERS.some((v) => normalizeForMatch(v) === mod)) return false;
   return true;
 }
+
+
+/**
+ * E3 intent-scoped guard: for the explicitly interpreted "کفی ماشین"
+ * floor-mat hunt, reject listings whose title/details identify the other
+ * common sense of کفی (a truck/trailer flatbed). This is deliberately NOT
+ * a global synonym or a kind assignment for the token کفی.
+ *
+ * The query guard is conservative: an explicit trailer query (e.g.
+ * "کفی تریلی") never enters this rule. The cue set contains closed,
+ * high-signal flatbed phrases observed in the source-matched E3 artifact.
+ * Unknown listings remain untouched.
+ */
+const FLOOR_MAT_FLATBED_CUES = [
+  "تریلی",
+  "تریلر",
+  "سه محور",
+  "دو محور",
+  "رول کش",
+  "کالابرس",
+  "ایران کاوه",
+  "مارال",
+  "ماموت",
+  "فوکس شاهنگ",
+  "جرثقیل",
+  "کفی مبلی",
+  "آهنکش",
+  "باربند",
+  "کانتینربر",
+  "کانتینر",
+  "تیغه",
+  "بالونی",
+  "حمل بار",
+] as const;
+
+/**
+ * Returns a reason only when a floor-mat query meets explicit flatbed
+ * evidence in the listing. Used before MUST completeness checks so a
+ * wrong-kind partial lexical match cannot survive merely as "near".
+ */
+export function floorMatFlatbedConflict(
+  query: string,
+  title: string,
+  description: string
+): string | null {
+  const q = normalizeForMatch(query);
+  const explicitFloorMatQuery =
+    textMatches(q, "کفی") &&
+    textMatches(q, "ماشین") &&
+    !textMatches(q, "تریلی") &&
+    !textMatches(q, "تریلر");
+  if (!explicitFloorMatQuery) return null;
+
+  const listing = normalizeForMatch(`${title} ${description}`);
+  if (!textMatches(listing, "کفی")) return null;
+  const cue = FLOOR_MAT_FLATBED_CUES.find((candidate) =>
+    textMatches(listing, candidate)
+  );
+  return cue ? `wrong-kind:floor-mat-vs-flatbed:${cue}` : null;
+}
