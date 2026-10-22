@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { resolveHuntDefinition } from "./definition";
+import { divarProvider } from "../divar/divarClient";
+import { ProviderError } from "../divar/provider";
 import {
   collectCandidates,
   confirmCandidates,
@@ -16,9 +18,40 @@ import {
  * No assertions are made about relevance: this captures evidence for review,
  * it does not turn unjudged live results into a quality score.
  */
+function redactIranianPhoneNumbers(value: string): string {
+  const asciiDigits = value.replace(/[۰-۹٠-٩]/g, (digit) =>
+    String("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩".indexOf(digit) % 10)
+  );
+  const mobileRedacted = asciiDigits.replace(
+    /(?<!\d)(?:(?:\+|00)?98[\s().-]*)?0?9(?:[\s().-]*\d){9}(?!\d)/g,
+    "[REDACTED_PHONE]"
+  );
+  // Also scrub common Iranian fixed-line formats with local area codes.
+  return mobileRedacted.replace(
+    /(?<!\d)(?:(?:\+|00)?98[\s()._-]*)?0?(?:[1-8]\d{1,2})[\s()._-]*\d(?:[\s()._-]*\d){6,7}(?!\d)/g,
+    "[REDACTED_PHONE]"
+  );
+}
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures a bounded live Divar observation for critical query families",
   async () => {
+    expect(redactIranianPhoneNumbers("09123456789")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("+98 912 345 6789")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("0098-912-345-6789")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("۰۹۱۲۳۴۵۶۷۸۹")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("21_22200017")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("021 22200017")).toBe("[REDACTED_PHONE]");
+
+    const sourceMatchedTargets = [
+      { label: "P01", sourceAdId: "gaiCb1F-" },
+      { label: "P02", sourceAdId: "gaZze3Z1" },
+      { label: "P03", sourceAdId: "gaZzOCha" },
+      { label: "P04", sourceAdId: "gaZb-8lt" },
+      { label: "P05", sourceAdId: "gaZnujck" },
+      { label: "P06", sourceAdId: "Qa0_1GLb" },
+      { label: "K01", sourceAdId: "gaZvu9P8" },
+    ] as const;
+
     const cases = [
       { id: "piano-identity", query: "پیانو اکوستیک" },
       { id: "part-vs-whole", query: "کفی ماشین" },
@@ -103,12 +136,39 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             detailUnknown: result.detailUnknown ?? false,
             demotedBy: result.demotedBy ?? null,
             descriptionExcerpt: result.descSnippet,
+            ...(process.env.HUNT_CAPTURE_FULL_DETAILS === "1" && result.descriptionSnapshot !== undefined
+              ? { descriptionSnapshot: redactIranianPhoneNumbers(result.descriptionSnapshot) }
+              : {}),
           })),
         });
       }
     } finally {
       if (oldBufferPath === undefined) delete process.env.SLUG_CAPTURE_BUFFER_PATH;
       else process.env.SLUG_CAPTURE_BUFFER_PATH = oldBufferPath;
+    }
+
+    const sourceMatchedDetails: Array<Record<string, unknown>> = [];
+    if (process.env.HUNT_CAPTURE_FULL_DETAILS === "1") {
+      for (const target of sourceMatchedTargets) {
+        try {
+          const detail = await divarProvider.getDetail(target.sourceAdId);
+          sourceMatchedDetails.push({
+            label: target.label,
+            sourceAdId: target.sourceAdId,
+            title: detail.title,
+            stale: detail.stale ?? false,
+            categorySlug: detail.categorySlug,
+            descriptionSnapshot: redactIranianPhoneNumbers(detail.description),
+          });
+        } catch (error) {
+          sourceMatchedDetails.push({
+            label: target.label,
+            sourceAdId: target.sourceAdId,
+            fetchStatus: "failed",
+            errorClass: error instanceof ProviderError ? error.errorClass : "unknown",
+          });
+        }
+      }
     }
 
     const report = {
@@ -121,10 +181,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       limits: {
         maxListPagesPerQuery: 2,
         maxDetailsPerQuery: Number(process.env.HUNT_MAX_DETAILS ?? "8"),
+        targetedSourceDetailReads: sourceMatchedTargets.length,
         queries: cases.length,
         mizanShadow: process.env.MIZAN_SHADOW ?? "default",
       },
       scenarios: reports,
+      sourceMatchedDetails,
     };
     const outputPath = join(
       process.env.RUNNER_TEMP ?? tmpdir(),
