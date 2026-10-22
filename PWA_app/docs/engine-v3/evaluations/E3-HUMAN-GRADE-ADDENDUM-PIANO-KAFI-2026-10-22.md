@@ -98,5 +98,33 @@ The previous source-ID reconciliation section above records the earlier excerpt-
 
 - The artifact includes full descriptions for the seven exact source IDs and the bounded query's top results. Contact-number redaction covers common Iranian mobile formats (including Persian/Arabic-Indic digits and `0098` prefixes) and common fixed-line formats. A scan of the captured descriptions found no remaining matches for those patterns. This is pattern-based screening, not a guarantee that every possible contact detail is removed.
 - Artifact `engine-v3-live-observation-23` used the earlier mobile-only scrubber and missed one fixed-line contact number in P06. It is superseded and must not be used for review; its 14-day artifact retention may leave it downloadable until expiry. Artifact 25 is the review copy.
-- This closes the P02/P05 full-detail evidence gap for the human-grade rationale, but **does not** establish a source-matched baseline-versus-current result comparison, search-quality uplift, or statistical metric. The baseline candidate/verdict join remains a separate gate.
+- This closes the P02/P05 full-detail evidence gap. A later paired replay now compares the specific floor-mat conflict guard on fixed source-matched records; it **does not** rerun full pipeline retrieval/scoring/ranking, establish end-to-end baseline-versus-current result quality, or support a statistical uplift claim.
 - No search/ranking behavior change, merge to `main`, deployment, or Mizan write is included or authorized by this documentation update.
+
+
+## Paired baseline/current replay — floor-mat conflict guard
+
+A deterministic replay now runs the same fixed records against the exact pre-ambiguity-removal baseline and the current branch. This isolates the one relevant source delta in this comparison: removal of the `"کفی مبلی"` hard-rejection cue after the human grade for that listing was marked insufficient/ambiguous.
+
+- Workflow: [E3 Fixed-Candidate Baseline Replay #3](https://github.com/Nimadanesh/shakar/actions/runs/39788391628)
+- Artifact: `e3-fixed-candidate-baseline-replay-3`, ID `12429309932`
+- Artifact SHA-256: `5ab9116c52bbb1333b174e4a0a5dcd712d97f67165a79f8a4773ba57bd978746`
+- Baseline source: `554686fa7d58932e0835b5b32475b4ea6dd34435`
+- Current source under test: `292544d443d5ced72dbf48712752f5b23a7764b4`
+- Both baseline and current replay tests passed. Same 17 records, same title/detail fixture strings, no live Divar calls, no Mizan calls or writes.
+
+### Result
+
+| Fixed record group | Baseline guard | Current guard | Interpretation |
+|---|---|---|---|
+| P01–P06 piano controls | No floor-mat conflict | No floor-mat conflict | Unchanged; this guard does not address piano identity |
+| K01, E17, E19 graded floor-mat positives | No conflict | No conflict | All three remain eligible at this guard stage |
+| N01, N02 graded hard negatives | Conflict flagged | Conflict flagged | Both human grade-0 examples remain suppressed by this guard |
+| U01–U05 ungraded trailer/flatbed controls | Conflict flagged | Conflict flagged | Guard behavior unchanged; these records remain ungraded |
+| AMB01 `gaYfZnPP`, `کفی مبلی نیسانی` (human grade: insufficient) | Conflict flagged by `کفی مبلی` | No conflict | Intended change: remove an unsupported hard rejection; **not** a claim that this ad is relevant |
+
+### Scope and next gate
+
+This is a paired **guard-level replay**, not a full engine replay. It does not calculate matchKind, final score/rank, recall, precision, nDCG, or live result-set overlap. It supports only the narrow conclusion that the ambiguous listing no longer triggers this hard-rejection cue while the tested positives and explicit flatbed controls retain their guard outcomes.
+
+The human grade-2 audio-centred listing family and other mixed-role cases still need a detail-backed false-rejection audit before treating every guard cue as validated. Do not infer human grades for the ungraded controls. No search/ranking behavior was changed by this replay, and no merge to `main`, deployment, or Mizan write occurred.
