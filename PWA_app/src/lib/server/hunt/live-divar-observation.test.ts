@@ -181,6 +181,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       limits: {
         maxListPagesPerQuery: 2,
         maxDetailsPerQuery: Number(process.env.HUNT_MAX_DETAILS ?? "8"),
+        targetedSourceDetailReads: sourceMatchedTargets.length,
         queries: cases.length,
         mizanShadow: process.env.MIZAN_SHADOW ?? "default",
       },
