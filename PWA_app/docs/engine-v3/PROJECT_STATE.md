@@ -82,3 +82,11 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - Earlier frozen controls remain unchanged: positives `gaYjJe4y`, `gaXjCsU5` (grade 3); hard negative `gaA3NPYd` (grade 0). Do not assign grades to other unreviewed records by inference.
 - Evidence is still bounded and unpaired. The explicit `کفی تریلی` live counter-intent and blinded review of rejected flatbed cases are outstanding. No quality-uplift claim, merge, or deployment.
 - [Baseline workflow 39756287701](https://github.com/Nimadanesh/shakar/actions/runs/39756287701): focused tests, portable suite, typecheck, and build passed; ESLint still fails on 8 `react-hooks/set-state-in-effect` errors in unrelated UI files.
+
+
+## Explicit trailer counter-intent — 2026-10-22
+
+- [Live observation run 39758555126](https://github.com/Nimadanesh/shakar/actions/runs/39758555126), commit `554686fa7d58932e0835b5b32475b4ea6dd34435`, added a fresh bounded observation for `کفی تریلی`.
+- `کفی تریلی`: 49 ads seen, 48 after duplicate collapse, 8 details checked, 7 confirmed, 0 near misses, 1 rejected, no stale data. Top results included `تریلی کفی و لبه و‌تیغه`, `تریلی کفی سه محور`, and `تریلی کفی`; this supports preservation of the explicit flatbed intent.
+- The same run's `کفی ماشین` top four included the three already human-graded exact candidates plus ungraded positive lead `Aafm5Bsf` (`پک کامل روکش صندلی ، کفی ، دورفرمان`). Keep this as an ungraded candidate for the next packet.
+- This is bounded observation only, not a paired uplift or full recall claim. Next: grade the new positive and a source-matched blinded sample of rejected flatbed cases. No merge or deploy.
