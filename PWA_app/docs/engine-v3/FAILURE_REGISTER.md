@@ -68,3 +68,11 @@ Frozen evaluation artifacts are not inputs to overwrite or rerun for this experi
 - [Fresh bounded observation run 39758555126](https://github.com/Nimadanesh/shakar/actions/runs/39758555126) included explicit query `کفی تریلی`: 49 ads seen, 48 after duplicate collapse, 8 details checked, 7 confirmed, 0 near misses, 1 rejected; no stale data. Confirmed examples include `تریلی کفی و لبه و‌تیغه`, `تریلی کفی سه محور`, and `تریلی کفی`. This supports the intended counter-control: the `کفی ماشین` guard is not a global ban on trailer flatbeds.
 - The same run surfaced a new ungraded positive lead for floor mats: `Aafm5Bsf`, `پک کامل روکش صندلی ، کفی ، دورفرمان`. Human-grade it before using it as a quality metric.
 - This remains a bounded 8-detail sample, not a population recall guarantee or paired quality comparison. Next: human-grade the new positive and a blinded source-matched sample of rejected flatbed candidates.
+
+
+### Human review update — `Aafm5Bsf` (2026-10-22)
+
+- Human grade: **2**, not exact, for `پک کامل روکش صندلی ، کفی ، دورفرمان` on the explicit automotive-floor-mat intent. The mat is real but is one of three package components; this is consistent with E34 (relevant but not central) and contrasts with E17 (floor covering co-listed as a titled item, grade 3).
+- Evaluation refinement: distinguish *product presence* from *listing focus/salience*. A keyword hit or real inclusion alone is not sufficient for grade 3.
+- Condition defects remain independent: `gaZjj5GY` keeps grade 3 despite a stain; condition must not lower relevance.
+- Next: use a source-ID-matched review packet to inspect the cue list against exact positive and trailer/flatbed examples. Do not assume every old hard negative was rejected by the current guard, and do not claim quality uplift from the bounded live sample.
