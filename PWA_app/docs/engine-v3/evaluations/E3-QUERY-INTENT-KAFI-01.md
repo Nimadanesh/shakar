@@ -91,3 +91,41 @@ A first **narrow, query-scoped guard** has now been added on `engine_v3`:
 - It does not globally assign a kind to `کفی` and does not change detail allocation.
 
 Focused unit tests and pipeline-level counter-control tests have been added. GitHub Actions is running; **the patch is not yet validated**. If checks pass, the next gate is a bounded read-only live replay plus blinded grading of both retained floor-mat candidates and rejected flatbed candidates. The cue list must be audited for false rejections before any broader use. No main merge or deployment.
+
+
+## Human review and bounded live observation — 2026-10-22
+
+### Human grades for retained live candidates
+
+The evaluator graded all three retained candidates as **3 (exactly relevant)** for the explicitly intended automotive floor-mat query:
+
+| Candidate | Source ad ID | Human grade | Additional observation |
+|---|---|---:|---|
+| `کفی ماشین کوییک نو` | `gaYfODFa` | 3 | Direct positive control from live observation |
+| `کفی ماشین` | `gaZjj5GY` | 3 | Complete set and correct product; driver-side mat has a stain |
+| `کفی قالبی یه تیکه پرایدی` | `gaZftRr4` | 3 | Directly relevant molded one-piece floor mat |
+
+**Annotation policy learned from candidate B:** keep relevance grade 3. Record the stain as a condition/quality observation, not as a relevance penalty. This preserves the distinction between *is it the requested item?* and *what is its condition?* It is consistent with the evaluator's H09 lesson. Do not rewrite a relevance grade to encode condition defects.
+
+### Bounded live observation
+
+- Workflow: [Live observation run 39756287700](https://github.com/Nimadanesh/shakar/actions/runs/39756287700)
+- Branch/commit observed: `engine_v3` / `97bf6101c779f903f613cca0c1a5ae22f89ffa82`
+- Read-only limits: 2 list pages and 8 detail checks per query; no Mizan shadow writes.
+- For `کفی ماشین`: 49 ads seen, 48 candidates after duplicate collapse, 8 details checked, 3 confirmed, 2 near misses, 5 rejected as no match, no stale data.
+- The three surfaced candidates above were human-graded 3. Two earlier monitor/audio false-positive patterns did not appear in this bounded top-result sample. This is a useful observed signal, **not proof of population-wide precision or complete false-positive removal**.
+- The live observation is not a paired baseline-vs-patch quality comparison; no before/after uplift claim is justified.
+
+### Positive and negative control accounting
+
+- Previously human-graded floor-mat controls remain: `gaYjJe4y` (`لاستیک و کف پوش ماشین`, grade 3) and `gaXjCsU5` (`کفی سه بعدی نمدی فابریکی اطلس`, grade 3). These came from the frozen source-matched artifact; this new live run did not independently re-fetch or re-grade them.
+- Previously graded hard negative `gaA3NPYd` (`آریسان ۲ با کفی و باربند`) remains grade 0 for floor-mat intent. Other trailer/flatbed examples in the frozen artifact are useful negative controls, but do not assign new human grades to them without reviewing the exact records.
+- Counter-intent `کفی تریلی` must continue to retrieve relevant flatbed listings. Unit and pipeline tests cover the explicit-trailer counter-control; a fresh live counter-intent observation and full blinded negative review are still outstanding.
+
+### Validation status and next gate
+
+- Bounded read-only live observation: **PASS as a run**, with the limitations above.
+- Human grades for three retained candidates: **3/3 exact**.
+- Focused tests, portable suite, typecheck, and production build passed in the baseline workflow; ESLint failed with 8 `react-hooks/set-state-in-effect` errors in unrelated UI files (including `KaminDetailSheet.tsx`, `BottomTabBar.tsx`, `MarketSheet.tsx`, `HomeCityUpdateNudge.tsx`, `HuntProgress.tsx`, `SearchSheet.tsx`, `HomeCityRow.tsx`, and `useProfile.ts`). The run also reports existing warnings. This is not a clean all-checks pass.
+- Next: build a source-ID-matched blinded packet of rejected trailer/flatbed candidates and retained floor-mat candidates; reuse prior grades only for exact ID matches. Obtain a fresh bounded observation for explicit `کفی تریلی`, verify the positive controls against exact source details, and measure both false-positive suppression and positive preservation before deciding whether to keep/refine the cue list.
+- No merge, deployment, production allocation change, or broad quality claim is authorized.
