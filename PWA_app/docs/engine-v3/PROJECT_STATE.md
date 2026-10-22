@@ -64,3 +64,11 @@ Collect blinded grades for packet E01–E20. Use 3 = exact, 2 = relevant, 1 = we
 - Query-level observation: `تعمیر یخچال` received 10/10 exact grades; `کفی ماشین`, explicitly intended as automotive floor mats, received 2/10 exact (E17 and E19) and 8/10 irrelevant. E14, an Arisan sold with a flatbed/bar, is correctly 0 for a floor-mat intent.
 - Audit found the displayed packet does not reliably satisfy its claimed balanced 5+5 allocation-arm sampling; some presented titles/descriptions were shortened/paraphrased. Consequently, these grades are not valid for an arm-level comparison and must not be used as an 80/20 go/no-go result.
 - Next: build a source-matched balanced packet from the actual artifact, reuse grades only for exact candidate-ID matches, collect missing grades, and only then join arm labels. No production allocation change.
+
+
+## Allocation decision after human grades — 2026-10-22
+
+- Supplemental grades E21–E34 are recorded with the first round in [the evaluation record](evaluations/E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md), latest commit `ffc3793c0bea8ce7c93f185f927855933a718a0e`.
+- Across the source-matched sample of allocation-only candidates for `کفی ماشین` (explicit intent: automotive floor mats), baseline-only and alternative-only each had 1 exact match out of 8 sampled candidates (12.5%); the other seven in each arm were irrelevant. No observed relevance advantage for 80/20.
+- Refrigerator-service candidates were relevant in both arms (baseline-only 8/8 exact; alternative-only 9/10 exact, 1/10 grade 2). This small unequal sample is diagnostic only.
+- Previous top-20 lists were identical for both queries. **Decision: do not promote the 80/20 allocation. Keep current allocation unchanged.** Next high-value work is a narrow query-understanding/intent disambiguation fix for `کفی ماشین` (automotive floor mats vs trailer flatbeds/services), with positive floor-mat controls and hard trailer negatives. No code behavior change is authorized by this result.
