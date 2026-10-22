@@ -1,8 +1,8 @@
 # E3 Human Grade Addendum — Piano Identity and Mixed Floor-Mat Listing
 
 Date: 2026-10-22
-Branch: `engine_v3`
-Status: human grades received; source-ID reconciliation still required for packet aliases P01–P06 and K01.
+Branch: `eval/full-detail-capture-20261022` (isolated evidence branch; not merged)
+Status: human grades received; exact source IDs and fresh full-detail snapshots captured for P01–P06 and K01. Baseline pairing remains open.
 
 ## Annotation rules confirmed by this review
 
@@ -35,11 +35,11 @@ These packet IDs are presentation aliases, not verified Divar source IDs. Do not
 
 ## Source reconciliation checklist
 
-- [ ] Map P01–P06 to exact source ad IDs in the live-observation artifact or frozen source packet.
-- [ ] Verify full details for P02 and P05 supporting acoustic/mechanical identity.
-- [ ] Preserve exact title/detail snapshots and original retrieval ranks.
-- [ ] Reconcile K01 to its exact source ID; do not infer identity from title alone.
-- [ ] Keep the human grade, engine verdict, and secondary annotations in separate fields.
+- [x] Map P01–P06 to exact source ad IDs in the live-observation artifact or frozen source packet.
+- [x] Verify full details for P02 and P05 supporting acoustic/mechanical identity.
+- [x] Preserve exact title/detail snapshots and original retrieval ranks in the immutable workflow artifact.
+- [x] Reconcile K01 to its exact source ID; do not infer identity from title alone.
+- [x] Keep the human grade, engine verdict, and secondary annotations in separate fields.
 
 
 ## Source-ID reconciliation — bounded live artifact
@@ -70,3 +70,33 @@ Reconciled against the exact-title records in the immutable workflow artifact be
 - K01's captured excerpt explicitly describes a Taraa floor-mat set plus trunk liner, consistent with the evaluator's role/salience rationale.
 - This is a source-mapping step, **not** a paired baseline-versus-current quality comparison. The artifact is an unjudged live observation; no uplift or metric claim is made.
 - Next: locate the frozen full-detail records for P02/P05 and the matching baseline candidate/verdict records. If no immutable full-detail snapshot exists, mark the evidence gap rather than reconstructing details from memory. No engine behavior change, merge to `main`, deployment, or allocation change is authorized.
+
+
+## Full-detail source verification — latest bounded artifact
+
+The previous source-ID reconciliation section above records the earlier excerpt-only artifact and its limitations at that time. Those full-detail gaps are now closed for the seven packet aliases by a later, exact-ID capture.
+
+- Workflow run: [39783668174](https://github.com/Nimadanesh/shakar/actions/runs/39783668174)
+- Artifact: `engine-v3-live-observation-25`, artifact ID `12427871523`
+- Captured commit: `210804e65386d527dd3b143c6dc68021636f0260`
+- Artifact SHA-256: `35478f8e4fe40696ed294aebd86dadd97ec2bba624de785aadb08a21ee4d489b`
+- Observation created: `2026-10-22T13:06:19.857Z`
+- Limits: 5 query scenarios; max 2 list pages/query; max 8 pipeline detail checks/query; 7 additional direct source-ID detail reads; `MIZAN_SHADOW=0`.
+- All seven target details were returned and marked non-stale. Full descriptions are in the workflow artifact, not copied into this repository document. The artifact's warning remains: these are unjudged live observations, not a paired quality comparison.
+
+| Alias | Exact source ID | Detail evidence observed | Evaluation implication |
+|---|---|---|---|
+| P01 | `gaiCb1F-` | Description says the back is made to look acoustic (`شبیه به آکوستیک زده شده`) and says the internal device can later be replaced with Yamaha. | Supports the grade-0 acoustic-style false-positive family when read with the exact title; do not infer that the title token alone proves acoustic identity. |
+| P02 | `gaZze3Z1` | Full description explicitly says `پیانو مکانیکی یاماها مدل m2`; it also says parts are original and not repaired/replaced. | Independently supports the human grade 3 identity rationale. |
+| P03 | `gaZzOCha` | Full description explicitly offers `انواع پیانو آکوستیک و دیجیتال` and describes availability, advice, delivery, warranty, and payment. | Supports grade 3 under the E17 rule: mixed catalogue is not an automatic downgrade when acoustic pianos are a genuine offered product. |
+| P04 | `gaZb-8lt` | Detail says `SLP-48 طرح آکوستیک یاماها`; it adds no independent mechanism/specification evidence beyond the title family. | Preserve grade 0; be explicit that the source detail itself is sparse. |
+| P05 | `gaZnujck` | Full description explicitly says `پیانو مکانیکی یاماها مدل u10`; it lists height 121, condition, original parts, and accompanying stool. | Independently supports the human grade 3 identity rationale. |
+| P06 | `Qa0_1GLb` | Full description separately lists digital Yamaha series (P/YDP/CLP) and acoustic Yamaha/Kawai model families (U/YU/YUS, etc.). | Supports grade 3 under the same mixed-catalogue rule as P03. |
+| K01 | `gaZvu9P8` | Full description says `ست کف پایی تارا و کفی صندوق عقب`, then explains the items had been used on the seller's car. | Supports grade 3: floor mats are the core item; trunk liner accompanies them. |
+
+### Redaction and evidence limits
+
+- The artifact includes full descriptions for the seven exact source IDs and the bounded query's top results. Contact-number redaction covers common Iranian mobile formats (including Persian/Arabic-Indic digits and `0098` prefixes) and common fixed-line formats. A scan of the captured descriptions found no remaining matches for those patterns. This is pattern-based screening, not a guarantee that every possible contact detail is removed.
+- Artifact `engine-v3-live-observation-23` used the earlier mobile-only scrubber and missed one fixed-line contact number in P06. It is superseded and must not be used for review; its 14-day artifact retention may leave it downloadable until expiry. Artifact 25 is the review copy.
+- This closes the P02/P05 full-detail evidence gap for the human-grade rationale, but **does not** establish a source-matched baseline-versus-current result comparison, search-quality uplift, or statistical metric. The baseline candidate/verdict join remains a separate gate.
+- No search/ranking behavior change, merge to `main`, deployment, or Mizan write is included or authorized by this documentation update.
