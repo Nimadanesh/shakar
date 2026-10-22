@@ -35,3 +35,17 @@ Phase 1 — two critical false-positive families have narrow fixes and determini
 
 ## Next action
 Collect blinded grades for the small detail-allocation packet, preserving all frozen R1 data. If the two lower-title exact candidates are confirmed relevant and no critical errors increase, prototype a deterministic 80/20 exploration allocation on `engine_v3` only and re-evaluate; do not merge/deploy or claim quality improvement yet. Keep technical direction autonomous and ask the human evaluator only for result grades/observations when needed.
+
+
+## Latest allocation experiment — 2026-10-22
+
+- Current branch/reporting commit: `a1233202cb20918ac012bfd0ec3c916f16fe0506` on `engine_v3`.
+- Read-only paired experiment [run](https://github.com/Nimadanesh/shakar/actions/runs/39740034802) completed successfully and emitted artifact `engine-v3-detail-allocation-multi-4`. It records allocation-disagreement candidates for both `کفی ماشین` and `تعمیر یخچال`.
+- The tested comparison remains baseline top-100 by title strength versus top-80 plus 20 evenly spaced ranks 101–200. Previous top-20 reporting showed no visible top-20 changes for either query. Aggregate exact/near engine verdicts vary but are not human-quality evidence.
+- Blinded packet E01–E20 is prepared from 5 sampled baseline-only and 5 sampled alternative-only candidates per query, randomized together with titles and description excerpts. The allocation labels and mapping are withheld pending grades.
+- Baseline check [run](https://github.com/Nimadanesh/shakar/actions/runs/39740035012): focused tests, full portable suite, TypeScript typecheck, and production build PASS; ESLint FAIL remains due to unrelated existing UI debt (8 errors / 38 warnings).
+- No production allocation change, merge, deployment, or frozen-evaluation mutation occurred.
+
+## Next action
+
+Request grades for E01–E20 only: 3 exact, 2 relevant, 1 weak, 0 irrelevant; `نامشخص/INSUFFICIENT` excluded from the denominator and reported separately. Then reveal/join the allocation mapping, compare relevance and critical-error rates, and make a documented go/no-go decision. Do not promote the alternative on engine labels alone.
