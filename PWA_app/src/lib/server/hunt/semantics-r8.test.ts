@@ -296,6 +296,8 @@ describe("E3 — floor-mat intent rejects trailer/flatbed listings only in that 
       ["آریسان ۲ با کفی و باربند", "دوگانه سوز ۴۰۳ با کفی و باربند روکش صندلی"],
       ["فروش جرثقیل ۱۰ تن کفی اطلس سالم", "جرثقیل ۱۰ تن کفی دستگاه اطلس مدل ۵۵ سالم"],
       ["کفی ماشین باری باربندخاص", "از از جنس ضعیف تا جنس یک بازار فقط ازما بخواهید"],
+      ["مانیتور قسطی ماشین خودرو سمند سورن سیستم کفی روکش", "مرکز مانیتور عبدی صوت تصویر"],
+      ["مانیتور هدلایت سیستم کفی روکش ماشین خودرو جیلی", "مرکز صوت تصویر"],
     ] as const;
     for (const [title, description] of cases) {
       expect(floorMatFlatbedConflict(floorMatQuery, title, description)).not.toBeNull();
