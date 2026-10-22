@@ -663,7 +663,7 @@ function evaluateDescription(
   // and runs before MUST completeness, because many wrong-kind ads match
   // only «کفی» and would otherwise remain eligible as partial matches.
   const floorMatConflict = floorMatFlatbedConflict(def.query, title, description);
-  if (floorMatConflict) return rejectedEvaluation(floorMatConflict);
+  if (floorMatConflict) return rejectedEvaluation();
   // 1. MUST_NOT — «نه» means نه, with repair-word polarity scoping (an
   // explicit «بدون تعمیر» listing satisfies a no-repair request instead of
   // being banned by its own vocabulary).
