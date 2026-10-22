@@ -49,3 +49,11 @@ Collect blinded grades for the small detail-allocation packet, preserving all fr
 ## Next action
 
 Request grades for E01–E20 only: 3 exact, 2 relevant, 1 weak, 0 irrelevant; `نامشخص/INSUFFICIENT` excluded from the denominator and reported separately. Then reveal/join the allocation mapping, compare relevance and critical-error rates, and make a documented go/no-go decision. Do not promote the alternative on engine labels alone.
+
+
+## Human review received — packet integrity caveat (2026-10-22)
+
+- Raw grades recorded in [E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md](evaluations/E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md), commit `68d6d44a7f7f19539e0f63bd051d3b1ed5ba58e7`.
+- Human evaluator graded all 10 `تعمیر یخچال` examples exact. For `کفی ماشین` with explicit intent **automotive floor mats**, E17 and E19 are exact and the other eight are irrelevant, including E14 (a vehicle sold with a flatbed/bar).
+- Integrity audit found the presented packet was not reliably balanced 5 candidates per arm per query and some titles/descriptions were paraphrased. Preserve the raw grades as valid ad judgments, but do not use them to estimate per-arm quality or approve 80/20 allocation.
+- Correct next step: prepare a source-matched balanced packet, reuse grades only where exact source candidate identity is confirmed, collect missing grades, then reveal the allocation mapping. Production allocation remains unchanged.
