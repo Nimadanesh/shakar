@@ -42,3 +42,17 @@ The human owner is the independent product evaluator; the technical agent owns c
 ## Next action
 
 Get independent human grades for a small blinded packet from the completed detail-allocation comparison, without touching frozen R1 artifacts. If the grade confirms the two additional exact cars and no critical regression, implement a small deterministic exploration allocation behind an experiment flag and compare again; do not replace production top-100 allocation on engine labels alone. Do not change global synonyms, increase model authority, change `main`, or deploy without explicit authorization.
+
+
+## Latest allocation experiment — 2026-10-22
+
+- Current reporting commit: `a1233202cb20918ac012bfd0ec3c916f16fe0506` on `engine_v3`.
+- Paired read-only multi-query report [run](https://github.com/Nimadanesh/shakar/actions/runs/39740034802), [artifact](https://github.com/Nimadanesh/shakar/actions/runs/39740034802): completed successfully; artifact `engine-v3-detail-allocation-multi-4`.
+- Queries: `کفی ماشین` and `تعمیر یخچال`; 20 pages per query, 481/480 post-filter candidates, 120 detail checks per query, no stale data. The baseline is top 100 by title strength; alternative is top 80 plus 20 evenly spaced candidates from ranks 101–200.
+- Top 20 remained identical between arms in the preceding top-20 report for both queries. The latest report exposes 20 baseline-only and 19 alternative-only candidates for `کفی ماشین`, and 20 baseline-only and 19 alternative-only candidates for `تعمیر یخچال` (one duplicate collapsed in the latter retrieval). Engine verdict counts differ between arms, but are not human relevance grades.
+- A 20-item blinded packet has been prepared: 5 randomly sampled from each allocation-only set for each query, IDs E01–E20, with title and description excerpt only. Arm mapping is intentionally withheld until grades are returned. No allocation decision is approved yet.
+- Latest portable baseline [run](https://github.com/Nimadanesh/shakar/actions/runs/39740035012): focused tests PASS, full portable suite PASS, TypeScript typecheck PASS, production build PASS; ESLint FAIL on the known unrelated UI errors (8 errors / 38 warnings). No production allocation changes, merge, or deployment.
+
+## Current next action
+
+Collect blinded grades for packet E01–E20. Use 3 = exact, 2 = relevant, 1 = weak, 0 = irrelevant; `نامشخص/INSUFFICIENT` is excluded from the denominator and reported separately. Ask for a critical-error flag/short note only where useful. Join the hidden arm mapping only after grades are submitted. Do not alter production allocation based on engine verdict counts alone.
