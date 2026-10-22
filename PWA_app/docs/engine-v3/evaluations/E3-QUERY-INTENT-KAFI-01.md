@@ -140,3 +140,12 @@ The evaluator graded all three retained candidates as **3 (exactly relevant)** f
 - In the same fresh run, `کفی ماشین` returned four top candidates, including a newly observed positive lead `Aafm5Bsf` (`پک کامل روکش صندلی ، کفی ، دورفرمان`), with detail describing a three-piece set including a 3D floor mat. This candidate has **not yet been human graded**; add it to the positive-preservation packet rather than assuming its grade.
 - Fresh `کفی ماشین` counts: 49 ads seen, 49 after duplicate collapse, 8 details checked, 4 confirmed, 3 near misses, 4 rejected; no stale data. The three already graded candidates remained in the top four and retain grade 3.
 - These two query observations are not a paired baseline comparison. Next, human-grade `Aafm5Bsf` and a source-matched sample of rejected flatbed candidates. Do not claim a measured uplift or broad recall guarantee.
+
+
+### Human grade received — Aafm5Bsf (2026-10-22)
+
+- Source ad `Aafm5Bsf`: `پک کامل روکش صندلی ، کفی ، دورفرمان` — human grade **2 (relevant, not exact)** for the explicitly intended automotive-floor-mat hunt.
+- Evaluator rationale: the 3D floor mat is genuinely included, but it is one of three components in a complete seat-cover / floor-mat / steering-wheel-cover package, rather than the listing's sole or central product. This follows the E34 distinction (a relevant but non-central item receives 2) and contrasts with E17 (`لاستیک و کف پوش ماشین`), where the floor covering is co-present as a titled item in a two-item listing and received 3.
+- Annotation rule: grade the role/salience of the requested product within the listing, not mere token presence. A target product included as one component of a multi-item package can be grade 2; do not automatically call it exact.
+- Existing grade-3 candidates `gaYfODFa`, `gaZjj5GY`, and `gaZftRr4` remain unchanged. The stain on `gaZjj5GY` remains a separate condition annotation, not a relevance penalty.
+- Next: inspect a source-ID-matched packet of floor-mat positives and trailer/flatbed-family candidates using exact frozen titles/excerpts. Keep the human grade, engine verdict, and condition annotation as separate fields. No merge/deploy or population-level quality claim.
