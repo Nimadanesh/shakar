@@ -1,0 +1,59 @@
+name: E3 Negated Exchange Role Regression
+
+on:
+  push:
+    branches:
+      - fix/negated-exchange-role-e3-20261022
+    paths:
+      - ".github/workflows/e3-negated-exchange-role.yml"
+      - "PWA_app/src/lib/server/hunt/semantics.ts"
+      - "PWA_app/src/lib/server/hunt/semantics-r8.test.ts"
+      - "PWA_app/src/lib/server/hunt/pipeline.test.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e3-negated-exchange-role-regression
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Validate negated exchange cue fix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: PWA_app
+    steps:
+      - name: Checkout isolated fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Focused semantic and pipeline regressions
+        run: npx vitest run src/lib/server/hunt/semantics-r8.test.ts src/lib/server/hunt/pipeline.test.ts --reporter=verbose
+
+      - name: Full portable test suite
+        run: >-
+          npx vitest run
+          --exclude src/lib/server/hunt/contractDeleteAudit.test.ts
+          --exclude src/lib/server/hunt/contractGate.test.ts
+          --exclude src/lib/server/hunt/expAFeatures.test.ts
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
