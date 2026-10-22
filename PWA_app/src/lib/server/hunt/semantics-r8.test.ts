@@ -338,8 +338,33 @@ describe("E3 — negated replacement history is not an exchange offer", () => {
     expect(r.role).toBe("product");
   });
 
-  it("preserves an explicit positive exchange offer", () => {
-    const r = assessListingRole("پیانو اکوستیک تعویض با پیانو دیجیتال");
+  it("handles common negated replacement-history variants without inventing an exchange offer", () => {
+    const descriptions = [
+      "پیانو اکوستیک تعویض نشده",
+      "پیانو اکوستیک قطعات تعویض نشد",
+      "پیانو اکوستیک تعویض ندارد",
+      "پیانو اکوستیک تعویض نداشته است",
+      "پیانو اکوستیک فاقد تعویض",
+      "پیانو اکوستیک تعویض نمی شود",
+    ];
+    for (const description of descriptions) {
+      expect(assessListingRole(description).role, description).toBe("product");
+    }
+  });
+
+  it("preserves positive exchange wording in more than one form", () => {
+    for (const description of [
+      "پیانو اکوستیک معاوضه با پیانو دیجیتال",
+      "پیانو اکوستیک را با کالای دیگر تعویض می‌کنم",
+    ]) {
+      expect(assessListingRole(description).role, description).toBe("exchange");
+    }
+  });
+
+  it("does not let a negated history clause hide a separate positive exchange offer", () => {
+    const r = assessListingRole(
+      "پیانو اکوستیک؛ قطعات تعویض نشده است؛ معاوضه با پیانو دیجیتال"
+    );
     expect(r.role).toBe("exchange");
   });
 });
