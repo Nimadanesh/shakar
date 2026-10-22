@@ -118,6 +118,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       else process.env.SLUG_CAPTURE_BUFFER_PATH = oldBufferPath;
     }
 
+    expect(detailsBudgetUsed).toBeLessThanOrEqual(8);
+
     const report = {
       kind: "read-only-live-observation",
       warning: "Unjudged observations only; not a relevance score or a paired quality comparison.",
