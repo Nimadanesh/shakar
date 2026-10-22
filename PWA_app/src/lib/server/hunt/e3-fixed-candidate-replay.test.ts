@@ -52,7 +52,7 @@ it("replays the same fixed E3 candidate records through the floor-mat guard", as
   if (outputPath) await writeFile(outputPath, JSON.stringify({
     kind: "e3-fixed-candidate-guard-replay",
     mode: process.env.E3_REPLAY_MODE,
-    sourceCommit: process.env.GITHUB_SHA ?? "local",
+    sourceCommit: process.env.E3_REPLAY_SOURCE_COMMIT ?? process.env.GITHUB_SHA ?? "local",
     candidates: replay,
     scopeWarning: "This replays the floor-mat conflict guard only; it does not rerun retrieval, full pipeline scoring, or ranking.",
   }, null, 2), "utf8");

@@ -56,6 +56,7 @@ jobs:
         working-directory: baseline/PWA_app
         env:
           E3_REPLAY_MODE: baseline
+          E3_REPLAY_SOURCE_COMMIT: 554686fa7d58932e0835b5b32475b4ea6dd34435
           E3_REPLAY_OUTPUT: ${{ runner.temp }}/e3-baseline-replay.json
         run: npx vitest run src/lib/server/hunt/e3-fixed-candidate-replay.test.ts --reporter=verbose
 
@@ -63,6 +64,7 @@ jobs:
         working-directory: current/PWA_app
         env:
           E3_REPLAY_MODE: current
+          E3_REPLAY_SOURCE_COMMIT: ${{ github.sha }}
           E3_REPLAY_OUTPUT: ${{ runner.temp }}/e3-current-replay.json
         run: npx vitest run src/lib/server/hunt/e3-fixed-candidate-replay.test.ts --reporter=verbose
 
