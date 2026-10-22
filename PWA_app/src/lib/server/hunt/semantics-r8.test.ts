@@ -323,3 +323,23 @@ describe("E3 — floor-mat intent rejects trailer/flatbed listings only in that 
     ).toBeNull();
   });
 });
+
+
+describe("E3 — negated replacement history is not an exchange offer", () => {
+  it("does not read «تعمیر یا تعویض نشده است» as an exchange role", () => {
+    const r = assessListingRole(
+      "فروشگاه پیانو فروش مرجع تخصصی خرید و فروش ادوات موسیقی؛ قطعات کاملا اورجینال هستش تعمیر یا تعویض نشده است"
+    );
+    expect(r.role).toBe("product");
+  });
+
+  it("does not read «بدون تعویض» as an exchange offer", () => {
+    const r = assessListingRole("فروش پیانو اکوستیک، قطعات اصلی و بدون تعویض");
+    expect(r.role).toBe("product");
+  });
+
+  it("preserves an explicit positive exchange offer", () => {
+    const r = assessListingRole("پیانو اکوستیک تعویض با پیانو دیجیتال");
+    expect(r.role).toBe("exchange");
+  });
+});
