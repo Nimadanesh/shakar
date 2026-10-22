@@ -3,8 +3,8 @@
 Last verified: 2026-10-22
 Work branch: `engine_v3`
 Branch base: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: `dd58188f09d7c0806f116d49a3b005ff1ba8e408`
-Latest portable baseline: [Run #19 — SHA `dd58188`](https://github.com/Nimadanesh/shakar/actions/runs/39682990792)
+Current source/test head: `3bf9bc12df7e50bb018950e17c19c6cb08991138`
+Latest portable baseline: [Run 39767995269 — source/test SHA `3bf9bc1`](https://github.com/Nimadanesh/shakar/actions/runs/39767995269); focused tests, portable suite, typecheck, and build pass; ESLint fails on 8 pre-existing UI hook-rule errors.
 Latest live observation: [Run #9 — SHA `f2d9484`](https://github.com/Nimadanesh/shakar/actions/runs/39682408569)
 
 ## Mission
@@ -98,3 +98,12 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - This extends the grading contract: grade 3 requires more than literal presence; account for the target product's role in the listing. E34 is the closer analogy (grade 2); E17 remains grade 3 because the floor covering is co-titled as an item in a two-item listing.
 - `gaZjj5GY` remains grade 3 despite a stain; record condition separately.
 - Next: source-ID-match the frozen E3 allocation candidates and prepare a small blinded relevance packet with exact titles and excerpts, sampling both genuine floor-mat controls and flatbed/trailer-family records. No engine changes based on this grade alone; no merge/deploy.
+
+
+## Human-grade source reconciliation — 2026-10-22
+
+- The addendum [E3-HUMAN-GRADE-ADDENDUM-PIANO-KAFI-2026-10-22.md](evaluations/E3-HUMAN-GRADE-ADDENDUM-PIANO-KAFI-2026-10-22.md) maps P01–P06 and K01 to exact ad IDs, titles, and ranks from live observation artifact `engine-v3-live-observation-20` (run [39767995345](https://github.com/Nimadanesh/shakar/actions/runs/39767995345)).
+- Human grades are recorded separately from the engine's `matchKind`; this mapping does not establish an uplift or a paired baseline comparison.
+- Source/test code head remains `3bf9bc12df7e50bb018950e17c19c6cb08991138`. The latest documentation-only branch head is tracked separately in GitHub.
+- The checked-in repository and available live observation report contain no immutable full-detail snapshot for P02/P05; the report has truncated `descriptionExcerpt` fields. The baseline CI run has no artifact. Full acoustic/mechanical evidence and source-matched baseline candidates remain an explicit evidence gap; do not reconstruct them from memory or use a current live ad page as a frozen substitute.
+- Current gate: keep the narrow guard on `engine_v3`; do not change allocation, merge to `main`, or deploy. Next evidence step is to locate an existing frozen full-detail source outside this repository or, if none exists, explicitly mark P02/P05 as human-graded but not independently source-verified from the available immutable artifact.
