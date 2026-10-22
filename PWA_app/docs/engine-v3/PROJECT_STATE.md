@@ -72,3 +72,13 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - Across the source-matched sample of allocation-only candidates for `کفی ماشین` (explicit intent: automotive floor mats), baseline-only and alternative-only each had 1 exact match out of 8 sampled candidates (12.5%); the other seven in each arm were irrelevant. No observed relevance advantage for 80/20.
 - Refrigerator-service candidates were relevant in both arms (baseline-only 8/8 exact; alternative-only 9/10 exact, 1/10 grade 2). This small unequal sample is diagnostic only.
 - Previous top-20 lists were identical for both queries. **Decision: do not promote the 80/20 allocation. Keep current allocation unchanged.** Next high-value work is a narrow query-understanding/intent disambiguation fix for `کفی ماشین` (automotive floor mats vs trailer flatbeds/services), with positive floor-mat controls and hard trailer negatives. No code behavior change is authorized by this result.
+
+
+## E3 floor-mat guard — live observation and human grades (2026-10-22)
+
+- The narrow `کفی ماشین` guard and monitor/audio cue additions were observed in [bounded live run 39756287700](https://github.com/Nimadanesh/shakar/actions/runs/39756287700), on `engine_v3` at `97bf6101c779f903f613cca0c1a5ae22f89ffa82`.
+- For this query: 49 ads seen, 48 after duplicate collapse, 8 details checked; 3 confirmed, 2 near misses, 5 rejected; no stale data. The three retained candidates were all human-graded 3: `gaYfODFa`, `gaZjj5GY`, `gaZftRr4`.
+- Candidate `gaZjj5GY` is exactly relevant even though the driver's mat has a stain. Record the stain in a separate condition/quality annotation; preserve relevance grade 3 (H09 lesson).
+- Earlier frozen controls remain unchanged: positives `gaYjJe4y`, `gaXjCsU5` (grade 3); hard negative `gaA3NPYd` (grade 0). Do not assign grades to other unreviewed records by inference.
+- Evidence is still bounded and unpaired. The explicit `کفی تریلی` live counter-intent and blinded review of rejected flatbed cases are outstanding. No quality-uplift claim, merge, or deployment.
+- [Baseline workflow 39756287701](https://github.com/Nimadanesh/shakar/actions/runs/39756287701): focused tests, portable suite, typecheck, and build passed; ESLint still fails on 8 `react-hooks/set-state-in-effect` errors in unrelated UI files.
