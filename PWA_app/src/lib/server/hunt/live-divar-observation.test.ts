@@ -22,6 +22,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
     const cases = [
       { id: "piano-identity", query: "پیانو اکوستیک" },
       { id: "part-vs-whole", query: "کفی ماشین" },
+      { id: "explicit-flatbed-counter-intent", query: "کفی تریلی" },
       { id: "service-intent", query: "تعمیر یخچال" },
       { id: "explicit-absence", query: "ماشین بدون رنگ" },
     ] as const;
