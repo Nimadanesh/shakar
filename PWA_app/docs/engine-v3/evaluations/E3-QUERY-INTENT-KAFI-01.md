@@ -48,7 +48,7 @@ The source IDs and original title ranks above identify records from the complete
 1. **Freeze a source-matched fixture set.** Store exact title, description excerpt, source ad ID, original retrieval rank, and provenance. Keep human grades and source IDs immutable.
 2. **Separate query interpretation from listing interpretation.** Record the structured query interpretation (intended entity/product kind, MUST/MUST NOT, confidence/ambiguity) before examining the candidate verdict. Do not let ranking alone compensate for a wrong query kind.
 3. **Paired baseline.** Run current deterministic Query Understanding and the proposed narrow variant against the same frozen candidates, with the same retrieval and detail budget. Do not call Divar or change allocation during this offline comparison.
-4. **Positive preservation.** Both human-graded floor-mat controls must remain eligible and exact. Check the additional artifact leads before treating them as gold positives.
+4. **Positive preservation.** Both human-graded floor-mat controls must remain eligible and must not be rejected by a wrong-kind gate. Evaluate whether intent-aware ranking moves them upward. A human grade of 3 is not itself a command to force the engine's `matchKind` to `exact`; exactness must still follow the evidence contract.
 5. **Hard-negative suppression.** Trailer/flatbed records must not be exact or near for this explicitly floor-mat intent. Prefer an intent-scoped wrong-kind rejection over a global `کفی` ban.
 6. **Counter-intent guard.** Add a separate control query explicitly asking for a trailer/flatbed (`کفی تریلی` or an equivalent explicit phrase). Relevant trailer listings must remain eligible for that different intent.
 7. **Unknown/ambiguous behavior.** If a future query lacks enough context to disambiguate, preserve UNKNOWN or ask for clarification rather than silently hard-coding every `کفی ماشین` query to one meaning.
@@ -59,7 +59,7 @@ The source IDs and original title ranks above identify records from the complete
 Do not modify engine behavior until:
 - exact source records and the additional controls are verified;
 - the query-intent decision is explicit and testable;
-- both human-graded floor-mat positives are preserved;
+- both human-graded floor-mat positives remain eligible (and their ranking is measured);
 - all selected trailer/flatbed hard negatives are rejected for the floor-mat intent;
 - the explicit trailer/flatbed counter-intent still retrieves relevant trailer listings;
 - focused tests, full portable suite, typecheck, and build pass.
