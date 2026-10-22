@@ -56,3 +56,11 @@ Get independent human grades for a small blinded packet from the completed detai
 ## Current next action
 
 Collect blinded grades for packet E01–E20. Use 3 = exact, 2 = relevant, 1 = weak, 0 = irrelevant; `نامشخص/INSUFFICIENT` is excluded from the denominator and reported separately. Ask for a critical-error flag/short note only where useful. Join the hidden arm mapping only after grades are submitted. Do not alter production allocation based on engine verdict counts alone.
+
+
+## Human review received — packet integrity caveat (2026-10-22)
+
+- Raw grades are recorded in [E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md](evaluations/E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md), commit `68d6d44a7f7f19539e0f63bd051d3b1ed5ba58e7`.
+- Query-level observation: `تعمیر یخچال` received 10/10 exact grades; `کفی ماشین`, explicitly intended as automotive floor mats, received 2/10 exact (E17 and E19) and 8/10 irrelevant. E14, an Arisan sold with a flatbed/bar, is correctly 0 for a floor-mat intent.
+- Audit found the displayed packet does not reliably satisfy its claimed balanced 5+5 allocation-arm sampling; some presented titles/descriptions were shortened/paraphrased. Consequently, these grades are not valid for an arm-level comparison and must not be used as an 80/20 go/no-go result.
+- Next: build a source-matched balanced packet from the actual artifact, reuse grades only for exact candidate-ID matches, collect missing grades, and only then join arm labels. No production allocation change.
