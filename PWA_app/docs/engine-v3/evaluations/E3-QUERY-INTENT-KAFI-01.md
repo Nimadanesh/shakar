@@ -172,7 +172,7 @@ Grade 3 remains about relevance to the requested item; condition defects are ann
 
 The previous guard treated the closed cue `کفی مبلی` as definitive flatbed evidence. That is overconfident for `کفی مبلی نیسانی`: the human evaluator marked the source listing INSUFFICIENT because both cargo-platform and cabin-mat interpretations remain plausible. The cue was removed from the hard-rejection list and a regression test now asserts that this ambiguous title/detail pair is left untouched. Clear trailer/flatbed cues and the explicit `کفی تریلی` counter-intent remain in place.
 
-This is a narrow guard correction, not a general semantic resolution for the phrase. The ambiguous record remains unknown; it must not be silently relabeled as a floor mat or flatbed. Validation of the new commits is pending CI/results inspection. No merge, deployment, or production allocation change.
+This is a narrow guard correction, not a general semantic resolution for the phrase. The ambiguous record remains unknown; it must not be silently relabeled as a floor mat or flatbed. Post-correction CI and bounded live-observation results are recorded below: focused and portable tests, typecheck, build, and live observation passed; ESLint remains blocked by 8 UI hook-rule errors. No merge, deployment, or production allocation change.
 
 
 ### Post-correction CI and live observation (2026-10-22)
