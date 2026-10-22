@@ -17,6 +17,7 @@ import {
   assessBaitTitle,
   assessDemandGoods,
   assessListingRole,
+  floorMatFlatbedConflict,
   assessModelSpecificity,
   assessQueryIntent,
   assessRepairPolarity,
@@ -657,6 +658,12 @@ function evaluateDescription(
   categorySlug: string = ""
 ): DescriptionEvaluation {
   const combined = `${title} ${description}`;
+  // E3: do not let an explicit trailer/flatbed listing survive as a near
+  // match for the floor-mat sense of «کفی ماشین». This guard is query-scoped
+  // and runs before MUST completeness, because many wrong-kind ads match
+  // only «کفی» and would otherwise remain eligible as partial matches.
+  const floorMatConflict = floorMatFlatbedConflict(def.query, title, description);
+  if (floorMatConflict) return rejectedEvaluation(floorMatConflict);
   // 1. MUST_NOT — «نه» means نه, with repair-word polarity scoping (an
   // explicit «بدون تعمیر» listing satisfies a no-repair request instead of
   // being banned by its own vocabulary).
