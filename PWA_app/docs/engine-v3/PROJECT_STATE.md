@@ -94,7 +94,7 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 
 ## E3 human grade update — `Aafm5Bsf` (2026-10-22)
 
-- `Aafm5Bsf` (`پک کامل روکش صندلی ، کفی ، دورفرمان`) received human grade **2** for the explicitly intended automotive-floor-mat hunt: the 3D mat is genuinely included but is one of three components of a complete package, not the listing's central product.
+- `Aafm5Bsf` (`پک کامل روکش صندلی ، کفی ، دورفرمان`) received provisional human grade **2** (the evaluator submitted it as a draft) for the explicitly intended automotive-floor-mat hunt: the 3D mat is genuinely included but is one of three components of a complete package, not the listing's central product.
 - This extends the grading contract: grade 3 requires more than literal presence; account for the target product's role in the listing. E34 is the closer analogy (grade 2); E17 remains grade 3 because the floor covering is co-titled as an item in a two-item listing.
 - `gaZjj5GY` remains grade 3 despite a stain; record condition separately.
 - Next: source-ID-match the frozen E3 allocation candidates and prepare a small blinded relevance packet with exact titles and excerpts, sampling both genuine floor-mat controls and flatbed/trailer-family records. No engine changes based on this grade alone; no merge/deploy.
