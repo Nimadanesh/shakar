@@ -103,6 +103,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             detailUnknown: result.detailUnknown ?? false,
             demotedBy: result.demotedBy ?? null,
             descriptionExcerpt: result.descSnippet,
+            ...(process.env.HUNT_CAPTURE_FULL_DETAILS === "1" && result.descriptionSnapshot !== undefined
+              ? { descriptionSnapshot: result.descriptionSnapshot }
+              : {}),
           })),
         });
       }
