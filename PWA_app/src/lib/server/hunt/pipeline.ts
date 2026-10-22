@@ -191,6 +191,8 @@ export interface ScoredAd {
    * never scored.
    */
   descSnippet?: string;
+  /** Full verified description for explicitly enabled evaluation-only evidence capture. */
+  descriptionSnapshot?: string;
   /**
    * R12b (double-check F3): why this ad was capped to "near" by a demote
    * rule (bait / demand-goods / kind-gate / semantic cap). Without the
@@ -1247,6 +1249,9 @@ export async function confirmCandidates(
         ...(ev.demotedBy ? { demotedBy: ev.demotedBy } : {}),
         // R5 grading packets show this so condition claims are verifiable.
         descSnippet: description.replace(/\s+/g, " ").trim().slice(0, 200),
+        ...(process.env.HUNT_CAPTURE_FULL_DETAILS === "1" && !detailUnknown
+          ? { descriptionSnapshot: description }
+          : {}),
         // Step 0.5: carry the verified leaf category on the result.
         ...(categorySlug ? { categorySlug } : {}),
       };
