@@ -6,6 +6,7 @@ on:
       - engine_v3
     paths:
       - ".github/workflows/engine-v3-detail-allocation-multi.yml"
+      - "PWA_app/src/lib/server/hunt/live-detail-allocation-multi.test.ts"
   workflow_dispatch:
 
 permissions:
