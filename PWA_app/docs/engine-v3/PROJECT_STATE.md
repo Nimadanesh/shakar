@@ -55,7 +55,7 @@ Get independent human grades for a small blinded packet from the completed detai
 
 ## Current next action
 
-Collect blinded grades for packet E01–E20. Use 3 = exact, 2 = relevant, 1 = weak, 0 = irrelevant; `نامشخص/INSUFFICIENT` is excluded from the denominator and reported separately. Ask for a critical-error flag/short note only where useful. Join the hidden arm mapping only after grades are submitted. Do not alter production allocation based on engine verdict counts alone.
+The E3 allocation question is closed for now: keep the existing allocation; the 80/20 alternative has no demonstrated human-quality advantage. The source-matched audit and grades are recorded in `evaluations/E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md`. Next, execute the design-only query-intent investigation in `evaluations/E3-QUERY-INTENT-KAFI-01.md`: verify exact source records and fixture provenance, then implement only a narrow, test-backed intent distinction if the query representation supports it. Preserve both human-graded floor-mat positives, reject trailer/flatbed hard negatives for floor-mat intent, and keep an explicit trailer-intent counter-control. No production allocation change, main merge, or deployment.
 
 
 ## Human review received — packet integrity caveat (2026-10-22)
