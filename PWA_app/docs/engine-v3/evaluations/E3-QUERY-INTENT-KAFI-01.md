@@ -129,3 +129,14 @@ The evaluator graded all three retained candidates as **3 (exactly relevant)** f
 - Focused tests, portable suite, typecheck, and production build passed in the baseline workflow; ESLint failed with 8 `react-hooks/set-state-in-effect` errors in unrelated UI files (including `KaminDetailSheet.tsx`, `BottomTabBar.tsx`, `MarketSheet.tsx`, `HomeCityUpdateNudge.tsx`, `HuntProgress.tsx`, `SearchSheet.tsx`, `HomeCityRow.tsx`, and `useProfile.ts`). The run also reports existing warnings. This is not a clean all-checks pass.
 - Next: build a source-ID-matched blinded packet of rejected trailer/flatbed candidates and retained floor-mat candidates; reuse prior grades only for exact ID matches. Obtain a fresh bounded observation for explicit `کفی تریلی`, verify the positive controls against exact source details, and measure both false-positive suppression and positive preservation before deciding whether to keep/refine the cue list.
 - No merge, deployment, production allocation change, or broad quality claim is authorized.
+
+
+### Explicit flatbed counter-intent — fresh live check
+
+- Workflow: [Live observation run 39758555126](https://github.com/Nimadanesh/shakar/actions/runs/39758555126)
+- Commit: `554686fa7d58932e0835b5b32475b4ea6dd34435`; the read-only harness now includes `کفی تریلی`.
+- Query `کفی تریلی`: 49 ads seen, 48 after duplicate collapse, 8 details checked, 7 confirmed, 0 near misses, 1 rejected; no stale data.
+- Top confirmed examples included `gaAhLdl5` (`تریلی کفی و لبه و‌تیغه`), `gaZDdTtK` (`تریلی کفی سه محور`), `gaYLnuaK` (`تریلی کفی ۱۳۷۰ مارال جارولیدار`), and `gaZTrXq5` (`تریلی کفی`). This is strong evidence that the narrow `کفی ماشین` guard did not globally ban trailer-flatbed listings. The eight-detail cap means it does not establish full-query recall.
+- In the same fresh run, `کفی ماشین` returned four top candidates, including a newly observed positive lead `Aafm5Bsf` (`پک کامل روکش صندلی ، کفی ، دورفرمان`), with detail describing a three-piece set including a 3D floor mat. This candidate has **not yet been human graded**; add it to the positive-preservation packet rather than assuming its grade.
+- Fresh `کفی ماشین` counts: 49 ads seen, 49 after duplicate collapse, 8 details checked, 4 confirmed, 3 near misses, 4 rejected; no stale data. The three already graded candidates remained in the top four and retain grade 3.
+- These two query observations are not a paired baseline comparison. Next, human-grade `Aafm5Bsf` and a source-matched sample of rejected flatbed candidates. Do not claim a measured uplift or broad recall guarantee.
