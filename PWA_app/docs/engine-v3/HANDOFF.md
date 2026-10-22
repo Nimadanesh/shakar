@@ -65,3 +65,14 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - For `کفی ماشین` with explicit intent automotive floor mats, the 8 sampled baseline-only and 8 sampled alternative-only candidates each contain one exact floor-mat result and seven irrelevant trailer/flatbed-family results (1/8 exact each). The alternative has no observed human-quality advantage. Refrigerator candidates were relevant in both arms; small unequal samples do not establish superiority.
 - The two methods' top 20 were identical in both queries. **Do not promote the 80/20 allocation; preserve the existing allocation.**
 - Next: treat `کفی ماشین` as a query-understanding issue—distinguish automotive floor mats from trailer flatbeds and trailer services—then design a narrow paired test with positive floor-mat controls and hard negative trailer cases. No behavior change, merge, or deployment until explicitly authorized and supported by paired evidence.
+
+
+## Current E3 handoff — `کفی ماشین` (2026-10-22)
+
+- Read the full evaluation record: [E3-QUERY-INTENT-KAFI-01.md](evaluations/E3-QUERY-INTENT-KAFI-01.md).
+- Guard additions were observed in [bounded live run 39756287700](https://github.com/Nimadanesh/shakar/actions/runs/39756287700), commit `97bf6101c779f903f613cca0c1a5ae22f89ffa82`. Query results: 49 ads seen, 48 after duplicate collapse, 8 detail checks, 3 confirmed, 2 near misses, 5 rejected; no stale data.
+- Human grades: `gaYfODFa` = 3, `gaZjj5GY` = 3, `gaZftRr4` = 3. For `gaZjj5GY`, preserve relevance grade 3 and record the driver-side stain separately as a condition observation; do not penalize relevance for condition.
+- Frozen prior controls: `gaYjJe4y` and `gaXjCsU5` are positive grade-3 controls; `gaA3NPYd` is a grade-0 hard negative for the floor-mat intent. Reuse only exact source-ID matches.
+- Next: build a blinded packet of exact source-matched rejected flatbed/trailer candidates and retained positives; then run the explicit `کفی تریلی` live counter-intent and verify relevant trailer listings remain eligible. Do not broaden the cue list without false-rejection review.
+- Validation caveat: [workflow 39756287701](https://github.com/Nimadanesh/shakar/actions/runs/39756287701) passed focused tests, portable suite, typecheck, and build, but ESLint failed on eight unrelated UI `react-hooks/set-state-in-effect` errors. Do not call this a clean CI pass.
+- Stay on `engine_v3`. No merge, deployment, production allocation change, or overall search-quality claim.
