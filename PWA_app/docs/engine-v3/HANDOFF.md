@@ -48,7 +48,7 @@ Collect blinded grades for the small detail-allocation packet, preserving all fr
 
 ## Next action
 
-Request grades for E01–E20 only: 3 exact, 2 relevant, 1 weak, 0 irrelevant; `نامشخص/INSUFFICIENT` excluded from the denominator and reported separately. Then reveal/join the allocation mapping, compare relevance and critical-error rates, and make a documented go/no-go decision. Do not promote the alternative on engine labels alone.
+The allocation comparison is closed: preserve the current allocation; do not promote 80/20 on this evidence. The corrected human grades and source-matching audit are in `evaluations/E3-DETAIL-ALLOCATION-MULTI-04-human-grades.md`. Continue with `evaluations/E3-QUERY-INTENT-KAFI-01.md`: verify source-matched positive and negative controls, then test a narrow Query Understanding distinction for automotive floor mats versus trailer/flatbed listings. Do not globally map `کفی` to a part/accessory kind. No production allocation change, main merge, or deployment.
 
 
 ## Human review received — packet integrity caveat (2026-10-22)
