@@ -18,23 +18,29 @@ import {
  * No assertions are made about relevance: this captures evidence for review,
  * it does not turn unjudged live results into a quality score.
  */
-function redactIranianMobileNumbers(value: string): string {
+function redactIranianPhoneNumbers(value: string): string {
   const asciiDigits = value.replace(/[۰-۹٠-٩]/g, (digit) =>
     String("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩".indexOf(digit) % 10)
   );
-  return asciiDigits.replace(
+  const mobileRedacted = asciiDigits.replace(
     /(?<!\d)(?:(?:\+|00)?98[\s().-]*)?0?9(?:[\s().-]*\d){9}(?!\d)/g,
     "[REDACTED_PHONE]"
   );
+  // Also scrub common Iranian fixed-line formats with local area codes.
+  return mobileRedacted.replace(
+    /(?<!\d)(?:(?:\+|00)?98[\s()._-]*)?0?(?:[1-8]\d{1,2})[\s()._-]*\d(?:[\s()._-]*\d){6,7}(?!\d)/g,
+    "[REDACTED_PHONE]"
+  );
 }
-
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures a bounded live Divar observation for critical query families",
   async () => {
-    expect(redactIranianMobileNumbers("09123456789")).toBe("[REDACTED_PHONE]");
-    expect(redactIranianMobileNumbers("+98 912 345 6789")).toBe("[REDACTED_PHONE]");
-    expect(redactIranianMobileNumbers("0098-912-345-6789")).toBe("[REDACTED_PHONE]");
-    expect(redactIranianMobileNumbers("۰۹۱۲۳۴۵۶۷۸۹")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("09123456789")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("+98 912 345 6789")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("0098-912-345-6789")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("۰۹۱۲۳۴۵۶۷۸۹")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("21_22200017")).toBe("[REDACTED_PHONE]");
+    expect(redactIranianPhoneNumbers("021 22200017")).toBe("[REDACTED_PHONE]");
 
     const sourceMatchedTargets = [
       { label: "P01", sourceAdId: "gaiCb1F-" },
@@ -131,7 +137,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             demotedBy: result.demotedBy ?? null,
             descriptionExcerpt: result.descSnippet,
             ...(process.env.HUNT_CAPTURE_FULL_DETAILS === "1" && result.descriptionSnapshot !== undefined
-              ? { descriptionSnapshot: redactIranianMobileNumbers(result.descriptionSnapshot) }
+              ? { descriptionSnapshot: redactIranianPhoneNumbers(result.descriptionSnapshot) }
               : {}),
           })),
         });
@@ -152,7 +158,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             title: detail.title,
             stale: detail.stale ?? false,
             categorySlug: detail.categorySlug,
-            descriptionSnapshot: redactIranianMobileNumbers(detail.description),
+            descriptionSnapshot: redactIranianPhoneNumbers(detail.description),
           });
         } catch (error) {
           sourceMatchedDetails.push({
