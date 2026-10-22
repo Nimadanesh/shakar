@@ -81,6 +81,13 @@ Do not modify engine behavior until:
 
 A passing synthetic fixture is necessary but not sufficient for rollout. After deterministic tests pass, run a fresh bounded live observation and obtain blinded human grades on unique top results and rejected/near-miss candidates. No production allocation change, main merge, or deployment is authorized by this plan.
 
-## Current decision
+## Implementation status (2026-10-22)
 
-**Do not implement a broad lexicon/synonym change yet.** A global `کفی` → `vehicle-part` mapping would risk classifying trailer flatbeds as accessories and could make the exact failure worse. The next implementation should be driven by the verified query-intent representation and paired controls above.
+A first **narrow, query-scoped guard** has now been added on `engine_v3`:
+
+- `floorMatFlatbedConflict` only activates when the query contains both `کفی` and `ماشین`, and does not activate for explicit `تریلی`/`تریلر` queries.
+- It uses a closed set of high-signal flatbed cues from the verified E3 records (e.g. تریلی/تریلر, محور, رول‌کش, ایران کاوه, مارال, ماموت, جرثقیل, باربند).
+- It runs before MUST-completeness scoring so a candidate that matches only `کفی` cannot survive as `near` when the listing explicitly identifies a flatbed.
+- It does not globally assign a kind to `کفی` and does not change detail allocation.
+
+Focused unit tests and pipeline-level counter-control tests have been added. GitHub Actions is running; **the patch is not yet validated**. If checks pass, the next gate is a bounded read-only live replay plus blinded grading of both retained floor-mat candidates and rejected flatbed candidates. The cue list must be audited for false rejections before any broader use. No main merge or deployment.
