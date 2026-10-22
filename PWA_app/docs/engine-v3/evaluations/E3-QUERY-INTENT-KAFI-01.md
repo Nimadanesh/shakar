@@ -149,3 +149,27 @@ The evaluator graded all three retained candidates as **3 (exactly relevant)** f
 - Annotation rule: grade the role/salience of the requested product within the listing, not mere token presence. A target product included as one component of a multi-item package can be grade 2; do not automatically call it exact.
 - Existing grade-3 candidates `gaYfODFa`, `gaZjj5GY`, and `gaZftRr4` remain unchanged. The stain on `gaZjj5GY` remains a separate condition annotation, not a relevance penalty.
 - Next: inspect a source-ID-matched packet of floor-mat positives and trailer/flatbed-family candidates using exact frozen titles/excerpts. Keep the human grade, engine verdict, and condition annotation as separate fields. No merge/deploy or population-level quality claim.
+
+
+### Human review — ambiguous and mixed-role candidates (2026-10-22)
+
+For the explicitly intended automotive-floor-mat hunt, the evaluator reviewed eight candidates in the latest audit:
+
+| Source ad | Listing title | Human grade | Annotation |
+|---|---|---:|---|
+| `gaI0HKIy` | `ضبط پخش سیستم باند کف پوش ماشین` | 2 | A floor mat is genuinely offered, but the listing is centered on audio equipment. |
+| `gaYfZnPP` | `کفی مبلی نیسانی` | INSUFFICIENT | Ambiguous between a Nissan pickup cargo bed/platform and a cabin floor mat; context does not disambiguate. Excluded from relevance denominators. |
+| `gaYjY0nM` | `کفی لاستیکی خودرو` | 3 | Direct match; two sets are offered. |
+| `gaYfYfl4` | `اجاره کفی` | 0 | Rental of a three-axle roll-curtain flatbed, not an automotive cabin mat. |
+| `ga4uraIe` | `تودوزی.تعمیر صندلی.کفپوش سه بعدی.کفی یه تیکه` | 2 | Service listing that includes floor mats; not clearly a standalone product sale. |
+| `gaYDXysD` | `کفی تریلر` | 0 | Explicit trailer flatbed, wrong intent for this query. |
+| `gaY3VCQ7` | `کفی سه بعدی کوییک` | 3 | Direct match. |
+| `gaYf5rLj` | `فروش جرثقیل ۱۰ تن کفی اطلس سالم` | 0 | Crane/flatbed listing, not a cabin floor mat. |
+
+Grade 3 remains about relevance to the requested item; condition defects are annotated separately. A real but non-central component can be grade 2. `INSUFFICIENT` means evidence cannot resolve the intended item and is not a grade of zero.
+
+### Corrective change — do not hard-reject `کفی مبلی` alone
+
+The previous guard treated the closed cue `کفی مبلی` as definitive flatbed evidence. That is overconfident for `کفی مبلی نیسانی`: the human evaluator marked the source listing INSUFFICIENT because both cargo-platform and cabin-mat interpretations remain plausible. The cue was removed from the hard-rejection list and a regression test now asserts that this ambiguous title/detail pair is left untouched. Clear trailer/flatbed cues and the explicit `کفی تریلی` counter-intent remain in place.
+
+This is a narrow guard correction, not a general semantic resolution for the phrase. The ambiguous record remains unknown; it must not be silently relabeled as a floor mat or flatbed. Validation of the new commits is pending CI/results inspection. No merge, deployment, or production allocation change.
