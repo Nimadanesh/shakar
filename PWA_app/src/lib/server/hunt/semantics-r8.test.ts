@@ -6,6 +6,7 @@ import {
   assessEntityComplement,
   assessListingRole,
   assessModelSpecificity,
+  floorMatFlatbedConflict,
 } from "./semantics";
 import { queryKindForDef } from "./kindLexicon";
 
@@ -254,5 +255,61 @@ describe("R8 — P6 glued variants + P7 word-boundary sale cues", () => {
   it("فروشگاه is not a sale cue", () => {
     expect(assessListingRole("فروشگاه باطری سپاهان").role).not.toBe("product");
     expect(assessListingRole("پراید ۱۳۱ فروش فوری").role).toBe("product");
+  });
+});
+
+
+describe("E3 — floor-mat intent rejects trailer/flatbed listings only in that query", () => {
+  const floorMatQuery = "کفی ماشین";
+
+  it("keeps human-graded floor-mat positives eligible", () => {
+    expect(
+      floorMatFlatbedConflict(
+        floorMatQuery,
+        "لاستیک و کف پوش ماشین",
+        "کف پوش سه بعدی جنس عالی قیمت توافقی"
+      )
+    ).toBeNull();
+    expect(
+      floorMatFlatbedConflict(
+        floorMatQuery,
+        "کفی سه بعدی نمدی فابریکی اطلس",
+        "کفی سه بعدی نمدی فابریک اطلس نو استفاده نشده"
+      )
+    ).toBeNull();
+    expect(
+      floorMatFlatbedConflict(
+        floorMatQuery,
+        "کفی لاستیکی خودرو",
+        "دوجفت کفی لاستیکی خودرو تمیز"
+      )
+    ).toBeNull();
+  });
+
+  it("flags source-matched flatbed/trailer families for the floor-mat query", () => {
+    const cases = [
+      ["کفی تریلر", "سلام تریلی چرخ 24"],
+      ["کفی تریلی ۲محور رول کش بالونی ۱۲/۶۰", "تیغه مبارکه سالم بدون شکستگی"],
+      ["کفی ایران کاوه", "کفی ایران کاوه مدل 71 سری اول شرکت ایران کاوه"],
+      ["کفی مارال ۱۳/۷۰", "کفی مارال لاستیک ۶۰درصد آماده کار"],
+      ["کفی مبلی نیسانی", "کفی مبلی مخصوص نیسان دوگانه دستی"],
+      ["آریسان ۲ با کفی و باربند", "دوگانه سوز ۴۰۳ با کفی و باربند روکش صندلی"],
+      ["فروش جرثقیل ۱۰ تن کفی اطلس سالم", "جرثقیل ۱۰ تن کفی دستگاه اطلس مدل ۵۵ سالم"],
+    ] as const;
+    for (const [title, description] of cases) {
+      expect(floorMatFlatbedConflict(floorMatQuery, title, description)).not.toBeNull();
+    }
+  });
+
+  it("does not apply to explicit trailer intent or unrelated queries", () => {
+    expect(
+      floorMatFlatbedConflict("کفی تریلی", "کفی تریلی", "سه محور رول کش")
+    ).toBeNull();
+    expect(
+      floorMatFlatbedConflict("کفی ماشین", "کفی لاستیکی خودرو", "دو جفت کفی تمیز")
+    ).toBeNull();
+    expect(
+      floorMatFlatbedConflict("ماشین بدون رنگ", "کفی تریلی", "تریلی سه محور")
+    ).toBeNull();
   });
 });
