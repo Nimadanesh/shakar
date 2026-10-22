@@ -76,3 +76,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Next: build a blinded packet of exact source-matched rejected flatbed/trailer candidates and retained positives; then run the explicit `کفی تریلی` live counter-intent and verify relevant trailer listings remain eligible. Do not broaden the cue list without false-rejection review.
 - Validation caveat: [workflow 39756287701](https://github.com/Nimadanesh/shakar/actions/runs/39756287701) passed focused tests, portable suite, typecheck, and build, but ESLint failed on eight unrelated UI `react-hooks/set-state-in-effect` errors. Do not call this a clean CI pass.
 - Stay on `engine_v3`. No merge, deployment, production allocation change, or overall search-quality claim.
+
+
+## Follow-up after explicit trailer live check — 2026-10-22
+
+- [Live run 39758555126](https://github.com/Nimadanesh/shakar/actions/runs/39758555126) on commit `554686fa7d58932e0835b5b32475b4ea6dd34435` added query `کفی تریلی` to the bounded observation harness.
+- `کفی تریلی`: 49 ads seen, 48 after duplicate collapse, 8 detail checks, 7 confirmed, 0 near misses, 1 rejected, no stale data. Trailer/flatbed examples remained eligible, supporting the counter-intent.
+- `کفی ماشین` returned four top candidates; the three human-graded candidates remained present and retain grade 3. New ungraded lead: `Aafm5Bsf`, `پک کامل روکش صندلی ، کفی ، دورفرمان` (description indicates a three-piece set including a 3D floor mat).
+- Next: human-grade `Aafm5Bsf` and a blinded source-matched sample of rejected flatbed candidates. Do not infer a population-level gain from the capped sample.
+- Baseline run [39758554980](https://github.com/Nimadanesh/shakar/actions/runs/39758554980) passed focused tests, portable suite, typecheck, and build; ESLint failed with eight unrelated UI `react-hooks/set-state-in-effect` errors. Stay on `engine_v3`; no merge/deploy.
