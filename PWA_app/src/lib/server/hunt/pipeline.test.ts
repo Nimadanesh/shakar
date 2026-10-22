@@ -2033,3 +2033,60 @@ describe("R7-redteam — adversarial review fixes (2026-10-18)", () => {
     expect(assessAbsencePolarity("ماشین بدون رنگ و صافکاری", "رنگ").polarity).toBe("absent");
   });
 });
+
+
+describe("E3 — pipeline-level floor-mat vs trailer intent guard", () => {
+  async function completed(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  it("rejects a trailer partial-match while retaining floor-mat candidates", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "flatbed", title: "کفی تریلر" }),
+        summary({ sourceAdId: "mat", title: "کفی سه بعدی نمدی فابریکی اطلس" }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id === "flatbed" ? "کفی تریلر" : "کفی سه بعدی نمدی فابریکی اطلس",
+      price: null,
+      city: "تهران",
+      description:
+        id === "flatbed"
+          ? "سلام تریلی چرخ 24"
+          : "کفی سه بعدی نمدی فابریک اطلس نو استفاده نشده",
+      images: [],
+      categorySlug: "",
+    }));
+
+    const done = await completed(resolveHuntDefinition({ query: "کفی ماشین" })!);
+    const ids = done.results.map((r) => r.sourceAdId);
+    expect(ids).toContain("mat");
+    expect(ids).not.toContain("flatbed");
+  });
+
+  it("keeps trailer listings eligible for an explicit trailer hunt", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "flatbed", title: "کفی تریلی" })],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: "کفی تریلی",
+      price: null,
+      city: "تهران",
+      description: "کفی تریلی سه محور رول کش سالم",
+      images: [],
+      categorySlug: "",
+    }));
+
+    const done = await completed(resolveHuntDefinition({ query: "کفی تریلی" })!);
+    expect(done.results.map((r) => r.sourceAdId)).toContain("flatbed");
+  });
+});
