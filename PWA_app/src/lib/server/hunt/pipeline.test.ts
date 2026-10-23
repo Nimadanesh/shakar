@@ -2359,3 +2359,40 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
   });
 });
 
+
+describe("BRH-2026-10-23 mixed transaction title cue", () => {
+  it.each([
+    "فروش و خریدار یخچال ساید دوقلو استوک واکبند",
+    "فروش وخریدار یخچال ساید دوقلو استوک واکبند",
+  ])("keeps a mixed-title listing eligible but below a direct offer: %s", async (mixedTitle) => {
+    const def = resolveHuntDefinition({ query: "یخچال" });
+    expect(def).not.toBeNull();
+    if (!def) return;
+
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "mixed", title: mixedTitle }),
+        summary({ sourceAdId: "direct", title: "فروش یخچال سالم" }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id === "mixed" ? mixedTitle : "فروش یخچال سالم",
+      price: null,
+      city: "تهران",
+      description: "یخچال سالم و آماده فروش",
+      images: [],
+      categorySlug: "",
+    }));
+
+    const { events } = await collect(def);
+    const done = events.find((event) => event.type === "done");
+    if (done?.type !== "done") throw new Error("pipeline did not finish");
+
+    const ids = done.results.map((result) => result.sourceAdId);
+    expect(ids).toContain("mixed");
+    expect(ids).toContain("direct");
+    expect(ids.indexOf("direct")).toBeLessThan(ids.indexOf("mixed"));
+  });
+});

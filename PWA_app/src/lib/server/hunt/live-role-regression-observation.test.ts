@@ -5,13 +5,13 @@ import { join } from "node:path";
 
 import { normalizeForMatch } from "@/lib/persianNormalize";
 import { resolveHuntDefinition } from "./definition";
-import { assessListingRole, assessQueryIntent } from "./semantics";
+import { assessListingRole, assessQueryIntent, isMixedTransactionTitle } from "./semantics";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
 
 function transactionCueClass(title: string): string {
   const normalized = normalizeForMatch(title);
   if (/خرید\s*و\s*فروش|خریدوفروش/.test(normalized)) return "explicit-buy-sell-catalogue";
-  if (/فروش\s+و\s+خریدار|خریدار\s+و\s+فروش/.test(normalized)) return "sale-and-buyer-cues";
+  if (/فروش\\s*و\\s*خریدار|خریدار\\s*و\\s*فروش/.test(normalized)) return "sale-and-buyer-cues";
   if (/فروش\s+نه\s+خریدار/.test(normalized)) return "sale-not-buyer-contrast";
   if (/فروشنده|خریدار/.test(normalized)) return "single-side-role-cue";
   return "none";
@@ -20,6 +20,7 @@ function transactionCueClass(title: string): string {
 it("classifies transaction title cues for diagnostics without changing ranking", () => {
   expect(transactionCueClass("خریدوفروش انواع یخچال")).toBe("explicit-buy-sell-catalogue");
   expect(transactionCueClass("فروش و خریدار یخچال ساید")).toBe("sale-and-buyer-cues");
+  expect(transactionCueClass("فروش وخریدار یخچال ساید")).toBe("sale-and-buyer-cues");
   expect(transactionCueClass("فروش نه خریدار یخچال")).toBe("sale-not-buyer-contrast");
   expect(transactionCueClass("فروش یخچال")).toBe("none");
 });
@@ -189,18 +190,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               descriptionExcerpt: result.descAuditText ?? result.descSnippet,
               // Reconstruct the current title-only cue for diagnosis; this is an estimate, not an internal score trace.
               listingRole: assessListingRole(listingText),
-              mixedTransactionTitleCue: /خرید\s*و\s*فروش|خریدوفروش/.test(
-                normalizeForMatch(result.title)
-              ),
+              mixedTransactionTitleCue: isMixedTransactionTitle(result.title),
               transactionCueClass: transactionCueClass(result.title),
-              cueDerivedScoringRoleEstimate: /خرید\s*و\s*فروش|خریدوفروش/.test(
-                normalizeForMatch(result.title)
-              )
+              cueDerivedScoringRoleEstimate: isMixedTransactionTitle(result.title)
                 ? "mixed-buyer-seller"
                 : assessListingRole(listingText).role,
-              expectedMixedTransactionPenalty: /خرید\s*و\s*فروش|خریدوفروش/.test(
-                normalizeForMatch(result.title)
-              )
+              expectedMixedTransactionPenalty: isMixedTransactionTitle(result.title)
                 ? 3
                 : 0,
             };
