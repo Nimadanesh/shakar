@@ -2427,6 +2427,19 @@ describe("BRH-2026-10-23 mixed transaction title cue", () => {
     const done = events.find((event) => event.type === "done");
     if (done?.type !== "done") throw new Error("pipeline did not finish");
 
+    console.info("[BRH-MIXED-TITLE-SCORE-TRACE]", JSON.stringify({
+      query: def.query,
+      mixedTitle,
+      results: done.results.map((result, rank) => ({
+        rank: rank + 1,
+        id: result.sourceAdId,
+        title: result.title,
+        score: result.score,
+        matchKind: result.matchKind,
+        breakdown: result.breakdown,
+        demotedBy: result.demotedBy ?? null,
+      })),
+    }));
     const ids = done.results.map((result) => result.sourceAdId);
     expect(ids).toContain("mixed");
     expect(ids).toContain("direct");
