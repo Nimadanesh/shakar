@@ -276,3 +276,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - C01 and C02 both have no explicit paint/body evidence about the requested Samand. C01's bodywork statements refer to the offered car; C02's engine/chassis statements refer to the offered Xantia. Neither is a target-side contradiction case.
 - Correction: earlier handoff wording called C01's offered vehicle a motorcycle. That was wrong. The frozen excerpt's motorcycle phrase is a price comparison; the hood, fender, AC, clutch-plate, and car references describe a passenger car, model year 1384. Exact make is not established. The internal key has been corrected.
 - These two judgments do not establish inter-rater agreement or close the clean contradiction evidence gap. Keep UNKNOWN distinct. No engine/ranking changes, main merge, deployment, or live-service mutation.
+
+## Continuation — Samand exchange candidate-pool observability (2026-10-23)
+
+- Re-inspected the frozen run 116 artifact and the selector in `live-divar-observation.test.ts`. The 8-page / 2-detail Samand scenario saw 186 candidates, including 32 Samand+exchange title candidates, but the artifact retained only aggregate counts and the two selected detail records. This made it impossible to make a source-informed next selection from the full title pool.
+- Observation-only commit [6e15829](https://github.com/Nimadanesh/shakar/commit/6e1582966462431556af3219b957ff8357a91b51) adds a bounded inventory of up to 40 Samand+exchange candidate IDs and exact titles to the live-observation artifact. It does not change candidate selection, detail-fetch budget, retrieval limits, production code, ranking, or grades.
+- The commit was verified on `engine_v3`; combined status lookup returned no CI checks, so validation is **not yet confirmed**. No new live observation has run on this commit. Do not treat the inventory as captured until a fresh artifact exists.
+- Next: run the same read-only observation with the unchanged 8-page/2-detail scenario budget, inspect the exact title inventory, then decide whether any candidate merits a blinded detail review. If no direction-matched contradiction candidate is evident, record the gap and stop rather than stacking another heuristic. Keep `UNKNOWN` distinct; no merge to `main`, deployment, or production mutation.
+
