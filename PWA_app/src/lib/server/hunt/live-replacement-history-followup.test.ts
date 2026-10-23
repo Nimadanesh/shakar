@@ -17,6 +17,7 @@ it.skipIf(process.env.LIVE_REPLACEMENT_HISTORY_FOLLOWUP !== "1")(
   "captures a bounded positive-replacement-history control for blind review",
   async () => {
     const query = "پیانو قطعات تعویض شده";
+    const retrievalQuery = "پیانو";
     const detailBudget = 2;
     process.env.HUNT_MAX_DETAILS = String(detailBudget);
     const def = resolveHuntDefinition({
@@ -34,8 +35,23 @@ it.skipIf(process.env.LIVE_REPLACEMENT_HISTORY_FOLLOWUP !== "1")(
     expect(def, "definition must resolve for the positive replacement-history query").not.toBeNull();
     if (!def) return;
 
+    const retrievalDef = resolveHuntDefinition({
+      query: retrievalQuery,
+      include: [],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+    });
+    expect(retrievalDef, "broad retrieval definition must resolve").not.toBeNull();
+    if (!retrievalDef) return;
+
     const events: HuntEvent[] = [];
-    const { candidates, stats, endCursor } = await collectCandidates(def, {
+    const { candidates, stats, endCursor } = await collectCandidates(retrievalDef, {
       maxPages: 2,
       emit: (event) => events.push(event),
     });
@@ -60,6 +76,8 @@ it.skipIf(process.env.LIVE_REPLACEMENT_HISTORY_FOLLOWUP !== "1")(
       commit: process.env.GITHUB_SHA ?? "local",
       runtime: process.version,
       query,
+      retrievalQuery,
+      retrievalNote: "Broad product retrieval is used only to discover history-bearing candidates; candidates are still confirmed against the exact target query.",
       resolved: {
         include: def.include,
         exclude: def.exclude,
