@@ -1945,6 +1945,27 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     expect(kinds["history-unknown"]).toBe("near");
   });
 
+  it("does not hard-reject a repair-word title when the listing explicitly seeks buyers", async () => {
+    const def = resolveHuntDefinition({
+      query: "پیانو تعمیر یا تعویض نشده است",
+      category: "music",
+    })!;
+    listings([
+      {
+        sourceAdId: "buyer-collector",
+        title: "تعمیرLCDکیبورد یاماها اتیری (خریدار ارگ و پیانو)",
+      },
+    ]);
+    detail({
+      "buyer-collector": "باسلام انواع ارگ و پیانو در محل شما خریداریم در کمترین زمان",
+    });
+
+    const done = await doneOf(def);
+    const kinds = kindsOf(done);
+    // A repair-related title alone must not hide explicit buyer/collector intent.
+    expect(kinds["buyer-collector"]).toBe("near");
+  });
+
   it("keeps generic product/service role clashes recall-preserving when repair history is not negated", async () => {
     const def = resolveHuntDefinition({
       query: "پیانو",
