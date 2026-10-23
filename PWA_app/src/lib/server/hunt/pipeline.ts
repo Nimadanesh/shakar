@@ -985,7 +985,8 @@ function scoreAd(
   ev: DescriptionEvaluation,
   mustCount: number,
   shouldCount: number,
-  price: number | null
+  price: number | null,
+  explicitSellerHunt: boolean
 ): { score: number; breakdown: ScoreBreakdown } {
   const title = mustCount > 0 ? ev.mustTitle / mustCount : 0;
   const description = mustCount > 0 ? ev.mustDesc / mustCount : 0;
@@ -1012,7 +1013,7 @@ function scoreAd(
   // when real sales evidence exists, but rank below a clean direct seller.
   // BRH E02 (human grade 2) showed the previous -3 penalty was insufficient.
   const mixedTransactionPenalty =
-    ev.adRole === "mixed-buyer-seller" ? (ev.huntWantsSellers ? 8 : 3) : 0;
+    ev.adRole === "mixed-buyer-seller" ? (explicitSellerHunt ? 8 : 3) : 0;
   const breakdown: ScoreBreakdown = { title, description, priceKnown };
   return {
     score:
@@ -1299,7 +1300,13 @@ export async function confirmCandidates(
           deterministicVerdict: ev.verdict,
         });
       }
-      const { score, breakdown } = scoreAd(ev, mustCount, shouldCount, c.price);
+      const { score, breakdown } = scoreAd(
+        ev,
+        mustCount,
+        shouldCount,
+        c.price,
+        def.roleMode === "seek-seller"
+      );
       const ad: ScoredAd = {
         sourceAdId: c.sourceAdId,
         title: c.title,
