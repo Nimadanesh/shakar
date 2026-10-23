@@ -57,3 +57,12 @@ A second isolated helper now exists at `PWA_app/src/lib/server/hunt/exchangeTarg
 The latest baseline workflow for commit `842ebc3a062dd0493f25cee51648eb9766d72c0e` (run #125) confirms the focused exchange-side tests (9/9), target-evidence tests (7/7), BRH semantics tests (7/7), polarity tests (5/5), the broader portable suite, TypeScript typecheck, and production build passed. The workflow overall remains failed solely at repository-wide ESLint: 8 existing React Hooks errors and 37 warnings. See [run #125](https://github.com/Nimadanesh/shakar/actions/runs/39929353572).
 
 **Decision remains unchanged:** this helper is diagnostic/test-only and has not been connected to ranking. Exact phrase lists are not sufficient to safely bind real-world synonyms or diverse Persian item descriptions. Next, collect and blind-grade more exchange cases across item categories, then design explicit target-phrase/attribute evidence fixtures and counterfactuals before proposing any integration.
+
+
+## Additional guard: token-boundary matching (2026-10-23)
+
+Reviewing the exact-phrase helper revealed a subtle overmatch risk: JavaScript substring matching could accept a short item/attribute phrase inside a longer token (for example, treating `کفی` as present inside `کفی‌سازی`). The helper now pads normalized side text and requires whole normalized token/phrase boundaries. Two counterfactual tests were added for item and attribute substring false positives.
+
+Commits: `1b284272f5e54ce4f8d39d2f4e2ea58dab90e94e` (implementation) and `88ba1efb2d7625d1d5f84575257eb9721460f49d` (tests). CI for these commits is running: [run #126](https://github.com/Nimadanesh/shakar/actions/runs/39930378488), [run #127](https://github.com/Nimadanesh/shakar/actions/runs/39930394530). Do not treat the new guard as validated until the focused tests and type/build checks complete.
+
+This remains phrase-level matching only. It deliberately does not introduce stemming, synonym expansion, or production ranking behavior.
