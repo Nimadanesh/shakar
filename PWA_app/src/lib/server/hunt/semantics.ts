@@ -60,7 +60,10 @@ export function isRepairWord(term: string): boolean {
  */
 export function isMixedTransactionTitle(title: string): boolean {
   const normalized = normalizeForMatch(title);
-  return /(?:خرید\s*و\s*فروش|فروش\s*و\s*خریدار|خریدار\s*و\s*فروش)/.test(normalized);
+  // Include «فروشنده و خریدار» as well as «فروش و خریدار»: observed
+  // dealer titles use both role nouns. Without this branch, a mixed seller
+  // could be misclassified as buyer-only and rejected by the wrong-item gate.
+  return /(?:خرید\s*و\s*فروش|فروشنده?\s*و\s*خریدار|خریدار\s*و\s*فروش)/.test(normalized);
 }
 
 function escRe(s: string): string {
