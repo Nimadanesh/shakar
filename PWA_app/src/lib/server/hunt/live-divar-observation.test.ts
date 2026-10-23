@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { resolveHuntDefinition } from "./definition";
-import { divarProvider } from "../divar/divarClient";
 import { assessListingRole, assessQueryIntent } from "./semantics";
 import {
   collectCandidates,
