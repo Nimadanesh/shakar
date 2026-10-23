@@ -305,3 +305,12 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - Residual candidate `gaLNJNwu`, `فروشگاه /خریدار یخچال ساید دوقلو هتلی خراب سوخته`, is now marked by `mixedTransactionTitleCue=true`; in `فروشنده یخچال` it is `near`, score 0.5, demoted by the existing cap, while the clean seller `gabPa811` is rank 1 exact in the ordinary `یخچال` observation. In the ordinary query the hybrid is rank 2/near and capped, not exact. This confirms the narrow cue is firing on the observed source; it does not establish population-level quality uplift.
 - The cue remains intentionally narrow (`فروشگاه خریدار` after normalization); no broad bare-`خریدار` rule, hard rejection, frozen-grade edit, allocation change, deployment, or `main` merge.
 - Next: keep the existing behavior under observation and move to the next evidence-backed mixed-transaction cue-matrix case only if it has a source-grounded paired control. Avoid stacking more title patterns from this single unjudged ad.
+
+
+## Supplemental mixed-role grades locked — 2026-10-23
+
+- Owner submitted grades for the blind packet from bounded capture run [40006314727](https://github.com/Nimadanesh/shakar/actions/runs/40006314727): X01=1, X02=1, X03=1, X04=1. Locked record: [BRH-2026-10-23-GAP-CAPTURE-131-HUMAN-GRADES.md](evaluations/BRH-2026-10-23-GAP-CAPTURE-131-HUMAN-GRADES.md); blind packet and mapping remain separate.
+- All four are grade 1 (weak/tangential or wrong transaction direction), 4/4; this is E4 human-judged evidence on a non-random supplemental sample, not an E5 paired comparison or population estimate.
+- X01 is a slash/truncated shop-buyer-like ad with no exchange offer; X02 and X04 are seller offers under `خریدار یخچال`; X03 is a direct retailer under `یخچال معاوضه`. These outcomes support treating the captured results as poor for their exact query contexts, but do not justify expanding a title cue, global buyer rule, hard rejection, or ranking change.
+- The bounded capture did not find a clean barter listing. Reuse the existing human-graded sale/exchange control for that matrix cell; do not repeat the same query path without a new retrieval hypothesis.
+- Next: inspect the existing source-matched role-control fixture/matrix and choose a next task only if it can falsify a specific hypothesis with both positive and negative controls. PR #28 remains draft/unmerged; `main`, deployment, and production behavior remain unchanged.
