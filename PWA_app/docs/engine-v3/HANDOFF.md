@@ -205,3 +205,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Baseline 137 is tests/typecheck/build passed but ESLint failed (8 known UI errors, 37 warnings). Do not call it fully green or expand scope to lint cleanup.
 - Next: make the next bounded observation select or explicitly fail to capture a candidate with the joint evidence (exchange relation + target Samand + target-scoped paint contradiction). Preserve fixed detail budgets and the existing human-grade distinctions. Continue the blinded seller-role review before proposing any role/ranking change.
 - No engine semantics changed in this review. No merge to `main`, deployment, or live-service mutation.
+
+
+## Continuation — targeted exchange-observation selector updated (2026-10-23)
+
+- Observation-only test-harness change: [638fec1953e8eae43885187818f19e6369de385c](https://github.com/Nimadanesh/shakar/commit/638fec1953e8eae43885187818f19e6369de385c) updates `live-divar-observation.test.ts` to prioritize titles jointly matching Samand + a paint cue + an explicit exchange cue. If no joint title exists, it alternates paint-cue and exchange-cue candidates within the existing two-detail scenario budget, then fills remaining slots from the candidate list without duplicate ad IDs. The artifact now records paint, exchange, and joint-candidate counts plus the selection method.
+- This is strictly observation/test tooling. No production semantics, ranking, candidate scoring, detail budget, main branch, or deployment changed.
+- Validation is **pending**: no workflow run was returned for commit `638fec1` by the available commit-run lookup, and this session has not run the repository test suite locally. Do not treat the selector as tested or the contradiction control as captured until a fresh live-observation artifact is inspected.
+- Next: run the dedicated live observation and baseline validation on this exact source SHA; verify the detail candidate pool actually includes the paired target-side control. If not, preserve the result as “not captured” and do not infer polarity correctness. Baseline ESLint debt remains separate.
