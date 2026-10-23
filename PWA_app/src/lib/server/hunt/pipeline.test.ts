@@ -2364,6 +2364,7 @@ describe("BRH-2026-10-23 mixed transaction title cue", () => {
   it.each([
     "فروش و خریدار یخچال ساید دوقلو استوک واکبند",
     "فروش وخریدار یخچال ساید دوقلو استوک واکبند",
+    "خریدوفروش همه رقم یخچال سالم وخراب درمحل",
   ])("keeps a mixed-title listing eligible but below a direct offer: %s", async (mixedTitle) => {
     const def = resolveHuntDefinition({ query: "یخچال" });
     expect(def).not.toBeNull();
