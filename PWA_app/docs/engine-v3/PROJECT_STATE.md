@@ -142,3 +142,11 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - The same successful artifact retained the seller-seeking/ordinary refrigerator controls. Later live run [39915087951](https://github.com/Nimadanesh/shakar/actions/runs/39915087951) timed out against Divar and emitted no artifact.
 - Baseline [39915088347](https://github.com/Nimadanesh/shakar/actions/runs/39915088347): focused and full portable tests, TypeScript, and production build PASS; ESLint still FAILS on existing 8 UI hook-rule errors (37 warnings).
 - Next: consider a narrowly scoped, evidence-aware treatment of `بدون دستکاری` for replacement-history intent only after paired positive/negative controls. Keep UNKNOWN as UNKNOWN; no global synonym, no merge to `main`, no deployment.
+
+## Replacement-history polarity characterization — 2026-10-23
+
+- Test-only commit [9a5553445251bd72329e0dd50a43971aa5587d61](https://github.com/Nimadanesh/shakar/commit/9a5553445251bd72329e0dd50a43971aa5587d61) adds regression characterization for explicit negative replacement history (`absent`), explicit positive history (`present`), and bare `بدون دستکاری` (`unknown`) when assessing `تعویض`.
+- Production semantics unchanged. The current code keeps `unknown`/`implied` as near caps and only counts explicit absence as positive evidence. B02's combined phrase is human-judged grade 3, but the live engine still lacks MUST evidence for `قطعات` and `اورجینال`; this test-only change does not claim to resolve that gap.
+- CI for `9a5553445251bd72329e0dd50a43971aa5587d61` has not yet been verified in this session. Check the hosted baseline result before accepting the characterization.
+- Next gate: inspect CI; then test the combined B02 wording in a separate scoped fixture and decide whether it warrants an explicit, narrowly scoped evidence state. No global synonym expansion, main merge, or deployment.
+
