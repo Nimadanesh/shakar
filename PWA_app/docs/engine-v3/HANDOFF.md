@@ -309,3 +309,13 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - D02: transaction direction is inferred from title convention and the `بدون رنگ` referent remains ambiguous. Samand paint status is unresolved.
 - Both judgments align with the internal mapping. The packet adds attribution evidence but no clean direction-matched contradiction witness. Keep `UNKNOWN` distinct and the helper isolated; no selector/ranking/query semantics change, no merge, and no deployment.
 - Stop pursuing this specific title-cue path rather than stacking heuristics. Wait for an explicit, source-matched target-side contradiction; synthetic fixtures remain unit tests only.
+
+
+## Packet A — current engine alignment audit (2026-10-23)
+
+- The already-locked grades `A01=2, A02=0, A03=2, A04=0, B01=1, B02=3` were matched to existing engine observations; the blind packet was not regraded.
+- Full audit: [BRH-2026-10-23-A-CURRENT-ENGINE-ALIGNMENT.md](evaluations/BRH-2026-10-23-A-CURRENT-ENGINE-ALIGNMENT.md). Source grades remain in [BRH-2026-10-23-A-HUMAN-GRADES.md](evaluations/BRH-2026-10-23-A-HUMAN-GRADES.md).
+- A02/A04 controls align with rejection; A01/A03 are relevant-but-unverified `near` results; B01 is a potential over-inclusion at human grade 1, insufficient for a broad consultation hard-reject. A01's later A01-like observation was not the exact same source listing, so do not claim exact per-ID corroboration.
+- B02 was recovered from `no-match` to `near` after the scoped buyer-cue fix. Current tests preserve UNKNOWN for its “بدون تغییر و جابه‌جایی و دستکاری” wording; engine still lacks explicit MUST evidence for `قطعات` and `اورجینال`. Human grade 3 is not equivalent to a full engine match.
+- Latest code-bearing baseline [run #147](https://github.com/Nimadanesh/shakar/actions/runs/39946256547): focused tests, full portable suite, TypeScript and build PASS; ESLint still FAILS on the known 8 unrelated UI hook-rule errors (37 warnings).
+- Next gate: prepare a paired, source-matched human-reviewed set contrasting ambiguous “بدون دستکاری/بدون تغییر”, explicit original/no-replacement claims, and explicit replacement claims. Until that evidence exists, keep UNKNOWN distinct, do not add global synonyms or broad consultation rejection, and do not change ranking/production behavior. No `main` merge or deployment.
