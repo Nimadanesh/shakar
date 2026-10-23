@@ -84,6 +84,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                   .slice(0, Math.max(0, scenario.detailBudget - historyCandidates.length)),
               ]
             : candidates.slice(0, scenario.detailBudget);
+        // Snapshot before confirmation: confirmCandidates may reorder its input
+        // in place, and the report must show the actual pre-confirmation budget.
+        const detailCandidatePool = detailCandidates.map((candidate) => ({
+          sourceAdId: candidate.sourceAdId,
+          title: candidate.title,
+        }));
         const results = await confirmCandidates(
           detailCandidates,
           def,
