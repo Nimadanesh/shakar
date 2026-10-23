@@ -106,3 +106,11 @@ For every meaningful experiment, record:
 - A blind packet has been prepared with task intent and full captured listing text but without source IDs or engine diagnostics. Collect the locked 0–3 grades before revealing/joining the internal mapping. Treat `INSUFFICIENT` separately and exclude it from the numeric denominator.
 - Do not compute a ranking-quality delta: there is no paired production top-N comparison, and `productionRank` is null. Use grades to assess per-task relevance and role-direction errors only.
 - Coverage gaps: compact `خریدوفروش`, clean barter/exchange-condition case, and a clean explicit buyer-seeking refrigerator control. The seller-piano selected control is a rejected training offer. Supplement only if the locked grades show that a missing cell affects the decision.
+
+
+## Mixed-transaction capture 01 — human grade outcome (2026-10-23)
+
+- Locked owner judgments: 12/12 numeric grades, distribution 3=4, 2=4, 1=2, 0=2; sum 22/36, mean 1.83/3. Per-task sums: seller refrigerator 4/6; generic refrigerator 5/6; buyer refrigerator 2/6; seller piano 3/6; generic piano 5/6; buyer piano 3/6. See [grade record](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-HUMAN-GRADES.md).
+- Human evidence repeats the distinction between product relevance and transaction-direction evidence: mixed-title/body-only-buying results are weaker than direct sellers for seller and generic refrigerator tasks. Explicit wrong-direction direct sale is grade 0 for buyer hunts; a multi-item scrap buyer is grade 2, not exact.
+- This is E4-style human judgment of captured candidates, **not E5 paired production ranking evidence**: productionRank is null and no common top-N ranking comparison exists. Do not derive precision@5, nDCG@5, ranking delta, or causal effect from this packet.
+- Preserve the current narrow cue and eligibility. Target only the uncovered compact-title, barter/exchange-condition, and clean buyer-seeking refrigerator cells; keep the capture bounded and blind any new packet.
