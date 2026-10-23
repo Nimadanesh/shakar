@@ -133,10 +133,15 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                     // jointly identifies the target vehicle, paint status, and exchange.
                     // If none exists, spend the bounded budget across both cue families
                     // so detail text can establish whether the cues refer to the same vehicle.
+                    const cueInterleaved = [];
+                    const cueCount = Math.max(paintHintCandidates.length, exchangeHintCandidates.length);
+                    for (let index = 0; index < cueCount; index += 1) {
+                      if (paintHintCandidates[index]) cueInterleaved.push(paintHintCandidates[index]);
+                      if (exchangeHintCandidates[index]) cueInterleaved.push(exchangeHintCandidates[index]);
+                    }
                     const prioritized = [
                       ...samandPaintExchangeCandidates,
-                      ...paintHintCandidates,
-                      ...exchangeHintCandidates,
+                      ...cueInterleaved,
                       ...candidates,
                     ];
                     const selected = [];
