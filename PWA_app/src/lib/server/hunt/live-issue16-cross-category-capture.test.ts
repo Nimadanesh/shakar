@@ -26,24 +26,38 @@ function roleCue(title: string): RoleCue {
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures Issue 16 cross-category transaction-role evidence within fixed budgets",
   async () => {
+    // Four distinct query scenarios, with a strict six-detail total budget.
+    // Keep compact/spaced hybrid titles comparable and reserve two details for
+    // the buyer-intent and spaced-title controls. Role cues are title-only;
+    // descriptions are preserved for human review and must not be inferred.
     const scenarios = [
       {
         id: "refrigerator-reference",
         query: "فروشنده یخچال",
         category: "home",
+        detailBudget: 1,
         desired: ["mixed", "seller", "buyer", "other"] as RoleCue[],
       },
       {
-        id: "vehicle-buy-sell",
+        id: "vehicle-buy-sell-compact",
         query: "خریدوفروش خودرو",
         category: "vehicles",
+        detailBudget: 1,
         desired: ["mixed", "seller", "buyer", "other"] as RoleCue[],
       },
       {
-        id: "vehicle-buyer",
+        id: "vehicle-buyer-explicit-control",
         query: "خریدار خودرو",
         category: "vehicles",
+        detailBudget: 2,
         desired: ["buyer", "seller", "mixed", "other"] as RoleCue[],
+      },
+      {
+        id: "vehicle-buy-sell-spaced",
+        query: "خرید و فروش خودرو",
+        category: "vehicles",
+        detailBudget: 2,
+        desired: ["mixed", "seller", "buyer", "other"] as RoleCue[],
       },
     ] as const;
 
@@ -61,7 +75,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
 
     try {
       for (const scenario of scenarios) {
-        const budget = Math.min(2, 6 - detailsUsed);
+        const budget = Math.min(scenario.detailBudget, 6 - detailsUsed);
         if (budget <= 0) break;
         process.env.HUNT_MAX_DETAILS = String(budget);
 
@@ -196,6 +210,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         maxDetailsUsed: detailsUsed,
         uniqueListingIds: globallySeen.size,
         scenarios: scenarios.length,
+        scenarioDetailBudgets: scenarios.map(({ id, detailBudget }) => ({ id, detailBudget })),
         requestedCategories: ["home", "vehicles"],
         mizanShadow: process.env.MIZAN_SHADOW ?? "default",
       },
