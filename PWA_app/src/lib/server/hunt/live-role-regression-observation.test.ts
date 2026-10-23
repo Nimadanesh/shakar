@@ -76,10 +76,40 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         const packetCandidates = candidates.filter((candidate) => packetTargetIds.has(candidate.sourceAdId));
         const roleHint = (title: string) =>
           /خریدار|خریداریم|خریدارم|می\s?خوام|می\s?خواهیم|فروش|فروشی|فروشنده/.test(title);
+        const titleRoleClass = (title: string): "mixed" | "buyer-only" | "seller-only" | "other" => {
+          const normalized = normalizeForMatch(title);
+          const hasBuyer = /خریدار|خریداریم|خریدارم/.test(normalized);
+          const hasSeller = /فروش|فروشی|فروشنده/.test(normalized);
+          if (hasBuyer && hasSeller) return "mixed";
+          if (hasBuyer) return "buyer-only";
+          if (hasSeller) return "seller-only";
+          return "other";
+        };
         const roleCandidates = candidates.filter((candidate) => roleHint(candidate.title));
+        const titleRoleCounts = roleCandidates.reduce<Record<string, number>>((counts, candidate) => {
+          const roleClass = titleRoleClass(candidate.title);
+          counts[roleClass] = (counts[roleClass] ?? 0) + 1;
+          return counts;
+        }, {});
+        // Stratify the tiny detail budget so a first-page title-order accident
+        // cannot consume every slot with the same role class. This is still
+        // an unjudged sample; cue classes are diagnostic heuristics only.
+        const desiredRoleClasses = scenario.id === "seek-seller-refrigerator"
+          ? ["buyer-only", "mixed", "seller-only", "other"]
+          : ["seller-only", "mixed", "buyer-only", "other"];
+        const roleStratified: typeof candidates = [];
+        for (const desiredClass of desiredRoleClasses) {
+          const candidate = roleCandidates.find((item) =>
+            titleRoleClass(item.title) === desiredClass &&
+            !roleStratified.some((picked) => picked.sourceAdId === item.sourceAdId)
+          );
+          if (candidate) roleStratified.push(candidate);
+          if (roleStratified.length >= scenario.detailBudget) break;
+        }
         const selectedIds = new Set<string>();
         const detailCandidates = [
           ...packetCandidates,
+          ...roleStratified,
           ...roleCandidates,
           ...candidates,
         ].filter((candidate) => {
@@ -121,14 +151,16 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             duplicatesCollapsed: stats.dupsCollapsed,
             candidatesAfterFilters: candidates.length,
             roleHintCandidates: roleCandidates.length,
+            titleRoleCueCounts: titleRoleCounts,
+            providerKeywordTerms: def.include,
             packetTargetCandidatesFound: packetCandidates.map((candidate) => ({
               sourceAdId: candidate.sourceAdId,
               title: candidate.title,
             })),
             detailSelection: packetCandidates.length > 0
-              ? "frozen-packet-targets-then-role-cues"
-              : roleCandidates.length > 0
-                ? "role-cue-prioritized"
+              ? "frozen-packet-targets-then-stratified-role-cues"
+              : roleStratified.length > 0
+                ? "stratified-role-cue-sample"
                 : "default-title-strength-order",
             detailsChecked: stats.detailsChecked,
             detailCandidatePool,
