@@ -31,7 +31,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       // negative-history PRODUCT definition. This directly probes cross-intent contamination.
       { id: "repair-service-control", query: "پیانو تعمیر یا تعویض نشده است", candidateQuery: "تعمیر پیانو", detailBudget: 2 },
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
-      { id: "exact-negated-phrase", query: "پیانو تعمیر یا تعویض نشده است", detailBudget: 2 },
+      // Cross-category exchange control: use the same bounded detail budget
+      // to observe vehicle exchange, rather than duplicating the piano query.
+      { id: "explicit-exchange-vehicle", query: "معاوضه با پژو ۲۰۶ بدون رنگ", detailBudget: 2 },
     ] as const;
 
     const reports: Array<Record<string, unknown>> = [];
