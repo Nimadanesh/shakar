@@ -2,6 +2,14 @@ name: Engine V3 Mixed Transaction Packet Capture
 # Raw evidence only. Never treated as human grades or a quality comparison.
 
 on:
+  push:
+    branches:
+      - engine_v3
+    paths:
+      - ".github/workflows/engine-v3-mixed-transaction-packet-capture.yml"
+      - "PWA_app/src/lib/server/hunt/live-mixed-transaction-packet-capture.test.ts"
+      - "PWA_app/src/lib/server/hunt/pipeline.ts"
+      - "PWA_app/src/lib/server/hunt/semantics.ts"
   pull_request:
     branches:
       - engine_v3
@@ -54,6 +62,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: engine-v3-mixed-transaction-packet-capture
-          path: engine-v3-mixed-transaction-packet-capture.json
+          path: PWA_app/engine-v3-mixed-transaction-packet-capture.json
           if-no-files-found: warn
           retention-days: 14
