@@ -196,3 +196,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Paired BRH human-grade ordering assertions no longer appear among test failures in the latest full suite, and both candidates remain eligible in the paired cases. The bounded live-observation workflow [39920561481](https://github.com/Nimadanesh/shakar/actions/runs/39920561481) succeeded, but its live listings are not human-graded and are not proof of a quality gain.
 - This is a very small sample (two unique refrigerator ads, four judgments). The title-only phrase detector is deliberately narrow, but it is still a heuristic and needs more varied examples before any broader claims. Preserve recall and avoid global barter/exchange penalties.
 - Current state: branch `engine_v3`; latest source SHA `51c379c3c1742566540d024345931aebdadc7091`. No merge to `main`, deployment, or live-service mutation. Next: add/collect a small paired human-reviewed set covering mixed buy/sell title variants, direct offers, barter offers, and descriptions that merely discuss buying/selling; verify score/matchKind plus ordering, then decide whether this cue generalizes. Keep the existing ESLint debt separate from search-quality changes unless explicitly authorized.
+
+
+## Continuation — observation 110/111 and baseline 137 reviewed (2026-10-23)
+
+- Read-only artifact review is recorded in [BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md](evaluations/BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md).
+- Run 111 confirms the harness whitespace-regex fix (paint-hint candidates 0 → 3 versus run 110), but the two inspected Samand candidates still have no explicit exchange cue and are not a complete contradiction control. The target-side contradiction gate remains open.
+- Baseline 137 is tests/typecheck/build passed but ESLint failed (8 known UI errors, 37 warnings). Do not call it fully green or expand scope to lint cleanup.
+- Next: make the next bounded observation select or explicitly fail to capture a candidate with the joint evidence (exchange relation + target Samand + target-scoped paint contradiction). Preserve fixed detail budgets and the existing human-grade distinctions. Continue the blinded seller-role review before proposing any role/ranking change.
+- No engine semantics changed in this review. No merge to `main`, deployment, or live-service mutation.
