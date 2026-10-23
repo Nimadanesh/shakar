@@ -1,0 +1,56 @@
+name: Engine V3 Replacement History Follow-up
+
+on:
+  push:
+    branches:
+      - engine_v3
+    paths:
+      - ".github/workflows/engine-v3-replacement-history-followup.yml"
+      - "PWA_app/src/lib/server/hunt/live-replacement-history-followup.test.ts"
+      - "PWA_app/src/lib/server/hunt/pipeline.ts"
+      - "PWA_app/src/lib/server/hunt/definition.ts"
+      - "PWA_app/src/lib/server/hunt/semantics.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-v3-replacement-history-followup-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    name: Bounded read-only replacement-history observation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: PWA_app
+    env:
+      LIVE_REPLACEMENT_HISTORY_FOLLOWUP: "1"
+      HUNT_MAX_DETAILS: "2"
+      MIZAN_SHADOW: "0"
+    steps:
+      - name: Checkout engine_v3
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run bounded read-only replacement-history observation
+        run: npx vitest run src/lib/server/hunt/live-replacement-history-followup.test.ts --reporter=verbose
+      - name: Upload observation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-v3-replacement-history-followup-${{ github.run_number }}
+          path: ${{ runner.temp }}/engine-v3-replacement-history-followup.json
+          if-no-files-found: warn
+          retention-days: 14
