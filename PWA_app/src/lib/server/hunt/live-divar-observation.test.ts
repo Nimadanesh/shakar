@@ -105,6 +105,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           /معاوضه|تهاتر|تعویض\s*با/.test(title);
         const paintHintCandidates = candidates.filter((candidate) => paintHint(candidate.title));
         const exchangeHintCandidates = candidates.filter((candidate) => exchangeHint(candidate.title));
+        const samandExchangeCandidates = candidates.filter(
+          (candidate) => /سمند/.test(candidate.title) && exchangeHint(candidate.title)
+        );
         const samandPaintExchangeCandidates = candidates.filter(
           (candidate) =>
             /سمند/.test(candidate.title) &&
@@ -139,8 +142,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                       if (paintHintCandidates[index]) cueInterleaved.push(paintHintCandidates[index]);
                       if (exchangeHintCandidates[index]) cueInterleaved.push(exchangeHintCandidates[index]);
                     }
+                    // If no title carries all three cues, inspect a Samand+exchange
+                    // candidate before a paint-only candidate; its details may establish
+                    // whether paint evidence is scoped to the target vehicle.
                     const prioritized = [
                       ...samandPaintExchangeCandidates,
+                      ...samandExchangeCandidates,
                       ...cueInterleaved,
                       ...candidates,
                     ];
@@ -214,6 +221,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                                 : "default-title-strength-order-no-paired-cues",
                         paintHintCandidates: paintHintCandidates.length,
                         exchangeHintCandidates: exchangeHintCandidates.length,
+                        samandExchangeCandidates: samandExchangeCandidates.length,
                         samandPaintExchangeCandidates: samandPaintExchangeCandidates.length,
                       }
                     : { method: "default-title-strength-order" },
