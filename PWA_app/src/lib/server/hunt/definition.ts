@@ -151,7 +151,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   const terms = [
     ...(contract.subject ? phraseTokens(contract.subject.text) : []),
     ...contract.must.flatMap((t) => phraseTokens(t.text)),
-  ].filter((t) => !absentStems.has(stemToken(t)));
+  ].filter((t) => !absentStems.has(stemToken(t)) && !isHistoryOnlyTerm(t));
   const seenTerms = new Set<string>();
   for (const t of def.include) for (const s of tokenize(t)) seenTerms.add(s);
   const include = def.include.filter((t) => !isHistoryOnlyTerm(t));
