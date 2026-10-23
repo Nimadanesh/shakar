@@ -222,3 +222,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Follow-up observation-only commit [10c36a92eddf4510e7d20f4afcef89ca1b032eff](https://github.com/Nimadanesh/shakar/commit/10c36a92eddf4510e7d20f4afcef89ca1b032eff) prioritizes Samand+exchange titles before paint-only candidates when a title with all three cues is absent. It retains the fixed detail budget and adds a diagnostic count. **Not yet executed or validated.**
 - Next: run the live observation on exactly `10c36a9`, inspect the artifact, then run baseline validation if the workflow allows. If the control is still absent, record “not captured”; do not widen paint/negation rules or alter ranking. Baseline 137 ESLint debt remains separate.
 - No main merge, deployment, production semantics or ranking changes.
+
+
+## Current handoff — run 114 artifact reviewed (2026-10-23)
+
+- Run [39940796881](https://github.com/Nimadanesh/shakar/actions/runs/39940796881) passed on `10c36a92eddf4510e7d20f4afcef89ca1b032eff`; artifact `engine-v3-live-observation-114` inspected.
+- Selector outcome: 90 ads / 4 pages; 3 paint cues; 17 exchange cues; 17 Samand+exchange title candidates; zero joint Samand+paint+exchange titles. Details were a Zantia exchange listing mentioning Samand and `معاوضه با تاکسی برون شهری سمند`, whose `بدون رنگ` detail does not unambiguously scope the paint statement to the target Samand.
+- Decision: keep exchange-polarity gate **closed**. Control is not captured / referent unresolved. Do not infer success/failure from this artifact, and do not continue blindly stacking title heuristics. Next useful step is a source-matched, explicitly target-scoped human-reviewed example, or a bounded observation design that distinguishes the offered listing from the exchange counterpart while preserving the detail budget.
+- Flatbed exchange: two exact sanity-control results. Negative repair-history/service control: two rejected examples. Piano history scenario: no relevant history witness. Refrigerator role comparison: same two listings/order across seller-seeking and generic queries; unjudged, no ranking change justified.
+- No production behavior change, merge to `main`, or deployment.
