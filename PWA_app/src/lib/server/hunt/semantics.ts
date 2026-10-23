@@ -485,6 +485,13 @@ export function assessListingRole(text: string): RoleAssessment {
     return { role: "buyer-seeking", reason: `buyer-subject:"${first}"` };
   }
 
+  // Explicit first-person collector language («ارگ و پیانو خریداریم»)
+  // is a wanted-to-buy ad, not a service offer—even if the same text also
+  // contains service-like words such as «در محل».
+  if (/(?:^|\\s)(?:خریداریم|خریدار\\s+هستیم)(?=\\s|$)/.test(norm)) {
+    return { role: "buyer-seeking", reason: 'buyer-cue:"خریداریم"' };
+  }
+
   // Shop-style service business («تعمیرات یخچال …»).
   const shop = SERVICE_SHOP.find((p) => includesWord(norm, p));
   if (shop) return { role: "service", reason: `service-shop:"${shop}"` };
