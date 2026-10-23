@@ -101,3 +101,10 @@ Frozen evaluation artifacts are not inputs to overwrite or rerun for this experi
 - For `پیانو تعمیر یا تعویض نشده است`, the selected service offer and buyer-seeking ad were both rejected; two unknown-history piano listings remained `near` in the separate exact-phrase scenario. Explicit exchange control returned two exact results. These are examples, not population estimates.
 - [Baseline run 39913211263](https://github.com/Nimadanesh/shakar/actions/runs/39913211263): focused tests, full portable suite, TypeScript typecheck, build PASS; ESLint FAIL (8 errors, 37 warnings) on existing UI `react-hooks/set-state-in-effect` violations. Keep lint debt separate from search behavior.
 - Next: collect blinded grades for `BRH-2026-10-23-A`, then review source IDs and only consider a narrowly scoped fix if human grades reveal a reproducible failure. No main merge/deploy.
+
+
+## Update — exchange direction / target-side paint ownership (2026-10-23)
+
+A wider bounded read-only replay now completed 8/8 pages for `معاوضه سمند رنگ دارد`: [run #116](https://github.com/Nimadanesh/shakar/actions/runs/39943428579), source SHA `a61658c`. It saw 186 ads, 32 Samand+exchange title candidates, and zero title candidates with all three cues. The two details inspected were `ga4iPfzH` (paint/hood evidence refers to the offered motorcycle; Samand is the requested counterparty) and `galu34HS` (no Samand paint evidence). Neither is a clean contradiction example.
+
+**Status remains unresolved / no new production fix.** The observation reinforces that attribute cue detection is insufficient without entity/transaction-side ownership. The selector's 2-detail scenario budget and 8-detail global budget were respected. Do not treat engine labels as human grades, and do not continue unbounded page widening. Next useful evidence should be a small blinded human review of transaction direction and attribute ownership. Baseline [#145](https://github.com/Nimadanesh/shakar/actions/runs/39943428525) passed focused tests, full suite, typecheck and build; ESLint alone failed on known unrelated UI debt (8 errors, 37 warnings).

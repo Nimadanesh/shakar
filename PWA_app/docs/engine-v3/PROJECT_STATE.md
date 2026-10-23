@@ -3,7 +3,7 @@
 Last verified: 2026-10-23
 Work branch: `engine_v3`
 Branch base: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: 48703004ea38412538781e53f66800ccaa811d20
+Current source/test head: a61658cba82621b0dbae3b263fcd8ae9b0bb2b59
 Latest portable baseline: [Run 39767995269 — source/test SHA `3bf9bc1`](https://github.com/Nimadanesh/shakar/actions/runs/39767995269); focused tests, portable suite, typecheck, and build pass; ESLint fails on 8 pre-existing UI hook-rule errors.
 Latest live observation: [Run #9 — SHA `f2d9484`](https://github.com/Nimadanesh/shakar/actions/runs/39682408569)
 
@@ -215,3 +215,12 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - Code commit: [9799adb](https://github.com/Nimadanesh/shakar/commit/9799adb318d71876cff638737d2ceb60f9dba6bd); synthetic test commit: [fc40b86](https://github.com/Nimadanesh/shakar/commit/fc40b8604e06c3e9b1c4c15f42b4c651ce6afd66).
 - Baseline run [39942219988](https://github.com/Nimadanesh/shakar/actions/runs/39942219988) reported focused hunt/search tests passing; its full suite/typecheck/lint/build were still in progress when recorded. Baseline run [39942237959](https://github.com/Nimadanesh/shakar/actions/runs/39942237959) for the test commit was pending.
 - Helper remains isolated and not integrated into ranking. Human gate remains closed until a direction-matched, human-reviewed live contradiction case exists. No main merge or deployment.
+
+
+## Update — bounded Samand exchange observation (2026-10-23)
+
+- Corrected the observation harness's reported limits in commit [a61658c](https://github.com/Nimadanesh/shakar/commit/a61658cba82621b0dbae3b263fcd8ae9b0bb2b59): the Samand scenario and global per-query list-page ceiling now report 8 rather than 4. This is reporting/observation configuration only; no ranker integration.
+- Live observation run [#116](https://github.com/Nimadanesh/shakar/actions/runs/39943428579) passed on source SHA `a61658c`: query `معاوضه سمند رنگ دارد`, 8/8 pages, 186 ads, 32 Samand+exchange title candidates, zero title candidates with the full Samand+exchange+paint cue set. Detail budget remained 2 for this scenario; global details used 8/8.
+- Two details inspected: `ga4iPfzH` is a motorcycle offered in exchange for white Samand/206SD/Pars; its paint/hood claims describe the motorcycle, not the target Samand. `galu34HS` is a Xantia offered for exchange with Samand/Peugeot and has no Samand paint evidence. Neither is a clean target-side contradiction case. Engine verdicts are not human grades.
+- Baseline run [#145](https://github.com/Nimadanesh/shakar/actions/runs/39943428525): focused hunt/search tests, full portable suite, typecheck, and build passed; ESLint alone failed on the known 8 unrelated UI hook-rule errors (37 warnings). Keep this debt separate from search findings.
+- Decision: do not widen retrieval further or alter ranking on this evidence. Seek a clean direction-matched case through a separately designed human-review sample; preserve UNKNOWN semantics and keep main/deployment untouched.

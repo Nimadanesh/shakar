@@ -3,7 +3,7 @@
 Updated: 2026-10-23
 Branch: `engine_v3`
 Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: 48703004ea38412538781e53f66800ccaa811d20
+Current source/test head: a61658cba82621b0dbae3b263fcd8ae9b0bb2b59
 
 ## Mission
 
@@ -249,3 +249,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Code: [9799adb](https://github.com/Nimadanesh/shakar/commit/9799adb318d71876cff638737d2ceb60f9dba6bd). Tests: [fc40b86](https://github.com/Nimadanesh/shakar/commit/fc40b8604e06c3e9b1c4c15f42b4c651ce6afd66).
 - Validation observed so far: focused hunt/search tests passed on run [39942219988](https://github.com/Nimadanesh/shakar/actions/runs/39942219988); full suite, typecheck, ESLint and build had not yet finished when recorded. Run [39942237959](https://github.com/Nimadanesh/shakar/actions/runs/39942237959) for the test commit was pending at note time.
 - Next: inspect both baseline run outcomes and address any test/type failures before proceeding. Do not connect this helper to ranking. Then collect a clean, direction-matched, human-reviewed live contradiction example; preserve the fixed detail budget and keep `main`/deployment untouched.
+
+
+## Latest handoff update — 2026-10-23, Samand replay run #116
+
+- Latest observation/config commit: [a61658c](https://github.com/Nimadanesh/shakar/commit/a61658cba82621b0dbae3b263fcd8ae9b0bb2b59). The previous run's actual pagination had already reached 8 pages; its static report limits incorrectly said 4. This commit fixes the reported ceiling and per-scenario `maxPages` metadata.
+- Live run [#116](https://github.com/Nimadanesh/shakar/actions/runs/39943428579) succeeded: `معاوضه سمند رنگ دارد`, 8/8 pages, 186 ads, 32 Samand+exchange candidates, zero titles with Samand+exchange+paint together. Detail calls: 2 for this scenario, 8 globally.
+- Source `ga4iPfzH` is a direction/ownership trap: paint and replaced-hood evidence belongs to the offered motorcycle, while the Samand is the counterparty. Source `galu34HS` has no paint evidence about the Samand. Neither provides the missing clean, direction-matched contradiction.
+- Baseline run [#145](https://github.com/Nimadanesh/shakar/actions/runs/39943428525): focused tests, full portable suite, typecheck and build pass; ESLint remains failed due to 8 known unrelated UI errors and 37 warnings.
+- **Next action:** do not add more page widening or connect the isolated helper to ranking. Prepare a compact blinded human review around transaction direction and which entity each attribute describes. Keep `UNKNOWN` distinct; no merge to `main`, deployment, or production mutation.
