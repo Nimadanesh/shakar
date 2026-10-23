@@ -1924,6 +1924,24 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     expect(kinds["repair-service"]).toBeUndefined();
   });
 
+  it("keeps generic product/service role clashes recall-preserving when repair history is not negated", async () => {
+    const def = resolveHuntDefinition({
+      query: "پیانو",
+      category: "music",
+    })!;
+    listings([
+      { sourceAdId: "repair-service", title: "تعمیر پیانو در محل" },
+    ]);
+    detail({
+      "repair-service": "خدمات تعمیر پیانو در منزل با ضمانت",
+    });
+
+    const done = await doneOf(def);
+    const kinds = kindsOf(done);
+    // The new hard rejection is intentionally scoped to negative repair-history hunts.
+    expect(kinds["repair-service"]).toBe("near");
+  });
+
   it("keeps a piano ad whose Persian item name touches its Latin model code", async () => {
     const def = resolveHuntDefinition({
       query: "پیانو تعمیر یا تعویض نشده است",
