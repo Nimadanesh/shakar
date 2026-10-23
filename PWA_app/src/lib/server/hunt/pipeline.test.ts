@@ -2596,6 +2596,14 @@ describe("BRH-2026-10-23 buyer-seeking exact source replay — B11/B12", () => {
       })),
       caveat: "Human grades are the source evaluation; engine scores are diagnostic and do not redefine relevance.",
     }));
+    if (query === "خریدار پیانو") {
+      const retail = done.results.find((item) => item.sourceAdId === "B11");
+      const buyer = done.results.find((item) => item.sourceAdId === "actual-buyer");
+      expect(buyer).toBeDefined();
+      expect(retail?.matchKind).toBe("near");
+      expect(retail?.demotedBy).toBe("cap");
+      expect(done.results.indexOf(buyer!)).toBeLessThan(done.results.indexOf(retail!));
+    }
     return done.results.map((item) => item.sourceAdId);
   }
 
