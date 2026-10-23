@@ -577,7 +577,19 @@ function semanticCapFires(
   const role = assessListingRole(combined);
   const explicitBuy =
     def.transaction === "buy" || detectTransaction(def.query) === "buy";
-  const clash = rolesClash(intent, role, explicitBuy);
+  const rawClash = rolesClash(intent, role, explicitBuy);
+  // Buyer-seeking ads remain eligible under ordinary product hunts and are
+  // handled by the existing ranker. Only negative repair/replacement-history
+  // product hunts hard-reject them in evaluateDescription before this stage.
+  const negativeRepairHistoryProductHunt = (def.absentAttributes ?? []).some(
+    (attr) => /تعمیر|تعویض/.test(attr)
+  );
+  const clash =
+    intent.role === "product" &&
+    role.role === "buyer-seeking" &&
+    !negativeRepairHistoryProductHunt
+      ? { clash: false, reason: "buyer-seeking-ad-rank-only" }
+      : rawClash;
   // R8 (F2): the hunt's subject kind for the kind-aware marker guard
   // (sibling markers of the same kind are co-offered, not wrong items).
   const qKind = queryKindForDef(def.include, def.serviceIntent ?? false, def.category);
@@ -606,11 +618,6 @@ function semanticCapFires(
     intent.role === "product" &&
     role.role === "service" &&
     (def.absentAttributes ?? []).some((a) => /تعمیر|تعویض/.test(a));
-  // A listing explicitly seeking to buy is not an item offered for sale.
-  // Reject only when product intent and buyer-seeking role are both explicit;
-  // generic/unknown roles remain recall-preserving.
-  const buyerSeekingProductMismatch =
-    intent.role === "product" && role.role === "buyer-seeking";
   const needsRepairMismatch =
     serviceIntent &&
     repairService.signal === "item_needs_repair" &&
@@ -630,7 +637,6 @@ function semanticCapFires(
     clash.clash ||
     identity.mismatch ||
     repairHistoryProductServiceMismatch ||
-    buyerSeekingProductMismatch ||
     absentNotExact ||
     repairUnknown ||
     needsRepairMismatch ||
@@ -640,13 +646,11 @@ function semanticCapFires(
   // R6: wrong-item rejection kind for the verdict stage (null unless the
   // identity mismatch fired at tier "reject").
   const wrongItemKind =
-    buyerSeekingProductMismatch
-      ? "buyer-seeking-ad-for-product-hunt"
-      : repairHistoryProductServiceMismatch
-        ? "service-offer-for-negative-repair-history-product-hunt"
-        : identity.mismatch && identity.tier === "reject"
-          ? identity.reason
-          : null;
+    repairHistoryProductServiceMismatch
+      ? "service-offer-for-negative-repair-history-product-hunt"
+      : identity.mismatch && identity.tier === "reject"
+        ? identity.reason
+        : null;
   return { fire, wrongItemKind };
 }
 
