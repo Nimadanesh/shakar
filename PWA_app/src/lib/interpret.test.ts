@@ -210,6 +210,9 @@ describe("detectServiceIntent — P0 (HumanTest S3)", () => {
     expect(detectServiceIntent("تعمیرات تخصصی موبایل")).toBe(true);
     expect(detectServiceIntent("نصاب کولر گازی")).toBe(true);
     expect(detectServiceIntent("نصب کولر گازی در محل")).toBe(true);
+    // Negated repair/exchange history is a product attribute, not service demand.
+    expect(detectServiceIntent("پیانو تعمیر یا تعویض نشده است")).toBe(false);
+    expect(detectServiceIntent("یخچال تعمیر نشده است")).toBe(false);
   });
 
   it("Q4 guard: تعمیری / تعمیرشده reads as repaired GOODS, not service", async () => {
