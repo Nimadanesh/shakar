@@ -1,4 +1,4 @@
-# BRH-2026-10-23-B — Human-vs-live ordering reconciliation
+# BRH-2026-10-23-B — Human-vs-observation reconciliation
 
 Date: 2026-10-23  
 Branch: `engine_v3`  
@@ -7,30 +7,30 @@ Scope: reconcile the graded role-control packet with existing regression expecta
 
 ## Finding
 
-The four owner grades are B01=1, B02=2, B03=3, B04=2. This creates the same human preference under both query conditions: the direct `فروش یخچال` listing outranks the mixed `خریدوفروش` catalogue. The preference is stronger under the seller-seeking query, where the mixed listing is only grade 1.
+The four owner grades are B01=1, B02=2, B03=3, B04=2. Under both queries, the human preference is for the direct `فروش یخچال` listing over the mixed `خریدوفروش` catalogue. This distinction is stronger for the seller-seeking query: B01=1 versus B02=2.
 
-The existing `pipeline.test.ts` already contains paired tests asserting exactly that ordering:
-- Under `فروشنده یخچال`, barter/sale-title candidate before mixed catalogue.
+The current `pipeline.test.ts` at the inspected branch revision already contains paired assertions for that ordering:
+- Under `فروشنده یخچال`, sale-title/exchange candidate before mixed catalogue.
 - Under ordinary `یخچال`, direct product listing before mixed catalogue.
 
-However, the frozen live observation used to build the packet records the mixed catalogue at rank 1 and the sale-title/exchange listing at rank 2 for both queries. The source mapping also says the resolved role mode changes from `seek-seller` to `none`, while the observed order does not change.
+The historical live observation used to build the packet records the reverse order for both queries. Crucially, its mapped code SHA is `a65b7d3cfe055cf0c868080de033bbb9a3a6bf9f`; the compare from that SHA to the owner-confirmed branch head `d3d424d78d5fe95710a3c9cdff538661eba93be6` reports 142 commits ahead, and the diff includes changes to both `pipeline.ts` and `pipeline.test.ts`. Therefore the historical observation must **not** be described as a current test/live discrepancy.
 
-## What this does and does not prove
+## Interpretation
 
-- It is a genuine **test/live discrepancy to reconcile**, not immediate proof that current code fails its tests.
-- The internal key records observed code SHA `a65b7d3cfe055cf0c868080de033bbb9a3a6bf9f`, with an explicit warning to verify the artifact metadata before treating it as the artifact's own code SHA.
-- The live observation may reflect a different source revision, listing detail text, price/score tie-break, or candidate execution path than the synthetic unit test. The current evidence does not isolate which.
-- Do not change scoring to force the observed order until the exact workflow artifact and source SHA are reconciled. Doing so risks duplicating an existing mixed-role penalty or introducing a query-wide hard filter.
+- The owner grades establish a real ordering target for this two-listing paired diagnostic, not a population-level metric.
+- The older live order is useful historical evidence, but it does not establish current behavior after the later pipeline changes.
+- The existence of assertions in source is not proof that the tests currently pass. No test run has been executed as part of this documentation-only step.
+- Do not add another mixed-role penalty or hard filter based only on the stale observation; the current code already has tests for the intended order, and duplicating a penalty could over-correct.
 
 ## Next safe action
 
-1. Verify the exact source SHA embedded in the original Actions artifact for run `39915083572` (and the role-control artifact run if distinct).
-2. Run the focused existing pipeline tests against current `engine_v3` head `d3d424d7` and record the actual result; do not infer pass/fail from test source alone.
-3. If current tests pass, rerun a **bounded, deterministic local fixture** using the exact two captured titles/descriptions and resolved definitions from the artifact, emitting component score breakdowns for both queries. Keep it test-only.
-4. Only if the same source inputs still invert the owner preference should a minimal isolated fix be proposed, with a paired control that ensures mixed catalogues remain eligible and ordinary product search remains intact.
+1. Obtain a fresh focused test run on the current `engine_v3` head, including the role-control cases in `pipeline.test.ts`.
+2. If those tests pass, run a bounded current-code fixture with the two exact captured listings under both queries and compare actual order plus score breakdowns. This distinguishes a unit-fixture success from source/detail-specific behavior.
+3. Only if current code reproduces the inverted order should a minimal isolated fix be proposed, preserving mixed listings as eligible and keeping ordinary product search intact.
+4. Keep the explicit-replacement-history gap separate; its missing positive control remains a different evidence gate.
 
 ## Boundaries
 
-- Human grades and blind packet/key are preserved.
+- Human grades and the frozen blind packet/key are preserved.
 - No changes to `main`, production semantics, ranking, or deployment.
-- This is a source reconciliation report, not a test run or a claim of quality uplift.
+- This is a reconciliation note, not a test run or a claim of quality uplift.
