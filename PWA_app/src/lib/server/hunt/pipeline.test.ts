@@ -1931,7 +1931,7 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     })!;
     listings([
       { sourceAdId: "history-explicitly-absent", title: "پیانو اکوستیک ژاپنی یاماها" },
-      { sourceAdId: "history-unknown", title: "پیانو آکوستیک ژاپنی یاماها" },
+      { sourceAdId: "history-unknown", title: "پیانو دیجیتال رولند سالم" },
     ]);
     detail({
       "history-explicitly-absent": "این پیانو تعمیر یا تعویض نشده است؛ قطعات اصلی و فابریک هستند.",
