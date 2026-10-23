@@ -83,7 +83,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                   .filter((candidate) => !historyHint(candidate.title))
                   .slice(0, Math.max(0, scenario.detailBudget - historyCandidates.length)),
               ]
-            : candidates;
+            : candidates.slice(0, scenario.detailBudget);
         const results = await confirmCandidates(
           detailCandidates,
           def,
@@ -121,7 +121,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                   }
                 : { method: "default-title-strength-order" },
             detailsChecked: stats.detailsChecked,
-            detailCandidatesInspected: detailCandidates.map((candidate) => ({
+            detailCandidatePool: detailCandidates.map((candidate) => ({
               sourceAdId: candidate.sourceAdId,
               title: candidate.title,
             })),
