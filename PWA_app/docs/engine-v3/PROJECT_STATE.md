@@ -191,3 +191,10 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - Run [39940161861](https://github.com/Nimadanesh/shakar/actions/runs/39940161861) succeeded on `638fec1953e8eae43885187818f19e6369de385c`. For `معاوضه سمند رنگ دارد`, 90 ads were seen, paint cue count=3, exchange cue count=17, joint Samand+paint+exchange title count=0. Two details inspected: a paint-only Samand and a Zantia listing that exchanges with Samand; neither establishes paint status on the target Samand within an explicit exchange relation. Control remains **not captured**.
 - Follow-up observation-only selector commit [10c36a92eddf4510e7d20f4afcef89ca1b032eff](https://github.com/Nimadanesh/shakar/commit/10c36a92eddf4510e7d20f4afcef89ca1b032eff) prioritizes Samand+exchange titles before paint-only candidates if no three-cue title exists; fixed detail budget retained. This commit is **not yet run/tested**.
 - No engine semantics/ranking change, no merge/deployment. Require a fresh artifact to validate sampling and the target-scoped contradiction witness; otherwise keep the gate open.
+
+
+## Latest bounded observation — run 114 (2026-10-23)
+
+- [Run 39940796881](https://github.com/Nimadanesh/shakar/actions/runs/39940796881) completed successfully on `10c36a92eddf4510e7d20f4afcef89ca1b032eff`; artifact `engine-v3-live-observation-114` was inspected.
+- The Samand scenario saw 90 ads/4 pages, 3 paint-cue titles, 17 exchange-cue titles, 17 Samand+exchange titles, and 0 joint Samand+paint+exchange titles. Two detail slots were used. The listing `معاوضه با تاکسی برون شهری سمند` includes `بدون رنگ`, but referent scope remains ambiguous; it is not accepted as a target-side contradiction witness. Status: **not captured / unresolved**, gate remains closed.
+- This is observation-only evidence, not a relevance score or quality uplift. Do not make further selector heuristics or production changes without a better-scoped source example. Keep main/deployment untouched. Other scenario results are small unjudged sanity checks only.
