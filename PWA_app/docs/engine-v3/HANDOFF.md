@@ -355,3 +355,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Live role observation [39968450800](https://github.com/Nimadanesh/shakar/actions/runs/39968450800) completed successfully with the 4-detail cap and Mizan disabled. Neither exact historical paired target was found in the 8-page query sets, so this run does not validate the new cue on those ads or provide a human-quality comparison.
 - Replacement-history follow-up [39968450511](https://github.com/Nimadanesh/shakar/actions/runs/39968450511) completed successfully but found no explicit component-replacement control. The rare-evidence gap remains open; do not repeat the same bounded query path or infer history from generic repair/sale wording.
 - **Next bounded task:** characterize the existing mixed-transaction cue matrix (registered issue 16) with title-only positive, negative, and ordinary controls, preserving both paired refrigerator candidates. Treat this as a diagnostic/test/evidence task first; no new scoring penalty, hard rejection, frozen-grade change, `main` merge, or deployment without source-grounded paired evidence.
+
+## Continuation — PR #26 merged; mixed-transaction capture inspected (2026-10-23)
+
+- Run [39970882822](https://github.com/Nimadanesh/shakar/actions/runs/39970882822) succeeded on merge SHA `e4aba4d8d30213ba44f47fcd893bc05889e4942d`. Artifact: `engine-v3-mixed-transaction-packet-capture`.
+- The bounded capture returned 12 unique listings across refrigerator/piano and seller/generic/buyer scenarios; 12/12 detail reads used; all descriptions present; Mizan shadow off.
+- Minimum raw count is met, but matrix is incomplete: no compact `خریدوفروش`, no clean barter/exchange control, no clean explicit buyer-seeking refrigerator control in selected details; seller-piano's sampled direct-seller-pattern item is a training offer rejected by the engine.
+- A blinded relevance packet is prepared separately. Ask for grades by blind ID only; do not expose the key or engine diagnostics until the grades are locked. The capture is not a production ranking comparison (`productionRank: null`).
+- After grades: join the key, report per-task grades/critical direction errors and missing/insufficient separately. If needed, run only a narrow supplement for the specific missing cells. No scoring changes, hard filters, frozen-grade edits, `main` merge, or deployment.
+- Evidence note: [BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md).
