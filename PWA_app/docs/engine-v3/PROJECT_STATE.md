@@ -271,3 +271,12 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - This is four judgments on two unique source listings, not four independent ads or a population estimate. Human preference is for the direct sale-title/exchange listing over the mixed buy/sell catalogue under both queries.
 - Reconciliation note: [BRH-2026-10-23-B-RECONCILIATION.md](evaluations/BRH-2026-10-23-B-RECONCILIATION.md). Existing pipeline tests already assert the desired pairwise order. The frozen live observation was captured at code SHA `a65b7d3cfe055cf0c868080de033bbb9a3a6bf9f`, 142 commits before owner-confirmed head `d3d424d78d5fe95710a3c9cdff538661eba93be6`; both `pipeline.ts` and `pipeline.test.ts` changed after that capture. Do not call this a current test/live discrepancy.
 - Next gate: run focused tests on current head, then reproduce the two-listing paired fixture with current code and score breakdowns. No test run was executed in this documentation step. No engine behavior, `main`, or deployment changed.
+
+
+## Mixed refrigerator-role title cue — implementation pending validation (2026-10-23)
+
+- Diagnostic branch `diagnostic/brh-fridge-conjoined-mixed-role`, PR [#25](https://github.com/Nimadanesh/shakar/pull/25), commit `62bd3c308bc64721d3f6cbf98579ed238ff651df` (plus the preceding implementation commit `5c5ca2932ca83b9f7d4d3f0aea35a0dd4fb3d683)).
+- Added shared title-only `isMixedTransactionTitle` and connected both pipeline mixed-role paths and the live role-observation report. The cue covers existing buy/sell wording and the forms `فروش و خریدار` / `فروش وخریدار`; it adds no penalty or hard filter.
+- Deterministic pipeline regressions now cover both forms and assert the mixed listing remains eligible below a direct offer; the diagnostic cue test covers the conjoined form.
+- Validation is **not confirmed**: GitHub reports zero checks for the diagnostic head. The baseline/live workflows trigger on pushes to `engine_v3` or manual dispatch; the available GitHub connection here cannot dispatch them, and local clone/test execution was blocked by unavailable network DNS. Do not call this fix accepted or validated.
+- Next: run the focused and full portable baseline on the PR head, typecheck/build, and the existing bounded live role observation with four details total and `MIZAN_SHADOW=0`. Inspect results; report known ESLint debt separately. Do not merge to `main`, deploy, change frozen grades, or alter scoring beyond the existing mixed-title handling.
