@@ -1,9 +1,9 @@
 # Project State — Engine V3
 
-Last verified: 2026-10-22
+Last verified: 2026-10-23
 Work branch: `engine_v3`
 Branch base: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: `3bf9bc12df7e50bb018950e17c19c6cb08991138`
+Current source/test head: 48703004ea38412538781e53f66800ccaa811d20
 Latest portable baseline: [Run 39767995269 — source/test SHA `3bf9bc1`](https://github.com/Nimadanesh/shakar/actions/runs/39767995269); focused tests, portable suite, typecheck, and build pass; ESLint fails on 8 pre-existing UI hook-rule errors.
 Latest live observation: [Run #9 — SHA `f2d9484`](https://github.com/Nimadanesh/shakar/actions/runs/39682408569)
 
@@ -124,3 +124,11 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - Target query `پیانو تعمیر یا تعویض نشده است`, with candidate retrieval query `تعمیر پیانو`, rejected both observed control candidates: `تعمیر پیانو دیجیتال` as `service-offer-for-negative-repair-history-product-hunt`, and `تعمیرLCDکیبورد یاماها اتیری (خریدار ارگ و پیانو )` as `no-match`. This is direct but bounded live evidence for the service/buyer rejection boundary.
 - On the same target query, the separate exact-phrase scenario retained `فروشگاه پیانو شهرام فر` and `پیانوC1 AIR KORG ژاپن اصلی` as `near`; this is consistent with not treating UNKNOWN repair history as a confirmed violation. The explicit exchange control `معاوضه با کفی سه محور` returned two exact exchange-role results.
 - Limits: 8 details total across 4 scenarios; no seller-seeking refrigerator control was run, and ordinary-search ranking was not compared against a paired baseline. This does not close all acceptance gates or prove human-quality uplift. Keep code unchanged pending source-matched blinded evaluation and explicit seller/ordinary-search regression evidence. No main merge, deployment, or production change.
+
+
+## Latest bounded observation and baseline — 2026-10-23
+
+- Live observation [run 39913211370](https://github.com/Nimadanesh/shakar/actions/runs/39913211370), source SHA `48703004ea38412538781e53f66800ccaa811d20`, completed successfully; artifact `engine-v3-live-observation-85`. The new seller-role control retained two selected listings for `فروشنده یخچال`; the ordinary `یخچال` control retained the same two. This is a bounded unjudged observation, not a relevance metric or proof that role discrimination is correct. One result is a mixed seller/buyer ad, so seller-role boundary remains unresolved.
+- The same artifact observed both selected repair-service/buyer examples rejected for `پیانو تعمیر یا تعویض نشده است`, and two unknown-history piano listings retained as near in a separate scenario. Explicit exchange control returned two exact results. See [E3 live role regression report](evaluations/E3-LIVE-ROLE-REGRESSION-2026-10-23.md).
+- Baseline [run 39913211263](https://github.com/Nimadanesh/shakar/actions/runs/39913211263): focused tests, full portable suite, TypeScript typecheck, and production build PASS; ESLint FAIL with 8 errors / 37 warnings, the errors in existing UI hook-rule locations. No new lint error in the observation test was reported.
+- Next: obtain blinded human grades for `BRH-2026-10-23-A`; do not change engine behavior based only on these observations. Stay on `engine_v3`; no merge/deploy.

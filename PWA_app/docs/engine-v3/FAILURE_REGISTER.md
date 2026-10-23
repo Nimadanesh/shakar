@@ -92,3 +92,12 @@ Frozen evaluation artifacts are not inputs to overwrite or rerun for this experi
 - Retry [39911832666, attempt 2](https://github.com/Nimadanesh/shakar/actions/runs/39911832666) completed successfully and uploaded `engine-v3-live-observation-84`; see [the evidence note](evaluations/E3-LIVE-OBSERVATION-BUYER-BOUNDARY-2026-10-23.md).
 - The target negative-history query rejected one explicit repair-service offer with the intended reason and rejected one buyer-seeking ad as `no-match`. The separate exact-phrase sample retained two product listings as `near`; explicit exchange controls produced two exact results.
 - Residual risk: sample size is small (8 detail reads); no live seller-seeking refrigerator control or paired ordinary-search baseline was included. Therefore the targeted behavior has positive live evidence, but the overall role-boundary gate remains partially open. Do not treat this as precision/recall or human-quality uplift.
+
+
+## E3 negative-history / seller-role controls — 2026-10-23
+
+- [Bounded live run 39913211370](https://github.com/Nimadanesh/shakar/actions/runs/39913211370), SHA `48703004ea38412538781e53f66800ccaa811d20`, completed successfully. Read-only, max two list pages per query, max two details per scenario, four total for the new role-control test, Mizan disabled. Full combined artifact: `engine-v3-live-observation-85`.
+- For `فروشنده یخچال`, two checked results were retained (one mixed seller/buyer title, one explicit seller listing). Ordinary `یخچال` retained the same two. This does not establish role precision/recall; the mixed-role result and mismatch between `roleMode: seek-seller` and `queryRole: product` remain unresolved. No global buyer rejection is justified by this evidence.
+- For `پیانو تعمیر یا تعویض نشده است`, the selected service offer and buyer-seeking ad were both rejected; two unknown-history piano listings remained `near` in the separate exact-phrase scenario. Explicit exchange control returned two exact results. These are examples, not population estimates.
+- [Baseline run 39913211263](https://github.com/Nimadanesh/shakar/actions/runs/39913211263): focused tests, full portable suite, TypeScript typecheck, build PASS; ESLint FAIL (8 errors, 37 warnings) on existing UI `react-hooks/set-state-in-effect` violations. Keep lint debt separate from search behavior.
+- Next: collect blinded grades for `BRH-2026-10-23-A`, then review source IDs and only consider a narrowly scoped fix if human grades reveal a reproducible failure. No main merge/deploy.

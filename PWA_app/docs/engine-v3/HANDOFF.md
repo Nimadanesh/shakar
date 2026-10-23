@@ -1,9 +1,9 @@
 # Engine V3 — Current Handoff
 
-Updated: 2026-10-22
+Updated: 2026-10-23
 Branch: `engine_v3`
 Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: `3bf9bc12df7e50bb018950e17c19c6cb08991138`
+Current source/test head: 48703004ea38412538781e53f66800ccaa811d20
 
 ## Mission
 
@@ -117,3 +117,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Targeted negative-history query rejected the sampled repair-service ad and the sampled buyer-seeking ad; a separate exact-phrase scenario kept two product listings at `near`, while explicit exchange controls remained `exact`.
 - Still unverified: seller-seeking refrigerator eligibility, ordinary transaction-direction/ranking parity against a paired baseline, and human-rated relevance uplift. The observation is unjudged and budgeted to 8 details. Do not broaden the guard or declare the acceptance gate complete from this artifact alone.
 - Next: prepare a blinded, source-ID-matched packet from these new observation records and existing frozen positives/negatives; separately run the missing seller/ordinary-search regression controls. Preserve frozen evaluation artifacts; stay on `engine_v3`, no merge/deploy.
+
+
+## Current handoff — negative-history and seller-role controls (2026-10-23)
+
+- [Live observation run 39913211370](https://github.com/Nimadanesh/shakar/actions/runs/39913211370) passed as an execution and produced artifact `engine-v3-live-observation-85`. The seller-role query `فروشنده یخچال` retained two selected listings, and ordinary `یخچال` retained the same two. This does not prove correct role discrimination; one title is explicitly mixed seller/buyer, while resolver `roleMode` is `seek-seller` and `queryRole` remains `product`.
+- The same bounded artifact rejected the two checked service/buyer examples for `پیانو تعمیر یا تعویض نشده است`, kept two unknown-history piano listings as `near`, and returned two exact explicit-exchange examples. Details and caveats are in [E3-LIVE-ROLE-REGRESSION-2026-10-23.md](evaluations/E3-LIVE-ROLE-REGRESSION-2026-10-23.md).
+- Baseline [run 39913211263](https://github.com/Nimadanesh/shakar/actions/runs/39913211263): focused tests, full portable suite, typecheck, and production build PASS; ESLint FAIL (8 errors / 37 warnings), with errors in existing UI hook-rule locations. This is not a clean CI pass.
+- Next: request human grades for blinded packet [BRH-2026-10-23-A](evaluations/BRH-2026-10-23-A-BLIND.md); do not reveal its internal key before grades. No engine change until source-level judgments support it. No merge/deployment.
