@@ -37,3 +37,10 @@ A future diagnostic extension should consider a three-state result for the targe
 Collect additional unique blind-graded examples, especially at least one clear grade-3 positive and more explicit contradiction/unknown counterexamples. Then implement and test the richer diagnostic state in isolation. Only after human-reviewed tests cover both offered/requested target sides and negation scope should a separate integration proposal be considered.
 
 No production ranking change, main merge, or deployment is authorized by this note.
+
+## Additional locked evidence — Run 105
+
+- Run 105 grades: `S01=2, S02=2`, recorded in `BRH-2026-10-23-RUN105-VEHICLE-EXCHANGE-HUMAN-GRADES.md`.
+- S01 is wrong-side evidence: «بدون رنگ و ضربه» applies to the offered Pride, while the requested Samand/Tiba2 paint state remains unknown. The engine's `exact` label is a false exactness caused by attribute ownership failure.
+- S02 is missing evidence: the offered Samand has no stated paint condition. This is unknown, not contradiction. The fact that the target appears on the offered side does not alone make the exchange direction wrong.
+- These are two distinct grade-2 cases. Together with Run 102, the human set still has no grade-3 positive control for target-side paint evidence. The implementation gate remains closed; continue blind collection rather than implementing or integrating the richer state yet.
