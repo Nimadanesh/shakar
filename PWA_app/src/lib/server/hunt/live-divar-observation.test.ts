@@ -98,6 +98,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         const serviceHint = (title: string) =>
           /تعمیر|تعمیرکار|سرویس|خدمات|در\s?محل/.test(title);
         const serviceCandidates = candidates.filter((candidate) => serviceHint(candidate.title));
+        const paintHint = (title: string) =>
+          /بدون\\s*رنگ|بی\\s*رنگ|بیرنگ|فابریک|رنگ\\s*(?:دارد|شده|خورده)|گلگیر\\s*رنگ/.test(title);
+        const paintHintCandidates = candidates.filter((candidate) => paintHint(candidate.title));
         const detailCandidates =
           scenario.id === "repair-service-control" && serviceCandidates.length > 0
             ? [
@@ -114,7 +117,15 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                     .filter((candidate) => !historyHint(candidate.title))
                     .slice(0, Math.max(0, scenario.detailBudget - historyCandidates.length)),
                 ]
-              : candidates.slice(0, scenario.detailBudget);
+              : scenario.id === "explicit-exchange-vehicle-samand" &&
+                paintHintCandidates.length > 0
+                ? [
+                    ...paintHintCandidates.slice(0, scenario.detailBudget),
+                    ...candidates
+                      .filter((candidate) => !paintHint(candidate.title))
+                      .slice(0, Math.max(0, scenario.detailBudget - paintHintCandidates.length)),
+                  ]
+                : candidates.slice(0, scenario.detailBudget);
         // Snapshot before confirmation: confirmCandidates may reorder its input
         // in place, and the report must show the actual pre-confirmation budget.
         const detailCandidatePool = detailCandidates.map((candidate) => ({
