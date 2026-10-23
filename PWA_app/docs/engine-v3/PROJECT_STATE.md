@@ -230,3 +230,10 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - The live Samand exchange observation had 32 Samand+exchange title candidates, but the prior artifact exposed only counts and the two selected detail records. Observation-only commit [6e15829](https://github.com/Nimadanesh/shakar/commit/6e1582966462431556af3219b957ff8357a91b51) now records a bounded inventory of candidate IDs and exact titles, without changing selection or detail budgets.
 - This commit has no reported CI status yet and has not been run live. It is instrumentation only; no new evidence about contradiction polarity exists. Next: inspect a fresh inventory under the same 8-page/2-detail limit before making any further selection change.
 
+
+## Latest bounded observation — run 118 (2026-10-23)
+
+- [Run 118](https://github.com/Nimadanesh/shakar/actions/runs/39946256433) completed successfully on `engine_v3` commit `9de158e946e271d968f4dfaf0b673e451b1e5a3f`, query `معاوضه با سمند بدون رنگ`. It completed 8/8 list pages, saw 193 ads, collapsed 1 duplicate, and inspected 2 details in this scenario (8 details total across four scenarios). Mizan shadow remained disabled.
+- The two inspected ads do not provide a clean contradiction for the requested Samand. One explicitly says the offered Tiba is `بدون رنگ` while the requested Samand is merely `سفید`; the other uses `بدون رنگ` without naming which exchange vehicle it describes. Title inventory: 84 Samand+exchange, 11 paint-hint, 5 joint Samand+paint+exchange candidates. This query has a different retrieval distribution from run 117; it is not a paired quality comparison.
+- Blinded attribution packet [BRH-2026-10-23-D-BLIND.md](evaluations/BRH-2026-10-23-D-BLIND.md) is ready; its mapping is separately stored in [BRH-2026-10-23-D-INTERNAL-KEY.md](evaluations/BRH-2026-10-23-D-INTERNAL-KEY.md). Await human judgments before drawing attribution conclusions.
+- Decision unchanged: no ranker/production behavior changes, no merge to `main`, no deployment. Keep `UNKNOWN` separate from supported and contradicted; engine labels are not human relevance grades.
