@@ -592,8 +592,15 @@ export function assessListingRole(text: string): RoleAssessment {
   // Retail installment catalogues often omit the literal word «فروش».
   // Require installment language plus at least two independent retail signals;
   // installment wording alone must remain unknown, not invent a seller role.
-  const installment = INSTALLMENT_CUES.find((p) => includesWord(norm, p));
-  const retailSignals = RETAIL_CONTEXT_CUES.filter((p) => norm.includes(p));
+  // Cue dictionaries are written in display spelling, while norm has already
+  // passed through normalizeForMatch (which folds ط → ت). Normalize the cue
+  // side too, otherwise «اقساط»/«قسطی» silently fail against «اقسات»/«قستی».
+  const installment = INSTALLMENT_CUES.find((p) =>
+    includesWord(norm, normalizeForMatch(p))
+  );
+  const retailSignals = RETAIL_CONTEXT_CUES.filter((p) =>
+    norm.includes(normalizeForMatch(p))
+  );
   if (installment && retailSignals.length >= 2) {
     return { role: "product", reason: `retail-installment:${installment}+${retailSignals.slice(0, 2).join("+")}` };
   }
