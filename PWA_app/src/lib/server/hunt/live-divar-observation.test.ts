@@ -100,7 +100,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           /تعمیر|تعمیرکار|سرویس|خدمات|در\s?محل/.test(title);
         const serviceCandidates = candidates.filter((candidate) => serviceHint(candidate.title));
         const paintHint = (title: string) =>
-          /بدون\\s*رنگ|بی\\s*رنگ|بیرنگ|فابریک|رنگ\\s*(?:دارد|شده|خورده)|گلگیر\\s*رنگ/.test(title);
+          /بدون\s*رنگ|بی\s*رنگ|بیرنگ|فابریک|رنگ\s*(?:دارد|شده|خورده)|گلگیر\s*رنگ/.test(title);
         const paintHintCandidates = candidates.filter((candidate) => paintHint(candidate.title));
         const detailCandidates =
           scenario.id === "repair-service-control" && serviceCandidates.length > 0
