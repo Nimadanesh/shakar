@@ -78,3 +78,18 @@ Therefore baseline 137 is **not fully green**. Record it as tests/typecheck/buil
 - The follow-up selector did run, but its recorded method is `paint-and-exchange-cue-interleaved-for-detail-audit`, and it did not produce a joint title. Do not keep adding title heuristics blindly: next improve the observation design only if it can explicitly capture listing-side/target-side referents or use a source-matched known control within the same fixed budget. Otherwise preserve the inconclusive result and ask for a deliberately selected human-reviewed source example.
 - Other bounded checks: the flatbed exchange control returned two exact results; the negative-repair-history control rejected two sampled listings, including a repair-service offer. The piano history query's two detail candidates were unrelated/near and did not test history polarity. The separate refrigerator role artifact returned the same two listings in the same order for `فروشنده یخچال` and `یخچال`; still unjudged and diagnostic only.
 - Run success means the observation workflow executed successfully, not that the quality gate passed. No production semantics, eligibility, ranking, detail budget, `main`, or deployment changed.
+
+
+## Source-matched human-evidence audit — exchange paint ownership (2026-10-23)
+
+After run 114 failed to capture a scoped contradiction, I audited the already locked human packets and their separate internal keys/artifacts before proposing another live selector change.
+
+- **Target-side positive:** S04, source ad `gaaTiMpU`, title `فروش سمند ۹۵ ای اف سون بیرنگ.معاوضه دارم`, grade 3. The title and detail `بدونه رنگ` refer to the same Samand, and the exchange cue is explicit. Source: run 109 artifact, code SHA `f7baa1aa3e4290529e1bbe98d72a555a2f309eae`.
+- **Target-side unknown:** S03, source ad `gaCLax_r`, title `سمند سورن دریچه سیمی 1404 معاوضه با دنا اپشنال`, grade 2. `بدون نقطه` does not establish paint state. Source: run 106 artifact, code SHA `912d26c9b8724610ba813336a4c79019f9e9eded`.
+- **Wrong-side evidence:** S01, source ad `gabTyjBD`, grade 2. `بدون رنگ و ضربه` belongs to the offered Pride, not the requested Samand/Tiba2; target paint remains unknown.
+- **Missing evidence:** S02, source ad `gabvxlgd`, grade 2. The Samand's paint state is not stated.
+- **Explicit contradiction exists, but is confounded:** V01, source ad `gaYj6KeD`, grade 0, explicitly says `یه کف دست گلگیر عقب سمت راننده رنگ داره` about the Peugeot 206. However, its transaction frame offers the Peugeot and asks for Pars/Rana, while the query asks `معاوضه با پژو ۲۰۶ بدون رنگ`. Its grade 0 therefore cannot serve as a clean, direction-matched contradiction-only control.
+
+**Conclusion:** The source-matched set now proves a target-side positive (S04), a target-side unknown (S03), wrong-side evidence (S01), missing evidence (S02), and an explicit but transaction-direction-confounded contradiction (V01). It still lacks a human-graded case where the requested exchange direction is valid and the same target vehicle explicitly contradicts `بدون رنگ`. Do not treat run 114's ambiguous `بدون رنگ` phrase as that case. The next useful step is a new blind, source-ID-mapped contradiction case or an equivalent controlled fixture explicitly marked synthetic; do not add more title-selection heuristics without a reasoned capture strategy.
+
+This audit is evidence bookkeeping only. No source records or grades were modified; no production logic, ranking, detail budget, `main`, or deployment changed.
