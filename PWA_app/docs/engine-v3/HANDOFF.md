@@ -337,3 +337,13 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - The packet has already been graded by the owner: B01=1, B02=2, B03=3, B04=2. Grades are in [BRH-2026-10-23-B-HUMAN-GRADES.md](evaluations/BRH-2026-10-23-B-HUMAN-GRADES.md); keep the blind packet and key frozen.
 - Read [BRH-2026-10-23-B-RECONCILIATION.md](evaluations/BRH-2026-10-23-B-RECONCILIATION.md) before touching role ranking. The old observation's code SHA `a65b7d3cfe055cf0c868080de033bbb9a3a6bf9f` predates the owner-confirmed head `d3d424d78d5fe95710a3c9cdff538661eba93be6` by 142 commits, including changes to pipeline and its tests. Current test source asserts the human-preferred order, but has not been rerun in this step.
 - Next: focused tests on current branch, then deterministic paired fixture with the exact two listings and emitted score breakdowns. Only propose code changes if current code reproduces the inverted order. No hard reject; mixed listings remain eligible. No `main` merge or deployment.
+
+
+## Handoff — conjoined mixed-title detector (2026-10-23)
+
+- Open draft PR [#25](https://github.com/Nimadanesh/shakar/pull/25), base `engine_v3`, branch `diagnostic/brh-fridge-conjoined-mixed-role`.
+- Shared title-only detector is wired into both current pipeline mixed-role checks and all three reconstructed mixed-cue fields in `live-role-regression-observation.test.ts`.
+- Regression coverage includes `فروش و خریدار` and `فروش وخریدار`; mixed listings remain eligible and the direct offer is required to rank first. The live diagnostic cue assertion covers the joined form.
+- No new penalty, hard rejection, retrieval change, frozen-grade edit, `main` merge, or deployment.
+- **Validation remains pending.** The available GitHub connection exposes workflow reads but no workflow-dispatch action; workflows only auto-trigger on `engine_v3` pushes. Local clone was blocked by DNS/network unavailability. Do not claim tests or live observation passed.
+- Next gate: run focused/full portable tests, typecheck, build, and the bounded role-regression live workflow with four details total and Mizan disabled; inspect the emitted report and confirm both B-pair order tests pass before deciding whether to keep the PR draft or revise.

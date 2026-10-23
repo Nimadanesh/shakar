@@ -54,6 +54,15 @@ export function isRepairWord(term: string): boolean {
   return REPAIR_WORDS.has(normalizeForMatch(term));
 }
 
+/**
+ * Narrow title-only cue for mixed buy/sell catalogues.
+ * Shared by pipeline scoring and live-observation diagnostics.
+ */
+export function isMixedTransactionTitle(title: string): boolean {
+  const normalized = normalizeForMatch(title);
+  return /(?:خرید\s*و\s*فروش|فروش\s*و\s*خریدار|خریدار\s*و\s*فروش)/.test(normalized);
+}
+
 function escRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
