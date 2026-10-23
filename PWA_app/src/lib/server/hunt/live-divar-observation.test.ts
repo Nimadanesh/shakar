@@ -31,10 +31,11 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       // negative-history PRODUCT definition. This directly probes cross-intent contamination.
       { id: "repair-service-control", query: "پیانو تعمیر یا تعویض نشده است", candidateQuery: "تعمیر پیانو", detailBudget: 2 },
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
-      // Cross-category exchange control: use the same bounded detail budget
-      // to observe vehicle exchange, rather than duplicating the piano query; this pass switches target model to collect fresh vehicle-side evidence.
-      // Seek an explicit target-side paint contradiction control; blind-grade only after checking the complete exchange relation and which vehicle owns the paint claim.
-      { id: "explicit-exchange-vehicle-samand", query: "معاوضه سمند رنگ دارد", detailBudget: 2 },
+      // Cross-category exchange control: retain the same bounded page/detail budgets.
+      // Run 117 found no joint Samand + paint + exchange title cue; use an explicit requested-side
+      // condition to improve the chance of sampling direction-matched evidence, without changing ranking.
+      // This is a new observation distribution, not a paired comparison; inspect full detail before grading.
+      { id: "explicit-exchange-vehicle-samand", query: "معاوضه با سمند بدون رنگ", detailBudget: 2 },
     ] as const;
 
     const reports: Array<Record<string, unknown>> = [];
