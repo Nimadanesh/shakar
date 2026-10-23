@@ -134,7 +134,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               )
                 ? "mixed-buyer-seller"
                 : assessListingRole(listingText).role,
-              mixedTransactionPenalty: /خرید\s*و\s*فروش|خریدوفروش/.test(
+              expectedMixedTransactionPenalty: /خرید\s*و\s*فروش|خریدوفروش/.test(
                 normalizeForMatch(result.title)
               )
                 ? 3
