@@ -58,3 +58,13 @@ Therefore baseline 137 is **not fully green**. Record it as tests/typecheck/buil
 4. Keep the existing blinded seller-role review and human grades as the gate for any mixed-transaction ranking proposal.
 5. No merge to `main`, deployment, or live-service mutation.
 
+
+
+## Follow-up observation 113 — selector executes, contradiction still not captured (2026-10-23)
+
+- Run: [39940161861](https://github.com/Nimadanesh/shakar/actions/runs/39940161861); artifact: `engine-v3-live-observation-113`; source commit: `638fec1953e8eae43885187818f19e6369de385c`; job succeeded.
+- The artifact reports 90 ads seen over 4 requested/completed pages for `معاوضه سمند رنگ دارد`, with 3 paint-title cue candidates, 17 exchange-title cue candidates, and **0 joint Samand + paint + exchange title candidates**. The fixed two-detail budget was respected.
+- The inspected detail candidates were `سمند ال ایکس مدل ۹۷ کارکرد ۱۸۷ رنگ دارد شاسی پلمپ` and `زانتیا ۲۰۰۰ معاوضه با سمند و پژو`. The first detail describes paint on the Samand but has no exchange cue; the second has an exchange cue and names Samand as the other vehicle, but its captured description does not establish the paint condition of that Samand. This is not a valid paired target-side contradiction witness. Gate remains **open / not captured**.
+- The observation's other scenarios ran within their configured limits. The separate refrigerator role-regression artifact remains unjudged and cannot justify ranking changes.
+- The artifact confirms the selector change at `638fec1` ran, but also reveals a sampling weakness: when no title has all three cues, the two-slot budget was spent on a paint-only Samand and a non-Samand vehicle title that mentions Samand. A follow-up observation-only adjustment was committed as `10c36a92eddf4510e7d20f4afcef89ca1b032eff`: prefer candidates whose titles jointly mention Samand + explicit exchange before paint-only candidates, while retaining the fixed budget and recording the new count. **This follow-up commit has not yet been run or validated.**
+- No production engine/ranking behavior changed; no main merge or deployment. Do not claim contradiction polarity correctness until a new artifact captures detail that explicitly scopes the paint statement to the exchanged Samand, or records the control as not captured again.
