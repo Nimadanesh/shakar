@@ -1924,6 +1924,27 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     expect(kinds["repair-service"]).toBeUndefined();
   });
 
+  it("allows exact only when negative repair and replacement history is explicit", async () => {
+    const def = resolveHuntDefinition({
+      query: "پیانو تعمیر یا تعویض نشده است",
+      category: "music",
+    })!;
+    listings([
+      { sourceAdId: "history-explicitly-absent", title: "پیانو اکوستیک ژاپنی یاماها" },
+      { sourceAdId: "history-unknown", title: "پیانو آکوستیک ژاپنی یاماها" },
+    ]);
+    detail({
+      "history-explicitly-absent": "این پیانو تعمیر یا تعویض نشده است؛ قطعات اصلی و فابریک هستند.",
+      "history-unknown": "پیانو سالم و آماده فروش است.",
+    });
+
+    const done = await doneOf(def);
+    const kinds = kindsOf(done);
+    expect(kinds["history-explicitly-absent"]).toBe("exact");
+    // Silence about repair/replacement history remains UNKNOWN.
+    expect(kinds["history-unknown"]).toBe("near");
+  });
+
   it("keeps generic product/service role clashes recall-preserving when repair history is not negated", async () => {
     const def = resolveHuntDefinition({
       query: "پیانو",
