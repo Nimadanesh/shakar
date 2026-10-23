@@ -290,3 +290,12 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - `sampleRank` is not production rank; `productionRank` is null. No human grades were created. A randomized blind relevance packet is prepared separately; withhold its internal key until grades are locked.
 - Next: collect 0–3 human grades, then join provenance and engine diagnostics; decide whether a targeted supplement is needed for missing cells. No ranker change, no new hard filter, no frozen-grade edit, no `main` merge, no deployment.
 - Detailed audit: [BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md).
+
+
+## Mixed-transaction capture 01 — human grades locked (2026-10-23)
+
+- Owner grades for the 12 blinded, query-conditioned listings are recorded in [BRH-2026-10-23-MIXED-TRANSACTION-HUMAN-GRADES.md](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-HUMAN-GRADES.md); the source mapping and engine diagnostics are in [the internal key](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-INTERNAL-KEY.md).
+- Distribution: 4×grade 3, 4×grade 2, 2×grade 1, 2×grade 0; total 22/36, mean 1.83/3, no insufficient judgments. These are relevance judgments, not ranking metrics.
+- The seller-refrigerator mixed title/body-only-buying item grades 1 vs direct seller 3; generic refrigerator grades 2 vs 3. Buyer controls include a direct seller at 0 and a conditional scrap buyer at 2. Piano results likewise distinguish listing focus and body-supported transaction direction.
+- No production rank exists in this capture; no precision@5/nDCG@5 or causal ranking delta can be computed. Keep the narrow cue and eligibility unchanged.
+- Next evidence task: a bounded supplement only for decision-relevant missing cells (compact «خریدوفروش», clean barter/exchange-condition case, and clean buyer-seeking refrigerator control). No ranker change, main merge, or deployment.
