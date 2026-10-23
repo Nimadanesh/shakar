@@ -34,7 +34,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       },
       {
         id: "barter-condition",
-        query: "یخچال",
+        query: "یخچال معاوضه",
         taskIntent: "generic-product",
         category: "home",
         desired: ["barter", "direct-seller", "buyer-seeking", "other"] as const,
