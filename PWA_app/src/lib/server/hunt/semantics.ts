@@ -499,10 +499,12 @@ export function assessListingRole(text: string): RoleAssessment {
   }
 
   // Bare «تعمیر» is service evidence only with offer context or offer
-  // phrasing («تعمیر X» up front). Repair-history spans were stripped
-  // above, so «تعمیر شده» / «بدون تعمیر» cannot reach this branch.
+  // phrasing («تعمیر X» up front). A coordinated negated history such as
+  // «تعمیر یا تعویض نشده است» is item-condition evidence, not an offer.
   const stripped = stripRepairPolaritySpans(norm);
-  if (includesWord(stripped, "تعمیر")) {
+  const negatedRepairHistory =
+    /(?:تعمیر|تعمیرات)(?:\s+یا\s+(?:تعمیر|تعمیرات|تعویض))?\s+(?:نشده|نشد|ندارد|نکرده|نمی\s?شود)(?:\s+است)?/.test(norm);
+  if (!negatedRepairHistory && includesWord(stripped, "تعمیر")) {
     const ctx = SERVICE_CONTEXT.find((p) => stripped.includes(p));
     if (ctx) return { role: "service", reason: `service-context:"${ctx}"` };
     const tokens = stripped.split(" ").filter(Boolean);
