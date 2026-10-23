@@ -56,6 +56,12 @@ describe("normalizeForMatch", () => {
   it("treats ZWNJ as separator and drops punctuation", () => {
     expect(normalizeForMatch("می‌روم، تهران!")).toBe("می روم تهران");
   });
+
+  it("separates Persian item names from adjacent Latin model codes", () => {
+    expect(normalizeForMatch("پیانوC1 AIR KORG")).toBe("پیانو C1 AIR KORG");
+    expect(textMatches("پیانوC1 AIR KORG ژاپن اصلی", "پیانو", "music")).toBe(true);
+    expect(textMatches("یاماهاP-145 پیانو دیجیتال", "یاماها", "music")).toBe(true);
+  });
 });
 
 describe("stemToken", () => {
