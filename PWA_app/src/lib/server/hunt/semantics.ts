@@ -1218,11 +1218,17 @@ export function assessModelSpecificity(
       };
     }
   }
-  // R6 — mixed-role dealer: «فروشنده خریدار یخچال» is a business card,
-  // not a listing. Pure-role dealers stay on the S4 scoring path.
+  // R6 — mixed-role dealer cards are normally rejected, but an explicit
+  // seller-seeking query needs to retain a mixed listing when it has actual
+  // sales evidence; ranking demotes it below a clean seller. Human grade
+  // BRH-2026-10-23 E02 = 2 (mixed but genuinely selling), not 0.
+  const explicitlySeeksSeller =
+    queryText !== undefined &&
+    normalizeForMatch(queryText).split(" ").includes(normalizeForMatch("فروشنده"));
   if (
     subjectPhrase.includes(normalizeForMatch("فروشنده")) &&
-    subjectPhrase.includes(normalizeForMatch("خریدار"))
+    subjectPhrase.includes(normalizeForMatch("خریدار")) &&
+    !explicitlySeeksSeller
   ) {
     return {
       mismatch: true,
