@@ -124,12 +124,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               detailUnknown: result.detailUnknown ?? false,
               demotedBy: result.demotedBy ?? null,
               descriptionExcerpt: result.descAuditText ?? result.descSnippet,
-              // Report the same title-only cue used by pipeline.ts, separately from the generic role classifier.
+              // Reconstruct the current title-only cue for diagnosis; this is an estimate, not an internal score trace.
               listingRole: assessListingRole(listingText),
               mixedTransactionTitleCue: /خرید\s*و\s*فروش|خریدوفروش/.test(
                 normalizeForMatch(result.title)
               ),
-              effectiveScoringRole: /خرید\s*و\s*فروش|خریدوفروش/.test(
+              cueDerivedScoringRoleEstimate: /خرید\s*و\s*فروش|خریدوفروش/.test(
                 normalizeForMatch(result.title)
               )
                 ? "mixed-buyer-seller"
