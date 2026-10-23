@@ -29,7 +29,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       // diagnostic then spends the small detail budget on likely candidates.
       { id: "negated-replacement-history", query: "پیانو قطعات اورجینال تعویض نشده", detailBudget: 3 },
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
-      { id: "exact-negated-phrase", query: "تعمیر یا تعویض نشده است", detailBudget: 3 },
+      { id: "exact-negated-phrase", query: "پیانو تعمیر یا تعویض نشده است", detailBudget: 3 },
     ] as const;
 
     const reports: Array<Record<string, unknown>> = [];
