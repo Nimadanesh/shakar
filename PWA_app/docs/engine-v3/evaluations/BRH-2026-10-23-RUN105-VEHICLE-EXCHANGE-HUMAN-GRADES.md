@@ -26,3 +26,17 @@ Therefore, a target-side attribute checker must preserve ownership and distingui
 ## Scope and decision
 
 This is a two-example human-reviewed diagnostic pair, not a performance estimate. Keep the evidence logic isolated from ranking. Before considering integration, continue collecting unique blind-graded cases, including a clear grade-3 target-side positive control and additional explicit contradiction/unknown controls. No ranking change, main merge, or deployment is authorized by this record.
+
+
+## Additional locked grades — Runs 106/109
+
+Blind review returned by the human reviewer on 2026-10-23:
+
+| Case | Grade | Human rationale |
+|---|---:|---|
+| S03 | 2 | The Samand and exchange relation are relevant, but the only appearance-related phrase is «بدون نقطه», which refers to spots/dents rather than paint condition. Paint remains unknown; missing paint evidence is not contradiction. |
+| S04 | 3 | The target is the Samand, the title explicitly says «معاوضه دارم», and the description says «بدونه رنگ» about the same car. The colloquial spelling «بدونه» is a surface form of «بدون» and must be recognized as positive target-side paint evidence. |
+
+The S03/S04 pair adds the first grade-3 target-side positive control in this sequence while preserving the grade-2 unknown case. It also exposes a normalization requirement: recognize colloquial orthographic variants such as «بدونه رنگ» without broadening generic «بدون» matching across unrelated attributes.
+
+These remain diagnostic observations, not a ranking-quality estimate. Keep the implementation gate closed while collecting more blind cases, especially explicit target-side paint contradiction, wrong-side positive evidence, and colloquial/orthographic positive variants. No ranking change, main merge, or deployment is authorized.
