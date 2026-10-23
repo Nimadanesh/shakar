@@ -21,6 +21,13 @@ function transactionCueClass(title: string): string {
   return "none";
 }
 
+it("classifies transaction title cues for diagnostics without changing ranking", () => {
+  expect(transactionCueClass("خریدوفروش انواع یخچال")).toBe("explicit-buy-sell-catalogue");
+  expect(transactionCueClass("فروش و خریدار یخچال ساید")).toBe("sale-and-buyer-cues");
+  expect(transactionCueClass("فروش نه خریدار یخچال")).toBe("sale-not-buyer-contrast");
+  expect(transactionCueClass("فروش یخچال")).toBe("none");
+});
+
 /**
  * Read-only regression probe for role direction. Separate from the negative
  * repair-history observation so each experiment has an explicit detail budget.
