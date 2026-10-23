@@ -15,7 +15,7 @@ Packet A's locked positive judgment remains B02/P03: the owner judged `بدون 
 
 ## Bounded capture attempts
 
-A dedicated read-only workflow was added at [engine-v3-replacement-history-followup.yml](../../../../.github/workflows/engine-v3-replacement-history-followup.yml), with its isolated test [live-replacement-history-followup.test.ts](../../src/lib/server/hunt/live-replacement-history-followup.test.ts). Every run used two list pages, at most two detail reads, and `MIZAN_SHADOW=0`.
+A dedicated read-only workflow was added at [engine-v3-replacement-history-followup.yml](../../../../.github/workflows/engine-v3-replacement-history-followup.yml), with its isolated test [live-replacement-history-followup.test.ts](../../../src/lib/server/hunt/live-replacement-history-followup.test.ts). Every run used two list pages, at most two detail reads, and `MIZAN_SHADOW=0`.
 
 | Run | Artifact / retrieval | What was actually inspected | Outcome |
 |---|---|---|---|
