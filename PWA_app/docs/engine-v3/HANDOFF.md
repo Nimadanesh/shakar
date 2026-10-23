@@ -347,3 +347,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - No new penalty, hard rejection, retrieval change, frozen-grade edit, `main` merge, or deployment.
 - **Validation remains pending.** The available GitHub connection exposes workflow reads but no workflow-dispatch action; workflows only auto-trigger on `engine_v3` pushes. Local clone was blocked by DNS/network unavailability. Do not claim tests or live observation passed.
 - Next gate: run focused/full portable tests, typecheck, build, and the bounded role-regression live workflow with four details total and Mizan disabled; inspect the emitted report and confirm both B-pair order tests pass before deciding whether to keep the PR draft or revise.
+
+## Continuation — PR #25 merged; validation readout (2026-10-23)
+
+- PR [#25](https://github.com/Nimadanesh/shakar/pull/25) merged into `engine_v3`; merge SHA `f32561fe4cbc1733b8b89feaf023d07a1317ea39`.
+- Baseline [39968450657](https://github.com/Nimadanesh/shakar/actions/runs/39968450657): focused hunt/search tests, full portable suite, typecheck, and production build passed. ESLint remains the known unrelated failure (8 UI errors, 37 warnings); do not label the whole workflow green.
+- Live role observation [39968450800](https://github.com/Nimadanesh/shakar/actions/runs/39968450800) completed successfully with the 4-detail cap and Mizan disabled. Neither exact historical paired target was found in the 8-page query sets, so this run does not validate the new cue on those ads or provide a human-quality comparison.
+- Replacement-history follow-up [39968450511](https://github.com/Nimadanesh/shakar/actions/runs/39968450511) completed successfully but found no explicit component-replacement control. The rare-evidence gap remains open; do not repeat the same bounded query path or infer history from generic repair/sale wording.
+- **Next bounded task:** characterize the existing mixed-transaction cue matrix (registered issue 16) with title-only positive, negative, and ordinary controls, preserving both paired refrigerator candidates. Treat this as a diagnostic/test/evidence task first; no new scoring penalty, hard rejection, frozen-grade change, `main` merge, or deployment without source-grounded paired evidence.
