@@ -95,3 +95,9 @@ A confirmed part/accessory listing is not a relaxed match for a hunt for the who
 **Status:** Binding
 
 Live observation workflows may retrieve public Divar lists/details, but must bound page/detail budgets, disable Mizan when testing deterministic behavior, avoid service mutations, and buffer slug-capture data only in runner-local temporary storage. Live observations are ungraded snapshots, never precision/nDCG or human-quality claims. Larger allocation experiments must disclose the extra diagnostic fetches separately from each simulated per-arm budget.
+
+
+## D016 — Buyer-seeking rejection is query-scoped
+**Status:** Binding (2026-10-23)
+
+An ad explicitly seeking to buy the target item is a critical role mismatch only when the user is running a product hunt with explicit negative repair/replacement-history constraints. In ordinary product hunts, preserve the existing ranker behavior rather than applying a new global hard rejection. This boundary was chosen after the broader rejection caused two existing transaction-direction tests to fail. Acceptance requires both targeted negative-history rejection and preservation of seller-seeking/ordinary-search controls. Current-head live confirmation remains pending because run 39911832666 timed out; passing portable tests are not a substitute for that live check.

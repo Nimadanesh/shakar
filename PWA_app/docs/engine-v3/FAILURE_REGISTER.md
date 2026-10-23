@@ -76,3 +76,12 @@ Frozen evaluation artifacts are not inputs to overwrite or rerun for this experi
 - Evaluation refinement: distinguish *product presence* from *listing focus/salience*. A keyword hit or real inclusion alone is not sufficient for grade 3.
 - Condition defects remain independent: `gaZjj5GY` keeps grade 3 despite a stain; condition must not lower relevance.
 - Next: use a source-ID-matched review packet to inspect the cue list against exact positive and trailer/flatbed examples. Do not assume every old hard negative was rejected by the current guard, and do not claim quality uplift from the bounded live sample.
+
+
+## Buyer-seeking role boundary — 2026-10-23
+
+- **Current implementation:** `70a077e` keeps buyer-seeking listings eligible for ordinary product hunts so the existing ranker handles them; the hard-rejection path is limited to targeted product hunts with explicit negative repair/replacement-history constraints. Earlier broad rejection was not accepted because it broke two existing transaction-direction tests.
+- **Automated evidence:** current-head baseline run [39911832644](https://github.com/Nimadanesh/shakar/actions/runs/39911832644) passes focused tests, full portable suite, typecheck, and build. ESLint remains red on 8 existing UI errors.
+- **Live evidence:** current-head run [39911832666](https://github.com/Nimadanesh/shakar/actions/runs/39911832666) timed out on a Divar request; it produced no report. Current-head live behavior is therefore not verified.
+- **Gate:** preserve seller-seeking ads in `فروشنده یخچال`; preserve ordinary search ranking/transaction-direction controls; reject explicit service offers and buyer-seeking ads for `پیانو تعمیر یا تعویض نشده است`; keep unknown repair history at most near. Review both false positives and false rejections before accepting the change as complete.
+- No human-quality uplift claim, main merge, deployment, or mutation of frozen evaluation artifacts.
