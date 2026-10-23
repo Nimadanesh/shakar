@@ -406,7 +406,7 @@ const BUYER_SUBJECT_FIRST = new Set(["خریدار", "خریدارم", "خواه
  * mid-text is deliberately excluded («فروش به خریدار واقعی» is a product
  * listing, not a wanted-to-buy ad).
  */
-const BUYER_ANYWHERE = ["خواهان", "متقاضی", "جویای", "به دنبال", "می خرم", "میخرم"];
+const BUYER_ANYWHERE = ["خواهان", "متقاضی", "جویای", "می خرم", "میخرم"];
 
 /** Shop-style service offers — the business itself, not a product feature. */
 const SERVICE_SHOP = ["تعمیرات", "تعمیرگاه", "سرویسکار"];
@@ -533,7 +533,14 @@ export function assessListingRole(text: string): RoleAssessment {
     }
   }
 
-  // Unambiguous buyer markers anywhere («خواهان …», «به دنبال …»).
+  // Unambiguous buyer markers anywhere («خواهان …», «جویای …»).
+  // «به دنبال» alone is NOT a buyer declaration: ordinary seller copy often
+  // says «برای خانواده‌هایی که به دنبال یک X باکیفیت هستند». Treat it as
+  // buyer intent only when it leads the listing text; a mid-description
+  // occurrence must not hard-reject an otherwise relevant product.
+  if (/^به دنبال(?:\s|$)/.test(norm)) {
+    return { role: "buyer-seeking", reason: 'buyer-cue:"به دنبال"'};
+  }
   const buyer = BUYER_ANYWHERE.find((p) => norm.includes(p));
   if (buyer) return { role: "buyer-seeking", reason: `buyer-cue:"${buyer}"` };
 
