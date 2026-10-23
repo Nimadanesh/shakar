@@ -132,3 +132,13 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - The same artifact observed both selected repair-service/buyer examples rejected for `پیانو تعمیر یا تعویض نشده است`, and two unknown-history piano listings retained as near in a separate scenario. Explicit exchange control returned two exact results. See [E3 live role regression report](evaluations/E3-LIVE-ROLE-REGRESSION-2026-10-23.md).
 - Baseline [run 39913211263](https://github.com/Nimadanesh/shakar/actions/runs/39913211263): focused tests, full portable suite, TypeScript typecheck, and production build PASS; ESLint FAIL with 8 errors / 37 warnings, the errors in existing UI hook-rule locations. No new lint error in the observation test was reported.
 - Next: obtain blinded human grades for `BRH-2026-10-23-A`; do not change engine behavior based only on these observations. Stay on `engine_v3`; no merge/deploy.
+
+
+## Human-grade follow-up — buyer-cue false rejection (2026-10-23)
+
+- Owner-supplied blind grades are recorded in [BRH-2026-10-23-A-HUMAN-GRADES.md](evaluations/BRH-2026-10-23-A-HUMAN-GRADES.md); frozen blind packet/key remain unchanged.
+- Narrow fix in `a65b7d3` scopes `به دنبال` buyer-role detection so a mid-description phrase in seller copy is not a hard buyer declaration; tests were added in `68b61b3`.
+- Successful bounded live run [39915083572](https://github.com/Nimadanesh/shakar/actions/runs/39915083572), artifact `engine-v3-live-observation-86`, observed `پیانو اصلی بتهوون اصلی` recover from `no-match` to `near` for `پیانو قطعات اورجینال تعویض نشده`. It still lacks explicit lexical evidence for `قطعات` and `اورجینال`; do not label this a full match or quality uplift.
+- The same successful artifact retained the seller-seeking/ordinary refrigerator controls. Later live run [39915087951](https://github.com/Nimadanesh/shakar/actions/runs/39915087951) timed out against Divar and emitted no artifact.
+- Baseline [39915088347](https://github.com/Nimadanesh/shakar/actions/runs/39915088347): focused and full portable tests, TypeScript, and production build PASS; ESLint still FAILS on existing 8 UI hook-rule errors (37 warnings).
+- Next: consider a narrowly scoped, evidence-aware treatment of `بدون دستکاری` for replacement-history intent only after paired positive/negative controls. Keep UNKNOWN as UNKNOWN; no global synonym, no merge to `main`, no deployment.
