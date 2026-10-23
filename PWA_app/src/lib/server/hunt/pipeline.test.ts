@@ -2396,4 +2396,43 @@ describe("BRH-2026-10-23 mixed transaction title cue", () => {
     expect(ids).toContain("direct");
     expect(ids.indexOf("direct")).toBeLessThan(ids.indexOf("mixed"));
   });
+
+  it("ranks a direct seller above the human-graded compact mixed title for seller-seeking intent", async () => {
+    const def = resolveHuntDefinition({ query: "فروشنده یخچال" });
+    expect(def).not.toBeNull();
+    if (!def) return;
+    expect(def.roleMode).toBe("seek-seller");
+
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "compact-mixed", title: "خریدوفروش همه رقم یخچال سالم وخراب درمحل" }),
+        summary({ sourceAdId: "direct-seller", title: "فروش یخچال سالم" }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id === "compact-mixed"
+        ? "خریدوفروش همه رقم یخچال سالم وخراب درمحل"
+        : "فروش یخچال سالم",
+      price: null,
+      city: "تهران",
+      description: id === "compact-mixed"
+        ? "باسلام یخچال های سالم و سوخته شمارو بالاترین قیمت خریداری میکنم تماس از شما حضور به موقع از ما بازید رایگان تسویه نقدی"
+        : "فروش یخچال سالم و آماده تحویل",
+      images: [],
+      categorySlug: "",
+    }));
+
+    const { events } = await collect(def);
+    const done = events.find((event) => event.type === "done");
+    if (done?.type !== "done") throw new Error("pipeline did not finish");
+    const ids = done.results.map((result) => result.sourceAdId);
+    // Human grade for compact-mixed is 1 (weak): the author buys from the
+    // reader, while this hunt seeks a seller. This is a ranking regression
+    // characterization, not evidence for hard exclusion or a new penalty.
+    expect(ids).toContain("compact-mixed");
+    expect(ids).toContain("direct-seller");
+    expect(ids.indexOf("direct-seller")).toBeLessThan(ids.indexOf("compact-mixed"));
+  });
 });
