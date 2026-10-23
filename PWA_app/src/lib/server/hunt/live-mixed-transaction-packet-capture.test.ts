@@ -97,7 +97,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         detailsUsed += stats.detailsChecked;
 
         const rejected = new Map<string, (typeof stats.rejectedSample)[number]>(
-          stats.rejectedSample.map((item) => [item.sourceAdId, item] as const)
+          stats.rejectedSample.flatMap((item) =>
+            item.sourceAdId ? [[item.sourceAdId, item] as const] : []
+          )
         );
         const scoredById = new Map<string, { item: (typeof scored)[number]; sampleRank: number }>(
           scored.map((item, index) => [item.sourceAdId, { item, sampleRank: index + 1 }] as const)
