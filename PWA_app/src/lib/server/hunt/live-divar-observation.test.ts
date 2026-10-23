@@ -85,7 +85,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         if (!retrievalDef) continue;
 
         const events: HuntEvent[] = [];
-        const pagesRequested = scenario.id === "explicit-exchange-vehicle-samand" ? 4 : 2;
+        const pagesRequested = scenario.id === "explicit-exchange-vehicle-samand" ? 8 : 2;
         const { candidates, stats, endCursor } = await collectCandidates(retrievalDef, {
           maxPages: pagesRequested,
           emit: (event) => events.push(event),
