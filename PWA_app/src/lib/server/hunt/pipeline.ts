@@ -681,18 +681,22 @@ function evaluateDescription(
   categorySlug: string = ""
 ): DescriptionEvaluation {
   const combined = `${title} ${description}`;
-  // Hard-reject explicit buyer-seeking listings for an explicit product hunt
-  // before missing-attribute bookkeeping can downgrade them to a near match.
+  // Hard-reject an explicit buyer-seeking listing only for the narrow
+  // negative repair/replacement-history product hunt. Outside this scope,
+  // preserve R7's established role-mode ranking behavior (including
+  // seek-seller hunts and default-hunt dealer demotion).
   const earlyQueryIntent = assessQueryIntent(
     def.include.join(" "),
     def.category,
     def.transaction
   );
   const earlyListingRole = assessListingRole(combined);
+  const negativeRepairHistoryProductHunt = (def.absentAttributes ?? []).some(
+    (attr) => /تعمیر|تعویض/.test(attr)
+  );
   if (
-    def.roleMode !== "seek-buyer" &&
-    def.roleMode !== "self-seller" &&
     earlyQueryIntent.role === "product" &&
+    negativeRepairHistoryProductHunt &&
     earlyListingRole.role === "buyer-seeking"
   ) {
     return rejectedEvaluation();
