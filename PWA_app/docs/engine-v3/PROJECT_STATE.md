@@ -237,3 +237,11 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - The two inspected ads do not provide a clean contradiction for the requested Samand. One explicitly says the offered Tiba is `بدون رنگ` while the requested Samand is merely `سفید`; the other uses `بدون رنگ` without naming which exchange vehicle it describes. Title inventory: 84 Samand+exchange, 11 paint-hint, 5 joint Samand+paint+exchange candidates. This query has a different retrieval distribution from run 117; it is not a paired quality comparison.
 - Blinded attribution packet [BRH-2026-10-23-D-BLIND.md](evaluations/BRH-2026-10-23-D-BLIND.md) is ready; its mapping is separately stored in [BRH-2026-10-23-D-INTERNAL-KEY.md](evaluations/BRH-2026-10-23-D-INTERNAL-KEY.md). Await human judgments before drawing attribution conclusions.
 - Decision unchanged: no ranker/production behavior changes, no merge to `main`, no deployment. Keep `UNKNOWN` separate from supported and contradicted; engine labels are not human relevance grades.
+
+
+## Packet D human judgments recorded (2026-10-23)
+
+- Returned judgments for [BRH-2026-10-23-D-BLIND.md](evaluations/BRH-2026-10-23-D-BLIND.md) are documented in [BRH-2026-10-23-D-JUDGMENT-RECORD.md](evaluations/BRH-2026-10-23-D-JUDGMENT-RECORD.md).
+- D01: the explicit no-paint claim belongs to the offered Tiba; the requested Samand is described as white only. This is wrong-side evidence, not a Samand paint-history contradiction.
+- D02: the claim's vehicle referent remains ambiguous; no conclusion about Samand paint history is justified.
+- Both judgments align with the separate internal mapping. The clean, direction-matched target-Samand contradiction evidence gap remains open. Keep `UNKNOWN` distinct, keep the helper isolated, and do not add selector heuristics or alter ranking/production semantics from these records. No merge to `main` or deployment.
