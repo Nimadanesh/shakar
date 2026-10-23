@@ -197,10 +197,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       limits: {
         maxListPagesPerQuery: 2,
         maxDetailsTotal: 8,
-        maxDetailsUsed: reports.reduce((sum, report) => {
-          const retrieval = report.retrieval as Record<string, unknown>;
-          return sum + Number(retrieval.detailsChecked ?? 0);
-        }, 0),
+        maxDetailsUsed: detailsBudgetUsed,
         perScenarioDetailBudgets: cases.map(({ id, detailBudget }) => ({ id, detailBudget })),
         queries: cases.length,
         mizanShadow: process.env.MIZAN_SHADOW ?? "default",
