@@ -191,7 +191,7 @@ export interface ScoredAd {
    * never scored.
    */
   descSnippet?: string;
-  /** Full-enough text for bounded live audit only; never enabled in normal hunts. */
+  /** Full description for explicitly opted-in bounded live audits only; never emitted in normal hunts. */
   descAuditText?: string;
   /**
    * R12b (double-check F3): why this ad was capped to "near" by a demote
@@ -1304,6 +1304,10 @@ export async function confirmCandidates(
         ...(ev.demotedBy ? { demotedBy: ev.demotedBy } : {}),
         // R5 grading packets show this so condition claims are verifiable.
         descSnippet: description.replace(/\s+/g, " ").trim().slice(0, 200),
+        // Immutable evidence capture for explicitly opted-in bounded live audits only.
+        ...(process.env.LIVE_DIVAR_OBSERVATION === "1" && !detailUnknown
+          ? { descAuditText: description.replace(/\s+/g, " ").trim() }
+          : {}),
         // Step 0.5: carry the verified leaf category on the result.
         ...(categorySlug ? { categorySlug } : {}),
       };
