@@ -8,6 +8,7 @@ import { assessListingRole, assessQueryIntent } from "./semantics";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
 
 /**
+ * Follow-up harness revision 1: keep this query isolated from the eight-detail main probe.
  * Read-only, bounded follow-up for the replacement-history evidence gap.
  * This deliberately captures live text only; it makes no relevance assertions
  * and must not be treated as a quality score or paired comparison.
