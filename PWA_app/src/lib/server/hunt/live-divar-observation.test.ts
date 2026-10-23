@@ -121,9 +121,15 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                   }
                 : { method: "default-title-strength-order" },
             detailsChecked: stats.detailsChecked,
+            detailCandidatesInspected: detailCandidates.map((candidate) => ({
+              sourceAdId: candidate.sourceAdId,
+              title: candidate.title,
+            })),
             confirmed: stats.confirmed,
             nearMiss: stats.nearMiss,
             rejectedNoMatch: stats.rejectedNoMatch,
+            // Preserve detail-phase rejection evidence for diagnostic review.
+            rejectedSample: stats.rejectedSample,
             stale: stats.stale,
             slugCapture: stats.slugCapture ?? null,
             cursorReturned: endCursor !== undefined && endCursor !== null,
