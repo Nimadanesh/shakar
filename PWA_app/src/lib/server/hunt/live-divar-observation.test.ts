@@ -140,7 +140,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               missingInfo: result.missingInfo,
               detailUnknown: result.detailUnknown ?? false,
               demotedBy: result.demotedBy ?? null,
-              descriptionExcerpt: result.descSnippet,
+              descriptionExcerpt: result.descAuditText ?? result.descSnippet,
               listingRole,
               exchangeCueAudit: {
                 hasNegatedReplacementHistory:
