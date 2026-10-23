@@ -42,7 +42,7 @@ Artifact created: `2026-10-23T15:07:28.744Z`
 **Status: TARGET NOT FOUND; gap remains.**
 
 - Query: `خریدار یخچال`; task intent: `seek-buyer`; target pattern: `buyer-seeking`.
-- The two inspected listings were a direct seller in Tehran (`gaRnPAOv)) and a shop-clearance direct seller in Urmia (`gaz9jWR3)). Neither is an explicit buyer-seeking refrigerator ad.
+- The two inspected listings were a direct seller in Tehran (`gaRnPAOv` and a shop-clearance direct seller in Urmia (`gaz9jWR3`. Neither is an explicit buyer-seeking refrigerator ad.
 - Full descriptions are available for both inspected listings, but no target-pattern hit was selected.
 - The first result mentions accepting an old refrigerator as a trade-in; that alone does not make it a clean buyer-seeking control for this target.
 - This is a bounded retrieval miss, not proof that a suitable control does not exist.
@@ -52,3 +52,16 @@ Artifact created: `2026-10-23T15:07:28.744Z`
 The run supplies **one confirmed target-pattern candidate out of three cells**. It does **not** supply enough target evidence for a complete, balanced blinded packet that covers all three gaps. Preserve the two empty cells as gaps; do not relax the page/detail budgets or repeat capture indefinitely. The compact-title candidate may be retained for a clearly labeled partial diagnostic review, but must not be presented as filling the barter or buyer-control cells.
 
 No human grades were produced, no causal effect of the mixed-title or role penalties can be inferred, and no ranking/eligibility policy change is justified. Keep current behavior and the gate connecting evidence logic to ranking unchanged until appropriate real samples receive human grades.
+
+
+## Human grade received — compact mixed-title seller task
+
+Grade received from the independent human evaluator on 2026-10-23:
+
+- Candidate ID: `gawtZCCr`
+- Task: refrigerator seller-seeking (user wants to buy from a seller)
+- Human grade: **1 — weak relevance**
+- Evidence shown to evaluator: exact captured title, listed price/city, and full description as reproduced in Matrix cell 1 above.
+- This is a human relevance judgment for this one candidate, not a grade for the engine's `near` label and not a causal test of the mixed-title penalty.
+- The grade is appended to the record; the original capture artifact remains immutable. Do not overwrite or reinterpret the raw E3 capture.
+- The clean barter/exchange cell and explicit buyer-seeking control remain unfilled. No ranking/eligibility change is authorized by this single grade.
