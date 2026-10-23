@@ -376,3 +376,17 @@ describe("E3 — negated replacement history is not an exchange offer", () => {
     expect(r.role).toBe("exchange");
   });
 });
+
+
+describe("E3 follow-up — replacement history is not exchange intent", () => {
+  it("does not classify «قطعات تعویض شده» as an exchange offer", () => {
+    expect(assessListingRole("قطعات تعویض شده").role).not.toBe("exchange");
+    expect(assessListingRole("پیانو اکوستیک، قطعات تعویض شده").role).not.toBe("exchange");
+  });
+
+  it("preserves an explicit exchange offer beside replacement-history wording", () => {
+    expect(
+      assessListingRole("قطعات تعویض شده؛ معاوضه با پیانو دیجیتال").role
+    ).toBe("exchange");
+  });
+});
