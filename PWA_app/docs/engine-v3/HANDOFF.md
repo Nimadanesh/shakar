@@ -268,3 +268,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Expected evidence limits are explicit in the key: C01 is wrong-side attribute evidence; C02 has no target-side paint evidence. Neither fills the clean target-side contradiction gap. Do not infer a grade or quality result before the evaluator returns judgments.
 - No production source or ranking logic changed. The existing contradiction helper remains isolated; the integration gate remains closed. No `main` merge, deployment, live-service mutation, or frozen-grade edit.
 - Next: collect the C01/C02 ownership judgments, record them without editing the blind packet, then reassess whether a different source-capture strategy is warranted. Do not widen the detail budget or add title heuristics solely to force a contradiction example.
+
+
+## Packet C judgment update — 2026-10-23
+
+- Judgments recorded in [BRH-2026-10-23-C-JUDGMENT-RECORD.md](evaluations/BRH-2026-10-23-C-JUDGMENT-RECORD.md). The blind packet remains unchanged.
+- C01 and C02 both have no explicit paint/body evidence about the requested Samand. C01's bodywork statements refer to the offered car; C02's engine/chassis statements refer to the offered Xantia. Neither is a target-side contradiction case.
+- Correction: earlier handoff wording called C01's offered vehicle a motorcycle. That was wrong. The frozen excerpt's motorcycle phrase is a price comparison; the hood, fender, AC, clutch-plate, and car references describe a passenger car, model year 1384. Exact make is not established. The internal key has been corrected.
+- These two judgments do not establish inter-rater agreement or close the clean contradiction evidence gap. Keep UNKNOWN distinct. No engine/ranking changes, main merge, deployment, or live-service mutation.
