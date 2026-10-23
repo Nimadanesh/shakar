@@ -36,8 +36,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "engine-v3-live-observation-slug-buffer.jsonl"
     );
 
+    let detailsBudgetUsed = 0;
     try {
-      let detailsBudgetUsed = 0;
       for (const scenario of cases) {
         const remainingBudget = 8 - detailsBudgetUsed;
         if (remainingBudget <= 0) break;
