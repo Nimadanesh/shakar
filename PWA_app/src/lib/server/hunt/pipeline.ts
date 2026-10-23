@@ -191,6 +191,8 @@ export interface ScoredAd {
    * never scored.
    */
   descSnippet?: string;
+  /** Full-enough text for bounded live audit only; never enabled in normal hunts. */
+  descAuditText?: string;
   /**
    * R12b (double-check F3): why this ad was capped to "near" by a demote
    * rule (bait / demand-goods / kind-gate / semantic cap). Without the
@@ -1209,6 +1211,9 @@ export async function confirmCandidates(
             kind: ev.rejectedKind ?? "no-match",
             price: c.price,
             descSnippet: description.replace(/\s+/g, " ").trim().slice(0, 200),
+        ...(process.env.LIVE_DIVAR_OBSERVATION === "1"
+          ? { descAuditText: description.replace(/\s+/g, " ").trim().slice(0, 1200) }
+          : {}),
           });
         }
         continue;
