@@ -802,6 +802,42 @@ describe("transaction direction — P1 (HumanTest S4: خریدار یخچال)",
     expect(done.results.map((r) => r.sourceAdId)).toEqual(["d1", "s1"]);
   });
 
+  it("BRH E01: full buyer-only live title ranks below a clean seller for seller-seeking", async () => {
+    listings([
+      { sourceAdId: "e01-buyer", title: "خریدار انواع یخچال ها سالم وخرابی قدیم وجدید" },
+      { sourceAdId: "clean-seller", title: "فروش یخچال سالم" },
+    ]);
+    detail({
+      "e01-buyer": "شبانه روز آنلاین",
+      "clean-seller": "فروش یخچال سالم و آماده تحویل",
+    });
+    const def = resolveHuntDefinition({ query: "فروشنده یخچال" });
+    expect(def?.roleMode).toBe("seek-seller");
+    const done = await doneOf(def!);
+    const ids = done.results.map((r) => r.sourceAdId);
+    expect(ids).toContain("e01-buyer");
+    expect(ids).toContain("clean-seller");
+    expect(ids.indexOf("clean-seller")).toBeLessThan(ids.indexOf("e01-buyer"));
+  });
+
+  it("BRH E02: explicit seller hunt keeps genuinely selling mixed dealer below clean seller", async () => {
+    listings([
+      { sourceAdId: "e02-mixed", title: "فروشنده و (خریدار)انواع مدل یخچال کل کرج" },
+      { sourceAdId: "clean-seller", title: "فروش یخچال سالم" },
+    ]);
+    detail({
+      "e02-mixed": "فروش وخریدار انواع مدل یخچال کاکرده و آکبند در کل کرج با بالاترین قیمت",
+      "clean-seller": "فروش یخچال سالم و آماده تحویل",
+    });
+    const def = resolveHuntDefinition({ query: "فروشنده یخچال" });
+    expect(def?.roleMode).toBe("seek-seller");
+    const done = await doneOf(def!);
+    const ids = done.results.map((r) => r.sourceAdId);
+    expect(ids).toContain("e02-mixed");
+    expect(ids).toContain("clean-seller");
+    expect(ids.indexOf("clean-seller")).toBeLessThan(ids.indexOf("e02-mixed"));
+  });
+
   it("seek-seller («فروشنده یخچال»): the seller ad outranks the buyer ad", async () => {
     listings([
       { sourceAdId: "d1", title: "خریدار یخچال هستیم" },
