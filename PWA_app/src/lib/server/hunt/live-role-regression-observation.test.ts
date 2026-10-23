@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { normalizeForMatch } from "@/lib/persianNormalize";
 import { resolveHuntDefinition } from "./definition";
 import { assessListingRole, assessQueryIntent } from "./semantics";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
@@ -123,19 +124,18 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               detailUnknown: result.detailUnknown ?? false,
               demotedBy: result.demotedBy ?? null,
               descriptionExcerpt: result.descAuditText ?? result.descSnippet,
-              // Mirror the title-scoped scoring cue separately from the generic role classifier.
-              // pipeline.ts applies a rank-only penalty of 3 for this effective role.
+              // Report the same title-only cue used by pipeline.ts, separately from the generic role classifier.
               listingRole: assessListingRole(listingText),
               mixedTransactionTitleCue: /خرید\s*و\s*فروش|خریدوفروش/.test(
-                result.title.normalize("NFKC").replace(/[يى]/g, "ی").replace(/ك/g, "ک")
+                normalizeForMatch(result.title)
               ),
               effectiveScoringRole: /خرید\s*و\s*فروش|خریدوفروش/.test(
-                result.title.normalize("NFKC").replace(/[يى]/g, "ی").replace(/ك/g, "ک")
+                normalizeForMatch(result.title)
               )
                 ? "mixed-buyer-seller"
                 : assessListingRole(listingText).role,
               mixedTransactionPenalty: /خرید\s*و\s*فروش|خریدوفروش/.test(
-                result.title.normalize("NFKC").replace(/[يى]/g, "ی").replace(/ك/g, "ک")
+                normalizeForMatch(result.title)
               )
                 ? 3
                 : 0,
