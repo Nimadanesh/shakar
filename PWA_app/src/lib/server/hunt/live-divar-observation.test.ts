@@ -172,7 +172,14 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                       method: "title-cue-prioritized-diagnostic",
                       historyHintCandidates: historyCandidates.length,
                     }
-                  : { method: "default-title-strength-order" },
+                  : scenario.id === "explicit-exchange-vehicle-samand"
+                    ? {
+                        method: paintHintCandidates.length > 0
+                          ? "explicit-paint-title-cue-prioritized"
+                          : "default-title-strength-order-no-paint-title-cue",
+                        paintHintCandidates: paintHintCandidates.length,
+                      }
+                    : { method: "default-title-strength-order" },
             detailsChecked: stats.detailsChecked,
             detailCandidatePool,
             confirmed: stats.confirmed,
