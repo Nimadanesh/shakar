@@ -258,3 +258,13 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Source `ga4iPfzH` is a direction/ownership trap: paint and replaced-hood evidence belongs to the offered motorcycle, while the Samand is the counterparty. Source `galu34HS` has no paint evidence about the Samand. Neither provides the missing clean, direction-matched contradiction.
 - Baseline run [#145](https://github.com/Nimadanesh/shakar/actions/runs/39943428525): focused tests, full portable suite, typecheck and build pass; ESLint remains failed due to 8 known unrelated UI errors and 37 warnings.
 - **Next action:** do not add more page widening or connect the isolated helper to ranking. Prepare a compact blinded human review around transaction direction and which entity each attribute describes. Keep `UNKNOWN` distinct; no merge to `main`, deployment, or production mutation.
+
+
+## Handoff — blinded exchange-attribute ownership packet C (2026-10-23)
+
+- Prepared [BRH-2026-10-23-C-BLIND.md](evaluations/BRH-2026-10-23-C-BLIND.md) from the exact frozen description excerpts in live observation run [39943428579](https://github.com/Nimadanesh/shakar/actions/runs/39943428579). Internal source mapping is in [BRH-2026-10-23-C-INTERNAL-KEY.md](evaluations/BRH-2026-10-23-C-INTERNAL-KEY.md); do not expose it before judgments are returned.
+- The two cases target a narrow human-evaluation question: separate the offered motorcycle's paint/hood history from the requested white Samand/other counterpart (C01), and distinguish Xantia condition evidence from missing Samand condition evidence (C02).
+- The packet asks structured attribution questions rather than reusing the old 0–3 relevance grades. It omits source IDs, ranks, and engine labels. It is a two-ad diagnostic packet, not a representative quality estimate.
+- Expected evidence limits are explicit in the key: C01 is wrong-side attribute evidence; C02 has no target-side paint evidence. Neither fills the clean target-side contradiction gap. Do not infer a grade or quality result before the evaluator returns judgments.
+- No production source or ranking logic changed. The existing contradiction helper remains isolated; the integration gate remains closed. No `main` merge, deployment, live-service mutation, or frozen-grade edit.
+- Next: collect the C01/C02 ownership judgments, record them without editing the blind packet, then reassess whether a different source-capture strategy is warranted. Do not widen the detail budget or add title heuristics solely to force a contradiction example.
