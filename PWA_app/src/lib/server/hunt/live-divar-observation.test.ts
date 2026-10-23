@@ -24,10 +24,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
     // The negated-history query gets four slots; positive exchange and replacement
     // history controls get two each. Do not interpret HUNT_MAX_DETAILS as global.
     const cases = [
-      // Combine the product with the negated history phrase so retrieval can
-      // surface real listings whose details contain the phrase, rather than
-      // searching the generic phrase alone (which returned no inspectable ads).
-      { id: "negated-replacement-history", query: "پیانو اکوستیک تعویض نشده", detailBudget: 4 },
+      // Include the product plus the known replacement-history vocabulary so
+      // list retrieval can surface likely real history-bearing ads. A title-cue
+      // diagnostic then spends the small detail budget on likely candidates.
+      { id: "negated-replacement-history", query: "پیانو قطعات اورجینال تعویض نشده", detailBudget: 4 },
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
       { id: "parts-replaced-control", query: "قطعات تعویض شده", detailBudget: 2 },
     ] as const;
