@@ -399,3 +399,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Supplemental four-item blind packet: [BRH-2026-10-23-GAP-CAPTURE-131-BLIND.md](evaluations/BRH-2026-10-23-GAP-CAPTURE-131-BLIND.md); separate mapping: [BRH-2026-10-23-GAP-CAPTURE-131-MAPPING.md](evaluations/BRH-2026-10-23-GAP-CAPTURE-131-MAPPING.md). Query contexts in the packet were checked against the raw capture. Do not open the mapping until grades are locked.
 - Existing human-graded sale/exchange refrigerator control remains the best current source-matched barter example; do not fabricate a fresh barter listing. The new packet is supplementary and all engine outputs remain ungraded diagnostics.
 - PR #28 remains draft and unmerged. No ranking behavior, `main`, or deployment changed.
+
+
+## Handoff — supplemental mixed-role grades locked (2026-10-23)
+
+- The owner returned the four blind grades: **X01=1, X02=1, X03=1, X04=1**. Locked record and rationale: [BRH-2026-10-23-GAP-CAPTURE-131-HUMAN-GRADES.md](evaluations/BRH-2026-10-23-GAP-CAPTURE-131-HUMAN-GRADES.md). Blind packet [BRH-2026-10-23-GAP-CAPTURE-131-BLIND.md](evaluations/BRH-2026-10-23-GAP-CAPTURE-131-BLIND.md) remains unchanged; source join is separate in the mapping file.
+- Interpretation: 4/4 grade 1 on a non-random E4 sample. X01 is a buyer/dismantler-style offer, not an exchange; X02 and X04 are seller offers under a buyer-seeking query; X03 is a retail seller under an exchange query. The grades show these four surfaced results are weak for the exact contexts but do not prove a single shared code cause or justify expanding cues.
+- The bounded capture did not find a clean barter listing; use the existing human-graded sale/exchange control. Do not add a broad buyer rule, hard rejection, or ranking penalty from this packet.
+- Next technical step: inspect the current role-control tests and source-matched matrix for a remaining falsifiable gap with both positive and negative controls. If none exists, document the evidence gap rather than stacking title heuristics. PR #28 remains draft/unmerged; no production behavior, `main`, or deployment changed.
