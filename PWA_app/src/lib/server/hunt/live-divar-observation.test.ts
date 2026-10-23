@@ -169,11 +169,11 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         sourceAdId: detail.sourceAdId,
         title: detail.title,
         descriptionLength: detail.description.length,
-        descriptionExcerpt: detail.description.replace(/\\s+/g, " ").trim().slice(0, 1200),
+        descriptionExcerpt: detail.description.replace(/\s+/g, " ").trim().slice(0, 1200),
         listingRole: assessListingRole(listingText),
         exchangeCueAudit: {
           hasNegatedReplacementHistory:
-            /(?:قطعات?\\s+)?تعویض\\s+(?:نشده(?:\\s+است)?|نشد(?:ه)?(?:\\s+است)?|ندارد|نداشته(?:\\s+است)?|نمی\\s?شود|نمی\\s?باشد)|(?:بدون|فاقد)\\s+تعویض/.test(listingText),
+            /(?:قطعات?\s+)?تعویض\s+(?:نشده(?:\s+است)?|نشد(?:ه)?(?:\s+است)?|ندارد|نداشته(?:\s+است)?|نمی\s?شود|نمی\s?باشد)|(?:بدون|فاقد)\s+تعویض/.test(listingText),
           hasPositiveExchangeCue: /معاوضه|با کالای دیگر تعویض می‌کنم/.test(listingText),
         },
         stale: detail.stale ?? false,
