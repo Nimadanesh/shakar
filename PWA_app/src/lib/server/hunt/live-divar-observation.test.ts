@@ -22,7 +22,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   async () => {
     // Explicit total budget: at most eight detail fetches across ALL scenarios.
     // Total budget: two history probes, two service-control details, and four exchange
-    // details split across trailer and vehicle categories. Do not interpret HUNT_MAX_DETAILS as global.
+    // details split across trailer and vehicle categories; vehicle target model is Samand for this capture. Do not interpret HUNT_MAX_DETAILS as global.
     const cases = [
       // Include the product plus known replacement-history vocabulary so list
       // retrieval can surface likely real history-bearing ads.
@@ -32,8 +32,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       { id: "repair-service-control", query: "پیانو تعمیر یا تعویض نشده است", candidateQuery: "تعمیر پیانو", detailBudget: 2 },
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
       // Cross-category exchange control: use the same bounded detail budget
-      // to observe vehicle exchange, rather than duplicating the piano query.
-      { id: "explicit-exchange-vehicle", query: "معاوضه با پژو ۲۰۶ بدون رنگ", detailBudget: 2 },
+      // to observe vehicle exchange, rather than duplicating the piano query; this pass switches target model to collect fresh vehicle-side evidence.
+      { id: "explicit-exchange-vehicle-samand", query: "معاوضه با سمند بدون رنگ", detailBudget: 2 },
     ] as const;
 
     const reports: Array<Record<string, unknown>> = [];
