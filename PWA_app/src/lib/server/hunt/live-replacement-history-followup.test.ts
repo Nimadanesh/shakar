@@ -17,7 +17,7 @@ it.skipIf(process.env.LIVE_REPLACEMENT_HISTORY_FOLLOWUP !== "1")(
   "captures a bounded positive-replacement-history control for blind review",
   async () => {
     const query = "پیانو قطعات تعویض شده";
-    const retrievalQuery = "پیانو";
+    const retrievalQuery = "پیانو تعویض شده";
     const detailBudget = 2;
     process.env.HUNT_MAX_DETAILS = String(detailBudget);
     const def = resolveHuntDefinition({
