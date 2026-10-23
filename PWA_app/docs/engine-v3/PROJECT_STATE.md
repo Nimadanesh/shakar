@@ -254,3 +254,12 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - B02 changed from `no-match` to `near` after the scoped buyer-cue fix. Its current phrase-level test remains `unknown` for replacement-history polarity and its definition still lacks explicit `قطعات` and `اورجینال` MUST evidence. This is a recovered result, not a full match or proven quality uplift.
 - Current-code baseline [run #147](https://github.com/Nimadanesh/shakar/actions/runs/39946256547): focused/full portable tests, TypeScript and production build passed; ESLint failed on the known unrelated 8 UI hook-rule errors (37 warnings).
 - Next gate is paired, source-matched human review of ambiguous “بدون دستکاری/بدون تغییر” versus explicit original/no-replacement and explicit replacement claims. Preserve UNKNOWN; no global synonym expansion, consultation hard-reject, ranking change, main merge, or deployment.
+
+
+## Replacement-history capture gap — 2026-10-23
+
+- Added isolated read-only workflow/test to search for an explicit positive replacement-history control, with two pages and at most two details per run; `MIZAN_SHADOW=0`.
+- Four bounded probes completed. None found a specific piano listing explicitly stating that its own component was replaced; observed results were spare-parts/service/adjacent listings or had no history evidence. Details and run provenance are in [BRH-2026-10-23-REPLACEMENT-HISTORY-CAPTURE-GAP.md](evaluations/BRH-2026-10-23-REPLACEMENT-HISTORY-CAPTURE-GAP.md).
+- No new blind packet and no human grade was created. Reuse existing B02/P03=3 and A01/P01=2 only as locked evidence; do not regrade or infer a missing third state.
+- Stop this query path rather than stacking selector heuristics. The paired-review gate remains open until a source-captured, specific piano listing explicitly states component replacement, distinguishable from a parts ad or repair service.
+- Baseline on SHA `053d0e8` passed focused/full portable tests, TypeScript, and production build; ESLint failed on the known 8 unrelated UI hook-rule errors (37 warnings). SHA `50a32cb` baseline is pending final confirmation. No production ranking/semantics change, `main` merge, deployment, or frozen-grade/key edit.
