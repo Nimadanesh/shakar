@@ -2315,7 +2315,7 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
     expect(ids.indexOf("gabbQJUc")).toBeLessThan(ids.indexOf("gaT3a_qu"));
   });
 
-  it("does not treat barter as irrelevant in an ordinary fridge hunt", async () => {
+  it("keeps the exchange-offer listing relevant in an ordinary fridge hunt", async () => {
     const def = resolveHuntDefinition({ query: "یخچال" });
     expect(def).not.toBeNull();
     if (!def) return;
