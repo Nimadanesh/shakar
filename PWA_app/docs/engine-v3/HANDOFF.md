@@ -366,3 +366,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Live [40004257788](https://github.com/Nimadanesh/shakar/actions/runs/40004257788) succeeded and uploaded `engine-v3-live-observation-130`. It is bounded/unjudged; no E4 human grade or E5 paired comparison was produced.
 - Next task: characterize the residual live candidate `gaLNJNwu` (`فروشگاه /خریدار یخچال ساید دوقلو هتلی خراب سوخته`), observed as `unknown`/rank-1 `exact` for `فروشنده یخچال`, while its description solicits broken refrigerators to buy. Build a deterministic paired fixture: this buyer/shop hybrid, a clean seller positive, and an ordinary-search control. Assert current role/ranking first; only then decide whether a narrow buyer cue is justified. Do not promote bare `خریدار` globally because seller copy can mention a buyer.
 - Do not mutate frozen grades/captures or claim human-quality uplift. Keep `main` untouched; no deployment or merge without explicit authorization. The technical agent owns the next diagnostic and code decision; ask the owner for grades only if a fresh, blinded human packet is actually needed.
+
+
+## Current continuation — PR #40 draft, validation pending (2026-10-23)
+
+- Draft PR [#40](https://github.com/Nimadanesh/shakar/pull/40), branch `fix/brh-shop-buyer-hybrid-title-20261023`, adds one narrow title cue for `فروشگاه خریدار` and a paired pipeline test against a clean seller.
+- Trigger/inspect focused and full portable baseline on the PR branch, then typecheck/build. The GitHub connection available in this session does not expose workflow dispatch, so do not claim these checks ran until the owner supplies workflow results.
+- Review the cross-mode counter-risk: current mixed-listing penalty applies in ordinary hunts too. Do not merge automatically after tests pass; compare the expected product-search consequence against evidence. Keep the PR draft.
+- Latest base baseline remains [40004257638](https://github.com/Nimadanesh/shakar/actions/runs/40004257638): focused/full portable tests, typecheck and build pass; ESLint fails on 8 known unrelated UI errors / 37 warnings. Latest live observation [40004257788](https://github.com/Nimadanesh/shakar/actions/runs/40004257788) is bounded and unjudged.
+- No frozen-grade edits, no `main` changes, no deployment, no merge without explicit authorization.
