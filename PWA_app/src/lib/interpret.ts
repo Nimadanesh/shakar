@@ -246,6 +246,11 @@ const REPAIRED_GOODS_FORMS = ["تعمیری", "تعمیرشده", "تعمیر ش
 export function detectServiceIntent(raw: string): boolean {
   const normalized = normalizePersian(raw);
   if (REPAIRED_GOODS_FORMS.some((w) => includesWordSmart(normalized, w))) return false;
+  // A repair word inside a negated item-history statement is an attribute,
+  // not a request to hire a repairer: «پیانو تعمیر یا تعویض نشده است».
+  if (/(?:تعمیر|تعمیرات|تعویض)(?:\s+یا\s+(?:تعمیر|تعمیرات|تعویض))?\s+(?:نشده|نشد|ندارد|نکرده|نمی\s?شود)(?:\s+است)?/.test(normalized)) {
+    return false;
+  }
   return SERVICE_DEMAND_WORDS.some((w) => includesWordSmart(normalized, w));
 }
 
