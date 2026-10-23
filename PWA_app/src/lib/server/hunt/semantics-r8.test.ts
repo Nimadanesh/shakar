@@ -16,6 +16,19 @@ import { queryKindForDef } from "./kindLexicon";
  * (Freebuff session) of the author's 7 diagnoses. Each test pins a
  * verified wound: the exact query/ad shape, the expected verdict.
  */
+describe("E3 — buyer cue must not overrule seller description copy", () => {
+  it("does not label a product as buyer-seeking for a mid-description «به دنبال»", () => {
+    const role = assessListingRole(
+      "پیانو اصلی بتهوون اصلی؛ این پیانو برای خانواده‌هایی که به دنبال یک پیانو با کیفیت و سالم برای استفاده موسیقی هستند مناسب است"
+    );
+    expect(role.role).not.toBe("buyer-seeking");
+  });
+
+  it("keeps a leading «به دنبال» declaration as buyer-seeking", () => {
+    expect(assessListingRole("به دنبال خرید پیانو هستم").role).toBe("buyer-seeking");
+  });
+});
+
 describe("R9 — styled sibling variants", () => {
   const qk = (inc: string[]) => queryKindForDef(inc, false, "music");
 
