@@ -426,7 +426,7 @@ const SERVICE_CONTEXT = [
 ];
 
 const RENTAL_WORDS = ["اجاره", "رهن"];
-const EXCHANGE_PHRASES = ["معاوضه", "تعویض", "فروش عمده", "عمده", "همکار", "بنکدار", "پخش کننده"];
+const EXCHANGE_PHRASES = ["معاوضه", "فروش عمده", "عمده", "همکار", "بنکدار", "پخش کننده"];
 const SALE_CUES = ["فروش", "فروشی", "میفروشم", "می فروشم", "فروش فوری", "قیمت", "تخفیف", "سند آماده"];
 
 /**
@@ -489,6 +489,14 @@ export function assessListingRole(text: string): RoleAssessment {
   const exchangeText = stripNegatedExchangeCues(norm);
   const exchange = EXCHANGE_PHRASES.find((p) => exchangeText.includes(p));
   if (exchange) return { role: "exchange", reason: `exchange-cue:"${exchange}"` };
+  // «تعویض» alone is ambiguous: «تعویض قطعات معیوب» describes maintenance.
+  // Keep it as exchange intent only when the text expresses an item-for-item
+  // transaction, e.g. «تعویض با X» or «با X تعویض می‌کنم».
+  const positiveReplacementOffer =
+    /(?:تعویض\s+با\s+\S+|با\s+\S+(?:\s+\S+){0,3}\s+تعویض)(?=\s|$)/.test(exchangeText);
+  if (positiveReplacementOffer) {
+    return { role: "exchange", reason: 'exchange-cue:"تعویض"' };
+  }
 
   // Bare «تعمیر» is service evidence only with offer context or offer
   // phrasing («تعمیر X» up front). Repair-history spans were stripped
