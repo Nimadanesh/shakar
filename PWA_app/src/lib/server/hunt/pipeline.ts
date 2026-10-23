@@ -602,14 +602,9 @@ function semanticCapFires(
   // not retain a clear repair-service provider as a "near" result. Keep this
   // narrow to negative repair-history hunts; generic product/service role
   // clashes elsewhere remain recall-preserving near matches.
-  const buyerCollectorEvidence =
-    /(?:^|\s)(?:خریداریم|خریدار\s+هستیم)(?=\s|$)/.test(
-      normalizeForMatch(combined)
-    );
   const repairHistoryProductServiceMismatch =
     intent.role === "product" &&
     role.role === "service" &&
-    !buyerCollectorEvidence &&
     (def.absentAttributes ?? []).some((a) => /تعمیر|تعویض/.test(a));
   const needsRepairMismatch =
     serviceIntent &&
