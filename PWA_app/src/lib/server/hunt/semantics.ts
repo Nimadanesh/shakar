@@ -220,8 +220,8 @@ function assessAbsenceOneWord(
   // «تعمیر یا تعویض نشده است» explicitly negates both, rather than leaving
   // each attribute UNKNOWN merely because «یا» sits between it and «نشده».
   const norm = normalizeForMatch(text).replace(
-    /\b(تعمیر|تعویض)\s+یا\s+(تعمیر|تعویض)\s+نشده(?:\s+است)?\b/g,
-    "$1 نشده $2 نشده"
+    /(^|\s)(تعمیر|تعویض)\s+یا\s+(تعمیر|تعویض)\s+نشده(?:\s+است)?(?=\s|$)/g,
+    "$1$2 نشده $3 نشده"
   );
   if (norm === "") return { polarity: "unknown", reason: "empty-text" };
   const w = escRe(normalizeForMatch(word));
