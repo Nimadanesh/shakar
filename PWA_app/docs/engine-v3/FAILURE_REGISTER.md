@@ -155,3 +155,11 @@ A wider bounded read-only replay now completed 8/8 pages for `معاوضه سم�
 - Compact `خریدوفروش` and spaced `خرید و فروش` controls were retrieved, but the targeted `یخچال معاوضه` selection still contained no clean barter title. The explicit `خریدار یخچال` query selected seller/product offers rather than a buyer-seeking listing. This is only a bounded retrieval/candidate-selection observation.
 - New ungraded candidate `Aax4Mkwa` title `فروشگا/خریدار/دوقلو یخچال ساید خراب سوخته کل مناطق` is a slash/truncated shop-buyer-like title variant. It is not proof the existing exact `فروشگاه خریدار` cue should be expanded. A supplemental blind packet plus separate mapping are in `evaluations/BRH-2026-10-23-GAP-CAPTURE-131-BLIND.md` and `...-MAPPING.md`.
 - Use the existing human-graded sale/exchange refrigerator control for the barter cell; do not invent or relabel a current candidate. No ranking change is justified by this capture. PR #28 remains draft/unmerged; `main` and deployment unchanged.
+
+
+## Update — supplemental mixed-role blind grades (2026-10-23)
+
+- The owner has locked grades X01=1, X02=1, X03=1, X04=1 for the four-item packet sourced from bounded capture [40006314727](https://github.com/Nimadanesh/shakar/actions/runs/40006314727). Full record and post-grade mapping: [BRH-2026-10-23-GAP-CAPTURE-131-HUMAN-GRADES.md](evaluations/BRH-2026-10-23-GAP-CAPTURE-131-HUMAN-GRADES.md).
+- All four surfaced ads are weak for their query: a buyer/dismantler-style refrigerator ad without exchange for `یخچال معاوضه`; two direct seller offers for `خریدار یخچال`; and a direct retailer for `یخچال معاوضه`. Sample is non-random, denominator 4, all grade 1.
+- This confirms a local result-quality problem in the selected sample, but does not isolate one shared classifier defect: the cases differ by transaction role and query mismatch. X01's slash/truncated wording is not enough evidence to expand the existing normalized `فروشگاه خریدار` cue. Do not add a global buyer cue or hard rejection from this packet.
+- The clean barter target was not retrieved within the bounded two-detail selection. Retain the existing human-graded sale/exchange control; avoid rerunning the same bounded path without a changed retrieval hypothesis. PR #28 remains draft/unmerged; no rank behavior, `main`, or deployment change.
