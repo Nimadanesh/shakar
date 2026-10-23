@@ -224,3 +224,9 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - Two details inspected: `ga4iPfzH` is a motorcycle offered in exchange for white Samand/206SD/Pars; its paint/hood claims describe the motorcycle, not the target Samand. `galu34HS` is a Xantia offered for exchange with Samand/Peugeot and has no Samand paint evidence. Neither is a clean target-side contradiction case. Engine verdicts are not human grades.
 - Baseline run [#145](https://github.com/Nimadanesh/shakar/actions/runs/39943428525): focused hunt/search tests, full portable suite, typecheck, and build passed; ESLint alone failed on the known 8 unrelated UI hook-rule errors (37 warnings). Keep this debt separate from search findings.
 - Decision: do not widen retrieval further or alter ranking on this evidence. Seek a clean direction-matched case through a separately designed human-review sample; preserve UNKNOWN semantics and keep main/deployment untouched.
+
+## Latest observation-harness follow-up — 2026-10-23
+
+- The live Samand exchange observation had 32 Samand+exchange title candidates, but the prior artifact exposed only counts and the two selected detail records. Observation-only commit [6e15829](https://github.com/Nimadanesh/shakar/commit/6e1582966462431556af3219b957ff8357a91b51) now records a bounded inventory of candidate IDs and exact titles, without changing selection or detail budgets.
+- This commit has no reported CI status yet and has not been run live. It is instrumentation only; no new evidence about contradiction polarity exists. Next: inspect a fresh inventory under the same 8-page/2-detail limit before making any further selection change.
+
