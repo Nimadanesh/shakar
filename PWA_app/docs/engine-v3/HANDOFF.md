@@ -231,3 +231,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Decision: keep exchange-polarity gate **closed**. Control is not captured / referent unresolved. Do not infer success/failure from this artifact, and do not continue blindly stacking title heuristics. Next useful step is a source-matched, explicitly target-scoped human-reviewed example, or a bounded observation design that distinguishes the offered listing from the exchange counterpart while preserving the detail budget.
 - Flatbed exchange: two exact sanity-control results. Negative repair-history/service control: two rejected examples. Piano history scenario: no relevant history witness. Refrigerator role comparison: same two listings/order across seller-seeking and generic queries; unjudged, no ranking change justified.
 - No production behavior change, merge to `main`, or deployment.
+
+
+## Current handoff — source-matched exchange evidence audited (2026-10-23)
+
+- Audited the locked Run 102/105/106/109 human packets and the source artifacts, then documented the result in [the observation review](evaluations/BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md) and [PROJECT_STATE](PROJECT_STATE.md).
+- Confirmed mappings: S04 `gaaTiMpU` grade 3 = target Samand + explicit exchange + target-side `بدونه رنگ`; S03 `gaCLax_r` grade 2 = `بدون نقطه` is not paint evidence; S01 `gabTyjBD` grade 2 = paint-free phrase belongs to the offered Pride; S02 `gabvxlgd` grade 2 = no paint evidence; V01 `gaYj6KeD` grade 0 = explicit paint contradiction on a Peugeot, but its offered/requested direction conflicts with the query and confounds the test.
+- **Decision:** the current human evidence covers positive, unknown, wrong-side, missing, and a direction-confounded contradiction, but still lacks a clean contradiction case with the exchange direction correctly matched. Run 114's `معاوضه با تاکسی برون شهری سمند` remains ambiguous and does not fill the gap.
+- Next useful work is one new blind, source-ID-mapped live case with explicit paint evidence about the same target vehicle under a valid exchange relation. A synthetic counterfactual can separately test code behavior, but must be labeled synthetic and cannot substitute for live human evidence.
+- Do not add more title-selection heuristics blindly; preserve fixed detail budget and the closed integration gate. No production semantics/ranking, `main`, deployment, or human grades changed.
