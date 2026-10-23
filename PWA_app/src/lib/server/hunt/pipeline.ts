@@ -997,6 +997,11 @@ function scoreAd(
   const goodsPenalty = nonServiceHits > 0 && ev.providerHits === 0 ? 4 : 0;
   const dealerPenalty = ev.huntWantsSellers && ev.dealerHits > 0 ? 4 : 0;
   const dealerBoost = !ev.huntWantsSellers && ev.dealerHits > 0 ? 1 : 0;
+  // A pure buyer-seeking ad is the wrong transaction direction for a
+  // seller hunt, even when its product/title match is otherwise exact.
+  // Keep it visible, but don't let lexical title strength put it first.
+  const buyerDirectionPenalty =
+    ev.huntWantsSellers && ev.adRole === "buyer-seeking" ? 4 : 0;
   // R7 (2026-10-18): mirror of the dealer penalty — a clear offer
   // ("product" stance) ad on a buyer-seeking hunt is the wrong side of
   // the market. Rank penalty only, never a hard drop: most ads are
@@ -1015,6 +1020,7 @@ function scoreAd(
       providerBoost -
       goodsPenalty -
       dealerPenalty -
+      buyerDirectionPenalty -
       offerPenalty -
       mixedTransactionPenalty +
       dealerBoost,
