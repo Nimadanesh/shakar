@@ -213,3 +213,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - This is strictly observation/test tooling. No production semantics, ranking, candidate scoring, detail budget, main branch, or deployment changed.
 - Validation is **pending**: no workflow run was returned for commit `638fec1` by the available commit-run lookup, and this session has not run the repository test suite locally. Do not treat the selector as tested or the contradiction control as captured until a fresh live-observation artifact is inspected.
 - Next: run the dedicated live observation and baseline validation on this exact source SHA; verify the detail candidate pool actually includes the paired target-side control. If not, preserve the result as “not captured” and do not infer polarity correctness. Baseline ESLint debt remains separate.
+
+
+## Continuation — run 113 reviewed; follow-up selector awaits observation (2026-10-23)
+
+- Run [39940161861](https://github.com/Nimadanesh/shakar/actions/runs/39940161861) succeeded on `638fec1953e8eae43885187818f19e6369de385c`. Artifact `engine-v3-live-observation-113` shows 90 candidates across 4 pages, 3 paint-cue titles, 17 exchange-cue titles, and no title with the full Samand+paint+exchange intersection. Its two inspected details were a paint-only Samand and a Zantia listing that mentions exchange with Samand; target-scoped paint contradiction is **not captured**.
+- Full review appended to [BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md](evaluations/BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md).
+- Follow-up observation-only commit [10c36a92eddf4510e7d20f4afcef89ca1b032eff](https://github.com/Nimadanesh/shakar/commit/10c36a92eddf4510e7d20f4afcef89ca1b032eff) prioritizes Samand+exchange titles before paint-only candidates when a title with all three cues is absent. It retains the fixed detail budget and adds a diagnostic count. **Not yet executed or validated.**
+- Next: run the live observation on exactly `10c36a9`, inspect the artifact, then run baseline validation if the workflow allows. If the control is still absent, record “not captured”; do not widen paint/negation rules or alter ranking. Baseline 137 ESLint debt remains separate.
+- No main merge, deployment, production semantics or ranking changes.
