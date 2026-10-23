@@ -153,3 +153,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - CI/status lookup returned no published checks for test commit `9a55534`; this session cannot claim either pass or fail. The new test commit `cd5c7ad` also needs hosted validation.
 - Decision: do not add a new polarity or scoped rule yet. First validate these cases in CI and collect at least paired human-graded positive/negative examples where `بدون دستکاری` appears with and without explicit replacement evidence. No merge to `main`, deployment, or live-service mutation.
 
+
+
+## Handoff — seller-role paired human review packet (2026-10-23)
+
+- Prepared new blinded packet [BRH-2026-10-23-B](evaluations/BRH-2026-10-23-B-BLIND.md) from the bounded live seller-role/ordinary-search observation. Its internal mapping is [BRH-2026-10-23-B-INTERNAL-KEY.md](evaluations/BRH-2026-10-23-B-INTERNAL-KEY.md); do not share that key before grades are returned.
+- The packet compares the same two observed refrigerator listings against `فروشنده یخچال` and ordinary `یخچال`. This pairing directly tests whether human relevance changes with transaction intent; it intentionally contains repeated source listings and only four judgments.
+- The observation's engine output was identical for both queries, while the resolver reported `roleMode: seek-seller` for the first and `none` for the second. That is a diagnostic concern, not yet a confirmed user-facing defect. Wait for independent grades before changing role logic.
+- No source code changed. The packet and mapping are documentation-only commits on `engine_v3`; `main` and deployment remain untouched. Existing baseline result still stands: focused tests, portable suite, typecheck and build passed on the cited older source SHA; ESLint remains red on known UI hook-rule errors. This does not validate a new source SHA.
+- Next: collect grades for B01–B04; then join them to the internal key and decide whether a narrowly scoped role correction is justified. Do not unblind BRH-A retroactively or modify its frozen artifacts.
