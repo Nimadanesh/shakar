@@ -243,10 +243,13 @@ export interface HuntStats {
   // rejected samples stored no description, so the firing text was lost.
   // Never audit blind again.
   rejectedSample: Array<{
+    sourceAdId?: string;
     title: string;
     kind: string;
     price: number | null;
+    city?: string;
     descSnippet?: string;
+    descAuditText?: string;
   }>;
   /**
    * Mizan judgments, log-only (R9 shadow → R10–R12 active → Decision v2
@@ -1259,13 +1262,15 @@ export async function confirmCandidates(
         // R7: feed the false-rejection audit — sample the rejects.
         if (stats.rejectedSample.length < 12) {
           stats.rejectedSample.push({
+            sourceAdId: c.sourceAdId,
             title: c.title,
             kind: ev.rejectedKind ?? "no-match",
             price: c.price,
+            city: c.city,
             descSnippet: description.replace(/\s+/g, " ").trim().slice(0, 200),
-        ...(process.env.LIVE_DIVAR_OBSERVATION === "1"
-          ? { descAuditText: description.replace(/\s+/g, " ").trim().slice(0, 1200) }
-          : {}),
+            ...(process.env.LIVE_DIVAR_OBSERVATION === "1"
+              ? { descAuditText: description.replace(/\s+/g, " ").trim() }
+              : {}),
           });
         }
         continue;
