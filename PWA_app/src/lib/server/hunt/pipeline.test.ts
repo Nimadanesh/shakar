@@ -2436,3 +2436,61 @@ describe("BRH-2026-10-23 mixed transaction title cue", () => {
     expect(ids.indexOf("direct-seller")).toBeLessThan(ids.indexOf("compact-mixed"));
   });
 });
+
+
+describe("BRH human-grade follow-up — seek-buyer must demote exchange offers", () => {
+  it("keeps buyer-seeking ad above both a barter offer and a direct product offer", async () => {
+    const def = resolveHuntDefinition({ query: "خریدار یخچال" });
+    expect(def).not.toBeNull();
+    if (!def) return;
+
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "barter-offer", title: "یخچال فریزر هیمالیا معاوضه با آیفون 15 یا 16 نرمال" }),
+        summary({ sourceAdId: "direct-offer", title: "یخچال پارس فوری فروشی" }),
+        summary({ sourceAdId: "actual-buyer", title: "خریدار یخچال نقد در محل" }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => {
+      const details: Record<string, { title: string; description: string }> = {
+        "barter-offer": {
+          title: "یخچال فریزر هیمالیا معاوضه با آیفون 15 یا 16 نرمال",
+          description: "یخچال فریزر هیمالیا سالم، معاوضه با آیفون 15 یا 16 نرمال",
+        },
+        "direct-offer": {
+          title: "یخچال پارس فوری فروشی",
+          description: "یخچال پارس سالم به علت جابجایی فوری فروشی",
+        },
+        "actual-buyer": {
+          title: "خریدار یخچال نقد در محل",
+          description: "خریدار انواع یخچال هستیم، نقد در محل",
+        },
+      };
+      const item = details[id];
+      return {
+        sourceAdId: id,
+        title: item.title,
+        price: null,
+        city: "تهران",
+        description: item.description,
+        images: [],
+        categorySlug: "",
+      };
+    });
+
+    const { events } = await collect(def);
+    const done = events.find((event) => event.type === "done");
+    if (done?.type !== "done") throw new Error("pipeline did not finish");
+
+    const ids = done.results.map((result) => result.sourceAdId);
+    // Human grades from the bounded 2026-10-23 capture: the barter offer
+    // and direct sale both scored 0 for «خریدار یخچال»; the actual buyer
+    // should outrank both. Keep wrong-side items visible; this is ranking-only.
+    expect(ids).toContain("actual-buyer");
+    expect(ids).toContain("barter-offer");
+    expect(ids).toContain("direct-offer");
+    expect(ids.indexOf("actual-buyer")).toBeLessThan(ids.indexOf("barter-offer"));
+    expect(ids.indexOf("actual-buyer")).toBeLessThan(ids.indexOf("direct-offer"));
+  });
+});
