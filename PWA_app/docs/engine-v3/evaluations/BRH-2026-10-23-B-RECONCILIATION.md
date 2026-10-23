@@ -34,3 +34,26 @@ The historical live observation used to build the packet records the reverse ord
 - Human grades and the frozen blind packet/key are preserved.
 - No changes to `main`, production semantics, ranking, or deployment.
 - This is a reconciliation note, not a test run or a claim of quality uplift.
+
+
+## Score-contract inspection — 2026-10-23
+
+A source-only inspection of the current `pipeline.ts` clarifies what the next bounded diagnostic must capture:
+
+- Final ordering is **lexicographic by verdict first, score second**: every `exact` result sorts ahead of every `near` result, regardless of numeric score. Score only orders results within the same `matchKind`.
+- `ScoredAd.breakdown` exposes only `title`, `description`, and `priceKnown`. It is not a full accounting of the final score. `scoreAd` also applies SHOULD boost, missing-information penalty, provider/goods-service adjustments, dealer/offer penalties, and a mixed-buy/sell penalty; these adjustments are not individually surfaced in `breakdown`.
+- Therefore the paired order assertion alone cannot tell whether the direct listing wins because its `matchKind` improved, because its score improved within the same verdict, or because the synthetic fixture does not reproduce the source-specific verdict split. Nor would the current three-field breakdown alone explain the full score.
+
+### Diagnostic contract
+
+For the two frozen source listings (`gaT3a_qu` mixed catalogue; `gabbQJUc` direct sale-title/exchange), under both `فروشنده یخچال` and `یخچال`, capture without modifying ranker behavior:
+
+1. resolved `roleMode` and MUST/SHOULD counts;
+2. each listing's source ID, exact title and frozen description text;
+3. `matchKind`, final `score`, existing `breakdown`, `missingInfo`, `evidence`, and `demotedBy`;
+4. the two final ranks and the score delta;
+5. a clearly labeled explanation of which score adjustments are not currently exposed, rather than pretending the three-field breakdown is complete.
+
+Keep the diagnostic bounded to these two listings × two queries, keep Mizan disabled, and do not fetch mutable live details as a replacement for the frozen packet. If the existing fixture does not preserve the frozen source text, report that mismatch explicitly instead of calling it an exact-source replay.
+
+This is a source-contract finding (E0), not a fresh execution or live result. The last reported baseline remains run [39949945856](https://github.com/Nimadanesh/shakar/actions/runs/39949945856) on `50a32cb`; its 12 commits to current `engine_v3` are documentation-only, so the engine/test source is unchanged since that baseline. No ranking code, tests, frozen grades/keys, `main`, or deployment were changed by this inspection.
