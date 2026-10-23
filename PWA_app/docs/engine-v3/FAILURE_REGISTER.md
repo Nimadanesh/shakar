@@ -108,3 +108,11 @@ Frozen evaluation artifacts are not inputs to overwrite or rerun for this experi
 A wider bounded read-only replay now completed 8/8 pages for `معاوضه سمند رنگ دارد`: [run #116](https://github.com/Nimadanesh/shakar/actions/runs/39943428579), source SHA `a61658c`. It saw 186 ads, 32 Samand+exchange title candidates, and zero title candidates with all three cues. The two details inspected were `ga4iPfzH` (paint/hood evidence refers to the offered motorcycle; Samand is the requested counterparty) and `galu34HS` (no Samand paint evidence). Neither is a clean contradiction example.
 
 **Status remains unresolved / no new production fix.** The observation reinforces that attribute cue detection is insufficient without entity/transaction-side ownership. The selector's 2-detail scenario budget and 8-detail global budget were respected. Do not treat engine labels as human grades, and do not continue unbounded page widening. Next useful evidence should be a small blinded human review of transaction direction and attribute ownership. Baseline [#145](https://github.com/Nimadanesh/shakar/actions/runs/39943428525) passed focused tests, full suite, typecheck and build; ESLint alone failed on known unrelated UI debt (8 errors, 37 warnings).
+
+## Update — PR #25 mixed-title detector, merged validation (2026-10-23)
+
+- Merge SHA: `f32561fe4cbc1733b8b89feaf023d07a1317ea39`; PR [#25](https://github.com/Nimadanesh/shakar/pull/25).
+- Baseline [39968450657](https://github.com/Nimadanesh/shakar/actions/runs/39968450657): focused tests, full portable suite, TypeScript and build passed; ESLint failed on 8 existing UI errors and 37 warnings.
+- Live role observation [39968450800](https://github.com/Nimadanesh/shakar/actions/runs/39968450800) was successful as a workflow, but `packetTargetCandidatesFound` was empty for both 8-page searches. No claim of target-specific live validation or quality gain is warranted.
+- Replacement-history observation [39968450511](https://github.com/Nimadanesh/shakar/actions/runs/39968450511) did not capture explicit component replacement; evidence gap remains open.
+- Next: mixed-transaction cue matrix / issue 16, characterization first. Preserve current eligibility and avoid expanding the ranker cue from unjudged live examples.
