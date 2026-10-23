@@ -576,7 +576,7 @@ function semanticCapFires(
   }
   const role = assessListingRole(combined);
   // Explicit buy-and-sell catalogues are mixed transaction listings, not clean direct offers.
-  const mixedTransactionAd = /خرید\s*و\s*فروش|خریدوفروش/.test(normalizeForMatch(combined));
+  const mixedTransactionAd = /خرید\s*و\s*فروش|خریدوفروش/.test(normalizeForMatch(title));
   const explicitBuy =
     def.transaction === "buy" || detectTransaction(def.query) === "buy";
   const rawClash = rolesClash(intent, role, explicitBuy);
@@ -756,7 +756,7 @@ function evaluateDescription(
   const dealerHits = countDealerHits(combined);
   // R7: the ad's speech-act stance — a clear offer ad on a buyer-seeking
   // hunt is the mirror of a dealer ad on a seller-seeking hunt.
-  const mixedTransactionAd = /خرید\s*و\s*فروش|خریدوفروش/.test(normalizeForMatch(combined));
+  const mixedTransactionAd = /خرید\s*و\s*فروش|خریدوفروش/.test(normalizeForMatch(title));
   const adRole = mixedTransactionAd ? "mixed-buyer-seller" : assessListingRole(combined).role;
   // Defensive: no MUST terms (never happens via resolveHuntDefinition, but
   // old snapshots and direct callers must not crash or pass vacuously).
