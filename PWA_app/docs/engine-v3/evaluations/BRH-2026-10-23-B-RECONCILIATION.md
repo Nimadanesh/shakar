@@ -66,3 +66,25 @@ This is a source-contract finding (E0), not a fresh execution or live result. Th
 - Source inspection confirms `scoreAd` applies an unexposed `mixedTransactionPenalty = 3` to `mixed-buyer-seller` listings. The observed synthetic 3-point gap is consistent with that penalty, but the logged breakdown is partial and cannot prove it is the only difference.
 - Interpretation: this run proves the synthetic paired tests execute and their assertions pass; it does **not** replay the exact frozen source IDs and therefore does not close the source-matched evidence gate. The historical live observation's `exact`/ `near` split is especially important because verdict sorts before score. Do not add another penalty or hard filter from this trace alone.
 - Follow-up: the test-only branch `diagnostic/brh-fridge-source-matched` replaces generic fixture IDs with frozen IDs `gaT3a_qu` and `gabbQJUc`, and pins the exact title/description excerpts in the blind packet under both queries. It remains a fixture replay of frozen packet text, not a live API detail replay. Run the focused tests on that branch and inspect whether either candidate's `matchKind` diverges. Production ranker, frozen grades, `main`, and deployment remain unchanged.
+
+
+## Current bounded live follow-up — runs 39960396108 and 39962509412 (2026-10-23)
+
+### Run #120 — before packet-target selection
+
+- [Live Observation #120](https://github.com/Nimadanesh/shakar/actions/runs/39960396108) completed successfully on merge SHA `71f3f739ebf27ff4fcbe3f641d119259fb05b66a`.
+- The two role-control queries each saw 50 ads across two list pages and checked two details. Neither frozen target ID (`gaT3a_qu`, `gabbQJUc`) was selected; the diagnostic used generic role-cue candidates.
+- In the seller-seeking query, `roleMode=seek-seller` coexisted with `queryRole=product`. This is a query-intent diagnostic inconsistency, not by itself proof of a final ranking defect.
+- The live sample did not contain the frozen human-graded pair and therefore could not validate their relative order.
+
+### Run #121 — after PR #20 was merged
+
+- [Live Observation #121](https://github.com/Nimadanesh/shakar/actions/runs/39962509412) completed successfully on merge SHA `5e41b1119c5f7974cf56c292798934abfb141a13`. The test-only diagnostic now prioritizes the frozen IDs if present in the retrieved candidate pool, reports whether they were found, and records title transaction-cue classes. Production ranking/scoring and the two-detail-per-query budget were not changed.
+- In both `فروشنده یخچال` and `یخچال`, retrieval saw 50 ads and reported `packetTargetCandidatesFound=[]`. The frozen IDs were absent from the retrieved candidate pool; therefore packet-target prioritization could not select them. This does **not** mean they were judged irrelevant or that the ranker rejected them.
+- For `فروشنده یخچال`, the two details selected were `gaf4cqwp` (“خریدار یخچال ساید دوقلو همه مدل تمام نقاط شهر”) and `QaYsoEJD` (“یخچال و فریزر خراب(فروش ندارم)فقط میخرم”). Both were classified as buyer-seeking, and the buyer-only ad ranked first with `exact` / score 3.5. The same two details appeared in the ordinary `یخچال` probe. This is current E3 evidence that the bounded candidate sample can be dominated by buyer-seeking listings, including under the seller-seeking query; it is not an E4 human relevance judgment and does not compare the frozen pair.
+- The new cue audit classified “فروش و خریدار” and “خریدوفروش” as distinct diagnostic categories in the offline test, but neither frozen target was available to exercise those categories against the current live source text.
+- Limits: two list pages per query; 50 ads observed per query; two detail checks per query; Mizan disabled; no Supabase write. Absence from this bounded pool is not evidence of absence from Divar as a whole.
+
+### Interpretation and next gate
+
+The evidence now points to a retrieval/candidate-coverage question before it can answer the frozen pair's ranking question. Do not add another mixed-role penalty or a hard filter from these observations. Next, use a **separate bounded diagnostic experiment** to determine whether deeper pagination or a targeted current query can retrieve the frozen IDs (or current comparable direct-sale and mixed-role listings) within an explicit request budget. Keep this separate from the immutable frozen grades and report whether target IDs are found, rather than treating not-found as a ranking outcome. Only after a comparable pair is actually present in the same candidate pool should we evaluate rank order; only a newly human-graded current sample can establish relevance quality.
