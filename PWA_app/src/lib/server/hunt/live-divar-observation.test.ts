@@ -127,10 +127,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                   }
                 : { method: "default-title-strength-order" },
             detailsChecked: stats.detailsChecked,
-            detailCandidatePool: detailCandidates.map((candidate) => ({
-              sourceAdId: candidate.sourceAdId,
-              title: candidate.title,
-            })),
+            detailCandidatePool,
             confirmed: stats.confirmed,
             nearMiss: stats.nearMiss,
             rejectedNoMatch: stats.rejectedNoMatch,
