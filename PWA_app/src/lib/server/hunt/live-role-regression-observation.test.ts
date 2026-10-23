@@ -11,7 +11,7 @@ import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline
 function transactionCueClass(title: string): string {
   const normalized = normalizeForMatch(title);
   if (/خرید\s*و\s*فروش|خریدوفروش/.test(normalized)) return "explicit-buy-sell-catalogue";
-  if (/فروش\\s*و\\s*خریدار|خریدار\\s*و\\s*فروش/.test(normalized)) return "sale-and-buyer-cues";
+  if (/فروش\s*و\s*خریدار|خریدار\s*و\s*فروش/.test(normalized)) return "sale-and-buyer-cues";
   if (/فروش\s+نه\s+خریدار/.test(normalized)) return "sale-not-buyer-contrast";
   if (/فروشنده|خریدار/.test(normalized)) return "single-side-role-cue";
   return "none";
