@@ -122,7 +122,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               listingRole,
               exchangeCueAudit: {
                 hasNegatedReplacementHistory:
-                  /(?:قطعات?\\s+)?تعویض\\s+(?:نشده(?:\\s+است)?|نشد(?:ه)?(?:\\s+است)?|ندارد|نداشته(?:\\s+است)?|نمی\\s?شود|نمی\\s?باشد)|(?:بدون|فاقد)\\s+تعویض/.test(listingText),
+                  /(?:قطعات?\s+)?تعویض\s+(?:نشده(?:\s+است)?|نشد(?:ه)?(?:\s+است)?|ندارد|نداشته(?:\s+است)?|نمی\s?شود|نمی\s?باشد)|(?:بدون|فاقد)\s+تعویض/.test(listingText),
                 hasPositiveExchangeCue: /معاوضه|با کالای دیگر تعویض می‌کنم/.test(listingText),
               },
             };
