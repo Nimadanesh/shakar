@@ -18,6 +18,29 @@ function body(over: Record<string, unknown> = {}) {
   };
 }
 
+describe("resolveHuntDefinition — negated repair history", () => {
+  it("routes «پیانو تعمیر یا تعویض نشده است» to product + absent attributes", () => {
+    const def = resolveHuntDefinition(
+      body({ query: "پیانو تعمیر یا تعویض نشده است", category: "music" })
+    )!;
+    expect(def.include).toContain("پیانو");
+    expect(def.include).not.toContain("تعمیر");
+    expect(def.include).not.toContain("یا");
+    expect(def.include).not.toContain("است");
+    expect(def.absentAttributes).toContain("تعویض");
+    expect(def.absentAttributes).toContain("تعمیر");
+    expect(def.serviceIntent).toBe(false);
+  });
+
+  it("does not remove repair terms from a positive service hunt", () => {
+    const def = resolveHuntDefinition(
+      body({ query: "تعمیر یخچال", category: "services" })
+    )!;
+    expect(def.include).toContain("تعمیر");
+    expect(def.serviceIntent).toBe(true);
+  });
+});
+
 describe("resolveHuntDefinition — the «پیانو» incident (2026-10-06)", () => {
   it("makes the query's content terms mandatory", () => {
     const def = resolveHuntDefinition(body())!;
