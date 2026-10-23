@@ -126,3 +126,11 @@ A wider bounded read-only replay now completed 8/8 pages for `معاوضه سم�
 - Live observation [40004257788](https://github.com/Nimadanesh/shakar/actions/runs/40004257788), artifact `engine-v3-live-observation-130`, completed under the existing 8-page / 8-detail budget with Mizan disabled. All outputs are unjudged.
 - **New candidate for characterization, not yet a confirmed general failure:** `gaLNJNwu`, title `فروشگاه /خریدار یخچال ساید دوقلو هتلی خراب سوخته`, was `unknown` and rank-1 `exact` for `فروشنده یخچال`; its description solicits broken refrigerators for purchase. The ordinary `یخچال` scenario also showed it as rank 2 `exact`. The title is a buyer/shop hybrid, but the existing conservative rule intentionally avoids treating every mid-text `خریدار` as buyer-seeking because seller copy can mention a buyer. Next: add a narrowly scoped paired characterization fixture using this source text plus a clean seller control and an ordinary-search control; test role and rank behavior before proposing any cue expansion. Do not add a global bare-`خریدار` substring rule from this one unjudged sample.
 - No human grade, frozen capture, or denominator changed. No `main` merge or deployment.
+
+
+## Follow-up — shop/buyer hybrid title characterization PR #40 (2026-10-23)
+
+- Draft PR [#40](https://github.com/Nimadanesh/shakar/pull/40) proposes a narrow extension to `isMixedTransactionTitle`: normalized `فروشگاه خریدار`. It uses the existing mixed-listing ranking penalty only; no hard rejection and no broad bare-`خریدار` role cue.
+- Regression pairs the observed hybrid title `فروشگاه /خریدار یخچال ساید دوقلو هتلی خراب سوخته` against a clean direct seller and asserts that the hybrid remains eligible but ranks below the seller. Shop-only and direct-seller titles are negative controls.
+- Counter-risk: the existing mixed-title penalty is not restricted to seller-seeking hunts, so this pattern can lower the hybrid in ordinary product searches too. Current evidence is one bounded, unjudged live source; this is why the PR remains draft pending focused/full CI and consideration of the cross-mode counter-risk.
+- Do not merge until the new regression, full portable suite, typecheck and build pass and the scope is reviewed. ESLint's 8 known unrelated UI errors remain separate. No human grades or frozen data changed.
