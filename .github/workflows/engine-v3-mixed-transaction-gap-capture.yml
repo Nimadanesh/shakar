@@ -1,0 +1,67 @@
+name: Engine V3 Mixed Transaction Gap Capture
+# Read-only, bounded supplement for three missing evidence cells. No ranking changes.
+
+on:
+  push:
+    branches:
+      - engine_v3
+    paths:
+      - ".github/workflows/engine-v3-mixed-transaction-gap-capture.yml"
+      - "PWA_app/src/lib/server/hunt/live-mixed-transaction-gap-capture.test.ts"
+      - "PWA_app/src/lib/server/hunt/pipeline.ts"
+      - "PWA_app/src/lib/server/hunt/semantics.ts"
+  pull_request:
+    branches:
+      - engine_v3
+    paths:
+      - ".github/workflows/engine-v3-mixed-transaction-gap-capture.yml"
+      - "PWA_app/src/lib/server/hunt/live-mixed-transaction-gap-capture.test.ts"
+      - "PWA_app/src/lib/server/hunt/pipeline.ts"
+      - "PWA_app/src/lib/server/hunt/semantics.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-v3-mixed-transaction-gap-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: Bounded capture for three missing matrix cells
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: PWA_app
+    env:
+      LIVE_DIVAR_OBSERVATION: "1"
+      HUNT_MAX_DETAILS: "2"
+      MIZAN_SHADOW: "0"
+      SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-mixed-transaction-gap-capture-slugs.jsonl
+    steps:
+      - name: Checkout pull request revision
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run bounded read-only missing-cell capture
+        run: npx vitest run src/lib/server/hunt/live-mixed-transaction-gap-capture.test.ts --reporter=verbose
+
+      - name: Upload raw gap capture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-v3-mixed-transaction-gap-capture
+          path: PWA_app/engine-v3-mixed-transaction-gap-capture.json
+          if-no-files-found: warn
+          retention-days: 14
