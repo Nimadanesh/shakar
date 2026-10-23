@@ -175,3 +175,11 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - The run-111 role-regression artifact returned the same two refrigerator listings in the same order for `فروشنده یخچال` and `یخچال`. This is unjudged and non-representative; keep the blinded source-matched human-review gate.
 - Baseline 137: focused suite 286 passed/6 skipped; full portable suite 879 passed/7 skipped; TypeScript and production build passed; ESLint failed with 8 known UI errors and 37 warnings. Baseline is not fully green.
 - Decision: no engine/ranking change, no merge/deployment. Next observation should prioritize the intersection of explicit exchange + target vehicle + target-scoped paint contradiction; if not found within budget, report the control as not captured.
+
+
+## Targeted exchange observation selector — pending validation (2026-10-23)
+
+- Observation-only commit [638fec1953e8eae43885187818f19e6369de385c](https://github.com/Nimadanesh/shakar/commit/638fec1953e8eae43885187818f19e6369de385c) now prioritizes a joint title cue (Samand + paint + explicit exchange); absent that, it interleaves paint-cue and exchange-cue candidates under the existing fixed detail budget and deduplicates ad IDs.
+- This changes only which candidates the read-only observation harness inspects and what diagnostic counts it reports. No engine or ranking behavior changed.
+- Validation remains pending: no workflow run was returned for this commit and tests have not been executed in this session. The contradiction gate remains open until a new artifact proves the relevant candidate was actually captured and its full detail confirms which vehicle the paint statement refers to.
+- Next: run and inspect the dedicated observation plus baseline checks on the current source. Do not infer a quality change from title cue counts alone; no merge/deployment.
