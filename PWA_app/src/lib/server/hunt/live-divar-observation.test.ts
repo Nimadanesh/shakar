@@ -71,10 +71,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         // budget on titles likely to describe item condition/history. This is
         // deliberately a targeted probe, not a representative rank sample.
         const historyHint = (title: string) =>
-          /تعویض|قطعات|اورجینال|اصلی|فابریک|فروشگاه|مرجع/.test(title);
+          /تعمیر|تعویض|قطعات|اورجینال|اصلی|فابریک|فروشگاه|مرجع/.test(title);
         const historyCandidates = candidates.filter((candidate) => historyHint(candidate.title));
         const detailCandidates =
-          scenario.id === "negated-replacement-history" && historyCandidates.length > 0
+          (scenario.id === "negated-replacement-history" ||
+            scenario.id === "exact-negated-phrase") &&
+          historyCandidates.length > 0
             ? [
                 ...historyCandidates.slice(0, scenario.detailBudget),
                 ...candidates
@@ -111,7 +113,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             duplicatesCollapsed: stats.dupsCollapsed,
             candidatesAfterFilters: candidates.length,
             detailSelection:
-              scenario.id === "negated-replacement-history"
+              scenario.id === "negated-replacement-history" ||
+              scenario.id === "exact-negated-phrase"
                 ? {
                     method: "title-cue-prioritized-diagnostic",
                     historyHintCandidates: historyCandidates.length,
