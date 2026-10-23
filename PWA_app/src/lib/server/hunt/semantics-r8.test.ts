@@ -400,6 +400,23 @@ describe("E3 — negated replacement history is not an exchange offer", () => {
 });
 
 
+describe("E3 follow-up — part replacement is not exchange intent", () => {
+  it("does not classify a repair service's «تعویض قطعات معیوب» as an exchange offer", () => {
+    for (const description of [
+      "آکادمی بین المللی فنی پیانو آموزش کوک پیانو تعمیر پیانو تعویض قطعات معیوب",
+      "پیانو آکوستیک یادگیری کوک و تعمیر پیانو تعویض قطعات معیوب",
+    ]) {
+      expect(assessListingRole(description).role, description).not.toBe("exchange");
+    }
+  });
+
+  it("preserves an independent explicit exchange offer beside part-replacement wording", () => {
+    expect(
+      assessListingRole("تعمیر پیانو تعویض قطعات معیوب؛ معاوضه با پیانو دیجیتال").role
+    ).toBe("exchange");
+  });
+});
+
 describe("E3 follow-up — replacement history is not exchange intent", () => {
   it("does not classify «قطعات تعویض شده» as an exchange offer", () => {
     expect(assessListingRole("قطعات تعویض شده").role).not.toBe("exchange");
