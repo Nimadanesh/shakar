@@ -277,8 +277,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       commit: process.env.GITHUB_SHA ?? "local",
       runtime: process.version,
       limits: {
-        maxListPagesPerQuery: 4,
-        perScenarioPageBudgets: cases.map(({ id }) => ({ id, maxPages: id === "explicit-exchange-vehicle-samand" ? 4 : 2 })),
+        maxListPagesPerQuery: 8,
+        perScenarioPageBudgets: cases.map(({ id }) => ({ id, maxPages: id === "explicit-exchange-vehicle-samand" ? 8 : 2 })),
         maxDetailsTotal: 8,
         maxDetailsUsed: detailsBudgetUsed,
         perScenarioDetailBudgets: cases.map(({ id, detailBudget }) => ({ id, detailBudget })),
