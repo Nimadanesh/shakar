@@ -245,3 +245,12 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - D01: the explicit no-paint claim belongs to the offered Tiba; the requested Samand is described as white only. This is wrong-side evidence, not a Samand paint-history contradiction.
 - D02: the claim's vehicle referent remains ambiguous; no conclusion about Samand paint history is justified.
 - Both judgments align with the separate internal mapping. The clean, direction-matched target-Samand contradiction evidence gap remains open. Keep `UNKNOWN` distinct, keep the helper isolated, and do not add selector heuristics or alter ranking/production semantics from these records. No merge to `main` or deployment.
+
+
+## Packet A current-engine alignment — 2026-10-23
+
+- Existing owner grades `A01=2, A02=0, A03=2, A04=0, B01=1, B02=3` were reused as locked evidence; no re-evaluation.
+- Alignment record: [BRH-2026-10-23-A-CURRENT-ENGINE-ALIGNMENT.md](evaluations/BRH-2026-10-23-A-CURRENT-ENGINE-ALIGNMENT.md). A02/A04 rejection matches grade 0; A01/A03 near results reflect relevant listings with unproven history; B01 near is a potential over-inclusion but not enough for a global hard-reject.
+- B02 changed from `no-match` to `near` after the scoped buyer-cue fix. Its current phrase-level test remains `unknown` for replacement-history polarity and its definition still lacks explicit `قطعات` and `اورجینال` MUST evidence. This is a recovered result, not a full match or proven quality uplift.
+- Current-code baseline [run #147](https://github.com/Nimadanesh/shakar/actions/runs/39946256547): focused/full portable tests, TypeScript and production build passed; ESLint failed on the known unrelated 8 UI hook-rule errors (37 warnings).
+- Next gate is paired, source-matched human review of ambiguous “بدون دستکاری/بدون تغییر” versus explicit original/no-replacement and explicit replacement claims. Preserve UNKNOWN; no global synonym expansion, consultation hard-reject, ranking change, main merge, or deployment.
