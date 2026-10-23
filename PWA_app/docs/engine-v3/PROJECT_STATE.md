@@ -157,3 +157,11 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - No CI checks were surfaced by status lookup for the prior characterization commit `9a55534`; validation of `cd5c7ad` remains outstanding. Do not call tests passing until a run is inspected.
 - Next gate: obtain hosted CI evidence and add paired human-reviewed examples before considering a narrow scoped interpretation. No global synonym, merge, or deployment.
 
+
+
+## Latest handoff — paired seller-role review packet (2026-10-23)
+
+- New blinded packet [BRH-2026-10-23-B](evaluations/BRH-2026-10-23-B-BLIND.md) and withheld mapping [BRH-2026-10-23-B-INTERNAL-KEY.md](evaluations/BRH-2026-10-23-B-INTERNAL-KEY.md) are ready for owner grading.
+- It uses two exact source listings under both `فروشنده یخچال` and `یخچال`, so the four judgments test the transaction-intent contrast directly. The bounded observation returned the same candidates in the same order for both queries; this remains an unjudged diagnostic signal, not a confirmed defect or quality metric.
+- No engine code changed. Only evaluation/handoff documentation was added on `engine_v3`. `main` and deployment remain untouched.
+- Next gate: receive B01–B04 grades, then inspect source-matched judgments before any role-logic change. Existing CI results are for earlier source SHAs and must not be represented as validation of the current documentation head.
