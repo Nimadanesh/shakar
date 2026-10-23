@@ -435,10 +435,18 @@ const SALE_CUES = ["فروش", "فروشی", "میفروشم", "می فروشم"
  * Examples: «تعمیر یا تعویض نشده است», «بدون تعویض».
  */
 function stripNegatedExchangeCues(normalized: string): string {
-  return normalized.replace(
-    /(?:^|\s)(?:(?:قطعات?\s+)?تعویض\s+(?:شده(?:\s+است)?|نشده(?:\s+است)?|نشد(?:ه)?(?:\s+است)?|ندارد|نداشته(?:\s+است)?|نمی\s?شود|نمی\s?باشد)|(?:بدون|فاقد)\s+تعویض)(?=\s|$)/g,
-    " "
-  );
+  // «تعویض قطعات معیوب» is maintenance/service language, not an offer to
+  // exchange the advertised item. Remove this narrow object phrase before
+  // checking the broad legacy «تعویض» cue; independent «معاوضه» survives.
+  return normalized
+    .replace(
+      /(?:^|\s)تعویض\s+قطعات?(?:\s+(?:معیوب|فرسوده|خراب|مصرفی|یدکی))?(?=\s|$)/g,
+      " "
+    )
+    .replace(
+      /(?:^|\s)(?:(?:قطعات?\s+)?تعویض\s+(?:شده(?:\s+است)?|نشده(?:\s+است)?|نشد(?:ه)?(?:\s+است)?|ندارد|نداشته(?:\s+است)?|نمی\s?شود|نمی\s?باشد)|(?:بدون|فاقد)\s+تعویض)(?=\s|$)/g,
+      " "
+    );
 }
 
 /**
