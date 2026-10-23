@@ -60,7 +60,7 @@ export function isRepairWord(term: string): boolean {
  */
 export function isMixedTransactionTitle(title: string): boolean {
   const normalized = normalizeForMatch(title);
-  return /(?:خرید\s*و\s*فروش|فروش\s*و\s*خریدار|خریدار\s*و\s*فروش|فروشنده\s*و\s*خریدار|خریدار\s*و\s*فروشنده)/.test(normalized);
+  return /(?:خرید\s*و\s*فروش|فروش\s*و\s*خریدار|خریدار\s*و\s*فروش|فروشنده\s*و\s*خریدار|خریدار\s*و\s*فروشنده|فروشگاه\s+خریدار)/.test(normalized);
 }
 
 function escRe(s: string): string {
