@@ -60,7 +60,7 @@ export function isRepairWord(term: string): boolean {
  */
 export function isMixedTransactionTitle(title: string): boolean {
   const normalized = normalizeForMatch(title);
-  return /(?:خرید\s*و\s*فروش|فروش\s*و\s*خریدار|خریدار\s*و\s*فروش)/.test(normalized);
+  return /(?:خرید\s*و\s*فروش|فروش\s*و\s*خریدار|خریدار\s*و\s*فروش|فروشنده\s*و\s*خریدار|خریدار\s*و\s*فروشنده)/.test(normalized);
 }
 
 function escRe(s: string): string {
@@ -464,6 +464,10 @@ const RENTAL_WORDS = ["اجاره", "رهن"];
 const EXCHANGE_PHRASES = ["معاوضه", "فروش عمده", "عمده", "همکار", "بنکدار", "پخش کننده"];
 const SALE_CUES = ["فروش", "فروشی", "میفروشم", "می فروشم", "فروش فوری", "قیمت", "تخفیف", "سند آماده"];
 
+/** Retail installment ads need a conjunction: installment language alone is ambiguous. */
+const INSTALLMENT_CUES = ["اقساط", "قسطی"];
+const RETAIL_CONTEXT_CUES = ["پیش پرداخت", "ارسال", "موجود", "پکیج هدیه", "تمام مدل", "گالری"];
+
 /**
  * A negated replacement-history statement is condition evidence, not an
  * offer to exchange the item. Keep positive exchange offers intact.
@@ -585,6 +589,14 @@ export function assessListingRole(text: string): RoleAssessment {
   }
 
   // A confident product offer needs a sale cue and no competing role cue.
+  // Retail installment catalogues often omit the literal word «فروش».
+  // Require installment language plus at least two independent retail signals;
+  // installment wording alone must remain unknown, not invent a seller role.
+  const installment = INSTALLMENT_CUES.find((p) => includesWord(norm, p));
+  const retailSignals = RETAIL_CONTEXT_CUES.filter((p) => norm.includes(p));
+  if (installment && retailSignals.length >= 2) {
+    return { role: "product", reason: `retail-installment:${installment}+${retailSignals.slice(0, 2).join("+")}` };
+  }
   // R8 (P7): word-boundary match — the old substring test read «فروشگاه»
   // (shop) as «فروش» (sale) and mislabeled shop ads as product offers,
   // which made role-based demotion unreliable.

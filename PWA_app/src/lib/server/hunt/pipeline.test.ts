@@ -2596,6 +2596,14 @@ describe("BRH-2026-10-23 buyer-seeking exact source replay — B11/B12", () => {
       })),
       caveat: "Human grades are the source evaluation; engine scores are diagnostic and do not redefine relevance.",
     }));
+    if (query === "خریدار پیانو") {
+      const retail = done.results.find((item) => item.sourceAdId === "B11");
+      const buyer = done.results.find((item) => item.sourceAdId === "actual-buyer");
+      expect(buyer).toBeDefined();
+      expect(retail?.matchKind).toBe("near");
+      expect(retail?.demotedBy).toBe("cap");
+      expect(done.results.indexOf(buyer!)).toBeLessThan(done.results.indexOf(retail!));
+    }
     return done.results.map((item) => item.sourceAdId);
   }
 
@@ -2622,6 +2630,7 @@ describe("BRH-2026-10-23 buyer-seeking exact source replay — B11/B12", () => {
     ]);
     expect(ids).toContain("B11");
     expect(ids).toContain("actual-buyer");
+    expect(ids.indexOf("actual-buyer")).toBeLessThan(ids.indexOf("B11"));
   });
 
   it("replays B12 direct fridge sale against a buyer-seeking positive", async () => {
@@ -2647,5 +2656,21 @@ describe("BRH-2026-10-23 buyer-seeking exact source replay — B11/B12", () => {
     ]);
     expect(ids).toContain("B12");
     expect(ids).toContain("actual-buyer");
+  });
+
+  it("classifies installment retail catalogues conservatively and preserves explicit buyer cues", async () => {
+    const { assessListingRole, isMixedTransactionTitle } = await import("./semantics");
+    const retail = assessListingRole(
+      "هوران پیانو.و(اقساط بدون سود) پیانو تمام مدل ها پکیج هدیه و ارسال تا درب منزل موجوده پیش پرداخت کم و شفاف گالری پیانو سازدونی"
+    );
+    expect(retail.role).toBe("product");
+    expect(retail.reason).toContain("retail-installment");
+
+    // Buyer speech-act wins before retail language; installment alone is not enough.
+    expect(assessListingRole("خریدار پیانو هستم، امکان خرید اقساطی دارم؟").role).toBe("buyer-seeking");
+    expect(assessListingRole("پیانو اقساطی مدنظر").role).toBe("unknown");
+
+    // Parenthesized mixed-dealer titles must still register both transaction sides.
+    expect(isMixedTransactionTitle("فروشنده و (خریدار)انواع مدل یخچال کل کرج")).toBe(true);
   });
 });
