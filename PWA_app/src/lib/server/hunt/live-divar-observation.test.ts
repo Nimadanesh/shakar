@@ -202,7 +202,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         queries: cases.length,
         mizanShadow: process.env.MIZAN_SHADOW ?? "default",
       },
-      targetedKnownAd,\n      scenarios: reports,
+      targetedKnownAd,
+      scenarios: reports,
     };
     const outputPath = join(
       process.env.RUNNER_TEMP ?? tmpdir(),
