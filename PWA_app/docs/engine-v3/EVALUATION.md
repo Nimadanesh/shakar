@@ -98,3 +98,11 @@ For every meaningful experiment, record:
 - Live role observation [run 39968450800](https://github.com/Nimadanesh/shakar/actions/runs/39968450800): workflow PASS, max 8 pages/query, 4 details total, `MIZAN_SHADOW=0). The historical paired target IDs were not found in either query's result pool. This is a successful bounded capture, not live confirmation of the specific cue or a human-quality comparison.
 - Replacement-history follow-up [run 39968450511](https://github.com/Nimadanesh/shakar/actions/runs/39968450511): bounded workflow PASS, but no explicit replacement-of-component control was captured.
 - No human grades or mappings changed. The next evaluation step is a frozen, source-grounded mixed-transaction cue matrix; do not infer ranking improvement from CI success or from unjudged live engine labels.
+
+## Mixed-transaction cue matrix — first capture, 2026-10-23
+
+- Raw source: [run 39970882822](https://github.com/Nimadanesh/shakar/actions/runs/39970882822), artifact `engine-v3-mixed-transaction-packet-capture`, commit `e4aba4d8d30213ba44f47fcd893bc05889e4942d`.
+- 12 unique ads; six scenarios; two categories; 12 detail snapshots; Mizan shadow disabled. All descriptions are present in the raw artifact.
+- A blind packet has been prepared with task intent and full captured listing text but without source IDs or engine diagnostics. Collect the locked 0–3 grades before revealing/joining the internal mapping. Treat `INSUFFICIENT` separately and exclude it from the numeric denominator.
+- Do not compute a ranking-quality delta: there is no paired production top-N comparison, and `productionRank` is null. Use grades to assess per-task relevance and role-direction errors only.
+- Coverage gaps: compact `خریدوفروش`, clean barter/exchange-condition case, and a clean explicit buyer-seeking refrigerator control. The seller-piano selected control is a rejected training offer. Supplement only if the locked grades show that a missing cell affects the decision.
