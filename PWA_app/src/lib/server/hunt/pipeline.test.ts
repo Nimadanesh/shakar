@@ -1945,7 +1945,7 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     expect(kinds["history-unknown"]).toBe("near");
   });
 
-  it("does not hard-reject a repair-word title when the listing explicitly seeks buyers", async () => {
+  it("rejects an explicit buyer/collector ad from a product repair-history hunt", async () => {
     const def = resolveHuntDefinition({
       query: "پیانو تعمیر یا تعویض نشده است",
       category: "music",
@@ -1962,8 +1962,9 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
 
     const done = await doneOf(def);
     const kinds = kindsOf(done);
-    // A repair-related title alone must not hide explicit buyer/collector intent.
-    expect(kinds["buyer-collector"]).toBe("near");
+    // Buyer-side intent is a true role clash, not an item for sale.
+    expect(kinds["buyer-collector"]).toBeUndefined();
+    expect(done.stats.rejectedNoMatch).toBe(1);
   });
 
   it("keeps generic product/service role clashes recall-preserving when repair history is not negated", async () => {
