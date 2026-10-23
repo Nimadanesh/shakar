@@ -1,3 +1,4 @@
+# Isolated regression workflow; this comment-only commit probes push-trigger delivery.
 name: E3 Negated Exchange Role Regression
 
 on:
