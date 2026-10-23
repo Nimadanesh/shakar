@@ -198,3 +198,11 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - [Run 39940796881](https://github.com/Nimadanesh/shakar/actions/runs/39940796881) completed successfully on `10c36a92eddf4510e7d20f4afcef89ca1b032eff`; artifact `engine-v3-live-observation-114` was inspected.
 - The Samand scenario saw 90 ads/4 pages, 3 paint-cue titles, 17 exchange-cue titles, 17 Samand+exchange titles, and 0 joint Samand+paint+exchange titles. Two detail slots were used. The listing `معاوضه با تاکسی برون شهری سمند` includes `بدون رنگ`, but referent scope remains ambiguous; it is not accepted as a target-side contradiction witness. Status: **not captured / unresolved**, gate remains closed.
 - This is observation-only evidence, not a relevance score or quality uplift. Do not make further selector heuristics or production changes without a better-scoped source example. Keep main/deployment untouched. Other scenario results are small unjudged sanity checks only.
+
+
+## Source-matched exchange evidence audit (2026-10-23)
+
+- Follow-up audit: [BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md](evaluations/BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md). Existing locked cases map to source IDs: S04 positive target-side paint evidence `gaaTiMpU` (grade 3); S03 target-side unknown `gaCLax_r` (grade 2); S01 wrong-side paint evidence `gabTyjBD` (grade 2); S02 missing paint evidence `gabvxlgd` (grade 2); V01 explicit paint contradiction `gaYj6KeD` (grade 0) but with a transaction-direction mismatch/confound.
+- This establishes positive / unknown / wrong-side / missing states, but **not** a clean, direction-matched human-graded contradiction control. V01 cannot isolate contradiction behavior because its exchange direction does not match the query.
+- Next: collect one new blind, source-mapped example with a valid exchange relation and an explicit paint statement about the same target vehicle that contradicts `بدون رنگ`; alternatively add a clearly labeled synthetic fixture for unit-level logic, without claiming it is live evidence. Do not continue title-selector heuristics or integrate ranking logic absent that evidence.
+- No source grades changed; no production semantics/ranking, main merge, or deployment.
