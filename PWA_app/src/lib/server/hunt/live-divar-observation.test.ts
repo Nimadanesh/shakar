@@ -223,6 +223,16 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                         exchangeHintCandidates: exchangeHintCandidates.length,
                         samandExchangeCandidates: samandExchangeCandidates.length,
                         samandPaintExchangeCandidates: samandPaintExchangeCandidates.length,
+                        // Evidence-only inventory: expose the bounded title pool so the next
+                        // selector decision can be based on observed candidates rather than
+                        // adding another title heuristic blindly. This does not fetch details
+                        // or change which candidates are confirmed.
+                        samandExchangeTitleInventory: samandExchangeCandidates
+                          .slice(0, 40)
+                          .map((candidate) => ({
+                            sourceAdId: candidate.sourceAdId,
+                            title: candidate.title,
+                          })),
                       }
                     : { method: "default-title-strength-order" },
             detailsChecked: stats.detailsChecked,
