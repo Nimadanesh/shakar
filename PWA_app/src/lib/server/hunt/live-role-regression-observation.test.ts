@@ -8,10 +8,6 @@ import { resolveHuntDefinition } from "./definition";
 import { assessListingRole, assessQueryIntent } from "./semantics";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
 
-function detailCandidatesLength(ids: Set<string>): number {
-  return ids.size;
-}
-
 function transactionCueClass(title: string): string {
   const normalized = normalizeForMatch(title);
   if (/خرید\s*و\s*فروش|خریدوفروش/.test(normalized)) return "explicit-buy-sell-catalogue";
@@ -85,7 +81,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           ...roleCandidates,
           ...candidates,
         ].filter((candidate) => {
-          if (selectedIds.has(candidate.sourceAdId) || detailCandidatesLength(selectedIds) >= scenario.detailBudget) return false;
+          if (selectedIds.has(candidate.sourceAdId) || selectedIds.size >= scenario.detailBudget) return false;
           selectedIds.add(candidate.sourceAdId);
           return true;
         });
