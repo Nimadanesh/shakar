@@ -2288,6 +2288,25 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
     });
 
     const done = await completed(def);
+    console.info("[BRH-FRIDGE-SCORE-TRACE]", JSON.stringify({
+      query: "فروشنده یخچال",
+      roleMode: def.roleMode ?? "none",
+      mustCount: def.include.length + def.exclude.length,
+      shouldCount: def.should.length,
+      fixtureOnly: true,
+      results: done.results.map((result, rank) => ({
+        rank: rank + 1,
+        fixtureId: result.sourceAdId,
+        title: result.title,
+        matchKind: result.matchKind,
+        score: result.score,
+        breakdown: result.breakdown,
+        missingInfo: result.missingInfo,
+        evidence: result.evidence,
+        demotedBy: result.demotedBy ?? null,
+      })),
+      caveat: "Synthetic fixture, not a replay of frozen Divar ad IDs; breakdown omits some score adjustments.",
+    }));
     const ids = done.results.map((result) => result.sourceAdId);
     // Human grades: barter offer = 2, mixed buying/catalogue listing = 1.
     // Preserve both candidates and require the observed human preference.
@@ -2312,6 +2331,25 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
     });
 
     const done = await completed(def);
+    console.info("[BRH-FRIDGE-SCORE-TRACE]", JSON.stringify({
+      query: "یخچال",
+      roleMode: def.roleMode ?? "none",
+      mustCount: def.include.length + def.exclude.length,
+      shouldCount: def.should.length,
+      fixtureOnly: true,
+      results: done.results.map((result, rank) => ({
+        rank: rank + 1,
+        fixtureId: result.sourceAdId,
+        title: result.title,
+        matchKind: result.matchKind,
+        score: result.score,
+        breakdown: result.breakdown,
+        missingInfo: result.missingInfo,
+        evidence: result.evidence,
+        demotedBy: result.demotedBy ?? null,
+      })),
+      caveat: "Synthetic fixture, not a replay of frozen Divar ad IDs; breakdown omits some score adjustments.",
+    }));
     const ids = done.results.map((result) => result.sourceAdId);
     // Human grades: barter = 3, mixed buyer-leaning catalogue = 2.
     // Both remain eligible, but the stronger direct product offer should rank first.
