@@ -8,6 +8,19 @@ import { resolveHuntDefinition } from "./definition";
 import { assessListingRole, assessQueryIntent } from "./semantics";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
 
+function detailCandidatesLength(ids: Set<string>): number {
+  return ids.size;
+}
+
+function transactionCueClass(title: string): string {
+  const normalized = normalizeForMatch(title);
+  if (/خرید\s*و\s*فروش|خریدوفروش/.test(normalized)) return "explicit-buy-sell-catalogue";
+  if (/فروش\s+و\s+خریدار|خریدار\s+و\s+فروش/.test(normalized)) return "sale-and-buyer-cues";
+  if (/فروش\s+نه\s+خریدار/.test(normalized)) return "sale-not-buyer-contrast";
+  if (/فروشنده|خریدار/.test(normalized)) return "single-side-role-cue";
+  return "none";
+}
+
 /**
  * Read-only regression probe for role direction. Separate from the negative
  * repair-history observation so each experiment has an explicit detail budget.
@@ -52,18 +65,23 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           maxPages: 2,
           emit: (event) => events.push(event),
         });
+        // Prefer the frozen human-graded pair if retrieval returns either ID.
+        // This changes only the read-only probe's detail allocation, never production ranking.
+        const packetTargetIds = new Set(["gaT3a_qu", "gabbQJUc"]);
+        const packetCandidates = candidates.filter((candidate) => packetTargetIds.has(candidate.sourceAdId));
         const roleHint = (title: string) =>
           /خریدار|خریداریم|خریدارم|می\s?خوام|می\s?خواهیم|فروش|فروشی|فروشنده/.test(title);
         const roleCandidates = candidates.filter((candidate) => roleHint(candidate.title));
-        const detailCandidates =
-          roleCandidates.length > 0
-            ? [
-                ...roleCandidates.slice(0, scenario.detailBudget),
-                ...candidates
-                  .filter((candidate) => !roleHint(candidate.title))
-                  .slice(0, Math.max(0, scenario.detailBudget - roleCandidates.length)),
-              ]
-            : candidates.slice(0, scenario.detailBudget);
+        const selectedIds = new Set<string>();
+        const detailCandidates = [
+          ...packetCandidates,
+          ...roleCandidates,
+          ...candidates,
+        ].filter((candidate) => {
+          if (selectedIds.has(candidate.sourceAdId) || detailCandidatesLength(selectedIds) >= scenario.detailBudget) return false;
+          selectedIds.add(candidate.sourceAdId);
+          return true;
+        });
         const detailCandidatePool = detailCandidates.map((candidate) => ({
           sourceAdId: candidate.sourceAdId,
           title: candidate.title,
@@ -98,7 +116,15 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             duplicatesCollapsed: stats.dupsCollapsed,
             candidatesAfterFilters: candidates.length,
             roleHintCandidates: roleCandidates.length,
-            detailSelection: roleCandidates.length > 0 ? "role-cue-prioritized" : "default-title-strength-order",
+            packetTargetCandidatesFound: packetCandidates.map((candidate) => ({
+              sourceAdId: candidate.sourceAdId,
+              title: candidate.title,
+            })),
+            detailSelection: packetCandidates.length > 0
+              ? "frozen-packet-targets-then-role-cues"
+              : roleCandidates.length > 0
+                ? "role-cue-prioritized"
+                : "default-title-strength-order",
             detailsChecked: stats.detailsChecked,
             detailCandidatePool,
             confirmed: stats.confirmed,
@@ -129,6 +155,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               mixedTransactionTitleCue: /خرید\s*و\s*فروش|خریدوفروش/.test(
                 normalizeForMatch(result.title)
               ),
+              transactionCueClass: transactionCueClass(result.title),
               cueDerivedScoringRoleEstimate: /خرید\s*و\s*فروش|خریدوفروش/.test(
                 normalizeForMatch(result.title)
               )
