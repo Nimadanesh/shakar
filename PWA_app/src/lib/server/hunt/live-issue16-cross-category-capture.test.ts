@@ -205,5 +205,4 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
     console.log("ENGINE_V3_ISSUE16_CROSS_CATEGORY_JSON_BEGIN");
     console.log(JSON.stringify(report, null, 2));
     console.log("ENGINE_V3_ISSUE16_CROSS_CATEGORY_JSON_END");
-  }
-, 120_000);
+  }, 120_000);
