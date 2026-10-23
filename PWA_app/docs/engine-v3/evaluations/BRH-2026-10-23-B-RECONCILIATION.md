@@ -88,3 +88,24 @@ This is a source-contract finding (E0), not a fresh execution or live result. Th
 ### Interpretation and next gate
 
 The evidence now points to a retrieval/candidate-coverage question before it can answer the frozen pair's ranking question. Do not add another mixed-role penalty or a hard filter from these observations. Next, use a **separate bounded diagnostic experiment** to determine whether deeper pagination or a targeted current query can retrieve the frozen IDs (or current comparable direct-sale and mixed-role listings) within an explicit request budget. Keep this separate from the immutable frozen grades and report whether target IDs are found, rather than treating not-found as a ranking outcome. Only after a comparable pair is actually present in the same candidate pool should we evaluate rank order; only a newly human-graded current sample can establish relevance quality.
+
+
+## Deeper live candidate scan — run 39963999459 (2026-10-23)
+
+- [Live Observation #122](https://github.com/Nimadanesh/shakar/actions/runs/39963999459) completed successfully on merge SHA `484a3d431588af49f890c2696f079a49fe0c47f3`, after the bounded role-regression probe was extended to eight cursor-chained list pages.
+- Both `فروشنده یخچال` and `یخچال` completed all 8 requested pages and observed 194 ads/candidates each. The frozen target set remained empty in both reports: `packetTargetCandidatesFound=[]` for `gaT3a_qu` and `gabbQJUc`.
+- The same two detail candidates were selected for both queries: `gaDn0jsk`, “فروش و نصب موتور یخچال استوک ونو، ۱سال ضمانت”, and `gabX2QE8`, “فروش یخچال”. Both were confirmed as `exact`, score 3.5. This is a tiny diagnostic detail sample, not a representative relevance sample and not evidence that the frozen pair is ranked correctly or incorrectly.
+- Query intent remains `roleMode=seek-seller` with `queryRole=product` for `فروشنده یخچال`. The ordinary `یخچال` query has `roleMode=none`, `queryRole=product`. The same observed candidate count and selected details across both queries warrant a focused check of query construction/retrieval semantics, but do not alone prove the backend issued identical requests.
+- The broader run's independent scenarios also stayed bounded: 8 total detail checks across 4 scenarios; the refrigerator role probe used 4 detail checks total across its 2 queries. Mizan shadow remained disabled, and observations were read-only.
+
+### Query-term contract finding
+
+The two role-probe reports share `include: ["یخچال"]`, even though the raw query differs. This is expected from the current source contract, not yet proof of a provider bug:
+
+- `resolveHuntDefinition` computes `roleMode=seek-seller` from the raw phrase `فروشنده یخچال`.
+- `collectCandidates` sends `keywords: def.include` to `divarProvider.searchLists`; role words are deliberately not MUST content terms (see `ROLE_WORDS` in `PWA_app/src/lib/interpret.ts`).
+- Therefore both queries ask Divar for refrigerator inventory and role semantics are expected to be evaluated downstream. The current report does not include serialized provider requests or cursor/page identity needed to prove the backend issued identical requests.
+
+### Updated decision
+
+The deeper scan did not locate the frozen pair even within 194 observed candidates per query. Record this as **not found in this bounded retrieval pool**, not as globally absent from Divar and not as a ranking failure. The frozen IDs are historical packet references and may no longer be active listings; failure to find them in current Divar is not a quality verdict. The next diagnostic should sample current candidates by seller-only, buyer-only/dealer, and mixed-role title cues, while recording the provider keyword contract and post-detail outcomes. Keep the detail budget capped and do not substitute mutable current listings for the immutable human grades. No production ranking change is justified by this run alone.
