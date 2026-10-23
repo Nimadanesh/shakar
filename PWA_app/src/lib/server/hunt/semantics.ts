@@ -440,7 +440,7 @@ function stripNegatedExchangeCues(normalized: string): string {
   // an independent explicit «معاوضه» cue must remain eligible.
   return normalized
     .replace(
-      /تعویض\s+(?:قطعات?|قطعه)(?:\s+(?:معیوب|فرسوده|خراب|مصرفی|یدکی))?/g,
+      /تعویض\s+(?:قطعات|قطعه)(?:\s+(?:معیوب|فرسوده|خراب|مصرفی|یدکی))?/g,
       " "
     )
     .replace(
