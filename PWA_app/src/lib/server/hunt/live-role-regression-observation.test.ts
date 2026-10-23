@@ -123,7 +123,22 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               detailUnknown: result.detailUnknown ?? false,
               demotedBy: result.demotedBy ?? null,
               descriptionExcerpt: result.descAuditText ?? result.descSnippet,
+              // Mirror the title-scoped scoring cue separately from the generic role classifier.
+              // pipeline.ts applies a rank-only penalty of 3 for this effective role.
               listingRole: assessListingRole(listingText),
+              mixedTransactionTitleCue: /خرید\s*و\s*فروش|خریدوفروش/.test(
+                result.title.normalize("NFKC").replace(/[يى]/g, "ی").replace(/ك/g, "ک")
+              ),
+              effectiveScoringRole: /خرید\s*و\s*فروش|خریدوفروش/.test(
+                result.title.normalize("NFKC").replace(/[يى]/g, "ی").replace(/ك/g, "ک")
+              )
+                ? "mixed-buyer-seller"
+                : assessListingRole(listingText).role,
+              mixedTransactionPenalty: /خرید\s*و\s*فروش|خریدوفروش/.test(
+                result.title.normalize("NFKC").replace(/[يى]/g, "ی").replace(/ك/g, "ک")
+              )
+                ? 3
+                : 0,
             };
           }),
         });
