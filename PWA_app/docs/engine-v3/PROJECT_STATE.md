@@ -150,3 +150,10 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - CI for `9a5553445251bd72329e0dd50a43971aa5587d61` has not yet been verified in this session. Check the hosted baseline result before accepting the characterization.
 - Next gate: inspect CI; then test the combined B02 wording in a separate scoped fixture and decide whether it warrants an explicit, narrowly scoped evidence state. No global synonym expansion, main merge, or deployment.
 
+## B02 phrase characterization — 2026-10-23
+
+- Test-only commit [cd5c7ad760c4749eef545a4289c4750e9f78e546](https://github.com/Nimadanesh/shakar/commit/cd5c7ad760c4749eef545a4289c4750e9f78e546) pins the full human-accepted B02 wording as `unknown` for replacement history and verifies explicit positive/negative replacement statements retain precedence.
+- No production semantics changed. Current engine has no distinct state for condition evidence that is supportive to a human but insufficient to establish a specific replacement-history claim. Adding one from this single human-graded listing would be premature.
+- No CI checks were surfaced by status lookup for the prior characterization commit `9a55534`; validation of `cd5c7ad` remains outstanding. Do not call tests passing until a run is inspected.
+- Next gate: obtain hosted CI evidence and add paired human-reviewed examples before considering a narrow scoped interpretation. No global synonym, merge, or deployment.
+
