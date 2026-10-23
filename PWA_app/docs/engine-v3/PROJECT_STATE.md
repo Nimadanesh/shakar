@@ -183,3 +183,11 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - This changes only which candidates the read-only observation harness inspects and what diagnostic counts it reports. No engine or ranking behavior changed.
 - Validation remains pending: no workflow run was returned for this commit and tests have not been executed in this session. The contradiction gate remains open until a new artifact proves the relevant candidate was actually captured and its full detail confirms which vehicle the paint statement refers to.
 - Next: run and inspect the dedicated observation plus baseline checks on the current source. Do not infer a quality change from title cue counts alone; no merge/deployment.
+
+
+## Observation 113 reviewed; next bounded selector adjustment (2026-10-23)
+
+- Review: [BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md](evaluations/BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md).
+- Run [39940161861](https://github.com/Nimadanesh/shakar/actions/runs/39940161861) succeeded on `638fec1953e8eae43885187818f19e6369de385c`. For `معاوضه سمند رنگ دارد`, 90 ads were seen, paint cue count=3, exchange cue count=17, joint Samand+paint+exchange title count=0. Two details inspected: a paint-only Samand and a Zantia listing that exchanges with Samand; neither establishes paint status on the target Samand within an explicit exchange relation. Control remains **not captured**.
+- Follow-up observation-only selector commit [10c36a92eddf4510e7d20f4afcef89ca1b032eff](https://github.com/Nimadanesh/shakar/commit/10c36a92eddf4510e7d20f4afcef89ca1b032eff) prioritizes Samand+exchange titles before paint-only candidates if no three-cue title exists; fixed detail budget retained. This commit is **not yet run/tested**.
+- No engine semantics/ranking change, no merge/deployment. Require a fresh artifact to validate sampling and the target-scoped contradiction witness; otherwise keep the gate open.
