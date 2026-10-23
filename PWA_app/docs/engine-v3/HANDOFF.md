@@ -125,3 +125,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - The same bounded artifact rejected the two checked service/buyer examples for `پیانو تعمیر یا تعویض نشده است`, kept two unknown-history piano listings as `near`, and returned two exact explicit-exchange examples. Details and caveats are in [E3-LIVE-ROLE-REGRESSION-2026-10-23.md](evaluations/E3-LIVE-ROLE-REGRESSION-2026-10-23.md).
 - Baseline [run 39913211263](https://github.com/Nimadanesh/shakar/actions/runs/39913211263): focused tests, full portable suite, typecheck, and production build PASS; ESLint FAIL (8 errors / 37 warnings), with errors in existing UI hook-rule locations. This is not a clean CI pass.
 - Next: request human grades for blinded packet [BRH-2026-10-23-A](evaluations/BRH-2026-10-23-A-BLIND.md); do not reveal its internal key before grades. No engine change until source-level judgments support it. No merge/deployment.
+
+
+## Handoff update — blinded grades and recovered B02 (2026-10-23)
+
+- Current branch HEAD at this update: `3784412e8dfb57b9b508396df8e2b5beacab6bdd` on `engine_v3`; `main` remains untouched.
+- Owner's grades and interpretation: [BRH-2026-10-23-A-HUMAN-GRADES.md](evaluations/BRH-2026-10-23-A-HUMAN-GRADES.md).
+- Source change: `a65b7d3` narrows mid-description `به دنبال` role detection; `68b61b3` adds unit tests. The successful read-only live artifact from run [39915083572](https://github.com/Nimadanesh/shakar/actions/runs/39915083572) shows `پیانو اصلی بتهوون اصلی` now survives as `near` instead of the earlier `no-match`. It is not yet exact: `قطعات` and `اورجینال` remain missing lexical evidence.
+- Portable tests, typecheck and build passed on baseline run [39915088347](https://github.com/Nimadanesh/shakar/actions/runs/39915088347); ESLint remains red on existing UI hook-rule errors. Live run [39915087951](https://github.com/Nimadanesh/shakar/actions/runs/39915087951) timed out against Divar and produced no artifact.
+- Next bounded task: inspect the existing absence/attribute contract and add paired unit cases for explicit negative replacement history, UNKNOWN history, and the phrase `بدون دستکاری` only if evidence supports a narrow interpretation. Do not add a global synonym, do not convert UNKNOWN into absent, and do not change ranker/global retrieval based on this six-item packet alone. No merge/deploy.
