@@ -2530,3 +2530,92 @@ describe("BRH human-grade follow-up — seek-buyer must demote exchange offers",
     expect(ids.indexOf("actual-buyer")).toBeLessThan(ids.indexOf("direct-offer"));
   });
 });
+
+
+describe("BRH-2026-10-23 buyer-seeking exact source replay — B11/B12", () => {
+  it("records exact seller-side controls against a real buyer-seeking positive", async () => {
+    const def = resolveHuntDefinition({ query: "خریدار پیانو" });
+    expect(def).not.toBeNull();
+    if (!def) return;
+    expect(def.roleMode).toBe("seek-buyer");
+
+    const rows = [
+      {
+        sourceAdId: "B11",
+        title: "هوران پیانو.و(اقساط بدون سود)",
+        description: "پیانو سازدونی جایی که رویاتو زندگی میکنی پیانو اورج،ینال طر،ح اکوستیک yamah.a ا قسطی بی سود چقد خوبه که مالیات نمیدی ارجینال اصلی، تمام مدل های p پکیج هدیه ده ملیونی و ارسال تا درب منزل با متخصص فول تقویت شده بدنه طرح چوب هایگلاس تاپ ترک و دیگر کیفیت ها هم موجوده پیش پرداخت کم و شفاف اگهی در خانه صنایع دستی فارس ما میسازیمش بقیه تبلیغش میکنن حال دلت رو با سازدونی کوک‌کن بین الحرمین آسونه گالری پیانو سازدونی",
+        price: 13200000,
+        city: "شیراز",
+        categorySlug: "music",
+      },
+      {
+        sourceAdId: "B12",
+        title: "فروش یخچال امرسان ۲۲ فوت (فوری)",
+        description: "سلام فروش یک دستگاه یخچال امرسان ۲۲ فوت جهت تعویض و ارتقای سطح یخچال به فروش می رسد به فروشنده واقعی تخفیف داده میشود",
+        price: 35000000,
+        city: "گرگان",
+        categorySlug: "home-appliances",
+      },
+      {
+        sourceAdId: "actual-buyer",
+        title: "خریدار پیانو نقد در محل",
+        description: "خریدار انواع پیانو هستیم، نقد در محل",
+        price: null,
+        city: "تهران",
+        categorySlug: "music",
+      },
+    ];
+
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map(({ sourceAdId, title, price, city }) =>
+        summary({ sourceAdId, title, price, city }),
+      ),
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => {
+      const row = rows.find((item) => item.sourceAdId === id);
+      if (!row) throw new Error(`unexpected source ID: ${id}`);
+      return {
+        sourceAdId: row.sourceAdId,
+        title: row.title,
+        price: row.price,
+        city: row.city,
+        description: row.description,
+        images: [],
+        categorySlug: row.categorySlug,
+      };
+    });
+
+    const { events } = await collect(def);
+    const done = events.find((event) => event.type === "done");
+    if (done?.type !== "done") throw new Error("pipeline did not finish");
+
+    const { assessListingRole } = await import("./semantics");
+    const ids = done.results.map((item) => item.sourceAdId);
+    console.info("[BRH-BUYER-EXACT-REPLAY]", JSON.stringify({
+      query: "خریدار پیانو",
+      roleMode: def.roleMode,
+      candidates: rows.map((row) => ({
+        sourceAdId: row.sourceAdId,
+        humanGrade: row.sourceAdId === "actual-buyer" ? 3 : 0,
+        role: assessListingRole(`${row.title} ${row.description}`),
+      })),
+      results: done.results.map((item, index) => ({
+        rank: index + 1,
+        sourceAdId: item.sourceAdId,
+        title: item.title,
+        matchKind: item.matchKind,
+        score: item.score,
+        breakdown: item.breakdown,
+        missingInfo: item.missingInfo,
+        evidence: item.evidence,
+        demotedBy: item.demotedBy ?? null,
+      })),
+      caveat: "B11/B12 are source-matched human grade-0 controls; B11/B12 source metadata is retained in this fixture. Engine score is diagnostic, not human relevance.",
+    }));
+
+    expect(ids).toContain("B11");
+    expect(ids).toContain("B12");
+    expect(ids).toContain("actual-buyer");
+  });
+});
