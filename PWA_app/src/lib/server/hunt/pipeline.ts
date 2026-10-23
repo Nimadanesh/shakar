@@ -690,6 +690,8 @@ function evaluateDescription(
   );
   const earlyListingRole = assessListingRole(combined);
   if (
+    def.roleMode !== "seek-buyer" &&
+    def.roleMode !== "self-seller" &&
     earlyQueryIntent.role === "product" &&
     earlyListingRole.role === "buyer-seeking"
   ) {
