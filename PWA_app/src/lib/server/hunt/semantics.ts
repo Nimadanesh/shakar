@@ -269,7 +269,10 @@ function assessAbsenceOneWord(
   // «بدون رنگ و صافکاری شده» must remain implied, because the direct regex
   // for «رنگ ... شده» can span the coordinated phrase even though «صافکاری»
   // is only present-implied evidence.
-  const clauses = norm.split(/[؛;.!؟?\\n]+/).map((part) => part.trim()).filter(Boolean);
+  const clauses = text
+    .split(/[؛;.!؟?\\n]+/)
+    .map((part) => normalizeForMatch(part).trim())
+    .filter(Boolean);
   const directOutsideAbsenceClause = clauses.find((clause) =>
     !absentRes.some((re) => re.test(clause)) &&
     directRes.some((re) => re.test(clause))
