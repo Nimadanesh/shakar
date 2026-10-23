@@ -101,3 +101,8 @@ Live observation workflows may retrieve public Divar lists/details, but must bou
 **Status:** Binding (2026-10-23)
 
 An ad explicitly seeking to buy the target item is a critical role mismatch only when the user is running a product hunt with explicit negative repair/replacement-history constraints. In ordinary product hunts, preserve the existing ranker behavior rather than applying a new global hard rejection. This boundary was chosen after the broader rejection caused two existing transaction-direction tests to fail. Acceptance requires both targeted negative-history rejection and preservation of seller-seeking/ordinary-search controls. Current-head live confirmation remains pending because run 39911832666 timed out; passing portable tests are not a substitute for that live check.
+
+
+### D016 evidence update — 2026-10-23
+
+The earlier note that current-head live confirmation was pending is superseded by bounded observation run [39911832666, attempt 2](https://github.com/Nimadanesh/shakar/actions/runs/39911832666) on code SHA `70a077e`. The targeted negative-history scenario rejected the observed repair-service offer and buyer-seeking ad; unknown-history product listings remained `near` in a separate exact-phrase scenario. This supports the narrow query-scoped boundary but does not close the decision's full acceptance gate: seller-seeking refrigerator and ordinary-search paired controls, plus blinded human review, remain required. See [the evidence note](evaluations/E3-LIVE-OBSERVATION-BUYER-BOUNDARY-2026-10-23.md).

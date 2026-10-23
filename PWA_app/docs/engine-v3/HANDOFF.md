@@ -109,3 +109,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Baseline run [39911832644](https://github.com/Nimadanesh/shakar/actions/runs/39911832644): focused + full portable tests, typecheck, build PASS; ESLint FAIL only on 8 existing UI hook-rule errors (37 warnings).
 - Live run [39911832666](https://github.com/Nimadanesh/shakar/actions/runs/39911832666) failed because a Divar request timed out; no observation artifact was produced. Do not claim current-head live confirmation.
 - Next: fresh bounded read-only live replay with the same budget and Mizan disabled; if successful, check the four acceptance conditions recorded in PROJECT_STATE, including seller-seeking and ordinary transaction-direction controls. Then build a new blinded human packet for explicit negative history / UNKNOWN history / service / buyer-seeking roles. Keep frozen evaluations immutable; no merge, deployment, or production changes.
+
+
+## Continuation — bounded live role-boundary evidence (2026-10-23)
+
+- Run [39911832666, attempt 2](https://github.com/Nimadanesh/shakar/actions/runs/39911832666) succeeded on `70a077e`; inspect report summary at [E3-LIVE-OBSERVATION-BUYER-BOUNDARY-2026-10-23.md](evaluations/E3-LIVE-OBSERVATION-BUYER-BOUNDARY-2026-10-23.md).
+- Targeted negative-history query rejected the sampled repair-service ad and the sampled buyer-seeking ad; a separate exact-phrase scenario kept two product listings at `near`, while explicit exchange controls remained `exact`.
+- Still unverified: seller-seeking refrigerator eligibility, ordinary transaction-direction/ranking parity against a paired baseline, and human-rated relevance uplift. The observation is unjudged and budgeted to 8 details. Do not broaden the guard or declare the acceptance gate complete from this artifact alone.
+- Next: prepare a blinded, source-ID-matched packet from these new observation records and existing frozen positives/negatives; separately run the missing seller/ordinary-search regression controls. Preserve frozen evaluation artifacts; stay on `engine_v3`, no merge/deploy.

@@ -85,3 +85,10 @@ Frozen evaluation artifacts are not inputs to overwrite or rerun for this experi
 - **Live evidence:** current-head run [39911832666](https://github.com/Nimadanesh/shakar/actions/runs/39911832666) timed out on a Divar request; it produced no report. Current-head live behavior is therefore not verified.
 - **Gate:** preserve seller-seeking ads in `فروشنده یخچال`; preserve ordinary search ranking/transaction-direction controls; reject explicit service offers and buyer-seeking ads for `پیانو تعمیر یا تعویض نشده است`; keep unknown repair history at most near. Review both false positives and false rejections before accepting the change as complete.
 - No human-quality uplift claim, main merge, deployment, or mutation of frozen evaluation artifacts.
+
+
+### Live observation follow-up — buyer/service boundary (2026-10-23)
+
+- Retry [39911832666, attempt 2](https://github.com/Nimadanesh/shakar/actions/runs/39911832666) completed successfully and uploaded `engine-v3-live-observation-84`; see [the evidence note](evaluations/E3-LIVE-OBSERVATION-BUYER-BOUNDARY-2026-10-23.md).
+- The target negative-history query rejected one explicit repair-service offer with the intended reason and rejected one buyer-seeking ad as `no-match`. The separate exact-phrase sample retained two product listings as `near`; explicit exchange controls produced two exact results.
+- Residual risk: sample size is small (8 detail reads); no live seller-seeking refrigerator control or paired ordinary-search baseline was included. Therefore the targeted behavior has positive live evidence, but the overall role-boundary gate remains partially open. Do not treat this as precision/recall or human-quality uplift.
