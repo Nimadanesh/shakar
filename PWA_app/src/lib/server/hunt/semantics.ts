@@ -488,7 +488,7 @@ export function assessListingRole(text: string): RoleAssessment {
   // Explicit first-person collector language («ارگ و پیانو خریداریم»)
   // is a wanted-to-buy ad, not a service offer—even if the same text also
   // contains service-like words such as «در محل».
-  if (/(?:^|\\s)(?:خریداریم|خریدار\\s+هستیم)(?=\\s|$)/.test(norm)) {
+  if (/(?:^|\s)(?:خریداریم|خریدار\s+هستیم)(?=\s|$)/.test(norm)) {
     return { role: "buyer-seeking", reason: 'buyer-cue:"خریداریم"' };
   }
 
