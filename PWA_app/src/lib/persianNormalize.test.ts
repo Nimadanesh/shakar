@@ -61,6 +61,9 @@ describe("normalizeForMatch", () => {
     expect(normalizeForMatch("پیانوC1 AIR KORG")).toBe("پیانو C1 AIR KORG");
     expect(textMatches("پیانوC1 AIR KORG ژاپن اصلی", "پیانو", "music")).toBe(true);
     expect(textMatches("یاماهاP-145 پیانو دیجیتال", "یاماها", "music")).toBe(true);
+    expect(normalizeForMatch("KORGپیانو مدل C1")).toBe("KORG پیانو مدل C1");
+    expect(textMatches("KORGپیانو مدل C1", "پیانو", "music")).toBe(true);
+    expect(normalizeForMatch("پیانو ۱۲۳ مدل")).toBe("پیانو ۱۲۳ مدل");
   });
 });
 
