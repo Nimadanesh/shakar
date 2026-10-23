@@ -48,3 +48,12 @@ Use stable fixtures and keep these distinct from observed Divar evidence:
 - Do not convert unknown attributes into a mismatch or a positive match.
 - Keep ranking changes blocked until the parser contract has counterfactual tests and the human-reviewed P06/P07 cases are replayed.
 - The next safe step is to design item/attribute binding independently from text segmentation, with explicit unknowns and counterfactual tests, before any scoring integration.
+
+
+## Follow-up: exact-phrase target evidence helper (2026-10-23)
+
+A second isolated helper now exists at `PWA_app/src/lib/server/hunt/exchangeTargetEvidence.ts`: `assessExchangeTargetEvidence(text, targetItemPhrases, requiredAttributePhrases)`. It builds on the span segmentation and only returns `supported` when an exact normalized target-item phrase and required-attribute phrase occur on the same explicit side. Opposite-side-only attributes, missing target/attribute, ambiguous target on both sides, and unsegmented text remain non-supporting/unknown outcomes. This is deliberately phrase-level evidence, not synonym resolution, entity extraction, or a general Persian attribute parser.
+
+The latest baseline workflow for commit `842ebc3a062dd0493f25cee51648eb9766d72c0e` (run #125) confirms the focused exchange-side tests (9/9), target-evidence tests (7/7), BRH semantics tests (7/7), polarity tests (5/5), the broader portable suite, TypeScript typecheck, and production build passed. The workflow overall remains failed solely at repository-wide ESLint: 8 existing React Hooks errors and 37 warnings. See [run #125](https://github.com/Nimadanesh/shakar/actions/runs/39929353572).
+
+**Decision remains unchanged:** this helper is diagnostic/test-only and has not been connected to ranking. Exact phrase lists are not sufficient to safely bind real-world synonyms or diverse Persian item descriptions. Next, collect and blind-grade more exchange cases across item categories, then design explicit target-phrase/attribute evidence fixtures and counterfactuals before proposing any integration.
