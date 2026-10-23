@@ -511,6 +511,13 @@ export function assessListingRole(text: string): RoleAssessment {
     return { role: "exchange", reason: 'exchange-cue:"تعویض"' };
   }
 
+  // Explicit first-person collector language («ارگ و پیانو خریداریم»)
+  // is a wanted-to-buy ad, not a service offer—even when the same listing
+  // contains service-like words such as «تعمیر» or «در محل».
+  if (/(?:^|\\s)(?:خریداریم|خریدار\\s+هستیم)(?=\\s|$)/.test(norm)) {
+    return { role: "buyer-seeking", reason: 'buyer-cue:"خریداریم"' };
+  }
+
   // Bare «تعمیر» is service evidence only with offer context or offer
   // phrasing («تعمیر X» up front). A coordinated negated history such as
   // «تعمیر یا تعویض نشده است» is item-condition evidence, not an offer.
