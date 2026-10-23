@@ -1,3 +1,4 @@
+# Observation output is diagnostic only; it is not a relevance judgment or paired quality comparison.
 name: Engine V3 Live Observation
 # Observation probes include query/listing role diagnostics; detail budget remains capped at eight.
 
