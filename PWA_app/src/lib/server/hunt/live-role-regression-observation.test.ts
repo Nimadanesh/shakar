@@ -27,6 +27,8 @@ it("classifies transaction title cues for diagnostics without changing ranking",
 /**
  * Read-only regression probe for role direction. Separate from the negative
  * repair-history observation so each experiment has an explicit detail budget.
+ * This probe scans up to eight cursor-chained list pages per query, but keeps
+ * the same two-detail-per-query and four-detail-total caps.
  * This captures unjudged evidence; it does not score relevance or compare arms.
  */
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
@@ -65,7 +67,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
 
         const events: HuntEvent[] = [];
         const { candidates, stats, endCursor } = await collectCandidates(def, {
-          maxPages: 2,
+          maxPages: 8,
           emit: (event) => events.push(event),
         });
         // Prefer the frozen human-graded pair if retrieval returns either ID.
@@ -112,7 +114,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           },
           queryRole: assessQueryIntent(def.query, def.category, def.transaction),
           retrieval: {
-            pagesRequested: 2,
+            pagesRequested: 8,
             pagesCompleted: events.filter((event) => event.type === "lists-progress").length,
             adsSeen: stats.adsSeen,
             titleRejected: stats.titleRejected,
@@ -187,7 +189,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       commit: process.env.GITHUB_SHA ?? "local",
       runtime: process.version,
       limits: {
-        maxListPagesPerQuery: 2,
+        maxListPagesPerQuery: 8,
         maxDetailsTotal: 4,
         maxDetailsUsed: detailsBudgetUsed,
         perScenarioDetailBudgets: cases.map(({ id, detailBudget }) => ({ id, detailBudget })),
