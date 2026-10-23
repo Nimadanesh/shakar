@@ -364,3 +364,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - A blinded relevance packet is prepared separately. Ask for grades by blind ID only; do not expose the key or engine diagnostics until the grades are locked. The capture is not a production ranking comparison (`productionRank: null`).
 - After grades: join the key, report per-task grades/critical direction errors and missing/insufficient separately. If needed, run only a narrow supplement for the specific missing cells. No scoring changes, hard filters, frozen-grade edits, `main` merge, or deployment.
 - Evidence note: [BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md).
+
+
+## Handoff — mixed-transaction capture 01 grades locked (2026-10-23)
+
+- Read [locked human grades](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-HUMAN-GRADES.md) and [internal key](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-INTERNAL-KEY.md). All 12 blind IDs have numeric grades; distribution 3:4, 2:4, 1:2, 0:2; total 22/36; no insufficient cases.
+- The strongest actionable observation is the repeated human preference for direct offers over mixed-title listings whose body only supports buying (seller fridge 1 vs 3; generic fridge 2 vs 3). This is consistent with prior B evidence, not an independent production-rank comparison.
+- The sample also confirms direction errors matter: direct sale for a buyer hunt is 0; a multi-item scrap buyer is relevant but peripheral at 2. For piano, listing focus prevents broad word-match scoring (education-led ad 1; appraisal/buy-sell service 2).
+- Keep current title-scoped rule, candidate eligibility, and frozen grades unchanged. No production ranks were captured, so do not claim a ranking improvement or calculate ranking metrics.
+- Next: bounded targeted collection for compact «خریدوفروش», clean barter/exchange condition, and a clean buyer-seeking refrigerator listing. Do not expand retrieval limits globally or modify ranking before source-grounded controls and human review.
