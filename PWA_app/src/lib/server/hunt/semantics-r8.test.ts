@@ -469,5 +469,32 @@ describe("E3 — replacement-history polarity contract", () => {
       assessAbsencePolarity("پیانو اصلی بتهوون؛ بدون دستکاری", "تعویض").polarity
     ).toBe("unknown");
   });
+
+  it("the full human-accepted B02 wording remains unknown for replacement history", () => {
+    expect(
+      assessAbsencePolarity(
+        "پیانو اصل بتوون بسیار کم کار در سلامت کامل ظاهر و فنی بدون تغییر و جابه جایی و دستکاری نگهداری در محل ثابت و مناسب سرویس و بررسی توسط تکنسین متخصص",
+        "تعویض"
+      ).polarity
+    ).toBe("unknown");
+  });
+
+  it("explicit positive replacement evidence still wins beside «بدون دستکاری»", () => {
+    expect(
+      assessAbsencePolarity(
+        "پیانو بدون دستکاری؛ قطعات تعویض شده است",
+        "تعویض"
+      ).polarity
+    ).toBe("present");
+  });
+
+  it("explicit negative replacement evidence stays absent beside «بدون دستکاری»", () => {
+    expect(
+      assessAbsencePolarity(
+        "پیانو بدون دستکاری؛ قطعات تعویض نشده است",
+        "تعویض"
+      ).polarity
+    ).toBe("absent");
+  });
 });
 
