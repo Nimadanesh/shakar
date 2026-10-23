@@ -603,7 +603,7 @@ function semanticCapFires(
   // narrow to negative repair-history hunts; generic product/service role
   // clashes elsewhere remain recall-preserving near matches.
   const buyerCollectorEvidence =
-    /(?:^|\\s)(?:خریداریم|خریدار\\s+هستیم)(?=\\s|$)/.test(
+    /(?:^|\s)(?:خریداریم|خریدار\s+هستیم)(?=\s|$)/.test(
       normalizeForMatch(combined)
     );
   const repairHistoryProductServiceMismatch =
