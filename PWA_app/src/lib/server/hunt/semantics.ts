@@ -531,9 +531,19 @@ export function assessQueryIntent(
   category: string,
   transaction: "" | "rent" | "buy"
 ): RoleAssessment {
-  if (transaction === "rent") return { role: "rental", reason: "transaction:rent" };
-  if (transaction === "buy") return { role: "product", reason: "transaction:buy" };
+  // An explicit exchange speech act in the query is more specific than the
+  // generic buy transaction field. This narrow exception prevents
+  // «معاوضه با کفی سه محور» from being rewritten as a product-buy hunt,
+  // without promoting replacement-history wording (stripped by
+  // stripNegatedExchangeCues) into exchange intent.
   const textRole = assessListingRole(query);
+  if (transaction === "rent") return { role: "rental", reason: "transaction:rent" };
+  if (transaction === "buy" && textRole.role !== "exchange") {
+    return { role: "product", reason: "transaction:buy" };
+  }
+  if (transaction === "buy" && textRole.role === "exchange") {
+    return { role: "exchange", reason: `query-${textRole.reason}` };
+  }
   if (textRole.role !== "unknown" && textRole.role !== "product") {
     return { role: textRole.role, reason: `query-${textRole.reason}` };
   }

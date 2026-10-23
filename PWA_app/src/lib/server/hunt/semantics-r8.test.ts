@@ -5,6 +5,7 @@ import {
   assessDemandGoods,
   assessEntityComplement,
   assessListingRole,
+  assessQueryIntent,
   assessModelSpecificity,
   floorMatFlatbedConflict,
 } from "./semantics";
@@ -324,6 +325,27 @@ describe("E3 — floor-mat intent rejects trailer/flatbed listings only in that 
   });
 });
 
+
+describe("E3 — explicit exchange query outranks generic buy transaction", () => {
+  it("keeps an explicit exchange hunt as exchange even when transaction defaults to buy", () => {
+    expect(
+      assessQueryIntent("معاوضه با کفی سه محور", "vehicles", "buy")
+    ).toEqual({ role: "exchange", reason: 'query-exchange-cue:"معاوضه"' });
+  });
+
+  it("does not promote replacement history to exchange intent", () => {
+    expect(
+      assessQueryIntent("پیانو اکوستیک قطعات تعویض شده", "music", "buy")
+    ).toEqual({ role: "product", reason: "transaction:buy" });
+  });
+
+  it("keeps ordinary explicit buy transaction behavior unchanged", () => {
+    expect(assessQueryIntent("پیانو اکوستیک", "music", "buy")).toEqual({
+      role: "product",
+      reason: "transaction:buy",
+    });
+  });
+});
 
 describe("E3 — negated replacement history is not an exchange offer", () => {
   it("does not read «تعمیر یا تعویض نشده است» as an exchange role", () => {
