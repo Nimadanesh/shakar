@@ -46,8 +46,14 @@ export function assessExchangeTargetEvidence(
   const itemPhrases = normalizedPhrases(targetItemPhrases);
   const attributePhrases = normalizedPhrases(requiredAttributePhrases);
 
-  const findPhrase = (side: string | null, phrases: readonly string[]) =>
-    side === null ? null : phrases.find((phrase) => side.includes(phrase)) ?? null;
+  // Match complete normalized tokens/phrases, not arbitrary substrings.
+  // For example, «کفی‌سازی» must not count as the item «کفی», and
+  // «سه محوری» must not silently satisfy the attribute «سه محور».
+  const findPhrase = (side: string | null, phrases: readonly string[]) => {
+    if (side === null) return null;
+    const paddedSide = ` ${side} `;
+    return phrases.find((phrase) => paddedSide.includes(` ${phrase} `)) ?? null;
+  };
 
   const offeredItem = findPhrase(offered, itemPhrases);
   const requestedItem = findPhrase(requested, itemPhrases);
