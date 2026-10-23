@@ -18,7 +18,7 @@
 
 ## Source and integrity notes
 
-- I01–I06 include vehicle role-direction, mixed-title, and wrong-kind cases from bounded capture run [40008523406](https://github.com/Nimadanesh/shakar/actions/runs/40008523406).
+- I01, I04, I06, I08, I09, and I11 come from bounded capture run [40008523406](https://github.com/Nimadanesh/shakar/actions/runs/40008523406).
 - I07–I08 are unjudged exchange controls from run [39945846455](https://github.com/Nimadanesh/shakar/actions/runs/39945846455); their exact query is preserved as captured.
 - I02, I05, and I10 include previously captured but unjudged refrigerator role controls from run [40004257788](https://github.com/Nimadanesh/shakar/actions/runs/40004257788). The duplicate appearance of `gaLNJNwu` under ordinary `یخچال` is intentionally not counted twice; this packet uses its `فروشنده یخچال` context only.
 - Every source ad ID appears once in this packet: 11 blind IDs, 11 unique source IDs. Description text is copied from the captured observation logs; capture time is not publication time.
