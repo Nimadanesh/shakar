@@ -1920,6 +1920,25 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     expect(kinds["repaired"]).toBeUndefined();
   });
 
+  it("keeps a piano ad whose Persian item name touches its Latin model code", async () => {
+    const def = resolveHuntDefinition({
+      query: "پیانو تعمیر یا تعویض نشده است",
+      category: "music",
+    })!;
+    listings([
+      { sourceAdId: "korg-c1", title: "پیانوC1 AIR KORG ژاپن اصلی" },
+    ]);
+    detail({
+      "korg-c1": "درحد نو و بسیار تمیز وکم کارکرد به همراه چند عدد کتاب",
+    });
+
+    const done = await doneOf(def);
+    const kinds = kindsOf(done);
+    // History is unknown, so the listing must survive as near—not exact.
+    expect(kinds["korg-c1"]).toBe("near");
+    expect(done.stats.rejectedNoMatch).toBe(0);
+  });
+
   it("negated bodywork («بدون نیاز به صافکاری») is not implied-present", async () => {
     const { assessAbsencePolarity } = await import("./semantics");
     // Supports absence (or unknown) — never counter-evidence.
