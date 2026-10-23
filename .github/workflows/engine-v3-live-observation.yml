@@ -55,14 +55,16 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Run bounded read-only live observation
-        run: npx vitest run src/lib/server/hunt/live-divar-observation.test.ts --reporter=verbose
+      - name: Run bounded read-only live observations
+        run: npx vitest run src/lib/server/hunt/live-divar-observation.test.ts src/lib/server/hunt/live-role-regression-observation.test.ts --reporter=verbose
 
       - name: Upload observation report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: engine-v3-live-observation-${{ github.run_number }}
-          path: ${{ runner.temp }}/engine-v3-live-observation.json
+          path: |
+            ${{ runner.temp }}/engine-v3-live-observation.json
+            ${{ runner.temp }}/engine-v3-role-regression-observation.json
           if-no-files-found: warn
           retention-days: 14
