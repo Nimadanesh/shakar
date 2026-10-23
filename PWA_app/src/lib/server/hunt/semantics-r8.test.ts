@@ -450,3 +450,24 @@ describe("E3 follow-up — replacement history is not exchange intent", () => {
     ).toBe("exchange");
   });
 });
+
+describe("E3 — replacement-history polarity contract", () => {
+  it("explicitly negated replacement history satisfies the absence constraint", () => {
+    expect(
+      assessAbsencePolarity("پیانو قطعات تعویض نشده است", "تعویض").polarity
+    ).toBe("absent");
+  });
+
+  it("explicitly positive replacement history contradicts the absence constraint", () => {
+    expect(
+      assessAbsencePolarity("پیانو قطعات تعویض شده است", "تعویض").polarity
+    ).toBe("present");
+  });
+
+  it("bare «بدون دستکاری» does not by itself prove replacement history absent", () => {
+    expect(
+      assessAbsencePolarity("پیانو اصلی بتهوون؛ بدون دستکاری", "تعویض").polarity
+    ).toBe("unknown");
+  });
+});
+
