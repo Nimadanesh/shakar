@@ -436,12 +436,15 @@ const SALE_CUES = ["فروش", "فروشی", "میفروشم", "می فروشم"
  */
 function stripNegatedExchangeCues(normalized: string): string {
   // «تعویض قطعات معیوب» is maintenance/service language, not an offer to
-  // exchange the advertised item. Remove this narrow object phrase before
-  // checking the broad legacy «تعویض» cue; independent «معاوضه» survives.
+  // exchange the advertised item. Normalize singular/plural part wording;
+  // an independent explicit «معاوضه» cue must remain eligible.
   return normalized
-    .replace(/تعویض\s+قطعات?(?:\s+(?:معیوب|فرسوده|خراب|مصرفی|یدکی))?/g, " ")
     .replace(
-      /(?:^|\s)(?:(?:قطعات?\s+)?تعویض\s+(?:شده(?:\s+است)?|نشده(?:\s+است)?|نشد(?:ه)?(?:\s+است)?|ندارد|نداشته(?:\s+است)?|نمی\s?شود|نمی\s?باشد)|(?:بدون|فاقد)\s+تعویض)(?=\s|$)/g,
+      /تعویض\s+(?:قطعات?|قطعه)(?:\s+(?:معیوب|فرسوده|خراب|مصرفی|یدکی))?/g,
+      " "
+    )
+    .replace(
+      /(?:^|\s)(?:(?:قطعات?|قطعه\s+)?تعویض\s+(?:شده(?:\s+است)?|نشده(?:\s+است)?|نشد(?:ه)?(?:\s+است)?|ندارد|نداشته(?:\s+است)?|نمی\s?شود|نمی\s?باشد)|(?:بدون|فاقد)\s+تعویض)(?=\s|$)/g,
       " "
     );
 }
