@@ -240,3 +240,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - **Decision:** the current human evidence covers positive, unknown, wrong-side, missing, and a direction-confounded contradiction, but still lacks a clean contradiction case with the exchange direction correctly matched. Run 114's `معاوضه با تاکسی برون شهری سمند` remains ambiguous and does not fill the gap.
 - Next useful work is one new blind, source-ID-mapped live case with explicit paint evidence about the same target vehicle under a valid exchange relation. A synthetic counterfactual can separately test code behavior, but must be labeled synthetic and cannot substitute for live human evidence.
 - Do not add more title-selection heuristics blindly; preserve fixed detail budget and the closed integration gate. No production semantics/ranking, `main`, deployment, or human grades changed.
+
+
+## Current handoff — isolated contradiction state and synthetic controls (2026-10-23)
+
+- `exchangeTargetEvidence.ts` now has an isolated `contradicted` result only for caller-supplied complete contradiction phrases on the target's own segmented side. Positive+contradictory phrases on the same target side return `unknown`; opposite-side evidence stays unknown; generic color mention is not contradiction.
+- Synthetic-only tests were added in `exchangeTargetEvidence-brh-run101.test.ts`. They are unit counterfactuals, **not** live Divar evidence and do not replace the missing blind human-grade case.
+- Code: [9799adb](https://github.com/Nimadanesh/shakar/commit/9799adb318d71876cff638737d2ceb60f9dba6bd). Tests: [fc40b86](https://github.com/Nimadanesh/shakar/commit/fc40b8604e06c3e9b1c4c15f42b4c651ce6afd66).
+- Validation observed so far: focused hunt/search tests passed on run [39942219988](https://github.com/Nimadanesh/shakar/actions/runs/39942219988); full suite, typecheck, ESLint and build had not yet finished when recorded. Run [39942237959](https://github.com/Nimadanesh/shakar/actions/runs/39942237959) for the test commit was pending at note time.
+- Next: inspect both baseline run outcomes and address any test/type failures before proceeding. Do not connect this helper to ranking. Then collect a clean, direction-matched, human-reviewed live contradiction example; preserve the fixed detail budget and keep `main`/deployment untouched.
