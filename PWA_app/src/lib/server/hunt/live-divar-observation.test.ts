@@ -34,7 +34,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       // Cross-category exchange control: use the same bounded detail budget
       // to observe vehicle exchange, rather than duplicating the piano query; this pass switches target model to collect fresh vehicle-side evidence.
       // Complement the prior wrong-side/unknown pair with a fresh phrasing that searches Samand listings themselves; blind-grade any result only after verifying which vehicle owns the paint claim.
-      { id: "explicit-exchange-vehicle-samand", query: "معاوضه سمند بدون رنگ", detailBudget: 2 },
+      { id: "explicit-exchange-vehicle-samand", query: "معاوضه سمند بیرنگ", detailBudget: 2 },
     ] as const;
 
     const reports: Array<Record<string, unknown>> = [];
@@ -85,8 +85,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         if (!retrievalDef) continue;
 
         const events: HuntEvent[] = [];
+        const pagesRequested = scenario.id === "explicit-exchange-vehicle-samand" ? 4 : 2;
         const { candidates, stats, endCursor } = await collectCandidates(retrievalDef, {
-          maxPages: 2,
+          maxPages: pagesRequested,
           emit: (event) => events.push(event),
         });
         // For the negated-history diagnostic only, spend the small detail
@@ -155,7 +156,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           },
           queryRole: assessQueryIntent(def.query, def.category, def.transaction),
           retrieval: {
-            pagesRequested: 2,
+            pagesRequested,
             pagesCompleted: events.filter((e) => e.type === "lists-progress").length,
             adsSeen: stats.adsSeen,
             titleRejected: stats.titleRejected,
@@ -232,7 +233,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       commit: process.env.GITHUB_SHA ?? "local",
       runtime: process.version,
       limits: {
-        maxListPagesPerQuery: 2,
+        maxListPagesPerQuery: 4,
+        perScenarioPageBudgets: cases.map(({ id }) => ({ id, maxPages: id === "explicit-exchange-vehicle-samand" ? 4 : 2 })),
         maxDetailsTotal: 8,
         maxDetailsUsed: detailsBudgetUsed,
         perScenarioDetailBudgets: cases.map(({ id, detailBudget }) => ({ id, detailBudget })),
