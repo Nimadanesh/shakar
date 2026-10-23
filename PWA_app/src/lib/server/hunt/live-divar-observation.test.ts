@@ -33,8 +33,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
       // Cross-category exchange control: use the same bounded detail budget
       // to observe vehicle exchange, rather than duplicating the piano query; this pass switches target model to collect fresh vehicle-side evidence.
-      // Complement the prior wrong-side/unknown pair with a fresh phrasing that searches Samand listings themselves; blind-grade any result only after verifying which vehicle owns the paint claim.
-      { id: "explicit-exchange-vehicle-samand", query: "معاوضه سمند بیرنگ", detailBudget: 2 },
+      // Seek an explicit target-side paint contradiction control; blind-grade only after checking the complete exchange relation and which vehicle owns the paint claim.
+      { id: "explicit-exchange-vehicle-samand", query: "معاوضه سمند رنگ دارد", detailBudget: 2 },
     ] as const;
 
     const reports: Array<Record<string, unknown>> = [];
