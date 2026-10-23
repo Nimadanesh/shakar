@@ -2289,10 +2289,11 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
 
     const done = await completed(def);
     const ids = done.results.map((result) => result.sourceAdId);
-    // Human grades: mixed listing = 1, barter offer = 2. This test protects
-    // recall while a later, evidence-backed rank/role fix is developed.
+    // Human grades: barter offer = 2, mixed buying/catalogue listing = 1.
+    // Preserve both candidates and require the observed human preference.
     expect(ids).toContain("mixed");
     expect(ids).toContain("barter");
+    expect(ids.indexOf("barter")).toBeLessThan(ids.indexOf("mixed"));
   });
 
   it("does not treat barter as irrelevant in an ordinary fridge hunt", async () => {
@@ -2312,10 +2313,11 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
 
     const done = await completed(def);
     const ids = done.results.map((result) => result.sourceAdId);
-    // Human grades: barter = 3, mixed buyer-leaning catalogue = 2. In a
-    // generic product hunt both remain relevant; this is not a hard reject.
+    // Human grades: barter = 3, mixed buyer-leaning catalogue = 2.
+    // Both remain eligible, but the stronger direct product offer should rank first.
     expect(ids).toContain("barter");
     expect(ids).toContain("mixed");
+    expect(ids.indexOf("barter")).toBeLessThan(ids.indexOf("mixed"));
   });
 });
 
