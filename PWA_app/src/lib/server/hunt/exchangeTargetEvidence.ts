@@ -3,7 +3,7 @@ import "server-only";
 import { normalizeForMatch } from "@/lib/persianNormalize";
 import { assessExchangeSides } from "./exchangeSides";
 
-export type ExchangeTargetEvidenceStatus = "supported" | "unknown";
+export type ExchangeTargetEvidenceStatus = "supported" | "contradicted" | "unknown";
 
 export interface ExchangeTargetEvidence {
   readonly status: ExchangeTargetEvidenceStatus;
@@ -18,14 +18,18 @@ export interface ExchangeTargetEvidence {
  * required attribute on an explicitly segmented exchange side.
  *
  * This helper does not extract entities, infer synonyms, or affect ranking.
- * Callers supply already-normalized phrase candidates. Missing attribute
- * evidence remains unknown, even when that phrase appears on the opposite
- * side. If item evidence occurs on both sides, ownership is ambiguous.
+ * Callers supply explicit phrase candidates for both supporting and
+ * contradicting evidence. This remains phrase-level diagnostics, not natural
+ * language inference: callers must not use generic tokens such as «رنگ» as
+ * contradiction phrases. Missing evidence remains unknown, even when a phrase
+ * appears on the opposite side. If item evidence occurs on both sides,
+ * ownership is ambiguous.
  */
 export function assessExchangeTargetEvidence(
   text: string,
   targetItemPhrases: readonly string[],
-  requiredAttributePhrases: readonly string[]
+  requiredAttributePhrases: readonly string[],
+  contradictingAttributePhrases: readonly string[] = []
 ): ExchangeTargetEvidence {
   const sides = assessExchangeSides(text);
   if (sides.status === "unknown") {
@@ -45,6 +49,7 @@ export function assessExchangeTargetEvidence(
   const requested = sides.requestedText;
   const itemPhrases = normalizedPhrases(targetItemPhrases);
   const attributePhrases = normalizedPhrases(requiredAttributePhrases);
+  const contradictionPhrases = normalizedPhrases(contradictingAttributePhrases);
 
   // Match complete normalized tokens/phrases, not arbitrary substrings.
   // For example, «کفی‌سازی» must not count as the item «کفی», and
@@ -83,9 +88,33 @@ export function assessExchangeTargetEvidence(
   }
 
   const attributeEvidence = findPhrase(targetText, attributePhrases);
+  const contradictionEvidence = findPhrase(targetText, contradictionPhrases);
+
+  if (attributeEvidence && contradictionEvidence) {
+    return {
+      status: "unknown",
+      targetSide,
+      itemEvidence,
+      attributeEvidence: null,
+      reason: "conflicting-target-side-attribute-evidence",
+    };
+  }
+
+  if (contradictionEvidence) {
+    return {
+      status: "contradicted",
+      targetSide,
+      itemEvidence,
+      attributeEvidence: contradictionEvidence,
+      reason: "target-side-attribute-explicitly-contradicted",
+    };
+  }
+
   if (!attributeEvidence) {
     const oppositeText = targetSide === "offered" ? requested : offered;
-    const oppositeAttribute = findPhrase(oppositeText, attributePhrases);
+    const oppositeAttribute =
+      findPhrase(oppositeText, attributePhrases) ??
+      findPhrase(oppositeText, contradictionPhrases);
     return {
       status: "unknown",
       targetSide,
