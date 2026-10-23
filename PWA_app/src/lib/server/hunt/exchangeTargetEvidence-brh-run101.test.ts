@@ -98,4 +98,34 @@ describe("BRH Run 101 — isolated exchange target evidence", () => {
       reason: "target-item-on-both-sides",
     });
   });
+  it("does not match a target item as a substring inside a longer word", () => {
+    expect(
+      assessExchangeTargetEvidence(
+        "کفی‌سازی سه محور معاوضه با تانکر تمیز",
+        ["کفی"],
+        ["سه محور"]
+      )
+    ).toMatchObject({
+      status: "unknown",
+      targetSide: "unknown",
+      reason: "target-item-not-found",
+    });
+  });
+
+  it("does not match an attribute as a substring inside a longer word", () => {
+    expect(
+      assessExchangeTargetEvidence(
+        "کفی سه محوری معاوضه با تانکر تمیز",
+        ["کفی"],
+        ["سه محور"]
+      )
+    ).toMatchObject({
+      status: "unknown",
+      targetSide: "offered",
+      itemEvidence: "کفی",
+      attributeEvidence: null,
+      reason: "attribute-not-found-on-target-side",
+    });
+  });
+
 });
