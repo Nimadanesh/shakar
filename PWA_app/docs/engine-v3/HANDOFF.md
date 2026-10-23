@@ -284,3 +284,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - The commit was verified on `engine_v3`; combined status lookup returned no CI checks, so validation is **not yet confirmed**. No new live observation has run on this commit. Do not treat the inventory as captured until a fresh artifact exists.
 - Next: run the same read-only observation with the unchanged 8-page/2-detail scenario budget, inspect the exact title inventory, then decide whether any candidate merits a blinded detail review. If no direction-matched contradiction candidate is evident, record the gap and stop rather than stacking another heuristic. Keep `UNKNOWN` distinct; no merge to `main`, deployment, or production mutation.
 
+## Run 117 reviewed; next bounded query prepared (2026-10-23)
+
+- Run [#117](https://github.com/Nimadanesh/shakar/actions/runs/39945846455) succeeded on `6e1582966462431556af3219b957ff8357a91b51`. It respected the 8-page / 2-detail Samand scenario budget and recorded the new bounded title inventory (30 Samand+exchange titles).
+- The title pool had zero joint Samand + paint + exchange title cues. The two inspected details repeat the previously judged pattern: C01's paint claims belong to the offered car; C02's engine/chassis claims belong to the offered Xantia. Neither is a target-Samand contradiction.
+- Review: [BRH-2026-10-23-RUN117-OBSERVATION-REVIEW.md](evaluations/BRH-2026-10-23-RUN117-OBSERVATION-REVIEW.md).
+- Observation-only follow-up commit [9de158e](https://github.com/Nimadanesh/shakar/commit/9de158e946e271d968f4dfaf0b673e451b1e5a3f) changes only the scenario query to `معاوضه با سمند بدون رنگ`. Scenario ID and 8-page / 2-detail budget remain unchanged. This query change alters the retrieval distribution; do not describe the next run as a paired comparison.
+- No new run or CI result for [9de158e](https://github.com/Nimadanesh/shakar/commit/9de158e946e271d968f4dfaf0b673e451b1e5a3f) is confirmed yet. Inspect the next artifact before any blind packet or rule change. If no candidate has clear exchange direction, target-side paint ownership, and explicit contradiction, record the gap and stop. No ranking change, merge, or deployment.
+
