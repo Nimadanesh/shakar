@@ -838,6 +838,31 @@ describe("transaction direction — P1 (HumanTest S4: خریدار یخچال)",
     expect(ids.indexOf("clean-seller")).toBeLessThan(ids.indexOf("e02-mixed"));
   });
 
+  it("BRH E03: shop/buyer hybrid title stays eligible but ranks below a direct seller", async () => {
+    const { isMixedTransactionTitle } = await import("./semantics");
+    const hybridTitle = "فروشگاه /خریدار یخچال ساید دوقلو هتلی خراب سوخته";
+    expect(isMixedTransactionTitle(hybridTitle)).toBe(true);
+    expect(isMixedTransactionTitle("فروش یخچال سالم")).toBe(false);
+    expect(isMixedTransactionTitle("فروشگاه لوازم خانگی")).toBe(false);
+
+    listings([
+      { sourceAdId: "shop-buyer-hybrid", title: hybridTitle },
+      { sourceAdId: "clean-seller", title: "فروش یخچال سالم" },
+    ]);
+    detail({
+      "shop-buyer-hybrid": "فروشگاه خریدار یخچال ساید یخچال دوقلو یخچال خراب موتور سوخته پوسیده با هر خرابی از همجا عکس بفرستید چت دیوار ایتا روبیکا",
+      "clean-seller": "فروش یخچال سالم و آماده تحویل",
+    });
+
+    const def = resolveHuntDefinition({ query: "فروشنده یخچال" });
+    expect(def?.roleMode).toBe("seek-seller");
+    const done = await doneOf(def!);
+    const ids = done.results.map((r) => r.sourceAdId);
+    expect(ids).toContain("shop-buyer-hybrid");
+    expect(ids).toContain("clean-seller");
+    expect(ids.indexOf("clean-seller")).toBeLessThan(ids.indexOf("shop-buyer-hybrid"));
+  });
+
   it("seek-seller («فروشنده یخچال»): the seller ad outranks the buyer ad", async () => {
     listings([
       { sourceAdId: "d1", title: "خریدار یخچال هستیم" },
