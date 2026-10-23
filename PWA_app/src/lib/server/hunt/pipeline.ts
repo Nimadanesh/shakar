@@ -598,6 +598,14 @@ function semanticCapFires(
     repairRequested && assessRepairPolarity(combined).polarity === "unknown";
   const repairService = assessRepairService(combined);
   const serviceIntent = (def.serviceIntent ?? false) || intent.role === "service";
+  // A product hunt explicitly requiring no repair/replacement history must
+  // not retain a clear repair-service provider as a "near" result. Keep this
+  // narrow to negative repair-history hunts; generic product/service role
+  // clashes elsewhere remain recall-preserving near matches.
+  const repairHistoryProductServiceMismatch =
+    intent.role === "product" &&
+    role.role === "service" &&
+    (def.absentAttributes ?? []).some((a) => /تعمیر|تعویض/.test(a));
   const needsRepairMismatch =
     serviceIntent &&
     repairService.signal === "item_needs_repair" &&
@@ -616,6 +624,7 @@ function semanticCapFires(
   const fire =
     clash.clash ||
     identity.mismatch ||
+    repairHistoryProductServiceMismatch ||
     absentNotExact ||
     repairUnknown ||
     needsRepairMismatch ||
@@ -625,7 +634,11 @@ function semanticCapFires(
   // R6: wrong-item rejection kind for the verdict stage (null unless the
   // identity mismatch fired at tier "reject").
   const wrongItemKind =
-    identity.mismatch && identity.tier === "reject" ? identity.reason : null;
+    repairHistoryProductServiceMismatch
+      ? "service-offer-for-negative-repair-history-product-hunt"
+      : identity.mismatch && identity.tier === "reject"
+        ? identity.reason
+        : null;
   return { fire, wrongItemKind };
 }
 
