@@ -1,4 +1,4 @@
-# BRH-2026-10-23 — Run 106 Blind Exchange Case
+# BRH-2026-10-23 — Runs 106/109 Blind Exchange Cases
 
 Source: [Engine V3 Live Observation #106](https://github.com/Nimadanesh/shakar/actions/runs/39935969832)  
 Branch: `engine_v3`  
@@ -22,3 +22,22 @@ Use the established scale: 3 = exact, 2 = relevant, 1 = weak, 0 = irrelevant, `I
 Grade relevance to the full query, including the exchange relation and the target vehicle's paint condition. Do not infer paint status from phrases that refer to other qualities (for example, «بدون نقطه»), and do not treat missing paint information as explicit contradiction. Evaluate transaction direction from the complete offer/request relation rather than a single surface phrase.
 
 Return `S03=<grade>` with a brief reason. Do not consult the internal key while grading.
+
+---
+
+## Blinded case S04
+
+Source: [Engine V3 Live Observation #109](https://github.com/Nimadanesh/shakar/actions/runs/39936557919)
+
+**Query:** `معاوضه سمند بیرنگ`
+
+- **Title:** فروش سمند ۹۵ ای اف سون بیرنگ.معاوضه دارم
+- **City:** همدان
+- **Listed price:** 1,380,000,000
+- **Captured description:**
+
+> ماشین بسیار تمیز مرتب کم کار بدونه رنگ یه سواری سبک قیمت باشه برمیدارم
+
+Grade S04 against the full query. Check that the paint statement belongs to the Samand itself, and interpret the exchange relation from the full title and description. Do not assume that the target vehicle being offered in exchange is automatically the wrong direction.
+
+Return both grades as `S03=<grade>, S04=<grade>` with a concise reason for each. Use the established scale: 3 = exact, 2 = relevant, 1 = weak, 0 = irrelevant, `INSUFFICIENT` = insufficient evidence (excluded from the denominator). Do not consult any internal key while grading.
