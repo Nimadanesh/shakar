@@ -12,6 +12,7 @@ Scope: read-only live Divar retrieval only. This report records observed ads and
 - Capture timestamp: `2026-10-23T19:05:22.977Z` (observation time, not publication time)
 - Limits respected: 3 scenarios; 2 list pages per scenario; 2 details per scenario; 6 details total; 6 unique IDs; `MIZAN_SHADOW=0`.
 - The first workflow attempt timed out at Vitest's default 5-second test timeout before producing an artifact. The test timeout was raised to 120 seconds; the successful run above completed the capture test in about 15 seconds. No result is taken from the failed attempt.
+- The same bounded test also executed on PR head `acddf26359b7d79ce7795776690f2a2b0dcd43ba` in [run 40008537573](https://github.com/Nimadanesh/shakar/actions/runs/40008537573) after a formatting-only follow-up commit. Treat that as a repeated execution of the same protocol, not an independent sample; the six-item findings below are recorded from run 40008523406.
 
 ## Observations
 
