@@ -63,9 +63,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         });
         expect(def, `definition must resolve for ${scenario.query}`).not.toBeNull();
         if (!def) continue;
-        const retrievalDef = scenario.candidateQuery
+        const candidateQuery = "candidateQuery" in scenario ? scenario.candidateQuery : undefined;
+        const retrievalDef = candidateQuery
           ? resolveHuntDefinition({
-              query: scenario.candidateQuery,
+              query: candidateQuery,
               include: [],
               exclude: [],
               should: [],
@@ -129,7 +130,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         reports.push({
           id: scenario.id,
           query: scenario.query,
-          ...(scenario.candidateQuery ? { candidateQuery: scenario.candidateQuery } : {}),
+          ...("candidateQuery" in scenario ? { candidateQuery: scenario.candidateQuery } : {}),
           resolved: {
             include: def.include,
             exclude: def.exclude,
