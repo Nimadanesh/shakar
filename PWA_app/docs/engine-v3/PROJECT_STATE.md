@@ -275,7 +275,7 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 
 ## Mixed refrigerator-role title cue — implementation pending validation (2026-10-23)
 
-- Diagnostic branch `diagnostic/brh-fridge-conjoined-mixed-role`, PR [#25](https://github.com/Nimadanesh/shakar/pull/25), commit `62bd3c308bc64721d3f6cbf98579ed238ff651df` (plus the preceding implementation commit `5c5ca2932ca83b9f7d4d3f0aea35a0dd4fb3d683)).
+- Diagnostic branch `diagnostic/brh-fridge-conjoined-mixed-role`, PR [#25](https://github.com/Nimadanesh/shakar/pull/25), current head `f4957bcea594907a173330fb2de4bf523547fa73` (plus the preceding implementation commit `5c5ca2932ca83b9f7d4d3f0aea35a0dd4fb3d683)).
 - Added shared title-only `isMixedTransactionTitle` and connected both pipeline mixed-role paths and the live role-observation report. The cue covers existing buy/sell wording and the forms `فروش و خریدار` / `فروش وخریدار`; it adds no penalty or hard filter.
 - Deterministic pipeline regressions now cover both forms and assert the mixed listing remains eligible below a direct offer; the diagnostic cue test covers the conjoined form.
 - Validation is **not confirmed**: GitHub reports zero checks for the diagnostic head. The baseline/live workflows trigger on pushes to `engine_v3` or manual dispatch; the available GitHub connection here cannot dispatch them, and local clone/test execution was blocked by unavailable network DNS. Do not call this fix accepted or validated.
