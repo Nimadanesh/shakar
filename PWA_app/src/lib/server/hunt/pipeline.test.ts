@@ -1895,6 +1895,31 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     expect(ids.indexOf("clean")).toBeLessThan(ids.indexOf("repaint"));
   });
 
+  it("negated repair-history hunt keeps unknown listings near and rejects explicit repair history", async () => {
+    const def = resolveHuntDefinition({
+      query: "پیانو تعمیر یا تعویض نشده است",
+      category: "music",
+    })!;
+    expect(def.include).toEqual(["پیانو"]);
+    expect(def.absentAttributes).toEqual(["تعمیر", "تعویض"]);
+
+    listings([
+      { sourceAdId: "unknown-history", title: "پیانو آکبند یاماها P-145" },
+      { sourceAdId: "repaired", title: "پیانو آکوستیک تعمیر شده" },
+    ]);
+    detail({
+      "unknown-history": "پیانو آکبند یاماها، سالم و آماده فروش",
+      repaired: "این پیانو تعمیر شده و قطعات آن تعویض شده است",
+    });
+
+    const done = await doneOf(def);
+    const kinds = kindsOf(done);
+    // Silence about history is UNKNOWN, never proof that the condition is met.
+    expect(kinds["unknown-history"]).toBe("near");
+    // Positive repair/replacement evidence contradicts the requested absence.
+    expect(kinds["repaired"]).toBeUndefined();
+  });
+
   it("negated bodywork («بدون نیاز به صافکاری») is not implied-present", async () => {
     const { assessAbsencePolarity } = await import("./semantics");
     // Supports absence (or unknown) — never counter-evidence.
