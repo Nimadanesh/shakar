@@ -2243,3 +2243,79 @@ describe("E3 — acoustic piano role replay", () => {
     expect(done.results.every((item) => item.demotedBy === undefined)).toBe(true);
   });
 });
+
+describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => {
+  async function completed(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  function setListings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((row) => summary(row)),
+      hasMore: false,
+    });
+  }
+
+  function setDetails(descriptions: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id === "mixed" ? "خریدوفروش انواع یخچال سالم موتورسوخته پوسیده" : "فروش یخچال",
+      price: null,
+      city: "تهران",
+      description: descriptions[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  it("keeps both observed candidates available under seller-seeking intent", async () => {
+    const def = resolveHuntDefinition({ query: "فروشنده یخچال" });
+    expect(def).not.toBeNull();
+    if (!def) return;
+    expect(def.roleMode).toBe("seek-seller");
+
+    setListings([
+      { sourceAdId: "mixed", title: "خریدوفروش انواع یخچال سالم موتورسوخته پوسیده" },
+      { sourceAdId: "barter", title: "فروش یخچال" },
+    ]);
+    setDetails({
+      mixed: "خریدانواع یخچال سالم موتورسوخته پوسیده گازرفته بصورت توافقی",
+      barter: "معاوضه با برنج یا چلتوک، یا گوسفند زنده",
+    });
+
+    const done = await completed(def);
+    const ids = done.results.map((result) => result.sourceAdId);
+    // Human grades: mixed listing = 1, barter offer = 2. This test protects
+    // recall while a later, evidence-backed rank/role fix is developed.
+    expect(ids).toContain("mixed");
+    expect(ids).toContain("barter");
+  });
+
+  it("does not treat barter as irrelevant in an ordinary fridge hunt", async () => {
+    const def = resolveHuntDefinition({ query: "یخچال" });
+    expect(def).not.toBeNull();
+    if (!def) return;
+    expect(def.roleMode ?? "none").toBe("none");
+
+    setListings([
+      { sourceAdId: "barter", title: "فروش یخچال" },
+      { sourceAdId: "mixed", title: "خریدوفروش انواع یخچال سالم موتورسوخته پوسیده" },
+    ]);
+    setDetails({
+      mixed: "خریدانواع یخچال سالم موتورسوخته پوسیده گازرفته بصورت توافقی",
+      barter: "معاوضه با برنج یا چلتوک، یا گوسفند زنده",
+    });
+
+    const done = await completed(def);
+    const ids = done.results.map((result) => result.sourceAdId);
+    // Human grades: barter = 3, mixed buyer-leaning catalogue = 2. In a
+    // generic product hunt both remain relevant; this is not a hard reject.
+    expect(ids).toContain("barter");
+    expect(ids).toContain("mixed");
+  });
+});
+
