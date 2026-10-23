@@ -101,7 +101,7 @@ describe("BRH Run 101 — isolated exchange target evidence", () => {
   it("does not match a target item as a substring inside a longer word", () => {
     expect(
       assessExchangeTargetEvidence(
-        "کفی‌سازی سه محور معاوضه با تانکر تمیز",
+        "کفیسازی سه محور معاوضه با تانکر تمیز",
         ["کفی"],
         ["سه محور"]
       )
