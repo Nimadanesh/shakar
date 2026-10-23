@@ -56,6 +56,11 @@ export function normalizeForMatch(text: string): string {
   return (
     unifyChars(text)
       .replace(/‌/g, " ") // ZWNJ → space for matching
+      // Script-boundary guard: real classifieds concatenate Persian item names
+      // with Latin model codes («پیانوC1», «یاماهاP-145»). Separate the
+      // scripts before tokenization so the Persian MUST term is not lost.
+      .replace(/([\u0600-\u06FF])([A-Za-z0-9])/g, "$1 $2")
+      .replace(/([A-Za-z0-9])([\u0600-\u06FF])/g, "$1 $2")
       // punctuation → space (Persian + Latin)
       .replace(/[.,،؛:!؟?()«»""''\[\]{}<>|/\\\-–—_+=*~@#$%^&`]/g, " ")
       .replace(/\s+/g, " ")
