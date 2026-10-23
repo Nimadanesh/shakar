@@ -101,3 +101,14 @@ The evidence now points to a retrieval/candidate-coverage question before it can
 ### Updated decision
 
 The deeper scan did not locate the frozen pair even within 194 observed candidates per query. Record this as **not found in this bounded retrieval pool**, not as globally absent from Divar and not as a ranking failure. Before touching production scoring, the next diagnostic should inspect the exact normalized/provider query and pagination/request metadata for `فروشنده یخچال` versus `یخچال`, then test whether a carefully bounded alternate query can retrieve current comparable sale-title and mixed-role listings. Keep the detail budget capped and do not substitute mutable current listings for the immutable human grades. No production ranking change is justified by this run alone.
+
+
+## Query-term contract finding — source inspection after run #122
+
+The report's two queries share `include: ["یخچال"]`, even though the raw query differs. This is expected from the current source contract, not yet proof of a provider bug:
+
+- `resolveHuntDefinition` computes `roleMode=seek-seller` from the raw phrase `فروشنده یخچال`.
+- `collectCandidates` sends `keywords: def.include` to `divarProvider.searchLists`; role words are deliberately not MUST content terms (see the comment around `ROLE_WORDS` in `PWA_app/src/lib/interpret.ts`).
+- Therefore both queries ask Divar for refrigerator-category inventory and the seller-role distinction is expected to be applied after retrieval. Same-sized candidate pools are unsurprising; they do not establish identical provider requests, but the current report does not include the serialized provider request or cursor/page identity needed to prove otherwise.
+
+This shifts the next experiment from “search deeper for the old packet IDs” to “sample current candidates by seller-only, buyer-only/dealer, and mixed-role title cues, then capture the actual query contract and post-detail outcomes.” The frozen IDs are historical packet references and may no longer be active listings; failure to find them in current Divar must not be treated as a quality verdict. Keep the production engine unchanged until current candidate-level evidence is human-graded.
