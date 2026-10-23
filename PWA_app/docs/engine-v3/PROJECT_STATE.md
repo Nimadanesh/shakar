@@ -3,7 +3,7 @@
 Last verified: 2026-10-23
 Work branch: `engine_v3`
 Branch base: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: a61658cba82621b0dbae3b263fcd8ae9b0bb2b59
+Current source/test head: 2054d6b9f18fcdf52b996a94852ff81c7da0bf84
 Latest portable baseline: [Run 39767995269 — source/test SHA `3bf9bc1`](https://github.com/Nimadanesh/shakar/actions/runs/39767995269); focused tests, portable suite, typecheck, and build pass; ESLint fails on 8 pre-existing UI hook-rule errors.
 Latest live observation: [Run #9 — SHA `f2d9484`](https://github.com/Nimadanesh/shakar/actions/runs/39682408569)
 
@@ -281,3 +281,18 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - Replacement-history follow-up [run 39968450511](https://github.com/Nimadanesh/shakar/actions/runs/39968450511) also succeeded as a bounded observation, but did not capture an explicit component-replacement claim. It is not a valid replacement-history control.
 - **Acceptance status:** merged and automated regression-tested; live target-specific confirmation remains unavailable. Do not interpret a successful workflow execution as proof of ranking quality.
 - Next: move to the registered mixed-transaction cue matrix / issue 16 as a characterization-and-evidence task. Preserve the two unique refrigerator ads and frozen grades, add no general penalty or hard filter, and only broaden the cue after a source-grounded paired case demonstrates the intended scope. Keep the rare explicit piano-component-replacement evidence gap open without repeating the same bounded query path.
+
+
+## Latest verified state — PR #39 merged (2026-10-23)
+
+- Current `engine_v3` head verified by both workflows: `2054d6b9f18fcdf52b996a94852ff81c7da0bf84` (merge of PR #39).
+- Baseline [run 40004257638](https://github.com/Nimadanesh/shakar/actions/runs/40004257638):
+  - Focused hunt/search suite: **15 test files passed, 5 skipped; 301 passed, 8 skipped**.
+  - Full portable suite: **74 test files passed, 6 skipped; 894 passed, 9 skipped**.
+  - TypeScript typecheck: PASS; production build: PASS.
+  - ESLint: FAIL only at the known 8 unrelated `react-hooks/set-state-in-effect` UI errors and 37 warnings. Therefore the workflow is not fully green.
+  - Three external-data research harnesses remain NOT RUN because frozen input files are absent from the hosted runner.
+- PR #39 fix is verified by the source replay: B11 is now role `product`, reason `retail-installment:اقساط+پیش پرداخت+ارسال`; actual buyer is rank 1 and B11 is rank 2 with `near` and `demotedBy: cap`. B12 replay and E02 pass as part of the focused/full suites.
+- Live observation [run 40004257788](https://github.com/Nimadanesh/shakar/actions/runs/40004257788) succeeded on the same SHA; artifact `engine-v3-live-observation-130`, with 4 query scenarios, max 8 pages/query, max 8 detail reads total, Mizan disabled. It is unjudged E3 evidence, not E4/E5 quality evidence.
+- Residual live role risk: in the role-regression artifact, `فروشگاه /خریدار یخچال ساید دوقلو هتلی خراب سوخته` (source ID `gaLNJNwu`) is still `unknown` and appears exact at rank 1 for `فروشنده یخچال`, despite its description explicitly soliciting broken refrigerators to buy. Treat this as a bounded, unjudged candidate for characterization—not enough alone to justify a broad `خریدار` substring rule.
+- `engine_v3` remains isolated from `main`; no deployment. Frozen human grades, keys, and historical captures remain unchanged.
