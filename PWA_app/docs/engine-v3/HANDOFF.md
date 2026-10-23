@@ -3,7 +3,7 @@
 Updated: 2026-10-23
 Branch: `engine_v3`
 Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: a61658cba82621b0dbae3b263fcd8ae9b0bb2b59
+Current source/test head: 2054d6b9f18fcdf52b996a94852ff81c7da0bf84
 
 ## Mission
 
@@ -355,3 +355,14 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Live role observation [39968450800](https://github.com/Nimadanesh/shakar/actions/runs/39968450800) completed successfully with the 4-detail cap and Mizan disabled. Neither exact historical paired target was found in the 8-page query sets, so this run does not validate the new cue on those ads or provide a human-quality comparison.
 - Replacement-history follow-up [39968450511](https://github.com/Nimadanesh/shakar/actions/runs/39968450511) completed successfully but found no explicit component-replacement control. The rare-evidence gap remains open; do not repeat the same bounded query path or infer history from generic repair/sale wording.
 - **Next bounded task:** characterize the existing mixed-transaction cue matrix (registered issue 16) with title-only positive, negative, and ordinary controls, preserving both paired refrigerator candidates. Treat this as a diagnostic/test/evidence task first; no new scoring penalty, hard rejection, frozen-grade change, `main` merge, or deployment without source-grounded paired evidence.
+
+
+## Handoff — PR #39 merged and validated; next bounded role characterization (2026-10-23)
+
+- Current source/test head: `2054d6b9f18fcdf52b996a94852ff81c7da0bf84`.
+- PR [#39](https://github.com/Nimadanesh/shakar/pull/39) is merged into `engine_v3`. It normalizes installment and retail-context cues before comparing them to normalized listing text.
+- Baseline [40004257638](https://github.com/Nimadanesh/shakar/actions/runs/40004257638): focused tests PASS (301 passed / 8 skipped), full portable suite PASS (894 passed / 9 skipped), typecheck PASS, production build PASS. ESLint still fails on 8 known unrelated UI hook-rule errors (37 warnings); workflow overall is therefore not fully green. The three data-dependent external harnesses remain NOT RUN, not passing.
+- Source replay confirms B11 role `product`, `near` + capped, rank 2 behind the actual buyer; B12 and E02 controls pass.
+- Live [40004257788](https://github.com/Nimadanesh/shakar/actions/runs/40004257788) succeeded and uploaded `engine-v3-live-observation-130`. It is bounded/unjudged; no E4 human grade or E5 paired comparison was produced.
+- Next task: characterize the residual live candidate `gaLNJNwu` (`فروشگاه /خریدار یخچال ساید دوقلو هتلی خراب سوخته`), observed as `unknown`/rank-1 `exact` for `فروشنده یخچال`, while its description solicits broken refrigerators to buy. Build a deterministic paired fixture: this buyer/shop hybrid, a clean seller positive, and an ordinary-search control. Assert current role/ranking first; only then decide whether a narrow buyer cue is justified. Do not promote bare `خریدار` globally because seller copy can mention a buyer.
+- Do not mutate frozen grades/captures or claim human-quality uplift. Keep `main` untouched; no deployment or merge without explicit authorization. The technical agent owns the next diagnostic and code decision; ask the owner for grades only if a fresh, blinded human packet is actually needed.
