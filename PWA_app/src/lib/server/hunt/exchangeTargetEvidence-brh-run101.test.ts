@@ -129,3 +129,78 @@ describe("BRH Run 101 — isolated exchange target evidence", () => {
   });
 
 });
+
+
+describe("Synthetic counterfactuals — exchange paint polarity (not live Divar evidence)", () => {
+  const target = ["پژو ۲۰۶"];
+  const wanted = ["بدون رنگ"];
+  const contradiction = ["رنگ داره", "رنگ دارد", "گلگیر رنگ"];
+
+  it("marks explicit target-side paint evidence as contradicted on the requested side", () => {
+    expect(
+      assessExchangeTargetEvidence(
+        "موتور معاوضه با پژو ۲۰۶ گلگیر عقب رنگ داره",
+        target,
+        wanted,
+        contradiction
+      )
+    ).toMatchObject({
+      status: "contradicted",
+      targetSide: "requested",
+      itemEvidence: "پژو ۲۰۶",
+      attributeEvidence: "رنگ داره",
+      reason: "target-side-attribute-explicitly-contradicted",
+    });
+  });
+
+  it("does not transfer explicit paint evidence from the opposite vehicle", () => {
+    expect(
+      assessExchangeTargetEvidence(
+        "موتور رنگ داره معاوضه با پژو ۲۰۶",
+        target,
+        wanted,
+        contradiction
+      )
+    ).toMatchObject({
+      status: "unknown",
+      targetSide: "requested",
+      itemEvidence: "پژو ۲۰۶",
+      attributeEvidence: null,
+      reason: "attribute-only-on-opposite-side",
+    });
+  });
+
+  it("keeps mixed positive and contradictory target-side phrases unknown", () => {
+    expect(
+      assessExchangeTargetEvidence(
+        "موتور معاوضه با پژو ۲۰۶ بدون رنگ ولی یک گلگیر رنگ داره",
+        target,
+        wanted,
+        contradiction
+      )
+    ).toMatchObject({
+      status: "unknown",
+      targetSide: "requested",
+      itemEvidence: "پژو ۲۰۶",
+      attributeEvidence: null,
+      reason: "conflicting-target-side-attribute-evidence",
+    });
+  });
+
+  it("does not treat a generic color mention as contradiction unless the caller explicitly supplies it", () => {
+    expect(
+      assessExchangeTargetEvidence(
+        "موتور معاوضه با پژو ۲۰۶ رنگ نقره‌ای",
+        target,
+        wanted,
+        contradiction
+      )
+    ).toMatchObject({
+      status: "unknown",
+      targetSide: "requested",
+      itemEvidence: "پژو ۲۰۶",
+      attributeEvidence: null,
+      reason: "attribute-not-found-on-target-side",
+    });
+  });
+});
