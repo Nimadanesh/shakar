@@ -46,8 +46,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         desired: ["mixed", "seller", "buyer", "other"] as RoleCue[],
       },
       {
-        id: "vehicle-buyer-explicit-control",
-        query: "خریدار خودرو",
+        id: "vehicle-buyer-damaged-vehicle-control",
+        query: "خریدار خودرو تصادفی",
         category: "vehicles",
         detailBudget: 2,
         desired: ["buyer", "seller", "mixed", "other"] as RoleCue[],
