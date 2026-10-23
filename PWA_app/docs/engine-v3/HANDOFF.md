@@ -143,3 +143,13 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Validation status for commit `9a55534`: not yet independently observed from CI in this session. The baseline workflow is configured for pushes touching `PWA_app/src/**`; its status must be checked before treating the tests as passing.
 - Next: inspect the focused/full CI result for `9a55534`. If the characterization tests pass, prepare a separate narrowly scoped evidence test for the combined B02 phrase without altering global absence semantics; if they fail, diagnose the exact polarity mismatch first. No merge to `main`, deployment, or live-service mutation.
 
+## Continuation — B02 phrase characterization (2026-10-23)
+
+- Test-only commit [cd5c7ad760c4749eef545a4289c4750e9f78e546](https://github.com/Nimadanesh/shakar/commit/cd5c7ad760c4749eef545a4289c4750e9f78e546) extends the replacement-history polarity tests:
+  - the full human-accepted B02 wording (`بدون تغییر و جابه‌جایی و دستکاری`) remains `unknown` for `تعویض`;
+  - explicit positive replacement evidence still resolves to `present` even beside `بدون دستکاری`;
+  - explicit negative replacement evidence remains `absent` beside that phrase.
+- This is characterization, not a production fix. It documents the current conservative contract and prevents a future generic synonym from overriding direct positive/negative evidence. The human grade 3 for B02 is not discarded; rather, the engine's present absence-attribute model cannot currently encode that broader human judgment as a distinct supporting-but-not-conclusive state.
+- CI/status lookup returned no published checks for test commit `9a55534`; this session cannot claim either pass or fail. The new test commit `cd5c7ad` also needs hosted validation.
+- Decision: do not add a new polarity or scoped rule yet. First validate these cases in CI and collect at least paired human-graded positive/negative examples where `بدون دستکاری` appears with and without explicit replacement evidence. No merge to `main`, deployment, or live-service mutation.
+
