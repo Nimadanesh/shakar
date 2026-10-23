@@ -264,11 +264,19 @@ function assessAbsenceOneWord(
   const impliedHit =
     (family ? IMPLIED_PATTERNS[family] : []).find((re) => re.test(unnegated))
       ?.source ?? null;
-  // Explicit positive evidence anywhere in the text defeats a universal
-  // absence claim. Check it before carving absence spans: otherwise a broad
-  // «بدون <fillers> تعویض» match can swallow an independent clause such as
-  // «بدون دستکاری؛ قطعات تعویض شده است» and incorrectly report absent.
-  const directAnywhere = directRes.find((re) => re.test(norm))?.source ?? null;
+  // Explicit positive evidence in a separate punctuation-delimited clause
+  // defeats a universal absence claim. Do not scan the whole sentence here:
+  // «بدون رنگ و صافکاری شده» must remain implied, because the direct regex
+  // for «رنگ ... شده» can span the coordinated phrase even though «صافکاری»
+  // is only present-implied evidence.
+  const clauses = norm.split(/[؛;.!؟?\\n]+/).map((part) => part.trim()).filter(Boolean);
+  const directOutsideAbsenceClause = clauses.find((clause) =>
+    !absentRes.some((re) => re.test(clause)) &&
+    directRes.some((re) => re.test(clause))
+  );
+  const directAnywhere = directOutsideAbsenceClause
+    ? directRes.find((re) => re.test(directOutsideAbsenceClause))?.source ?? null
+    : null;
   if (directAnywhere) {
     return { polarity: "present", reason: `absence-defeated:${directAnywhere}` };
   }
