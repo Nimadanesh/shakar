@@ -162,3 +162,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - The observation's engine output was identical for both queries, while the resolver reported `roleMode: seek-seller` for the first and `none` for the second. That is a diagnostic concern, not yet a confirmed user-facing defect. Wait for independent grades before changing role logic.
 - No source code changed. The packet and mapping are documentation-only commits on `engine_v3`; `main` and deployment remain untouched. Existing baseline result still stands: focused tests, portable suite, typecheck and build passed on the cited older source SHA; ESLint remains red on known UI hook-rule errors. This does not validate a new source SHA.
 - Next: collect grades for B01–B04; then join them to the internal key and decide whether a narrowly scoped role correction is justified. Do not unblind BRH-A retroactively or modify its frozen artifacts.
+
+
+## Human grades received — BRH-2026-10-23-B (2026-10-23)
+
+- Owner grades: B01=1, B02=2, B03=3, B04=2. Each of the two unique ads scored one grade lower under `فروشنده یخچال` than under ordinary `یخچال`.
+- The live engine returned the same two listings in the same order for both queries. This supports a narrow role-intent investigation, not a population-level quality claim.
+- Code inspection found `effectiveWantsSellers` returns true both for `roleMode: seek-seller` and default `none`; current role assessment also does not represent a positive seller-seeking listing role. Existing test coverage verifies that an explicit buyer-cue ad falls below a seller offer, but these live examples are not recognized the same way: one is a mixed `خریدوفروش` title and the other is an exchange listing.
+- Next: add paired characterization tests for these two exact textual patterns and ordinary-query controls; inspect the existing role/score contract before any production logic change. Do not add a global rejection rule. No main merge or deployment.
