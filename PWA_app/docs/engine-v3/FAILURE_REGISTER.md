@@ -116,3 +116,11 @@ A wider bounded read-only replay now completed 8/8 pages for `معاوضه سم�
 - Live role observation [39968450800](https://github.com/Nimadanesh/shakar/actions/runs/39968450800) was successful as a workflow, but `packetTargetCandidatesFound` was empty for both 8-page searches. No claim of target-specific live validation or quality gain is warranted.
 - Replacement-history observation [39968450511](https://github.com/Nimadanesh/shakar/actions/runs/39968450511) did not capture explicit component replacement; evidence gap remains open.
 - Next: mixed-transaction cue matrix / issue 16, characterization first. Preserve current eligibility and avoid expanding the ranker cue from unjudged live examples.
+
+## Mixed-transaction cross-category capture — 2026-10-23
+
+- Successful bounded workflow [39970882822](https://github.com/Nimadanesh/shakar/actions/runs/39970882822) captured 12 unique ads across refrigerator and piano scenarios; details and limitations: [capture note](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md).
+- The capture contains two spaced mixed-title candidates, body-level buy/sell shop copy on direct-offer-pattern listings, and explicit buyer-side listings. It did not capture a compact `خریدوفروش` title or a clean barter/exchange-condition control.
+- Sampling gaps remain: no clean explicit buyer-seeking refrigerator listing in the two selected details for that scenario; the selected direct-seller-pattern piano listing is an education/training offer and was rejected by the engine.
+- All `sampleRank` values are diagnostic sample-pool positions, not production ranks. Human grades are still pending. Do not use engine `score`, `matchKind`, or suggested case labels as ground truth.
+- Keep current ranking/eligibility behavior. Grade the blind packet first; only then use the key to assess which missing cells materially affect a decision.

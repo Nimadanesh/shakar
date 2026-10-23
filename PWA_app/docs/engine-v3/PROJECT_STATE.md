@@ -281,3 +281,21 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - Replacement-history follow-up [run 39968450511](https://github.com/Nimadanesh/shakar/actions/runs/39968450511) also succeeded as a bounded observation, but did not capture an explicit component-replacement claim. It is not a valid replacement-history control.
 - **Acceptance status:** merged and automated regression-tested; live target-specific confirmation remains unavailable. Do not interpret a successful workflow execution as proof of ranking quality.
 - Next: move to the registered mixed-transaction cue matrix / issue 16 as a characterization-and-evidence task. Preserve the two unique refrigerator ads and frozen grades, add no general penalty or hard filter, and only broaden the cue after a source-grounded paired case demonstrates the intended scope. Keep the rare explicit piano-component-replacement evidence gap open without repeating the same bounded query path.
+
+## Mixed-transaction evidence capture — 2026-10-23
+
+- PR [#26](https://github.com/Nimadanesh/shakar/pull/26) merged to `engine_v3` at `e4aba4d8d30213ba44f47fcd893bc05889e4942d`; bounded capture [run 39970882822](https://github.com/Nimadanesh/shakar/actions/runs/39970882822) succeeded and uploaded `engine-v3-mixed-transaction-packet-capture`.
+- Raw capture: 12 unique source ads, six scenarios across `home` and `music`, 4 pages per query, 12/12 detail reads, Mizan shadow disabled. All 12 selected ads have full description snapshots.
+- This satisfies the protocol's raw sample-count floor, but not all matrix cells: no compact `خریدوفروش` title, no clean barter/exchange-condition example, no clean explicit buyer-seeking refrigerator control in the sampled detail budget, and the seller-piano direct-seller-pattern sample is actually rejected as a training offer.
+- `sampleRank` is not production rank; `productionRank` is null. No human grades were created. A randomized blind relevance packet is prepared separately; withhold its internal key until grades are locked.
+- Next: collect 0–3 human grades, then join provenance and engine diagnostics; decide whether a targeted supplement is needed for missing cells. No ranker change, no new hard filter, no frozen-grade edit, no `main` merge, no deployment.
+- Detailed audit: [BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md).
+
+
+## Mixed-transaction capture 01 — human grades locked (2026-10-23)
+
+- Owner grades for the 12 blinded, query-conditioned listings are recorded in [BRH-2026-10-23-MIXED-TRANSACTION-HUMAN-GRADES.md](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-HUMAN-GRADES.md); the source mapping and engine diagnostics are in [the internal key](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-INTERNAL-KEY.md).
+- Distribution: 4×grade 3, 4×grade 2, 2×grade 1, 2×grade 0; total 22/36, mean 1.83/3, no insufficient judgments. These are relevance judgments, not ranking metrics.
+- The seller-refrigerator mixed title/body-only-buying item grades 1 vs direct seller 3; generic refrigerator grades 2 vs 3. Buyer controls include a direct seller at 0 and a conditional scrap buyer at 2. Piano results likewise distinguish listing focus and body-supported transaction direction.
+- No production rank exists in this capture; no precision@5/nDCG@5 or causal ranking delta can be computed. Keep the narrow cue and eligibility unchanged.
+- Next evidence task: a bounded supplement only for decision-relevant missing cells (compact «خریدوفروش», clean barter/exchange-condition case, and clean buyer-seeking refrigerator control). No ranker change, main merge, or deployment.

@@ -355,3 +355,21 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Live role observation [39968450800](https://github.com/Nimadanesh/shakar/actions/runs/39968450800) completed successfully with the 4-detail cap and Mizan disabled. Neither exact historical paired target was found in the 8-page query sets, so this run does not validate the new cue on those ads or provide a human-quality comparison.
 - Replacement-history follow-up [39968450511](https://github.com/Nimadanesh/shakar/actions/runs/39968450511) completed successfully but found no explicit component-replacement control. The rare-evidence gap remains open; do not repeat the same bounded query path or infer history from generic repair/sale wording.
 - **Next bounded task:** characterize the existing mixed-transaction cue matrix (registered issue 16) with title-only positive, negative, and ordinary controls, preserving both paired refrigerator candidates. Treat this as a diagnostic/test/evidence task first; no new scoring penalty, hard rejection, frozen-grade change, `main` merge, or deployment without source-grounded paired evidence.
+
+## Continuation — PR #26 merged; mixed-transaction capture inspected (2026-10-23)
+
+- Run [39970882822](https://github.com/Nimadanesh/shakar/actions/runs/39970882822) succeeded on merge SHA `e4aba4d8d30213ba44f47fcd893bc05889e4942d`. Artifact: `engine-v3-mixed-transaction-packet-capture`.
+- The bounded capture returned 12 unique listings across refrigerator/piano and seller/generic/buyer scenarios; 12/12 detail reads used; all descriptions present; Mizan shadow off.
+- Minimum raw count is met, but matrix is incomplete: no compact `خریدوفروش`, no clean barter/exchange control, no clean explicit buyer-seeking refrigerator control in selected details; seller-piano's sampled direct-seller-pattern item is a training offer rejected by the engine.
+- A blinded relevance packet is prepared separately. Ask for grades by blind ID only; do not expose the key or engine diagnostics until the grades are locked. The capture is not a production ranking comparison (`productionRank: null`).
+- After grades: join the key, report per-task grades/critical direction errors and missing/insufficient separately. If needed, run only a narrow supplement for the specific missing cells. No scoring changes, hard filters, frozen-grade edits, `main` merge, or deployment.
+- Evidence note: [BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-CAPTURE-01.md).
+
+
+## Handoff — mixed-transaction capture 01 grades locked (2026-10-23)
+
+- Read [locked human grades](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-HUMAN-GRADES.md) and [internal key](evaluations/BRH-2026-10-23-MIXED-TRANSACTION-INTERNAL-KEY.md). All 12 blind IDs have numeric grades; distribution 3:4, 2:4, 1:2, 0:2; total 22/36; no insufficient cases.
+- The strongest actionable observation is the repeated human preference for direct offers over mixed-title listings whose body only supports buying (seller fridge 1 vs 3; generic fridge 2 vs 3). This is consistent with prior B evidence, not an independent production-rank comparison.
+- The sample also confirms direction errors matter: direct sale for a buyer hunt is 0; a multi-item scrap buyer is relevant but peripheral at 2. For piano, listing focus prevents broad word-match scoring (education-led ad 1; appraisal/buy-sell service 2).
+- Keep current title-scoped rule, candidate eligibility, and frozen grades unchanged. No production ranks were captured, so do not claim a ranking improvement or calculate ranking metrics.
+- Next: bounded targeted collection for compact «خریدوفروش», clean barter/exchange condition, and a clean buyer-seeking refrigerator listing. Do not expand retrieval limits globally or modify ranking before source-grounded controls and human review.
