@@ -21,8 +21,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures a bounded live Divar observation for critical query families",
   async () => {
     // Explicit total budget: at most eight detail fetches across ALL scenarios.
-    // Total budget: two history probes, two service-control details, two exchange
-    // details, and two exact-phrase details. Do not interpret HUNT_MAX_DETAILS as global.
+    // Total budget: two history probes, two service-control details, and four exchange
+    // details split across trailer and vehicle categories. Do not interpret HUNT_MAX_DETAILS as global.
     const cases = [
       // Include the product plus known replacement-history vocabulary so list
       // retrieval can surface likely real history-bearing ads.
