@@ -21,11 +21,14 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures a bounded live Divar observation for critical query families",
   async () => {
     // Explicit total budget: at most eight detail fetches across ALL scenarios.
-    // Per-scenario caps sum to eight; do not interpret HUNT_MAX_DETAILS as global.
+    // The negated-history query gets four slots; positive exchange and replacement
+    // history controls get two each. Do not interpret HUNT_MAX_DETAILS as global.
     const cases = [
-      { id: "piano-acoustic-precision", query: "پیانو اکوستیک", detailBudget: 2 },
+      // Combine the product with the negated history phrase so retrieval can
+      // surface real listings whose details contain the phrase, rather than
+      // searching the generic phrase alone (which returned no inspectable ads).
+      { id: "negated-replacement-history", query: "پیانو اکوستیک تعویض نشده", detailBudget: 4 },
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
-      { id: "negated-exchange-phrase", query: "تعویض نشده", detailBudget: 2 },
       { id: "parts-replaced-control", query: "قطعات تعویض شده", detailBudget: 2 },
     ] as const;
 
@@ -100,21 +103,30 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             slugCapture: stats.slugCapture ?? null,
             cursorReturned: endCursor !== undefined && endCursor !== null,
           },
-          topResults: results.slice(0, 8).map((result, index) => ({
-            rank: index + 1,
-            sourceAdId: result.sourceAdId,
-            title: result.title,
-            price: result.price,
-            city: result.city,
-            matchKind: result.matchKind,
-            score: result.score,
-            evidence: result.evidence,
-            missingInfo: result.missingInfo,
-            detailUnknown: result.detailUnknown ?? false,
-            demotedBy: result.demotedBy ?? null,
-            descriptionExcerpt: result.descSnippet,
-            listingRole: assessListingRole(`${result.title} ${result.descSnippet ?? ""}`),
-          })),
+          topResults: results.slice(0, 8).map((result, index) => {
+            const listingText = `${result.title} ${result.descSnippet ?? ""}`;
+            const listingRole = assessListingRole(listingText);
+            return {
+              rank: index + 1,
+              sourceAdId: result.sourceAdId,
+              title: result.title,
+              price: result.price,
+              city: result.city,
+              matchKind: result.matchKind,
+              score: result.score,
+              evidence: result.evidence,
+              missingInfo: result.missingInfo,
+              detailUnknown: result.detailUnknown ?? false,
+              demotedBy: result.demotedBy ?? null,
+              descriptionExcerpt: result.descSnippet,
+              listingRole,
+              exchangeCueAudit: {
+                hasNegatedReplacementHistory:
+                  /(?:قطعات?\\s+)?تعویض\\s+(?:نشده(?:\\s+است)?|نشد(?:ه)?(?:\\s+است)?|ندارد|نداشته(?:\\s+است)?|نمی\\s?شود|نمی\\s?باشد)|(?:بدون|فاقد)\\s+تعویض/.test(listingText),
+                hasPositiveExchangeCue: /معاوضه|با کالای دیگر تعویض می‌کنم/.test(listingText),
+              },
+            };
+          }),
         });
       }
     } finally {
