@@ -30,5 +30,11 @@ Query: `معاوضه با سمند بدون رنگ`
 - `معاوضه با کفی سه محور`: two results marked exact. One title offers a trailer in exchange for a three-axle flatbed; the other offers a flatbed in exchange for a three-axle tanker. Both are lexical matches, but the second appears directionally opposite and should be human-graded before treating exactness as meaningful.
 - Role-regression control `فروشنده یخچال` and ordinary `یخچال` returned the same two sampled listings in the same order. The mixed transaction title cue was false for both; this run does not test the narrow `خریدوفروش` cue.
 
+## Locked human grades
+- S01 = 2; S02 = 2. See [human grades](./BRH-2026-10-23-RUN105-VEHICLE-EXCHANGE-HUMAN-GRADES.md).
+- S01 is a wrong-side attribute ownership case: «بدون رنگ و ضربه» belongs to the offered Pride, not the requested Samand/Tiba2. For the target, paint status remains unknown. The engine's `exact` label is therefore a false exactness caused by finding the phrase without binding it to its owner.
+- S02 is a separate no-evidence case: the offered Samand's paint condition is not stated. This is unknown, not contradiction. The target vehicle appearing on the offered side is not by itself a direction error; read the whole exchange relation.
+- The equal grade of 2 must not collapse these into one error class. The two cases are a diagnostic pair, not a performance estimate.
+
 ## Next step
-Collect blind grades for S01/S02. Do not implement contradiction status, alter ranking, or generalize from this two-listing sample until the human evidence and additional positive/negative controls justify it.
+Continue collecting unique blind-graded exchange cases, prioritizing a clear grade-3 target-side positive control and additional explicit contradiction/unknown controls. Keep the richer evidence-state logic isolated; do not alter ranking or integrate it until the regression set covers both target sides, attribute ownership, contradiction scope, and unknown cases. No production ranking change, main merge, or deployment is authorized.
