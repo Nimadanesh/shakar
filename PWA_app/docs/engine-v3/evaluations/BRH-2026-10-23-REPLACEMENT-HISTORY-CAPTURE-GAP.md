@@ -36,5 +36,5 @@ All four runs were bounded discovery probes, not representative samples, relevan
 ## Validation and boundaries
 
 - The isolated observation workflow succeeded on the captured runs. Baseline [run #39949779598](https://github.com/Nimadanesh/shakar/actions/runs/39949779598) on code-bearing SHA `053d0e8`: focused tests, full portable suite, TypeScript, and production build passed; ESLint failed on the known unrelated UI hook-rule errors (8 errors, 37 warnings).
-- The latest retrieval-query-only revision is `50a32cbb38b4f5e3d39b1605a578f01ddd40d740`; its baseline was still running when this report was prepared. Do not claim validation for that exact SHA until its workflow completes.
+- The latest retrieval-query-only revision `50a32cbb38b4f5e3d39b1605a578f01ddd40d740` was validated by [baseline run #39949945856](https://github.com/Nimadanesh/shakar/actions/runs/39949945856): focused tests, full portable suite, TypeScript, and production build passed; ESLint failed on the known unrelated UI hook-rule errors. The isolated live observation [run #39949945854](https://github.com/Nimadanesh/shakar/actions/runs/39949945854) completed successfully and still captured no explicit-replacement control.
 - The observation harness/workflow are test-only. No production ranking change, `main` merge, deployment, or frozen-grade/key edit occurred.
