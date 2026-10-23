@@ -1906,10 +1906,12 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     listings([
       { sourceAdId: "unknown-history", title: "پیانو آکبند یاماها P-145" },
       { sourceAdId: "repaired", title: "پیانو آکوستیک تعمیر شده" },
+      { sourceAdId: "repair-service", title: "تعمیر پیانو در محل" },
     ]);
     detail({
       "unknown-history": "پیانو آکبند یاماها، سالم و آماده فروش",
       repaired: "این پیانو تعمیر شده و قطعات آن تعویض شده است",
+      "repair-service": "خدمات تعمیر پیانو در منزل با ضمانت",
     });
 
     const done = await doneOf(def);
@@ -1918,6 +1920,8 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     expect(kinds["unknown-history"]).toBe("near");
     // Positive repair/replacement evidence contradicts the requested absence.
     expect(kinds["repaired"]).toBeUndefined();
+    // A repair provider is not a piano-for-sale result for this product hunt.
+    expect(kinds["repair-service"]).toBeUndefined();
   });
 
   it("keeps a piano ad whose Persian item name touches its Latin model code", async () => {
