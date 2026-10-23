@@ -300,3 +300,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - D01 (`gaXvBpp8`, `تیبا ۹۵ بیرنگ دوگانه معاوضه با سمند دوگانه سفید`) explicitly describes the offered Tiba as `بدون رنگ`, while the requested Samand is described as white. White color is not proof of paint history. D02 (`ga_KqrRw`, `سمند معاوضه‌با فیدلیتی پرایم بدون رنگ`) has ambiguous attribute ownership: the short description says `ماشین ... بدون رنگ` but does not identify which side.
 - Prepared blinded packet [BRH-2026-10-23-D-BLIND.md](evaluations/BRH-2026-10-23-D-BLIND.md) and separate internal mapping [BRH-2026-10-23-D-INTERNAL-KEY.md](evaluations/BRH-2026-10-23-D-INTERNAL-KEY.md). Await independent judgments. These two title-selected ads do not establish a clean target-Samand contradiction.
 - Keep the exchange-target helper isolated; no ranker change, production semantic change, merge to `main`, or deployment. Preserve `UNKNOWN` as distinct from support and contradiction. Do not use engine labels as human relevance judgments.
+
+
+## Packet D judgments received — 2026-10-23
+
+- Human judgments for [BRH-2026-10-23-D-BLIND.md](evaluations/BRH-2026-10-23-D-BLIND.md) are recorded in [BRH-2026-10-23-D-JUDGMENT-RECORD.md](evaluations/BRH-2026-10-23-D-JUDGMENT-RECORD.md).
+- D01: offered Tiba is explicitly `بدون رنگ`; requested Samand is only described as white. This is wrong-side evidence, not support or contradiction about Samand.
+- D02: transaction direction is inferred from title convention and the `بدون رنگ` referent remains ambiguous. Samand paint status is unresolved.
+- Both judgments align with the internal mapping. The packet adds attribution evidence but no clean direction-matched contradiction witness. Keep `UNKNOWN` distinct and the helper isolated; no selector/ranking/query semantics change, no merge, and no deployment.
+- Stop pursuing this specific title-cue path rather than stacking heuristics. Wait for an explicit, source-matched target-side contradiction; synthetic fixtures remain unit tests only.
