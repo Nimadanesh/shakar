@@ -2263,7 +2263,7 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
   function setDetails(descriptions: Record<string, string>) {
     mockGetDetail.mockImplementation(async (id: string) => ({
       sourceAdId: id,
-      title: id === "mixed" ? "خریدوفروش انواع یخچال سالم موتورسوخته پوسیده" : "فروش یخچال",
+      title: id === "gaT3a_qu" ? "خریدوفروش انواع یخچال سالم موتورسوخته پوسیده" : "فروش یخچال",
       price: null,
       city: "تهران",
       description: descriptions[id] ?? "",
@@ -2279,12 +2279,12 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
     expect(def.roleMode).toBe("seek-seller");
 
     setListings([
-      { sourceAdId: "mixed", title: "خریدوفروش انواع یخچال سالم موتورسوخته پوسیده" },
-      { sourceAdId: "barter", title: "فروش یخچال" },
+      { sourceAdId: "gaT3a_qu", title: "خریدوفروش انواع یخچال سالم موتورسوخته پوسیده" },
+      { sourceAdId: "gabbQJUc", title: "فروش یخچال" },
     ]);
     setDetails({
-      mixed: "خریدانواع یخچال سالم موتورسوخته پوسیده گازرفته بصورت توافقی",
-      barter: "معاوضه با برنج یا چلتوک، یا گوسفند زنده",
+      gaT3a_qu: "خریدانواع یخچال سالم موتورسوخته پوسیده گازرفته بصورت توافقی",
+      gabbQJUc: "معاوضه با برنج یا چلتوک، یا گوسفند زنده",
     });
 
     const done = await completed(def);
@@ -2293,7 +2293,7 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
       roleMode: def.roleMode ?? "none",
       mustCount: def.include.length + def.exclude.length,
       shouldCount: def.should.length,
-      fixtureOnly: true,
+      sourceMatchedFixture: true,
       results: done.results.map((result, rank) => ({
         rank: rank + 1,
         fixtureId: result.sourceAdId,
@@ -2305,29 +2305,29 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
         evidence: result.evidence,
         demotedBy: result.demotedBy ?? null,
       })),
-      caveat: "Synthetic fixture, not a replay of frozen Divar ad IDs; breakdown omits some score adjustments.",
+      caveat: "Frozen packet title and description excerpt replay; not a live API detail replay. Breakdown omits some score adjustments.",
     }));
     const ids = done.results.map((result) => result.sourceAdId);
-    // Human grades: barter offer = 2, mixed buying/catalogue listing = 1.
+    // Frozen human grades: gabbQJUc/B02 = 2, gaT3a_qu/B01 = 1.
     // Preserve both candidates and require the observed human preference.
-    expect(ids).toContain("mixed");
-    expect(ids).toContain("barter");
-    expect(ids.indexOf("barter")).toBeLessThan(ids.indexOf("mixed"));
+    expect(ids).toContain("gaT3a_qu");
+    expect(ids).toContain("gabbQJUc");
+    expect(ids.indexOf("gabbQJUc")).toBeLessThan(ids.indexOf("gaT3a_qu"));
   });
 
-  it("does not treat barter as irrelevant in an ordinary fridge hunt", async () => {
+  it("keeps the exchange-offer listing relevant in an ordinary fridge hunt", async () => {
     const def = resolveHuntDefinition({ query: "یخچال" });
     expect(def).not.toBeNull();
     if (!def) return;
     expect(def.roleMode ?? "none").toBe("none");
 
     setListings([
-      { sourceAdId: "barter", title: "فروش یخچال" },
-      { sourceAdId: "mixed", title: "خریدوفروش انواع یخچال سالم موتورسوخته پوسیده" },
+      { sourceAdId: "gabbQJUc", title: "فروش یخچال" },
+      { sourceAdId: "gaT3a_qu", title: "خریدوفروش انواع یخچال سالم موتورسوخته پوسیده" },
     ]);
     setDetails({
-      mixed: "خریدانواع یخچال سالم موتورسوخته پوسیده گازرفته بصورت توافقی",
-      barter: "معاوضه با برنج یا چلتوک، یا گوسفند زنده",
+      gaT3a_qu: "خریدانواع یخچال سالم موتورسوخته پوسیده گازرفته بصورت توافقی",
+      gabbQJUc: "معاوضه با برنج یا چلتوک، یا گوسفند زنده",
     });
 
     const done = await completed(def);
@@ -2336,7 +2336,7 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
       roleMode: def.roleMode ?? "none",
       mustCount: def.include.length + def.exclude.length,
       shouldCount: def.should.length,
-      fixtureOnly: true,
+      sourceMatchedFixture: true,
       results: done.results.map((result, rank) => ({
         rank: rank + 1,
         fixtureId: result.sourceAdId,
@@ -2348,14 +2348,14 @@ describe("BRH-2026-10-23-B — seller-role paired replay (human-graded)", () => 
         evidence: result.evidence,
         demotedBy: result.demotedBy ?? null,
       })),
-      caveat: "Synthetic fixture, not a replay of frozen Divar ad IDs; breakdown omits some score adjustments.",
+      caveat: "Frozen packet title and description excerpt replay; not a live API detail replay. Breakdown omits some score adjustments.",
     }));
     const ids = done.results.map((result) => result.sourceAdId);
-    // Human grades: barter = 3, mixed buyer-leaning catalogue = 2.
+    // Frozen human grades: gabbQJUc/B03 = 3, gaT3a_qu/B04 = 2.
     // Both remain eligible, but the stronger direct product offer should rank first.
-    expect(ids).toContain("barter");
-    expect(ids).toContain("mixed");
-    expect(ids.indexOf("barter")).toBeLessThan(ids.indexOf("mixed"));
+    expect(ids).toContain("gabbQJUc");
+    expect(ids).toContain("gaT3a_qu");
+    expect(ids.indexOf("gabbQJUc")).toBeLessThan(ids.indexOf("gaT3a_qu"));
   });
 });
 
