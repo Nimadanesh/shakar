@@ -70,4 +70,28 @@ describe("BRH Run 101 — conservative exchange-side segmentation", () => {
       reason: "multiple-exchange-boundaries",
     });
   });
+
+  it("preserves the actual P06 listing's offered/requested sides", () => {
+    const result = assessExchangeSides("تریلی بیات معاوضه با کفی سه محور");
+
+    expect(result).toMatchObject({
+      status: "parsed",
+      offeredText: normalizeForMatch("تریلی بیات"),
+      requestedText: normalizeForMatch("کفی سه محور"),
+    });
+  });
+
+  it("does not promote P07's requested tanker attribute to the offered flatbed", () => {
+    const result = assessExchangeSides(
+      "کفی اطلس ۱۲۶۰ معاوضه با تانکر سه محور تمیز"
+    );
+
+    expect(result).toMatchObject({
+      status: "parsed",
+      offeredText: normalizeForMatch("کفی اطلس ۱۲۶۰"),
+      requestedText: normalizeForMatch("تانکر سه محور تمیز"),
+    });
+    expect(result.offeredText).not.toContain(normalizeForMatch("سه محور"));
+  });
+
 });
