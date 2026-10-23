@@ -165,3 +165,13 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - It uses two exact source listings under both `فروشنده یخچال` and `یخچال`, so the four judgments test the transaction-intent contrast directly. The bounded observation returned the same candidates in the same order for both queries; this remains an unjudged diagnostic signal, not a confirmed defect or quality metric.
 - No engine code changed. Only evaluation/handoff documentation was added on `engine_v3`. `main` and deployment remain untouched.
 - Next gate: receive B01–B04 grades, then inspect source-matched judgments before any role-logic change. Existing CI results are for earlier source SHAs and must not be represented as validation of the current documentation head.
+
+
+## Observation review — runs 110/111 and baseline 137 (2026-10-23)
+
+- Review record: [BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md](evaluations/BRH-2026-10-23-RUN110-111-137-OBSERVATION-REVIEW.md).
+- Observation 110 succeeded on source `2070ae6147f720c8a7e407602b1196a15cee871c`; observation 111 succeeded on `b81451c8d3dc6a1eb80e24fac6f9a992c03db562`. The whitespace fix changed diagnostic `paintHintCandidates` from 0 to 3, confirming the observation-harness matcher is repaired.
+- The two inspected Samand paint-cue titles in both runs lacked an explicit exchange cue in the listing audit and remained `near` with `معاوضه` missing. Therefore the intended explicit target-side contradiction control was **not captured**; do not count this as evidence that the engine correctly or incorrectly handles that polarity.
+- The run-111 role-regression artifact returned the same two refrigerator listings in the same order for `فروشنده یخچال` and `یخچال`. This is unjudged and non-representative; keep the blinded source-matched human-review gate.
+- Baseline 137: focused suite 286 passed/6 skipped; full portable suite 879 passed/7 skipped; TypeScript and production build passed; ESLint failed with 8 known UI errors and 37 warnings. Baseline is not fully green.
+- Decision: no engine/ranking change, no merge/deployment. Next observation should prioritize the intersection of explicit exchange + target vehicle + target-scoped paint contradiction; if not found within budget, report the control as not captured.
