@@ -67,8 +67,23 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           maxPages: 2,
           emit: (event) => events.push(event),
         });
+        // For the negated-history diagnostic only, spend the small detail
+        // budget on titles likely to describe item condition/history. This is
+        // deliberately a targeted probe, not a representative rank sample.
+        const historyHint = (title: string) =>
+          /تعویض|قطعات|اورجینال|اصلی|فابریک|فروشگاه|مرجع/.test(title);
+        const historyCandidates = candidates.filter((candidate) => historyHint(candidate.title));
+        const detailCandidates =
+          scenario.id === "negated-replacement-history" && historyCandidates.length > 0
+            ? [
+                ...historyCandidates.slice(0, scenario.detailBudget),
+                ...candidates
+                  .filter((candidate) => !historyHint(candidate.title))
+                  .slice(0, Math.max(0, scenario.detailBudget - historyCandidates.length)),
+              ]
+            : candidates;
         const results = await confirmCandidates(
-          candidates,
+          detailCandidates,
           def,
           stats,
           (event) => events.push(event)
@@ -95,6 +110,13 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             titleRejected: stats.titleRejected,
             duplicatesCollapsed: stats.dupsCollapsed,
             candidatesAfterFilters: candidates.length,
+            detailSelection:
+              scenario.id === "negated-replacement-history"
+                ? {
+                    method: "title-cue-prioritized-diagnostic",
+                    historyHintCandidates: historyCandidates.length,
+                  }
+                : { method: "default-title-strength-order" },
             detailsChecked: stats.detailsChecked,
             confirmed: stats.confirmed,
             nearMiss: stats.nearMiss,
