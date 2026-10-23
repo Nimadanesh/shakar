@@ -348,6 +348,14 @@ describe("E3 — explicit exchange query outranks generic buy transaction", () =
 });
 
 describe("E3 — negated replacement history is not an exchange offer", () => {
+  it("does not classify a negated repair-history query as a service hunt", () => {
+    expect(assessListingRole("پیانو تعمیر یا تعویض نشده است").role).toBe("unknown");
+    expect(assessQueryIntent("پیانو تعمیر یا تعویض نشده است", "music", "")).toEqual({
+      role: "product",
+      reason: "implied-product:clear-category",
+    });
+  });
+
   it("does not read «تعمیر یا تعویض نشده است» as an exchange role", () => {
     const r = assessListingRole(
       "فروشگاه پیانو فروش مرجع تخصصی خرید و فروش ادوات موسیقی؛ قطعات کاملا اورجینال هستش تعمیر یا تعویض نشده است"
