@@ -575,6 +575,8 @@ function semanticCapFires(
     intent = { role: "buyer-seeking", reason: "query-role-mode:seek-buyer" };
   }
   const role = assessListingRole(combined);
+  // Explicit buy-and-sell catalogues are mixed transaction listings, not clean direct offers.
+  const mixedTransactionAd = /خرید\s*و\s*فروش|خریدوفروش/.test(normalizeForMatch(combined));
   const explicitBuy =
     def.transaction === "buy" || detectTransaction(def.query) === "buy";
   const rawClash = rolesClash(intent, role, explicitBuy);
@@ -634,6 +636,7 @@ function semanticCapFires(
     !serviceIntent ||
     assessServiceTarget(def.include, combined, def.category).bound;
   const fire =
+    mixedTransactionAd ||
     clash.clash ||
     identity.mismatch ||
     repairHistoryProductServiceMismatch ||
@@ -753,7 +756,8 @@ function evaluateDescription(
   const dealerHits = countDealerHits(combined);
   // R7: the ad's speech-act stance — a clear offer ad on a buyer-seeking
   // hunt is the mirror of a dealer ad on a seller-seeking hunt.
-  const adRole = assessListingRole(combined).role;
+  const mixedTransactionAd = /خرید\s*و\s*فروش|خریدوفروش/.test(normalizeForMatch(combined));
+  const adRole = mixedTransactionAd ? "mixed-buyer-seller" : assessListingRole(combined).role;
   // Defensive: no MUST terms (never happens via resolveHuntDefinition, but
   // old snapshots and direct callers must not crash or pass vacuously).
   if (def.include.length === 0) {
@@ -994,6 +998,8 @@ function scoreAd(
   // the market. Rank penalty only, never a hard drop: most ads are
   // role-silent ("unknown") and stay fully compatible.
   const offerPenalty = !ev.huntWantsSellers && ev.adRole === "product" ? 4 : 0;
+  // Mixed buy/sell catalogues stay eligible but rank below direct offers.
+  const mixedTransactionPenalty = ev.adRole === "mixed-buyer-seller" ? 3 : 0;
   const breakdown: ScoreBreakdown = { title, description, priceKnown };
   return {
     score:
@@ -1005,7 +1011,8 @@ function scoreAd(
       providerBoost -
       goodsPenalty -
       dealerPenalty -
-      offerPenalty +
+      offerPenalty -
+      mixedTransactionPenalty +
       dealerBoost,
     breakdown,
   };
