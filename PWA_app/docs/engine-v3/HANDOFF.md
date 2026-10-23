@@ -319,3 +319,14 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - B02 was recovered from `no-match` to `near` after the scoped buyer-cue fix. Current tests preserve UNKNOWN for its “بدون تغییر و جابه‌جایی و دستکاری” wording; engine still lacks explicit MUST evidence for `قطعات` and `اورجینال`. Human grade 3 is not equivalent to a full engine match.
 - Latest code-bearing baseline [run #147](https://github.com/Nimadanesh/shakar/actions/runs/39946256547): focused tests, full portable suite, TypeScript and build PASS; ESLint still FAILS on the known 8 unrelated UI hook-rule errors (37 warnings).
 - Next gate: prepare a paired, source-matched human-reviewed set contrasting ambiguous “بدون دستکاری/بدون تغییر”, explicit original/no-replacement claims, and explicit replacement claims. Until that evidence exists, keep UNKNOWN distinct, do not add global synonyms or broad consultation rejection, and do not change ranking/production behavior. No `main` merge or deployment.
+
+
+## Replacement-history paired-evidence gate — bounded capture outcome (2026-10-23)
+
+- Follow-up report: [BRH-2026-10-23-REPLACEMENT-HISTORY-CAPTURE-GAP.md](evaluations/BRH-2026-10-23-REPLACEMENT-HISTORY-CAPTURE-GAP.md).
+- A dedicated read-only workflow was added; it caps each observation at 2 list pages / 2 detail reads and keeps `MIZAN_SHADOW=0`. Four bounded probes completed across `پیانو قطعات تعویض شده`, broad `پیانو` discovery, and `پیانو تعویض شده` discovery.
+- No probe captured a specific piano listing whose own text explicitly says parts were replaced. Selected results were parts ads, a repair/maintenance service, a lightly used piano with no history claim, a styled-piano/cabinet listing, a piano book, and a toy piano. These are not a valid explicit-replacement control; no new human-review packet was issued and no grades were inferred.
+- Reuse locked B02/P03 grade 3 and A01/P01 grade 2 only as already-recorded historical judgments; do not regrade. Keep UNKNOWN distinct and do not infer replacement history from low use, clean appearance, technician inspection, or generic sales language.
+- Stop this particular bounded query path rather than adding title heuristics. Next valid gate requires a source-captured, specific piano listing with explicit replacement of a component, distinguishable from spare parts and repair service, before a paired blind packet can be completed.
+- Baseline [run #39949779598](https://github.com/Nimadanesh/shakar/actions/runs/39949779598) on SHA `053d0e8`: focused/full portable tests, TypeScript and production build passed; ESLint remains failed on the known 8 unrelated UI hook-rule errors (37 warnings). Latest retrieval-query-only SHA `50a32cb` still needs its own baseline completion confirmation.
+- Test harness/workflow only. No production ranking/semantics change, no `main` merge, no deployment, and no frozen grade/key edits.
