@@ -126,7 +126,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             cursorReturned: endCursor !== undefined && endCursor !== null,
           },
           topResults: results.slice(0, 8).map((result, index) => {
-            const listingText = `${result.title} ${result.descSnippet ?? ""}`;
+            const listingText = `${result.title} ${result.descAuditText ?? result.descSnippet ?? ""}`;
             const listingRole = assessListingRole(listingText);
             return {
               rank: index + 1,
