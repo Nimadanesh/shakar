@@ -108,6 +108,17 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
 
   const dismissed = getDismissedIds(body);
   const interp = interpretQuery(def.query);
+  // A coordinated negative condition is an item attribute, not searchable
+  // content: «پیانو تعمیر یا تعویض نشده است» means the piano has no repair/
+  // replacement history. Keep the product subject, route both attributes
+  // to absence semantics, and never make «تعمیر / یا / است» MUST terms.
+  const negatedRepairHistoryQuery =
+    /(?:تعمیر|تعمیرات)\s+یا\s+(?:تعمیر|تعمیرات|تعویض)\s+(?:نشده|نشد|ندارد|نکرده|نمی\s?شود)(?:\s+است)?/.test(
+      normalizeForMatch(def.query)
+    );
+  const historyOnlyContent = new Set(["تعمیر", "تعمیرات", "یا", "است"]);
+  const isHistoryOnlyTerm = (term: string) =>
+    negatedRepairHistoryQuery && historyOnlyContent.has(normalizeForMatch(term));
   // Absence inferences the user dismissed, by normalized value — the
   // contract below must honor the same dismissals the applied list does.
   const dismissedAbsent = new Set(
@@ -143,7 +154,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   ].filter((t) => !absentStems.has(stemToken(t)));
   const seenTerms = new Set<string>();
   for (const t of def.include) for (const s of tokenize(t)) seenTerms.add(s);
-  const include = [...def.include];
+  const include = def.include.filter((t) => !isHistoryOnlyTerm(t));
   for (const t of terms) {
     const key = stemToken(t);
     if (!seenTerms.has(key)) {
@@ -229,6 +240,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     }
   };
   for (const t of def.absentAttributes ?? []) pushAbsent(t);
+  if (negatedRepairHistoryQuery) pushAbsent("تعمیر");
   for (const t of contract.mustNot) {
     if (dismissedAbsent.has(tokenize(t.text).join(" "))) continue;
     pushAbsent(t.text);
