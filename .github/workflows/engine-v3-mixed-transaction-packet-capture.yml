@@ -2,7 +2,7 @@ name: Engine V3 Mixed Transaction Packet Capture
 # Raw evidence only. Never treated as human grades or a quality comparison.
 
 on:
-  push:
+  pull_request:
     branches:
       - engine_v3
     paths:
@@ -33,10 +33,8 @@ jobs:
       MIZAN_SHADOW: "0"
       SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-mixed-transaction-packet-capture-slugs.jsonl
     steps:
-      - name: Checkout engine_v3
+      - name: Checkout pull request revision
         uses: actions/checkout@v4
-        with:
-          ref: engine_v3
 
       - name: Set up Node.js 24
         uses: actions/setup-node@v4
