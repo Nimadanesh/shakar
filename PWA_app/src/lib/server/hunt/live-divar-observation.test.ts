@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { resolveHuntDefinition } from "./definition";
+import { divarProvider } from "../divar/divarClient";
 import { assessListingRole, assessQueryIntent } from "./semantics";
 import {
   collectCandidates,
@@ -27,7 +28,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       // Include the product plus the known replacement-history vocabulary so
       // list retrieval can surface likely real history-bearing ads. A title-cue
       // diagnostic then spends the small detail budget on likely candidates.
-      { id: "negated-replacement-history", query: "پیانو قطعات اورجینال تعویض نشده", detailBudget: 4 },
+      { id: "negated-replacement-history", query: "پیانو قطعات اورجینال تعویض نشده", detailBudget: 3 },
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
       { id: "parts-replaced-control", query: "قطعات تعویض شده", detailBudget: 2 },
     ] as const;
@@ -156,6 +157,34 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       else process.env.SLUG_CAPTURE_BUFFER_PATH = oldBufferPath;
     }
 
+    // One slot is reserved for a previously observed candidate whose list
+    // excerpt was truncated: inspect that exact ad directly instead of
+    // repeating generic searches. This keeps the experiment-wide detail cap at 8.
+    let targetedKnownAd: Record<string, unknown>;
+    detailsBudgetUsed += 1;
+    try {
+      const detail = await divarProvider.getDetail("gaH4GOSc");
+      const listingText = `${detail.title} ${detail.description}`;
+      targetedKnownAd = {
+        sourceAdId: detail.sourceAdId,
+        title: detail.title,
+        descriptionLength: detail.description.length,
+        descriptionExcerpt: detail.description.replace(/\\s+/g, " ").trim().slice(0, 1200),
+        listingRole: assessListingRole(listingText),
+        exchangeCueAudit: {
+          hasNegatedReplacementHistory:
+            /(?:قطعات?\\s+)?تعویض\\s+(?:نشده(?:\\s+است)?|نشد(?:ه)?(?:\\s+است)?|ندارد|نداشته(?:\\s+است)?|نمی\\s?شود|نمی\\s?باشد)|(?:بدون|فاقد)\\s+تعویض/.test(listingText),
+          hasPositiveExchangeCue: /معاوضه|با کالای دیگر تعویض می‌کنم/.test(listingText),
+        },
+        stale: detail.stale ?? false,
+      };
+    } catch (error) {
+      targetedKnownAd = {
+        sourceAdId: "gaH4GOSc",
+        fetchError: error instanceof Error ? error.message : String(error),
+      };
+    }
+
     expect(detailsBudgetUsed).toBeLessThanOrEqual(8);
 
     const report = {
@@ -176,7 +205,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         queries: cases.length,
         mizanShadow: process.env.MIZAN_SHADOW ?? "default",
       },
-      scenarios: reports,
+      targetedKnownAd,\n      scenarios: reports,
     };
     const outputPath = join(
       process.env.RUNNER_TEMP ?? tmpdir(),
