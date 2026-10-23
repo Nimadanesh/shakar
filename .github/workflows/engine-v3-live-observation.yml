@@ -15,6 +15,7 @@ on:
       - "PWA_app/src/lib/server/hunt/definition.ts"
       - "PWA_app/src/lib/server/hunt/definition.test.ts"
       - "PWA_app/src/lib/server/hunt/live-divar-observation.test.ts"
+      - "PWA_app/src/lib/server/hunt/live-role-regression-observation.test.ts"
       - "PWA_app/src/lib/interpret.ts"
       - "PWA_app/src/lib/interpret.test.ts"
   workflow_dispatch:
