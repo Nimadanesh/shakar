@@ -681,6 +681,20 @@ function evaluateDescription(
   categorySlug: string = ""
 ): DescriptionEvaluation {
   const combined = `${title} ${description}`;
+  // Hard-reject explicit buyer-seeking listings for an explicit product hunt
+  // before missing-attribute bookkeeping can downgrade them to a near match.
+  const earlyQueryIntent = assessQueryIntent(
+    def.include.join(" "),
+    def.category,
+    def.transaction
+  );
+  const earlyListingRole = assessListingRole(combined);
+  if (
+    earlyQueryIntent.role === "product" &&
+    earlyListingRole.role === "buyer-seeking"
+  ) {
+    return rejectedEvaluation();
+  }
   // E3: do not let an explicit trailer/flatbed listing survive as a near
   // match for the floor-mat sense of «کفی ماشین». This guard is query-scoped
   // and runs before MUST completeness, because many wrong-kind ads match
