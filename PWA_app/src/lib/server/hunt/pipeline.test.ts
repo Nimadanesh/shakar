@@ -2530,3 +2530,122 @@ describe("BRH human-grade follow-up — seek-buyer must demote exchange offers",
     expect(ids.indexOf("actual-buyer")).toBeLessThan(ids.indexOf("direct-offer"));
   });
 });
+
+
+describe("BRH-2026-10-23 buyer-seeking exact source replay — B11/B12", () => {
+  async function replay(
+    query: string,
+    rows: Array<{
+      sourceAdId: string;
+      title: string;
+      description: string;
+      price: number | null;
+      city: string;
+      categorySlug: string;
+      humanGrade: 0 | 3;
+    }>,
+  ) {
+    const def = resolveHuntDefinition({ query });
+    expect(def).not.toBeNull();
+    if (!def) throw new Error(`could not resolve hunt: ${query}`);
+    expect(def.roleMode).toBe("seek-buyer");
+
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map(({ sourceAdId, title, price, city }) =>
+        summary({ sourceAdId, title, price, city }),
+      ),
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => {
+      const row = rows.find((item) => item.sourceAdId === id);
+      if (!row) throw new Error(`unexpected source ID: ${id}`);
+      return {
+        sourceAdId: row.sourceAdId,
+        title: row.title,
+        price: row.price,
+        city: row.city,
+        description: row.description,
+        images: [],
+        categorySlug: row.categorySlug,
+      };
+    });
+
+    const { events } = await collect(def);
+    const done = events.find((event) => event.type === "done");
+    if (done?.type !== "done") throw new Error("pipeline did not finish");
+
+    const { assessListingRole } = await import("./semantics");
+    console.info("[BRH-BUYER-EXACT-REPLAY]", JSON.stringify({
+      query,
+      roleMode: def.roleMode,
+      candidates: rows.map((row) => ({
+        sourceAdId: row.sourceAdId,
+        humanGrade: row.humanGrade,
+        role: assessListingRole(`${row.title} ${row.description}`),
+      })),
+      results: done.results.map((item, index) => ({
+        rank: index + 1,
+        sourceAdId: item.sourceAdId,
+        title: item.title,
+        matchKind: item.matchKind,
+        score: item.score,
+        breakdown: item.breakdown,
+        missingInfo: item.missingInfo,
+        evidence: item.evidence,
+        demotedBy: item.demotedBy ?? null,
+      })),
+      caveat: "Human grades are the source evaluation; engine scores are diagnostic and do not redefine relevance.",
+    }));
+    return done.results.map((item) => item.sourceAdId);
+  }
+
+  it("replays B11 piano retail/installment ad against a buyer-seeking positive", async () => {
+    const ids = await replay("خریدار پیانو", [
+      {
+        sourceAdId: "B11",
+        title: "هوران پیانو.و(اقساط بدون سود)",
+        description: "پیانو سازدونی جایی که رویاتو زندگی میکنی پیانو اورج،ینال طر،ح اکوستیک yamah.a ا قسطی بی سود چقد خوبه که مالیات نمیدی ارجینال اصلی، تمام مدل های p پکیج هدیه ده ملیونی و ارسال تا درب منزل با متخصص فول تقویت شده بدنه طرح چوب هایگلاس تاپ ترک و دیگر کیفیت ها هم موجوده پیش پرداخت کم و شفاف اگهی در خانه صنایع دستی فارس ما میسازیمش بقیه تبلیغش میکنن حال دلت رو با سازدونی کوک‌کن بین الحرمین آسونه گالری پیانو سازدونی",
+        price: 13200000,
+        city: "شیراز",
+        categorySlug: "music",
+        humanGrade: 0,
+      },
+      {
+        sourceAdId: "actual-buyer",
+        title: "خریدار پیانو نقد در محل",
+        description: "خریدار انواع پیانو هستیم، نقد در محل",
+        price: null,
+        city: "تهران",
+        categorySlug: "music",
+        humanGrade: 3,
+      },
+    ]);
+    expect(ids).toContain("B11");
+    expect(ids).toContain("actual-buyer");
+  });
+
+  it("replays B12 direct fridge sale against a buyer-seeking positive", async () => {
+    const ids = await replay("خریدار یخچال", [
+      {
+        sourceAdId: "B12",
+        title: "فروش یخچال امرسان ۲۲ فوت (فوری)",
+        description: "سلام فروش یک دستگاه یخچال امرسان ۲۲ فوت جهت تعویض و ارتقای سطح یخچال به فروش می رسد به فروشنده واقعی تخفیف داده میشود",
+        price: 35000000,
+        city: "گرگان",
+        categorySlug: "home-appliances",
+        humanGrade: 0,
+      },
+      {
+        sourceAdId: "actual-buyer",
+        title: "خریدار یخچال نقد در محل",
+        description: "خریدار یخچال هستیم، پرداخت نقدی و مراجعه در محل",
+        price: null,
+        city: "تهران",
+        categorySlug: "home-appliances",
+        humanGrade: 3,
+      },
+    ]);
+    expect(ids).toContain("B12");
+    expect(ids).toContain("actual-buyer");
+  });
+});
