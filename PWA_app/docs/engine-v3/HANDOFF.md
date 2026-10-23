@@ -170,3 +170,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - The live engine returned the same two listings in the same order for both queries. This supports a narrow role-intent investigation, not a population-level quality claim.
 - Code inspection found `effectiveWantsSellers` returns true both for `roleMode: seek-seller` and default `none`; current role assessment also does not represent a positive seller-seeking listing role. Existing test coverage verifies that an explicit buyer-cue ad falls below a seller offer, but these live examples are not recognized the same way: one is a mixed `خریدوفروش` title and the other is an exchange listing.
 - Next: add paired characterization tests for these two exact textual patterns and ordinary-query controls; inspect the existing role/score contract before any production logic change. Do not add a global rejection rule. No main merge or deployment.
+
+## Continuation — BRH-2026-10-23-B paired replay tests (2026-10-23)
+
+- Test-only commit [1f92885932686eea9a9df8568147d24d7372a148](https://github.com/Nimadanesh/shakar/commit/1f92885932686eea9a9df8568147d24d7372a148) adds two pipeline-level paired replay cases to `pipeline.test.ts`.
+- Under `فروشنده یخچال`, the test ensures both human-reviewed candidates remain available: the mixed buying/catalogue ad (grade 1) and the barter offer (grade 2). Under ordinary `یخچال`, it ensures both remain eligible, including the barter offer (grade 3) and mixed catalogue (grade 2).
+- These are recall-preserving guard tests only; they do not assert that rank order or matchKind now matches the human grades. No production logic changed.
+- GitHub combined-status lookup returned no statuses, and the commit-workflow lookup returned no workflow runs. Therefore tests have **not** been independently confirmed passing or failing in hosted CI. Do not infer success from empty status results.
+- Next: obtain actual focused test/CI evidence for this new source commit, then use the observed grade-vs-rank mismatch to design a separate ranking/role test before considering production changes. No merge to `main`, deployment, or live-service mutation.
