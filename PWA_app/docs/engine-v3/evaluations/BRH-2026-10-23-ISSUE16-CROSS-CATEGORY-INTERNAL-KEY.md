@@ -22,5 +22,5 @@
 - I07–I08 are unjudged exchange controls from run [39945846455](https://github.com/Nimadanesh/shakar/actions/runs/39945846455); their exact query is preserved as captured.
 - I02, I05, and I10 include previously captured but unjudged refrigerator role controls from run [40004257788](https://github.com/Nimadanesh/shakar/actions/runs/40004257788). The duplicate appearance of `gaLNJNwu` under ordinary `یخچال` is intentionally not counted twice; this packet uses its `فروشنده یخچال` context only.
 - Every source ad ID appears once in this packet: 11 blind IDs, 11 unique source IDs. Description text is copied from the captured observation logs; capture time is not publication time.
-- No human grades have been assigned here. Keep the grades immutable once returned and use a separate reconciliation record after grading.
+- Human grades were locked on 2026-10-23 and are recorded separately in [BRH-2026-10-23-ISSUE16-CROSS-CATEGORY-HUMAN-GRADES.md](BRH-2026-10-23-ISSUE16-CROSS-CATEGORY-HUMAN-GRADES.md). The blind packet remains unchanged; the reconciliation file joins grades to this key only after submission.
 - A clean explicit buyer-seeking vehicle control and a spaced `خرید و فروش` title are still not represented. Their absence from this packet must not be interpreted as absence from Divar or as evidence for a broad rule.
