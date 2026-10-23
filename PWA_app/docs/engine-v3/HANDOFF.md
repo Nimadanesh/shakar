@@ -117,3 +117,7 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Targeted negative-history query rejected the sampled repair-service ad and the sampled buyer-seeking ad; a separate exact-phrase scenario kept two product listings at `near`, while explicit exchange controls remained `exact`.
 - Still unverified: seller-seeking refrigerator eligibility, ordinary transaction-direction/ranking parity against a paired baseline, and human-rated relevance uplift. The observation is unjudged and budgeted to 8 details. Do not broaden the guard or declare the acceptance gate complete from this artifact alone.
 - Next: prepare a blinded, source-ID-matched packet from these new observation records and existing frozen positives/negatives; separately run the missing seller/ordinary-search regression controls. Preserve frozen evaluation artifacts; stay on `engine_v3`, no merge/deploy.
+
+
+- **Packet prepared:** [blinded review BRH-2026-10-23-A](evaluations/BRH-2026-10-23-A-BLIND.md) contains six frozen excerpt records; source IDs and engine outcomes are isolated in [the internal key](evaluations/BRH-2026-10-23-A-INTERNAL-KEY.md). Do not reveal the key until grades are received. The packet is diagnostic and intentionally not a representative sample.
+- Next: obtain grades for A01–A04 and B01–B02; then run the still-missing live/automated seller-seeking refrigerator and ordinary-search controls. Keep the engine unchanged until both false-rejection and contamination evidence are reviewed.
