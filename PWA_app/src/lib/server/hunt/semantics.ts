@@ -216,7 +216,13 @@ function assessAbsenceOneWord(
   readonly polarity: AbsencePolarity;
   readonly reason: string;
 } {
-  const norm = normalizeForMatch(text);
+  // Persian coordinated negation distributes over both repair-history attributes:
+  // «تعمیر یا تعویض نشده است» explicitly negates both, rather than leaving
+  // each attribute UNKNOWN merely because «یا» sits between it and «نشده».
+  const norm = normalizeForMatch(text).replace(
+    /\b(تعمیر|تعویض)\s+یا\s+(تعمیر|تعویض)\s+نشده(?:\s+است)?\b/g,
+    "$1 نشده $2 نشده"
+  );
   if (norm === "") return { polarity: "unknown", reason: "empty-text" };
   const w = escRe(normalizeForMatch(word));
   if (w === "") return { polarity: "unknown", reason: "empty-word" };
