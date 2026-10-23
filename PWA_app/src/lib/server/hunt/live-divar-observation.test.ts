@@ -101,7 +101,16 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         const serviceCandidates = candidates.filter((candidate) => serviceHint(candidate.title));
         const paintHint = (title: string) =>
           /بدون\s*رنگ|بی\s*رنگ|بیرنگ|فابریک|رنگ\s*(?:دارد|شده|خورده)|گلگیر\s*رنگ/.test(title);
+        const exchangeHint = (title: string) =>
+          /معاوضه|تهاتر|تعویض\s*با/.test(title);
         const paintHintCandidates = candidates.filter((candidate) => paintHint(candidate.title));
+        const exchangeHintCandidates = candidates.filter((candidate) => exchangeHint(candidate.title));
+        const samandPaintExchangeCandidates = candidates.filter(
+          (candidate) =>
+            /سمند/.test(candidate.title) &&
+            paintHint(candidate.title) &&
+            exchangeHint(candidate.title)
+        );
         const detailCandidates =
           scenario.id === "repair-service-control" && serviceCandidates.length > 0
             ? [
@@ -118,14 +127,28 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                     .filter((candidate) => !historyHint(candidate.title))
                     .slice(0, Math.max(0, scenario.detailBudget - historyCandidates.length)),
                 ]
-              : scenario.id === "explicit-exchange-vehicle-samand" &&
-                paintHintCandidates.length > 0
-                ? [
-                    ...paintHintCandidates.slice(0, scenario.detailBudget),
-                    ...candidates
-                      .filter((candidate) => !paintHint(candidate.title))
-                      .slice(0, Math.max(0, scenario.detailBudget - paintHintCandidates.length)),
-                  ]
+              : scenario.id === "explicit-exchange-vehicle-samand"
+                ? (() => {
+                    // Observation-only targeted sampling: prefer a single title that
+                    // jointly identifies the target vehicle, paint status, and exchange.
+                    // If none exists, spend the bounded budget across both cue families
+                    // so detail text can establish whether the cues refer to the same vehicle.
+                    const prioritized = [
+                      ...samandPaintExchangeCandidates,
+                      ...paintHintCandidates,
+                      ...exchangeHintCandidates,
+                      ...candidates,
+                    ];
+                    const selected = [];
+                    const seen = new Set<string>();
+                    for (const candidate of prioritized) {
+                      if (seen.has(candidate.sourceAdId)) continue;
+                      seen.add(candidate.sourceAdId);
+                      selected.push(candidate);
+                      if (selected.length >= scenario.detailBudget) break;
+                    }
+                    return selected;
+                  })()
                 : candidates.slice(0, scenario.detailBudget);
         // Snapshot before confirmation: confirmCandidates may reorder its input
         // in place, and the report must show the actual pre-confirmation budget.
@@ -175,10 +198,18 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                     }
                   : scenario.id === "explicit-exchange-vehicle-samand"
                     ? {
-                        method: paintHintCandidates.length > 0
-                          ? "explicit-paint-title-cue-prioritized"
-                          : "default-title-strength-order-no-paint-title-cue",
+                        method: samandPaintExchangeCandidates.length > 0
+                          ? "joint-samand-paint-exchange-title-cue-prioritized"
+                          : paintHintCandidates.length > 0 && exchangeHintCandidates.length > 0
+                            ? "paint-and-exchange-cue-interleaved-for-detail-audit"
+                            : paintHintCandidates.length > 0
+                              ? "paint-title-cue-prioritized-no-exchange-title-cue"
+                              : exchangeHintCandidates.length > 0
+                                ? "exchange-title-cue-prioritized-no-paint-title-cue"
+                                : "default-title-strength-order-no-paired-cues",
                         paintHintCandidates: paintHintCandidates.length,
+                        exchangeHintCandidates: exchangeHintCandidates.length,
+                        samandPaintExchangeCandidates: samandPaintExchangeCandidates.length,
                       }
                     : { method: "default-title-strength-order" },
             detailsChecked: stats.detailsChecked,
