@@ -21,15 +21,17 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures a bounded live Divar observation for critical query families",
   async () => {
     // Explicit total budget: at most eight detail fetches across ALL scenarios.
-    // Total budget: negated-history query gets three slots; positive exchange gets two;
-    // exact-phrase query gets three. Do not interpret HUNT_MAX_DETAILS as global.
+    // Total budget: two history probes, two service-control details, two exchange
+    // details, and two exact-phrase details. Do not interpret HUNT_MAX_DETAILS as global.
     const cases = [
-      // Include the product plus the known replacement-history vocabulary so
-      // list retrieval can surface likely real history-bearing ads. A title-cue
-      // diagnostic then spends the small detail budget on likely candidates.
-      { id: "negated-replacement-history", query: "پیانو قطعات اورجینال تعویض نشده", detailBudget: 3 },
+      // Include the product plus known replacement-history vocabulary so list
+      // retrieval can surface likely real history-bearing ads.
+      { id: "negated-replacement-history", query: "پیانو قطعات اورجینال تعویض نشده", detailBudget: 2 },
+      // Retrieve likely service ads, but evaluate their details against the
+      // negative-history PRODUCT definition. This directly probes cross-intent contamination.
+      { id: "repair-service-control", query: "پیانو تعمیر یا تعویض نشده است", candidateQuery: "تعمیر پیانو", detailBudget: 2 },
       { id: "explicit-exchange-flatbed", query: "معاوضه با کفی سه محور", detailBudget: 2 },
-      { id: "exact-negated-phrase", query: "پیانو تعمیر یا تعویض نشده است", detailBudget: 3 },
+      { id: "exact-negated-phrase", query: "پیانو تعمیر یا تعویض نشده است", detailBudget: 2 },
     ] as const;
 
     const reports: Array<Record<string, unknown>> = [];
@@ -61,9 +63,25 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         });
         expect(def, `definition must resolve for ${scenario.query}`).not.toBeNull();
         if (!def) continue;
+        const retrievalDef = scenario.candidateQuery
+          ? resolveHuntDefinition({
+              query: scenario.candidateQuery,
+              include: [],
+              exclude: [],
+              should: [],
+              city: "all",
+              category: "all",
+              priceMin: "",
+              priceMax: "",
+              transaction: "",
+              condition: "",
+            })
+          : def;
+        expect(retrievalDef, `retrieval definition must resolve for ${scenario.id}`).not.toBeNull();
+        if (!retrievalDef) continue;
 
         const events: HuntEvent[] = [];
-        const { candidates, stats, endCursor } = await collectCandidates(def, {
+        const { candidates, stats, endCursor } = await collectCandidates(retrievalDef, {
           maxPages: 2,
           emit: (event) => events.push(event),
         });
@@ -73,17 +91,27 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         const historyHint = (title: string) =>
           /تعمیر|تعویض|قطعات|اورجینال|اصلی|فابریک|فروشگاه|مرجع/.test(title);
         const historyCandidates = candidates.filter((candidate) => historyHint(candidate.title));
+        const serviceHint = (title: string) =>
+          /تعمیر|تعمیرکار|سرویس|خدمات|در\s?محل/.test(title);
+        const serviceCandidates = candidates.filter((candidate) => serviceHint(candidate.title));
         const detailCandidates =
-          (scenario.id === "negated-replacement-history" ||
-            scenario.id === "exact-negated-phrase") &&
-          historyCandidates.length > 0
+          scenario.id === "repair-service-control" && serviceCandidates.length > 0
             ? [
-                ...historyCandidates.slice(0, scenario.detailBudget),
+                ...serviceCandidates.slice(0, scenario.detailBudget),
                 ...candidates
-                  .filter((candidate) => !historyHint(candidate.title))
-                  .slice(0, Math.max(0, scenario.detailBudget - historyCandidates.length)),
+                  .filter((candidate) => !serviceHint(candidate.title))
+                  .slice(0, Math.max(0, scenario.detailBudget - serviceCandidates.length)),
               ]
-            : candidates.slice(0, scenario.detailBudget);
+            : (scenario.id === "negated-replacement-history" ||
+                scenario.id === "exact-negated-phrase") &&
+              historyCandidates.length > 0
+              ? [
+                  ...historyCandidates.slice(0, scenario.detailBudget),
+                  ...candidates
+                    .filter((candidate) => !historyHint(candidate.title))
+                    .slice(0, Math.max(0, scenario.detailBudget - historyCandidates.length)),
+                ]
+              : candidates.slice(0, scenario.detailBudget);
         // Snapshot before confirmation: confirmCandidates may reorder its input
         // in place, and the report must show the actual pre-confirmation budget.
         const detailCandidatePool = detailCandidates.map((candidate) => ({
@@ -101,6 +129,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         reports.push({
           id: scenario.id,
           query: scenario.query,
+          ...(scenario.candidateQuery ? { candidateQuery: scenario.candidateQuery } : {}),
           resolved: {
             include: def.include,
             exclude: def.exclude,
@@ -119,13 +148,18 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             duplicatesCollapsed: stats.dupsCollapsed,
             candidatesAfterFilters: candidates.length,
             detailSelection:
-              scenario.id === "negated-replacement-history" ||
-              scenario.id === "exact-negated-phrase"
+              scenario.id === "repair-service-control"
                 ? {
-                    method: "title-cue-prioritized-diagnostic",
-                    historyHintCandidates: historyCandidates.length,
+                    method: "service-title-cue-prioritized-control",
+                    serviceHintCandidates: serviceCandidates.length,
                   }
-                : { method: "default-title-strength-order" },
+                : scenario.id === "negated-replacement-history" ||
+                    scenario.id === "exact-negated-phrase"
+                  ? {
+                      method: "title-cue-prioritized-diagnostic",
+                      historyHintCandidates: historyCandidates.length,
+                    }
+                  : { method: "default-title-strength-order" },
             detailsChecked: stats.detailsChecked,
             detailCandidatePool,
             confirmed: stats.confirmed,
