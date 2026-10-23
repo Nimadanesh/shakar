@@ -264,6 +264,15 @@ function assessAbsenceOneWord(
   const impliedHit =
     (family ? IMPLIED_PATTERNS[family] : []).find((re) => re.test(unnegated))
       ?.source ?? null;
+  // Explicit positive evidence anywhere in the text defeats a universal
+  // absence claim. Check it before carving absence spans: otherwise a broad
+  // «بدون <fillers> تعویض» match can swallow an independent clause such as
+  // «بدون دستکاری؛ قطعات تعویض شده است» and incorrectly report absent.
+  const directAnywhere = directRes.find((re) => re.test(norm))?.source ?? null;
+  if (directAnywhere) {
+    return { polarity: "present", reason: `absence-defeated:${directAnywhere}` };
+  }
+
   // 2. Absent spans own their words — cut them out first so counter-
   // evidence is only ever read OUTSIDE the absence claim itself.
   let remainder = ` ${unnegated} `;
