@@ -93,3 +93,18 @@ After run 114 failed to capture a scoped contradiction, I audited the already lo
 **Conclusion:** The source-matched set now proves a target-side positive (S04), a target-side unknown (S03), wrong-side evidence (S01), missing evidence (S02), and an explicit but transaction-direction-confounded contradiction (V01). It still lacks a human-graded case where the requested exchange direction is valid and the same target vehicle explicitly contradicts `بدون رنگ`. Do not treat run 114's ambiguous `بدون رنگ` phrase as that case. The next useful step is a new blind, source-ID-mapped contradiction case or an equivalent controlled fixture explicitly marked synthetic; do not add more title-selection heuristics without a reasoned capture strategy.
 
 This audit is evidence bookkeeping only. No source records or grades were modified; no production logic, ranking, detail budget, `main`, or deployment changed.
+
+
+## Isolated synthetic polarity contract added (2026-10-23)
+
+To make progress without pretending the missing live contradiction was captured, the phrase-level diagnostic helper `exchangeTargetEvidence.ts` now supports an explicit third state, `contradicted`, when—and only when—the caller supplies a complete contradiction phrase that appears on the same segmented target side. This is an isolated helper change, not ranking integration.
+
+Synthetic counterfactual tests were added for:
+- a valid exchange where the requested Peugeot side explicitly says `رنگ داره` -> `contradicted`;
+- the same contradiction phrase on the opposite vehicle -> `unknown`;
+- both positive `بدون رنگ` and contradictory evidence on the target side -> `unknown` pending conflict resolution;
+- a generic color mention such as `رنگ نقره‌ای` -> `unknown`, not contradiction.
+
+The helper does not infer contradiction from the generic token `رنگ`, and no broad `بدون` rule was added. These are explicitly **synthetic unit counterfactuals**, not real Divar examples or human grades. Baseline workflow [run 39942219988](https://github.com/Nimadanesh/shakar/actions/runs/39942219988) has reported focused hunt/search tests passing; full portable suite, typecheck, ESLint, and build were still running at the time of this note. The subsequent test-only commit has its own baseline run pending.
+
+No production caller, ranking/eligibility behavior, live selector, detail budget, `main`, or deployment was changed. The human evidence gate for integration remains closed until a clean, direction-matched contradiction example is collected and reviewed.
