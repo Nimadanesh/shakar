@@ -44,3 +44,11 @@ No production ranking change, main merge, or deployment is authorized by this no
 - S01 is wrong-side evidence: «بدون رنگ و ضربه» applies to the offered Pride, while the requested Samand/Tiba2 paint state remains unknown. The engine's `exact` label is a false exactness caused by attribute ownership failure.
 - S02 is missing evidence: the offered Samand has no stated paint condition. This is unknown, not contradiction. The fact that the target appears on the offered side does not alone make the exchange direction wrong.
 - These are two distinct grade-2 cases. Together with Run 102, the human set still has no grade-3 positive control for target-side paint evidence. The implementation gate remains closed; continue blind collection rather than implementing or integrating the richer state yet.
+
+
+## Additional locked evidence — Runs 106/109 (human grades received)
+
+- Human grades: `S03=2, S04=3`, recorded in [BRH-2026-10-23-RUN105-VEHICLE-EXCHANGE-HUMAN-GRADES.md](./BRH-2026-10-23-RUN105-VEHICLE-EXCHANGE-HUMAN-GRADES.md).
+- S03 confirms an unknown case: `بدون نقطه` is not paint evidence; paint stays unknown rather than contradicted.
+- S04 is the first grade-3 positive control in this sequence: target Samand + explicit exchange relation + target-scoped `بدونه رنگ`. Colloquial `بدونه` must be recognized as the spelling variant of `بدون` in this attribute context.
+- This does not authorize ranking integration. The next collection should add a clear target-side contradiction, another wrong-side evidence case, and additional positive variants. Keep attribute-specific scope: never let generic `بدون` or unrelated neighbors satisfy/contradict `بدون رنگ`.
