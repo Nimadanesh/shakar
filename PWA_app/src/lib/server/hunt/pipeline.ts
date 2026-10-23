@@ -985,7 +985,8 @@ function scoreAd(
   ev: DescriptionEvaluation,
   mustCount: number,
   shouldCount: number,
-  price: number | null
+  price: number | null,
+  explicitSellerHunt: boolean
 ): { score: number; breakdown: ScoreBreakdown } {
   const title = mustCount > 0 ? ev.mustTitle / mustCount : 0;
   const description = mustCount > 0 ? ev.mustDesc / mustCount : 0;
@@ -1008,7 +1009,11 @@ function scoreAd(
   // role-silent ("unknown") and stay fully compatible.
   const offerPenalty = !ev.huntWantsSellers && ev.adRole === "product" ? 4 : 0;
   // Mixed buy/sell catalogues stay eligible but rank below direct offers.
-  const mixedTransactionPenalty = ev.adRole === "mixed-buyer-seller" ? 3 : 0;
+  // For seller-seeking hunts, a mixed buy/sell dealer should remain eligible
+  // when real sales evidence exists, but rank below a clean direct seller.
+  // BRH E02 (human grade 2) showed the previous -3 penalty was insufficient.
+  const mixedTransactionPenalty =
+    ev.adRole === "mixed-buyer-seller" ? (explicitSellerHunt ? 8 : 3) : 0;
   const breakdown: ScoreBreakdown = { title, description, priceKnown };
   return {
     score:
@@ -1295,7 +1300,13 @@ export async function confirmCandidates(
           deterministicVerdict: ev.verdict,
         });
       }
-      const { score, breakdown } = scoreAd(ev, mustCount, shouldCount, c.price);
+      const { score, breakdown } = scoreAd(
+        ev,
+        mustCount,
+        shouldCount,
+        c.price,
+        def.roleMode === "seek-seller"
+      );
       const ad: ScoredAd = {
         sourceAdId: c.sourceAdId,
         title: c.title,
