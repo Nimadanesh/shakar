@@ -439,10 +439,7 @@ function stripNegatedExchangeCues(normalized: string): string {
   // exchange the advertised item. Remove this narrow object phrase before
   // checking the broad legacy «تعویض» cue; independent «معاوضه» survives.
   return normalized
-    .replace(
-      /(?:^|\s)تعویض\s+قطعات?(?:\s+(?:معیوب|فرسوده|خراب|مصرفی|یدکی))?(?=\s|$)/g,
-      " "
-    )
+    .replace(/تعویض\s+قطعات?(?:\s+(?:معیوب|فرسوده|خراب|مصرفی|یدکی))?/g, " ")
     .replace(
       /(?:^|\s)(?:(?:قطعات?\s+)?تعویض\s+(?:شده(?:\s+است)?|نشده(?:\s+است)?|نشد(?:ه)?(?:\s+است)?|ندارد|نداشته(?:\s+است)?|نمی\s?شود|نمی\s?باشد)|(?:بدون|فاقد)\s+تعویض)(?=\s|$)/g,
       " "
