@@ -206,3 +206,12 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - This establishes positive / unknown / wrong-side / missing states, but **not** a clean, direction-matched human-graded contradiction control. V01 cannot isolate contradiction behavior because its exchange direction does not match the query.
 - Next: collect one new blind, source-mapped example with a valid exchange relation and an explicit paint statement about the same target vehicle that contradicts `بدون رنگ`; alternatively add a clearly labeled synthetic fixture for unit-level logic, without claiming it is live evidence. Do not continue title-selector heuristics or integrate ranking logic absent that evidence.
 - No source grades changed; no production semantics/ranking, main merge, or deployment.
+
+
+## Isolated exchange-polarity diagnostic prototype (2026-10-23)
+
+- Added an explicit `contradicted` state to `exchangeTargetEvidence.ts`, based only on caller-supplied exact contradiction phrases scoped to the same segmented target side. Mixed positive and contradiction phrases remain `unknown`; opposite-side evidence does not transfer; generic `رنگ` alone is not a contradiction.
+- Added clearly labeled synthetic counterfactuals for requested-side contradiction, opposite-side isolation, conflicting target-side phrases, and generic color mention. These do not count as live evidence or human grades.
+- Code commit: [9799adb](https://github.com/Nimadanesh/shakar/commit/9799adb318d71876cff638737d2ceb60f9dba6bd); synthetic test commit: [fc40b86](https://github.com/Nimadanesh/shakar/commit/fc40b8604e06c3e9b1c4c15f42b4c651ce6afd66).
+- Baseline run [39942219988](https://github.com/Nimadanesh/shakar/actions/runs/39942219988) reported focused hunt/search tests passing; its full suite/typecheck/lint/build were still in progress when recorded. Baseline run [39942237959](https://github.com/Nimadanesh/shakar/actions/runs/39942237959) for the test commit was pending.
+- Helper remains isolated and not integrated into ranking. Human gate remains closed until a direction-matched, human-reviewed live contradiction case exists. No main merge or deployment.
