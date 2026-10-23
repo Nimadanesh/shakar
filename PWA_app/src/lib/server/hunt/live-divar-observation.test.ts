@@ -105,8 +105,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                   .filter((candidate) => !serviceHint(candidate.title))
                   .slice(0, Math.max(0, scenario.detailBudget - serviceCandidates.length)),
               ]
-            : (scenario.id === "negated-replacement-history" ||
-                scenario.id === "exact-negated-phrase") &&
+            : scenario.id === "negated-replacement-history" &&
               historyCandidates.length > 0
               ? [
                   ...historyCandidates.slice(0, scenario.detailBudget),
@@ -156,8 +155,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
                     method: "service-title-cue-prioritized-control",
                     serviceHintCandidates: serviceCandidates.length,
                   }
-                : scenario.id === "negated-replacement-history" ||
-                    scenario.id === "exact-negated-phrase"
+                : scenario.id === "negated-replacement-history"
                   ? {
                       method: "title-cue-prioritized-diagnostic",
                       historyHintCandidates: historyCandidates.length,
