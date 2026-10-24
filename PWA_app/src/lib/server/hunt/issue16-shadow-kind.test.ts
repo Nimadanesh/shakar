@@ -326,7 +326,7 @@ function shadowSpecificSubjectVerdict(
     const between = targetEnd <= otherStart
       ? normalizedTitle.slice(targetEnd, otherStart)
       : normalizedTitle.slice(otherEnd, targetStart);
-    return /^(?:\\s*و\\s*|\\s*همراه با\\s*|\\s*به همراه\\s*|\\s*به‌همراه\\s*)$/.test(between);
+    return /^(?:\s*و\s*|\s*همراه با\s*|\s*به همراه\s*|\s*به‌همراه\s*)$/.test(between);
   });
 
   if (explicitCoOffer) return "allow";
