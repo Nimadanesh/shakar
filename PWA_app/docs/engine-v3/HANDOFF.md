@@ -489,3 +489,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - `بدنه` remains too ambiguous for a broad entry. `لوازم یدکی` is a stronger shadow-test candidate but still needs the query-subject and same-kind marker counter-tests.
 - Next: extend the test-only shadow matrix with direct specific-part queries, unrelated same-kind part controls, and role-prefixed title cases. Keep B02/B07/D02/D05/D07 whole-vehicle positives and B06 tire-only negative intact. The whole-car-with-secondary-part-mention source cell remains missing; do not fabricate it or substitute the tire-only exchange.
 - No production lexicon/marker edits, rank changes, merge, deployment, or `main` change. PR #42 remains Draft/open/unmerged.
+
+
+## Follow-up — test-only same-kind counter-risk captured (2026-10-24)
+
+- Extended `issue16-shadow-kind.test.ts` in commits `c7af4487bd3f47e9756aa26ffd02ea94ec8d84ec` and `62185a97f51797d3e2e215215c4d43a2598972bd`. The added assertions compare current vehicle-category fallback with a hypothetical `vehicle-part` query kind and show that the existing `دیسک` part marker is rejected under the current kind but skipped by the same-kind marker guard under the hypothetical broad part kind.
+- This is a **counter-risk characterization**, not a recommendation to preserve the current behavior or a production change. It demonstrates why a new `HEAD_KIND` entry can affect direct part hunts, not only whole-car false positives.
+- A commit-associated workflow query for the latest test commit returned no runs. The new assertions are therefore **not yet validated**; do not claim they passed. The previously reported 131-test green run predates these additions.
+- Next: obtain a real focused test run through the existing workflow path, or inspect the relevant PR check suite if available. If no run is triggered, report validation pending rather than adding another workflow or inferring success. PR #42 stays Draft/open; no production logic, ranking, merge, deployment, or `main` change.
