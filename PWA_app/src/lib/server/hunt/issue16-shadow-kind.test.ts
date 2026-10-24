@@ -282,6 +282,7 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
 type ShadowSubjectVerdict = "reject" | "allow" | "unknown";
 
 const SHADOW_PART_SUBJECTS = [
+  "اگزوز",
   "کاتالیزور",
   "دیسک ترمز",
   "دیسک",
@@ -455,6 +456,13 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
         "دیسک ترمز پراید سالم؛ کاتالیزور فابریک خودرو نیز موجود است"
       )
     ).toBe("reject");
+  });
+
+  it("rejects C02 when exhaust service/sale leads and catalyst is a separate purchase role", () => {
+    const title = "تعمیر وفروش اگزوز خرید کاتالیزور";
+    const description =
+      "فروش و تعمیر اگزوز با بهترین کیفیت؛ خرید کاتالیزور؛ اگزوز ن خرید دارم ن معاوضه فقط فروش";
+    expect(shadowSpecificSubjectVerdict("کاتالیزور", title, description)).toBe("reject");
   });
 
   it("preserves a direct converter offer when catalyst dust is mentioned secondarily", () => {
