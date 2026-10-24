@@ -547,3 +547,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - This is a mechanism-level diagnostic fixture only, not a source ad, human grade, or claim of a measured production false positive.
 - Baseline #172 on test commit `f60241139d96be2bba82e274ffdbab0a04ce93f4` was triggered and is pending: https://github.com/Nimadanesh/shakar/actions/runs/40090307284
 - Audit addendum updated in [I16-HEAD-KIND-THREE-READER-AUDIT-2026-10-24.md](evaluations/I16-HEAD-KIND-THREE-READER-AUDIT-2026-10-24.md). The decision remains no production lexicon/parser/ranking/eligibility change; no merge, deployment, or `main` modification.
+
+### Baseline #172 outcome — Issue 16 counter-risk diagnostic (2026-10-24)
+
+- Run [#172](https://github.com/Nimadanesh/shakar/actions/runs/40090307284) completed on test commit `f60241139d96be2bba82e274ffdbab0a04ce93f4`.
+- Focused hunt/search tests, full portable suite, TypeScript typecheck, and production build all passed. ESLint failed in its separate step, so the workflow is **not fully green**.
+- The GitHub job summary exposed step conclusions but not test counts, and downloadable job logs were unavailable in this session. Do not claim exact #172 test counts from this inspection.
+- The synthetic third-reader counterexample therefore passed the automated suites: it documents a mechanism-level false-acceptance risk if a direct part query is broadened to the shared `vehicle-part` kind. It is not a real listing or human-quality finding.
+- Next: do a bounded, read-only characterization of current production versus shadow outcomes for the frozen role-prefix titles (including `خرید فروش کاتالیزور`, `فروش لوازم یدکی...`, and `خریدار خودرو تصادفی`), keeping item-kind and transaction-role verdicts separate. No production change, merge, deployment, or `main` modification.
