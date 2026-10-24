@@ -441,3 +441,10 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Added evidence-only characterization assertions to `kindLexicon.test.ts` in commit `03520ed119e6198e2604ad0d0b360f0be9481590`. The tests document current unknown title-head outcomes for all seven source-matched 05F titles, retain the known `فروش پراید` vehicle-head positive, and demonstrate that category fallback `vehicle` plus unknown ad head currently yields no kind-gate verdict.
 - These assertions intentionally characterize the gap; they are not a proposed final contract. They do not alter runtime behavior and must be replaced/refined alongside any future approved fix rather than mistaken for a passing quality solution.
 - No test run is claimed: this session's GitHub connection does not expose workflow dispatch or local test execution. Next: validate the branch's focused test workflow if an automatic run is available; then add the full-pipeline paired fixture only after exact snapshots and expected baseline verdicts are source-matched. Keep PR #42 Draft/open; no merge, deployment, or `main` change.
+
+
+## Deterministic validation path added (2026-10-24)
+
+- Added `.github/workflows/engine-v3-issue16-kind-characterization.yml` in commit `a8953f4cf2ddf9212b67a5c826d176a5b85b5363`. Unlike the bounded live-capture workflows, it runs only the deterministic `kindLexicon.test.ts` suite on relevant PR changes; it does not call Divar or use live-observation environment flags.
+- GitHub's commit-associated workflow-run query currently returns no run for that commit, so validation is still pending and no pass is claimed. If PR checks do not appear, inspect the PR's check suite/trigger state rather than assuming the tests passed.
+- Scope remains characterization only: the added assertions document current behavior and are not an endorsed fix. No production code changed. PR #42 remains Draft/open/unmerged; `main` untouched; no deployment.
