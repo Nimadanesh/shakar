@@ -19,7 +19,7 @@ Source: bounded live capture [run 40080467492](https://github.com/Nimadanesh/sha
 
 ## Aggregate
 
-- **8** distinct source ads graded.
+- **7** distinct source ads in the fresh 05D sample; D03 (`gaTPiMW9`) duplicates an invalid-selection record from 05E. Human grades remain unchanged.
 - Grade sum: **14/24**; mean: **1.75/3**.
 - Grade distribution: **3× grade 3**, **5× grade 1**, **0× grade 2**, **0× grade 0**, **0 unknown**.
 
