@@ -106,3 +106,12 @@ Validation on branch head `99172c9ca8dc9ace47953dc40245ba8f5829d45f`:
 - These newly captured rows are raw diagnostic observations, not human grades. Do not add them to the locked 05F graded sample or treat repeated workflow invocations as independent observations.
 
 No full-pipeline paired fixture exists yet. The next step remains to use exact source snapshots for a deterministic fixture that records the title-head kind, gate verdict, semantic verdict, and final verdict separately. No engine/ranking change, merge, deployment, or `main` change.
+
+
+## Deterministic full-pipeline baseline fixture added (2026-10-24)
+
+- Added a source-pinned characterization test to `PWA_app/src/lib/server/hunt/pipeline.test.ts` for all seven rows in the locked 05F blind packet. It uses the exact source-matched titles and descriptions, the resolved target query `خرید و فروش خودرو`, and mocked Divar I/O; it does not contact live services.
+- The baseline expectations encode the observed 05F outcomes: B01/B03/B04/B05 wrong-kind catalyst/body/service rows are `near`; B02 and B07 human-grade-3 whole-vehicle buyer/dealer controls are also `near`; B06 tire-only exchange is rejected. This test is a regression baseline, not an assertion that the current behavior is desirable.
+- The workflow now runs both `kindLexicon.test.ts` and `pipeline.test.ts` before the bounded live capture. The first execution on the updated head is pending; no test pass is claimed until its job reports success.
+- The valid whole-car-with-secondary-part-mention positive remains unavailable in the locked source set. The test therefore covers the existing whole-vehicle buyer/dealer positives and the tire-only negative, but cannot fully close the secondary-mention counter-control. Do not use the older misclassified tire row as a substitute.
+- No production code or ranking behavior changed. PR #42 remains Draft/open/unmerged; `main` untouched; no deployment.
