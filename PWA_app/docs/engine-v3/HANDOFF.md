@@ -583,3 +583,12 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Proposed next experiment is **test-only**: distinguish broad kind, principal subject identity, and explicit title-level co-offer evidence. Preserve D05 (grade-3 whole car with secondary `کمک فنر`/`تایر`) and H05F-B03 (parts inventory before model names); ensure a different part as principal title subject is not accepted merely because the hunted part is mentioned secondarily in the description.
 - Evidence limitation: no source-matched human-graded false acceptance for that specific-part counter-risk is present in the current frozen packet. Keep the existing example labelled synthetic; do not represent it as a Divar observation. Any fresh live case must use a new immutable experiment/capture ID and separate blinded grading.
 - This is still investigation only. No production `HEAD_KIND`, `PART_MARKERS`, parser, ranking, or eligibility changes; no merge/deploy; `main` remains untouched.
+
+
+## Issue 16 — subject identity / co-offer prototype added (2026-10-24)
+
+- Test-only commit [e8353365fb2a0e65362f06a871cde9ef4e3d2c0b](https://github.com/Nimadanesh/shakar/commit/e8353365fb2a0e65362f06a871cde9ef4e3d2c0b) adds a local diagnostic policy to `issue16-shadow-kind.test.ts`; it is not called by production code.
+- The prototype separates broad item kind from specific principal subject and explicit title-level co-offer evidence. Its compact matrix covers: source-backed D05 whole-car positive with secondary parts in description; source-backed B03 parts inventory for a whole-car hunt; synthetic wrong-part principal subject with target only in description; synthetic title-level co-offer; and unknown principal subject remaining no-op.
+- The two synthetic direct-part cases are mechanism-level policy tests, not Divar captures or human grades. Title-level co-mention is accepted only with an explicit conjunction/co-offer phrase in this prototype; this is not yet a validated production parser.
+- Commit-associated status query currently returns no checks/workflow runs. Validation is pending; do not infer success. Next: inspect the actual Baseline workflow run if one appears or trigger it manually through GitHub Actions on `engine_v3` if available, then inspect focused/full tests. Keep all production files unchanged.
+- No merge, deployment, or `main` change. `main` remains the protected red line.
