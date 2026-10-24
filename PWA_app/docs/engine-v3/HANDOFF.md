@@ -407,3 +407,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Interpretation: 4/4 grade 1 on a non-random E4 sample. X01 is a buyer/dismantler-style offer, not an exchange; X02 and X04 are seller offers under a buyer-seeking query; X03 is a retail seller under an exchange query. The grades show these four surfaced results are weak for the exact contexts but do not prove a single shared code cause or justify expanding cues.
 - The bounded capture did not find a clean barter listing; use the existing human-graded sale/exchange control. Do not add a broad buyer rule, hard rejection, or ranking penalty from this packet.
 - Next technical step: inspect the current role-control tests and source-matched matrix for a remaining falsifiable gap with both positive and negative controls. If none exists, document the evidence gap rather than stacking title heuristics. PR #28 remains draft/unmerged; no production behavior, `main`, or deployment changed.
+
+
+## Current handoff — Issue 16 Retargeted Capture 03 (2026-10-24)
+
+- Durable human scores recorded separately from the diagnostic key in [I16-RETARGETED-CAPTURE-03-HUMAN-GRADES.md](evaluations/I16-RETARGETED-CAPTURE-03-HUMAN-GRADES.md): 32/36 across I16-R01–R12 (ten 3s, two 1s).
+- Human/motor comparison and the two controlled follow-up hypotheses are in [I16-RETARGETED-CAPTURE-03-RECONCILIATION.md](evaluations/I16-RETARGETED-CAPTURE-03-RECONCILIATION.md).
+- Keep the two primary issues separate: (1) I16-R05, grade 3, rejected as appliance-not-home-goods; (2) I16-R03 and I16-R12, grade 1 each, catalyst listings retained for a whole-car hunt. The grade-3 near cases I16-R01/R06/R08 are a separate under-scoring signal.
+- Next: design two preregistered controlled tests with unseen IDs only, each with positive and negative controls; freeze the blinded packet before opening its key. No ranking or hard-rejection changes until failures repeat across independent ads and controls remain healthy.
+- PR #41 remains Draft/unmerged. Keep main untouched; no merge or deployment. Phase 1 remains active. Baseline status is not all-green: portable tests/typecheck/build are the relevant gates, while the known ESLint UI errors must be reported separately.
