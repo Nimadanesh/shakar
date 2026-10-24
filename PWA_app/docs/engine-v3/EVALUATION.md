@@ -140,3 +140,37 @@ For every meaningful experiment, record:
 - Before opening/reconciling the new diagnostic key, froze `evaluations/BRH-2026-10-24-ISSUE16-FRESH-PAIRED-BLIND.md` (commit `e4f83a3de9896e52ba21d953b7d21f4b00d711d1`). It contains six fresh records: direct refrigerator seller, mixed refrigerator query, ordinary refrigerator, refrigerator part query, whole-vehicle buy/sell, and vehicle voucher. Separate key: `evaluations/BRH-2026-10-24-ISSUE16-FRESH-PAIRED-INTERNAL-KEY.md` (commit `501dcbc5428a3e8f4f93ea0b27e3efc8a299997f`).
 - Diagnostics after blind freeze: direct seller `gab_ekWg` and ordinary refrigerator `gaKTlAwq` are eligible/exact (3.5); mixed query `Qa9fP53U` is eligible/exact (3.5); part query `gaaPW6zt` is eligible/near (1.5); whole vehicle `gabvBEiY` eligible/near (0); voucher `ga726UUL` eligible/exact (3.5). These are diagnostic only until owner grades are locked. The part result should be judged against the explicit query `قطعه یخچال`, not as a negative to the appliance query-kind fix.
 - Missing cells remain: refrigerator buyer, cash, installment, exchange. Do not fill these with unrelated ads. Keep PR #41 Draft pending owner blind grades and subsequent reconciliation. No merge/deploy; `main` untouched.
+
+## Next controlled gate — role and whole-item relevance (2026-10-24)
+
+### Current CI/status verification
+
+- On current PR head `27f7dea6d1decedeb81f167ec86320104dd0b83d`, [Issue 16 kind regression run 40063098453](https://github.com/Nimadanesh/shakar/actions/runs/40063098453) passed. The cross-category bounded capture run [40063098439](https://github.com/Nimadanesh/shakar/actions/runs/40063098439) also succeeded; its artifact is diagnostic capture only, not a blind-grade result.
+- PR #41 is Draft and unmerged. `main=10f3c40d70748ff27d6928eaed0875e10dab1c56`; `engine_v3=a2d8f269f32c9dcf3bf01dc960e8d12b4e8e1192`. No merge or deployment.
+
+### Why the next capture must be a separate experiment
+
+The latest human-graded packet was designed primarily around query-kind and cross-category cells. Its two engine/human divergences are informative but insufficient for a role/ranking patch. In particular, P03-05 is one ambiguous whole-vehicle result, and the previously observed catalytic-converter ads are diagnostic-only after their engine output was inspected. Do not recycle those IDs into a blind packet or count workflow reruns as independent evidence.
+
+### Predeclared vehicle-role matrix (not yet populated)
+
+| Query intent | Positive control required | Negative / contrast control required | Current status |
+|---|---|---|---|
+| `خریدوفروش خودرو` (whole vehicle, mixed direction) | Direct whole-car listing with clear buy/sell evidence | Vehicle part/accessory, e.g. catalytic converter, with no whole-car offer | Needs fresh source-matched pair and blind grading |
+| `خریدار خودرو تصادفی` (buyer role) | Explicit buyer listing for damaged/accident vehicle | Seller-only whole-car listing with no buying offer | Existing observations are diagnostic-only unless a prior human-grade record is verified; obtain a fresh pair |
+| `حواله خودرو` (voucher/transfer product) | Explicit voucher/transfer listing | Whole-car sale that only mentions a voucher incidentally, or a part listing | P03-06 is a human-grade 3 positive anchor; add independent contrast controls |
+| `قطعه یخچال` (explicit appliance part) | Direct motor/parts listing | Whole refrigerator listing without parts offer | P03-04 is a human-grade 3 positive anchor; this is not a negative against the narrow query-kind fix |
+
+The matrix is a design checklist, not a claim that these fresh controls have already been collected. Reuse a historical example only if its exact query, source ID, text snapshot, and human grade are present in the control documents; otherwise mark it missing.
+
+### Required protocol before any role/ranking change
+
+1. Build a bounded, read-only capture with fixed query cells and explicit exclusions for every inspected ID. Keep the existing caps; no Mizan shadow and no production-rank mutation.
+2. Freeze and commit a blind packet containing query + listing text only. Commit the diagnostic key separately and do not open it until owner grades are recorded in a third file.
+3. Compare the same judged candidate IDs under the relevant old/new logic where possible. A fresh-live snapshot alone is not an old/new paired comparison (E5); it remains bounded E3 capture plus E4 human judgment.
+4. Report per-cell grades, top-5 critical errors, and disagreements. Do not infer general uplift from a six-item convenience sample; no rule change on a single listing.
+5. If the fixed-candidate comparison is not technically feasible, record that limitation and keep the code experimental rather than manufacturing an E5 claim.
+
+### Current decision
+
+No buyer-role, voucher semantics, whole-vehicle eligibility, catalytic-converter filtering, or ranking-score changes are authorized. Continue the narrow query-kind experiment only. Missing cells stay missing. PR #41 remains Draft; `main` and deployment untouched.
