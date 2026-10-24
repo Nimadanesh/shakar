@@ -567,3 +567,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 
 - On Baseline #173, the focused hunt/search suite and full portable suite have passed; TypeScript typecheck has passed. ESLint is still running at the last poll, with production build not yet started. Do not call this run complete or green until all steps finish.
 - Baseline #174 is queued on the type-only cleanup commit. The test semantics are unchanged between #173 and #174.
+
+
+## Issue 16 — role-prefix characterization Baseline #173/#174 completed (2026-10-24)
+
+- The user confirmed both Baseline [#173](https://github.com/Nimadanesh/shakar/actions/runs/40090483865) on `f020a45a3afbeb008c89a94e1ae6a14fa2fbaa46` and Baseline [#174](https://github.com/Nimadanesh/shakar/actions/runs/40090490072) on `85cd0c40a75963a73ac3ce809441e5a94cfaef0d` completed with **320 focused tests passed** and **913 full portable tests passed** in each run. This is +2 focused and +2 full tests compared with #171 (318 / 911), and the counts are identical across #173 and #174.
+- The GitHub job details independently confirm for both runs: focused suite PASS, full portable suite PASS, TypeScript typecheck PASS, and production build PASS. ESLint is the only failed step; therefore the overall workflow is not green, but the failure is not from the test suites.
+- The role-prefix characterization is validated as test-only current-vs-shadow behavior. It does not resolve the production three-reader risk or authorize edits to `HEAD_KIND`, `PART_MARKERS`, parsing, ranking, or eligibility.
+- Next: continue the source-grounded, read-only Issue 16 audit and design the missing paired controls. Keep production behavior unchanged; no merge, deployment, or `main` changes without explicit authorization.
