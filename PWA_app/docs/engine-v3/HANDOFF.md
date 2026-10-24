@@ -601,3 +601,12 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - The test-only subject-identity / explicit co-offer prototype is validated as a passing test suite. This validates the diagnostic helper's defined examples only; it does not establish live-search quality uplift or justify production integration.
 - Next: inspect the helper for edge cases where substring matching or first-occurrence ordering could overstate “principal subject” or co-offer evidence, then strengthen test-only adversarial cases and record the boundary. Seek a source-matched, blinded human-graded specific-part false-acceptance example before considering production logic.
 - No production behavior changed. No merge, deployment, or `main` change.
+
+
+## Issue 16 — Baseline #175 validation received (2026-10-24)
+
+- Owner-reported Baseline #175 on test commit `e8353365` completed: **325 focused tests passed; 918 full portable tests passed**, exactly five more in each suite than #173/#174 (320/913).
+- ESLint remains the workflow failure source; the owner reports failures are lint-related, not test failures. Do not call the entire workflow green.
+- The test-only subject-identity / explicit co-offer prototype is validated as passing its defined examples. This does not establish live-search quality uplift or justify production integration.
+- Next: inspect substring collisions, overlapping marker matches, conjunctions elsewhere in a title, and whether the first matched part is actually the principal subject. Add adversarial test-only cases before drawing conclusions, and seek a source-matched, blinded human-graded specific-part false-acceptance example.
+- No production behavior changed. No merge, deployment, or `main` change.
