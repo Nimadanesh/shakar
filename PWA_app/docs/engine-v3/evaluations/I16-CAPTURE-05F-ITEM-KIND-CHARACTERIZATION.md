@@ -162,3 +162,11 @@ The next experiment should separate **transaction-role parsing** from **principa
 - Required paired assertions for any future candidate: B02/D02/D05/D07 whole-vehicle buyer/dealer/direct-sale positives stay eligible; B01/B03/B04/B05 and D03 wrong-kind examples stop being `exact`/eligible where the evidence supports exclusion; B06 tire-only exchange and D08 catalyst/exhaust control remain rejected; and unknown item kinds still no-op rather than causing broad false rejection.
 
 Decision: **do not edit `HEAD_KIND`, `HEAD_SKIP_TOKENS`, production gate logic, or ranking yet.** The successful characterization establishes a target for the next isolated shadow experiment, not authorization or proof for a production fix.
+
+## Test-only shadow parser experiment (2026-10-24; validation pending)
+
+A separate test file, `PWA_app/src/lib/server/hunt/issue16-shadow-kind.test.ts`, now compares the current title-head parser with a deliberately isolated candidate parser. The candidate strips leading transaction-role cues before reading the principal title head, checks part heads before vehicle aliases, and falls back to the established parser before broad vehicle aliases so compounds such as `ماشین لباسشویی` keep their existing appliance classification. It includes paired controls for catalyst-only, spare-parts inventory, body/bumper listings, direct Dena/Toyota vehicle offers, a whole-vehicle buyer cue, tire-only exchange, and a title that mentions a secondary spare tire.
+
+This is **not production code** and its small local candidate lexicon is not yet approved for promotion. In particular, the candidate has an explicit narrow `خودرو تصادفی` positive cue for the source-matched damaged-vehicle buyer title; this must be reviewed as a scoped exception, not generalized into a broad substring rule. FMC511 dealer title remains unknown by design until an exact safe head rule is evidenced, so the gate remains a no-op rather than guessing.
+
+The Capture 05F workflow was updated to include this new test file in both its path filters and focused Vitest command. CI on current head `a83ad94daf0a849104fbc6da9fd34f8af3436dcb` is pending at the time of this note; no shadow-parser result is claimed until that run completes. Do not use the candidate parser for production ranking, hard exclusion, or human-grade computation.
