@@ -16,4 +16,4 @@ Source: [bounded live capture run 40080467492](https://github.com/Nimadanesh/sha
 
 **Capture integrity:** 8/8 detail reads used; 8 unique IDs; 2 pages maximum per retrieval query; Mizan shadow disabled. The workflow's overlap list records previously inspected IDs that were excluded from this run; none of D01–D08 is one of those listed IDs. Do not treat this sample as random or as a paired quality comparison.
 
-**Important:** Do not reveal this mapping until human scores for D01–D08 are locked. Keep source IDs and engine outputs out of the blind packet.
+**Human grades locked:** D01=1, D02=3, D03=1, D04=1, D05=3, D06=1, D07=3, D08=1. D03 (`gaTPiMW9`) duplicates an invalid-selection record from Capture 05E, so this capture contains 7 fresh distinct ads across captures, not 8. Per-row grades remain unchanged. Keep source IDs and engine outputs out of the blind packet.
