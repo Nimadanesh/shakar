@@ -282,6 +282,7 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
 type ShadowSubjectVerdict = "reject" | "allow" | "unknown";
 
 const SHADOW_PART_SUBJECTS = [
+  "اگزوز",
   "کاتالیزور",
   "دیسک ترمز",
   "دیسک",
@@ -303,6 +304,23 @@ function shadowSpecificSubjectVerdict(
   const normalizedTitle = normalizeForMatch(title);
   const normalizedDescription = normalizeForMatch(description);
   const target = normalizeForMatch(querySubject);
+
+  // Capture 06C C01 is human grade 1 for «کاتالیزور خودرو»: its principal
+  // product is catalyst dust («خاک کاتالیزور»), not a catalytic converter.
+  // Keep this subtype distinction local to the experiment until more paired
+  // evidence exists; a later direct occurrence of «کاتالیزور» can still count.
+  if (target === normalizeForMatch("کاتالیزور")) {
+    const dustStart = normalizedTitle.indexOf(normalizeForMatch("خاک کاتالیزور"));
+    const firstTargetStart = normalizedTitle.indexOf(target);
+    if (
+      dustStart >= 0 &&
+      firstTargetStart === dustStart + "خاک ".length &&
+      normalizedTitle.slice(dustStart, firstTargetStart).trim() === normalizeForMatch("خاک")
+    ) {
+      return "reject";
+    }
+  }
+
   const knownTitleSubjects = SHADOW_PART_SUBJECTS.filter((subject) =>
     normalizedTitle.includes(normalizeForMatch(subject))
   );
@@ -440,6 +458,25 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
     ).toBe("reject");
   });
 
+  it("rejects C02 when exhaust service/sale leads and catalyst is a separate purchase role", () => {
+    const title = "تعمیر وفروش اگزوز خرید کاتالیزور";
+    const description =
+      "فروش و تعمیر اگزوز با بهترین کیفیت؛ خرید کاتالیزور؛ اگزوز ن خرید دارم ن معاوضه فقط فروش";
+    expect(shadowSpecificSubjectVerdict("کاتالیزور", title, description)).toBe("reject");
+  });
+
+  it("preserves a direct converter offer when catalyst dust is mentioned secondarily", () => {
+    // Synthetic co-occurrence counterexample: a genuine converter offer appears
+    // first; the later dust phrase must not trigger the subtype rejection.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "فروش کاتالیزور خودرو و خاک کاتالیزور",
+        "کاتالیزور خودرو موجود است؛ خاک کاتالیزور نیز خریداری می‌شود"
+      )
+    ).toBe("allow");
+  });
+
   it("allows a specific-part title only when title-level text explicitly co-offers both parts", () => {
     // Synthetic positive control for the rule's intended boundary, not a graded ad.
     expect(
@@ -515,5 +552,76 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
         "کاتالیزور در توضیحات ذکر شده"
       )
     ).toBe("unknown");
+  });
+});
+
+
+describe("Issue 16 — Capture 06C shadow subject-policy replay (test-only)", () => {
+  it("compares the candidate subject policy against all five locked human grades", () => {
+    // Exact source text is pinned in the immutable Capture 06C blind packet
+    // and mapped only after grade lock in ISSUE16-CAPTURE-06C-SOURCE-MAP.md.
+    // These are diagnostic policy outputs, not production verdicts.
+    const rows: Array<{
+      code: string;
+      title: string;
+      description: string;
+      humanGrade: 1 | 3;
+      expectedShadow: "allow" | "reject" | "unknown";
+    }> = [
+      {
+        code: "C01",
+        title: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی",
+        description: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی با بالاترین قیمت درایران توسط مهندس محمدی در محل شما",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+      {
+        code: "C02",
+        title: "تعمیر وفروش اگزوز خرید کاتالیزور",
+        description: "با سلام خدمت دوستان عزیز فروش و تعمیر اگزوز با بهترین کیفیت و کمترین زمان ممکن فروش انواع اگزوزهای بلوچی و معمولی و دست ساز و فابریک برای ماشین‌های پراید پژو نیسان پیکان و غیر با یکبار تجربه مشتری همیشگی ما باشید 100 % لطفا از ساعت 8 شب ب بعد دیگ تماس نگیرید معاوضه اگزوز نداریم پس سوال الکی نپرسید ممنون جوشکاری شاسی ماشین هم پذیرفته میشود خرید کاتالیزور 99 %تعمیر 1 %تعویض آدرس نگین شهر روبروی چهارراه مدرسه اتوبان آزادشهر به گنبد برجاده اصلی اگزوزسازی بهروز بامدی ساعت کاری8 تا7 حتی روز های تعطیل اگزوز ن خرید دارم ن معاوضه فقط فروش",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+      {
+        code: "C03",
+        title: "فروش وخریدانواع کاتالیزور و خاک۲۰۶ پژو ال۹۰ نیسان",
+        description: "خرید در محل انواع کاتالیزور های ایرانی نو کاتالیزور استوک و زیر صفری ب شرط انواع منبع جایگزین بدون تعطیلی در سراسر تهران",
+        humanGrade: 3,
+        expectedShadow: "allow",
+      },
+      {
+        code: "C04",
+        title: "جایگزین کاتالیزور xu7 پژو پارس و ۴۰۵و اگزوز بلوچی",
+        description: "یدونه جایگزین کاتالیزور یورو چهار کلا یک هفته رو ماشین بود کاملا نو ب مبلغ ۱,۶۵۰۰ اگزوز منبع بلوجی شرکتی ورق ضخیم مارک لیزر با صدای ریزوعالی نوعه نو ب مبلغ ۲,۳۰۰",
+        humanGrade: 3,
+        expectedShadow: "allow",
+      },
+      {
+        code: "C05",
+        title: "اگزوز (بیات)تیبا.کوییک پژو سمند مارک مشهد",
+        description: "با سلام خدمات رایگان ما تست وبازدید ..دیاگ..تست کاتالیزور..جوشکاری و وصل اگزوز..بازدید چشمی از سراسر اگزوز ..تست شمع وایر کویل سنسور اکسیژن کمپرس متور خام سوزی تمام این خدمات رایگان میباشد لیست قیمت ها نصب اگزوز کاملا رایگان است اگزوز عقب پراید۱۹۰۰ رضا مشهد اگزوز تیبا مشهد ۲۹۰۰ اگزوز پژو 2900 رضا مشهد اگزوز تیبا2.کوییک ۳۳۰۰ رضا مشهد اگزوز بلوچی پراید۲۱۰۰ اگزوز سورن توربویی۳۵۰۰ اگزوز سمند ساینا سورن و......موجود میباشد با مدیریت استاد بیات (همدانی) چهار راه سیلو به سمت رشیدی روبه رویه استخر خلیج فارس",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+    ];
+
+    for (const row of rows) {
+      expect(
+        shadowSpecificSubjectVerdict("کاتالیزور", row.title, row.description),
+        row.code
+      ).toBe(row.expectedShadow);
+    }
+
+    // C01 is a source-backed subtype distinction («خاک کاتالیزور» vs the
+    // hunted converter). The new guard is still test-local and based on one
+    // graded item, so it must not be promoted into production yet.
+    expect(rows.find((row) => row.code === "C01")?.humanGrade).toBe(1);
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        rows[0].title,
+        rows[0].description
+      )
+    ).toBe("reject");
   });
 });

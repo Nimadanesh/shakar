@@ -107,3 +107,31 @@ For every meaningful experiment, record:
 - Denominator: 4; grade 1 = 4/4 (100%); no INSUFFICIENT items. Every item was weak/tangential or wrong transaction direction for its exact query.
 - This is E4 human judgment over a non-random supplemental retrieval sample, not E5 paired comparison, not a population precision estimate, and not evidence of ranking uplift. The barter target was absent from the bounded capture, so the existing human-graded sale/exchange control remains the positive control for that matrix cell.
 - Decision: no new regex, broad buyer cue, hard rejection, or ranking change from these four items. PR #28 remains draft/unmerged; `main` and deployment untouched.
+
+
+## E4 — Issue 16 Capture 06A: specific-part body-only candidates (2026-10-24)
+
+- Live capture [run #10](https://github.com/Nimadanesh/shakar/actions/runs/40096410639), artifact ID `12560808508`; query `کاتالیزور خودرو`, four source-backed body-only candidates, bounded to two list pages per retrieval query and four detail reads total.
+- Locked human grades: C01=2, C02=1, C03=2, C04=2; no note; denominator 4, no insufficient grades, mean 1.75/3. Human judgments are preserved separately from engine labels in [the human-grade record](evaluations/ISSUE16-CAPTURE-06A-HUMAN-GRADES.md); exact source IDs and original engine fields are joined in [the source map](evaluations/ISSUE16-CAPTURE-06A-SOURCE-MAP.md).
+- Source join integrity passed: all four blind codes map one-to-one to exact `listings[].sourceAdId` records in the original artifact. Engine rejected C03 (`gaODFbLY`) and C04 (`gaTnu9bU`) even though the human judged both grade 2. Preserve these as targeted false-rejection signals for follow-up; do not overwrite the human grades or generalize from this small sample.
+- Evidence is E4 over a bounded, non-random live sample, not E5 paired comparison and not a population precision estimate. No production source/ranking/eligibility/`HEAD_KIND` change, merge to `main`, or deployment is authorized.
+
+
+## E4 — Issue 16 Capture 06B: specific-part body-only candidate (2026-10-24)
+
+- Live bounded capture [run #1](https://github.com/Nimadanesh/shakar/actions/runs/40098538799), artifact ID `12562225909`, completed successfully. Retrieval used a distinct query family: `کاتالیزور اگزوز`, `کاتالیزور موتور خودرو`, `کاتالیزور سنسور اکسیژن`, and `کاتالیزور منیفولد`; max two pages/query, max eight details, Mizan Shadow disabled.
+- Four detail reads were used; 11 IDs encountered in retrieval were already inspected and excluded from selection. One fresh candidate met the strict body-only selection gate and is preserved as blind item B01 in [the blind packet](evaluations/ISSUE16-CAPTURE-06B-BLIND.md). The other three selected detail records did not meet the target-in-body / target-not-in-title condition.
+- B01 was independently graded **1** by the owner (weak/tangential relevance); human note: none. Denominator **1**, no UNKNOWN grades, mean **1.00/3**. The locked grade is recorded separately in [ISSUE16-CAPTURE-06B-HUMAN-GRADES.md](evaluations/ISSUE16-CAPTURE-06B-HUMAN-GRADES.md); post-grade source mapping and engine reconciliation are in [ISSUE16-CAPTURE-06B-SOURCE-MAP.md](evaluations/ISSUE16-CAPTURE-06B-SOURCE-MAP.md).
+- Post-grade join integrity passed: B01 maps to source ID `gaPD6_BG`; original engine diagnostic was `eligible=true`, `matchKind=near`, `score=1`, `rejectedKind=null`. The target term appears in the description but not the title. The human grade remains 1 and is not replaced by the engine label.
+- Interpretation: one source-backed, human-graded false-acceptance example for this specific query is now observed. This is E4 on a targeted, non-random single-item sample, not E5 paired evidence, a population precision estimate, or proof of general behavior. Use it to motivate a narrow paired follow-up with true direct-offer positives and other-part/body-context negatives; do not implement a broad marker/parser/ranking/eligibility change from this single case.
+- The blind packet remains immutable. No production change, merge, deployment, or `main` change.
+
+
+## E4 — Issue 16 Capture 06C: locked paired-follow-up grades (2026-10-24)
+
+- Preregistered protocol: [ISSUE16-CAPTURE-06C-PROTOCOL.md](evaluations/ISSUE16-CAPTURE-06C-PROTOCOL.md); immutable bounded capture [run #1](https://github.com/Nimadanesh/shakar/actions/runs/40100799513), artifact ID `12563205197`, SHA-256 `c321b97cfefce573c6956b15e52c451e34915d1749e8c2a8541a681dcd82d198`.
+- The owner supplied and locked grades C01=1, C02=1, C03=3, C04=3, C05=1; no note and no UNKNOWN. Denominator 5; grade 1 = 3/5, grade 3 = 2/5; mean **1.80/3**. Full grade record: [ISSUE16-CAPTURE-06C-HUMAN-GRADES.md](evaluations/ISSUE16-CAPTURE-06C-HUMAN-GRADES.md).
+- Post-grade join integrity passed: all five blind codes map one-to-one to exact records in the original artifact. Source IDs and original engine fields are kept separately in [ISSUE16-CAPTURE-06C-SOURCE-MAP.md](evaluations/ISSUE16-CAPTURE-06C-SOURCE-MAP.md).
+- Four title-term candidate controls were not guaranteed positives: only C03 and C04 received human grade 3; C01 and C02 received grade 1. Body-only C05 received grade 1 although engine marked it eligible/near (score 1.0), because the body mentions a catalytic-converter test as a service and does not establish the converter itself as offered. This is one source-backed false-acceptance example in this bounded scenario.
+- Evidence is E4 over a small, targeted, non-random sample—not E5 paired old-vs-new evidence, not a population precision estimate, and not a general false-acceptance rate. Keep Capture 06B separate; do not combine the captures' denominators.
+- Interpretation: preserve this narrow failure signal and continue evidence-led investigation. Do not make a broad parser, eligibility, ranking, `HEAD_KIND`, or `PART_MARKERS` change from these five records alone. No production behavior, merge, deployment, or `main` change.

@@ -2825,3 +2825,82 @@ describe("Issue 16 — source-pinned whole-vehicle item-kind characterization (C
     });
   });
 });
+
+
+describe("Issue 16 Capture 06C — source-backed service-mention characterization", () => {
+  it("records that a service-only catalyst mention currently survives beside direct-offer controls", async () => {
+    // Frozen, source-matched text from Capture 06C. Human grades live separately
+    // in ISSUE16-CAPTURE-06C-HUMAN-GRADES.md; this test does not derive grades
+    // from engine output and intentionally characterizes, rather than fixes,
+    // the current behavior.
+    const rows = [
+      {
+        sourceAdId: "I16-06C-C01",
+        title: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی",
+        description: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی با بالاترین قیمت درایران توسط مهندس محمدی در محل شما",
+      },
+      {
+        sourceAdId: "I16-06C-C02",
+        title: "تعمیر وفروش اگزوز خرید کاتالیزور",
+        description: "با سلام خدمت دوستان عزیز فروش و تعمیر اگزوز با بهترین کیفیت و کمترین زمان ممکن فروش انواع اگزوزهای بلوچی و معمولی و دست ساز و فابریک برای ماشین‌های پراید پژو نیسان پیکان و غیر با یکبار تجربه مشتری همیشگی ما باشید 100 % لطفا از ساعت 8 شب ب بعد دیگ تماس نگیرید معاوضه اگزوز نداریم پس سوال الکی نپرسید ممنون جوشکاری شاسی ماشین هم پذیرفته میشود خرید کاتالیزور 99 %تعمیر 1 %تعویض آدرس نگین شهر روبروی چهارراه مدرسه اتوبان آزادشهر به گنبد برجاده اصلی اگزوزسازی بهروز بامدی ساعت کاری8 تا7 حتی روز های تعطیل اگزوز ن خرید دارم ن معاوضه فقط فروش",
+      },
+      {
+        sourceAdId: "I16-06C-C03",
+        title: "فروش وخریدانواع کاتالیزور و خاک۲۰۶ پژو ال۹۰ نیسان",
+        description: "خرید در محل انواع کاتالیزور های ایرانی نو کاتالیزور استوک و زیر صفری ب شرط انواع منبع جایگزین بدون تعطیلی در سراسر تهران",
+      },
+      {
+        sourceAdId: "I16-06C-C04",
+        title: "جایگزین کاتالیزور xu7 پژو پارس و ۴۰۵و اگزوز بلوچی",
+        description: "یدونه جایگزین کاتالیزور یورو چهار کلا یک هفته رو ماشین بود کاملا نو ب مبلغ ۱,۶۵۰۰ اگزوز منبع بلوجی شرکتی ورق ضخیم مارک لیزر با صدای ریزوعالی نوعه نو ب مبلغ ۲,۳۰۰",
+      },
+      {
+        sourceAdId: "I16-06C-C05",
+        title: "اگزوز (بیات)تیبا.کوییک پژو سمند مارک مشهد",
+        description: "با سلام خدمات رایگان ما تست وبازدید ..دیاگ..تست کاتالیزور..جوشکاری و وصل اگزوز..بازدید چشمی از سراسر اگزوز ..تست شمع وایر کویل سنسور اکسیژن کمپرس متور خام سوزی تمام این خدمات رایگان میباشد لیست قیمت ها نصب اگزوز کاملا رایگان است اگزوز عقب پراید۱۹۰۰ رضا مشهد اگزوز تیبا مشهد ۲۹۰۰ اگزوز پژو 2900 رضا مشهد اگزوز تیبا2.کوییک ۳۳۰۰ رضا مشهد اگزوز بلوچی پراید۲۱۰۰ اگزوز سورن توربویی۳۵۰۰ اگزوز سمند ساینا سورن و......موجود میباشد با مدیریت استاد بیات (همدانی) چهار راه سیلو به سمت رشیدی روبه رویه استخر خلیج فارس",
+      },
+    ];
+
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map(({ sourceAdId, title }) => summary({ sourceAdId, title })),
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => {
+      const row = rows.find((item) => item.sourceAdId === id);
+      return {
+        sourceAdId: id,
+        title: row?.title ?? id,
+        price: null,
+        city: "تهران",
+        description: row?.description ?? "",
+        images: [],
+        categorySlug: "",
+      };
+    });
+
+    const def = resolveHuntDefinition({ query: "کاتالیزور خودرو" });
+    if (!def) throw new Error("could not resolve Capture 06C target query");
+    const { events } = await collect(def);
+    const done = events.find((event) => event.type === "done");
+    if (done?.type !== "done") throw new Error("pipeline did not emit done");
+
+    const outcomes = Object.fromEntries(
+      rows.map((row) => {
+        const result = done.results.find((candidate) => candidate.sourceAdId === row.sourceAdId);
+        return [row.sourceAdId, result?.matchKind ?? "rejected"];
+      })
+    );
+
+    // Current baseline: all five survive as near. The key mismatch is C05:
+    // human grade 1, while its only catalyst mention is a free test service.
+    // C03/C04 are human grade 3 controls; this assertion is not a proposed
+    // production policy and does not imply that all title mentions are offers.
+    expect(outcomes).toEqual({
+      "I16-06C-C01": "near",
+      "I16-06C-C02": "near",
+      "I16-06C-C03": "near",
+      "I16-06C-C04": "near",
+      "I16-06C-C05": "near",
+    });
+  });
+});

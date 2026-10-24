@@ -668,3 +668,38 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Next action is a new immutable, bounded live capture with a distinct artifact and fresh IDs, then a blind packet and owner grading. Existing completed captures must remain immutable. Keep source IDs/engine outputs separate from the blind packet. No production changes until grades support a paired change.
 - Validation source: [Baseline #179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171), 330 focused and 923 full tests passed; typecheck/build passed; ESLint still fails (8 errors / 42 warnings). Full workflow is not green.
 - Current source/test code head remains `8b96c3af9674231fa0cf6c2403bb0a79f9fc3475`; latest docs-only updates are on `engine_v3`. `main` remains untouched.
+
+
+## Issue 16 — Capture 06C grades locked; source join complete (2026-10-24)
+
+- Capture 06C run [#1](https://github.com/Nimadanesh/shakar/actions/runs/40100799513), artifact ID `12563205197`, artifact SHA-256 `c321b97cfefce573c6956b15e52c451e34915d1749e8c2a8541a681dcd82d198`. Blind packet preserved unchanged.
+- Owner-locked independent grades: C01=1, C02=1, C03=3, C04=3, C05=1. Denominator 5, no UNKNOWN, distribution 1:3 and 3:2, mean 1.80/3. No human note supplied. See [human grades](evaluations/ISSUE16-CAPTURE-06C-HUMAN-GRADES.md).
+- Post-grade source mapping and engine reconciliation are in [ISSUE16-CAPTURE-06C-SOURCE-MAP.md](evaluations/ISSUE16-CAPTURE-06C-SOURCE-MAP.md). Join integrity passed 5/5. Four title-term candidates yielded only two grade-3 controls (C03/C04). Body-only C05 was grade 1 while engine labeled it eligible/near, score 1.0: a narrow, source-backed false-acceptance signal for a service mention.
+- Evidence remains E4 on a small targeted sample, not E5 or a population estimate. Capture 06B stays separate. Next: inspect whether this specific failure can be isolated to service-intent vs item-offer semantics in an existing test-only diagnostic; if not, preserve the limitation and seek another independently sampled source. Do not alter production behavior from this sample alone.
+- No production logic, ranking, eligibility, `HEAD_KIND`, `main`, merge, or deployment change. PR #43 remains Draft and unmerged.
+
+
+## Issue 16 — Capture 06C source-backed pipeline replay (2026-10-24)
+
+- Test-only commit [350b8121](https://github.com/Nimadanesh/shakar/commit/350b81214970a0426d7d694db68461fbe67e44e5) adds a full-pipeline replay fixture using the exact five frozen Capture 06C title/description pairs. Human grades remain separately recorded in `evaluations/ISSUE16-CAPTURE-06C-HUMAN-GRADES.md`; the test does not derive grades from engine labels.
+- The test intentionally characterizes the current baseline, not a fix: all five candidates survive as `near`. The important mismatch remains C05 (human grade 1; title is an exhaust service/product listing; body mentions a free catalyst test but does not establish a catalyst offer). C03/C04 are the grade-3 direct-offer controls and must be preserved by any future scoped change.
+- This makes the exact source-backed behavior reproducible through the mocked full pipeline; it does not make the live observation itself repeatable and does not estimate population precision. Test/CI status for this newest commit is pending at this handoff update; do not transfer Baseline #179 counts to it.
+- Technical interpretation: current product hunt `کاتالیزور خودرو` does not distinguish a product offer from a service/test mention in this case. This is consistent with a missing product-role distinction, but does not yet prove a generally applicable cue or safe rule. Next: inspect existing service/product role cues and design the smallest test-local counterfactual around C05 while keeping C03/C04 and Capture 06B B01 as controls. Do not edit production logic until a paired human-graded gate supports a narrowly bounded rule.
+- No production source, ranking, eligibility, `HEAD_KIND`, or `PART_MARKERS` changes; no merge, deployment, or `main` modification. PR #43 remains Draft/unmerged.
+
+
+## Issue 16 — Capture 06C shadow-policy replay and remaining counterexample (2026-10-24)
+
+- Test-only commit [7efca41a](https://github.com/Nimadanesh/shakar/commit/7efca41aae5d7388c4a4b450b22fa65d4806136e) replays all five locked Capture 06C source title/description pairs through the existing local `shadowSpecificSubjectVerdict` prototype; no production call path is changed.
+- Diagnostic outcomes: C01 allow (human 1), C02 reject (human 1), C03 allow (human 3), C04 allow (human 3), C05 reject (human 1). This preserves both grade-3 controls and catches C05's service-only body mention, but **fails on C01**: the title subject `خاک کاتالیزور` is treated as a product offer even though the human grade is 1. The prototype is therefore not fit for production integration; subject identity + service cue is not sufficient without a distinct offer-role check.
+- This is a source-backed counterfactual evaluation of a test-local heuristic, not a live engine intervention and not a quality-uplift claim. It narrows the next question to distinguishing catalyst material / buyer-intent / service mentions from an actual offer while preserving C03/C04; no new generic lexical rule is justified by these five examples.
+- CI for the newest test-only commit is pending; do not transfer prior test counts to it. Next: validate the new characterization, then inspect whether an existing transaction-role signal can be reused test-locally to explain C01 without changing production. If no robust distinction emerges from these source records, preserve the limitation and seek another independent graded capture rather than expanding the heuristic.
+- No production source, ranking, eligibility, `HEAD_KIND`, or `PART_MARKERS` changes; no merge, deployment, or `main` modification. PR #43 remains Draft/unmerged.
+
+
+## Issue 16 — test-local catalyst-dust subtype counterfactual (2026-10-24)
+
+- Follow-up test-only commit [a0ecc99d](https://github.com/Nimadanesh/shakar/commit/a0ecc99d8f0491d1be202e83c9612963e8b65c14) adds one narrow shadow-only distinction: when the first and only title occurrence of the hunted `کاتالیزور` is embedded in `خاک کاتالیزور`, the candidate policy treats the subject as catalyst dust rather than a catalytic converter. Capture 06C C01 is the human-grade-1 evidence for this specific counterexample; C03's direct `کاتالیزور` title mention remains a grade-3 control.
+- This changes only the test-local `shadowSpecificSubjectVerdict` helper and its Capture 06C replay expectations. Production `kindLexicon`, parser, pipeline, ranking and eligibility are untouched. The rule is an experiment hypothesis from one graded subtype example, not a general synonym or approved production rule.
+- The earlier shadow replay's C01 false allow is now addressed in the diagnostic prototype; C02/C05 remain rejected and C03/C04 remain allowed. These expected shadow outcomes are still subject to CI validation and should not be interpreted as engine quality uplift.
+- Next: validate the latest focused/full test suites, typecheck and build; then audit a counterexample where a genuine converter offer and catalyst-dust mention coexist in the same title/description. Do not broaden or promote the subtype guard unless paired human grades show it preserves real converter offers. No merge, deployment, or `main` change; PR #43 remains Draft/unmerged.
