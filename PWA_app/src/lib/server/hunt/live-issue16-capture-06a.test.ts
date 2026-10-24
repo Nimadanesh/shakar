@@ -131,7 +131,7 @@ for (const id of idsFromRecentCaptures) previouslyInspectedIds.add(id);
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-part body-only false-acceptance candidates",async()=>{
  const targetQuery="کاتالیزور خودرو"; const category="vehicles"; const targetDef=resolve(targetQuery,category);
  expect(targetDef).not.toBeNull(); if(!targetDef)return;
- const retrievalQueries=["فروش دیسک ترمز","فروش لنت ترمز","فروش باتری خودرو","فروش گیربکس","فروش رادیاتور خودرو","فروش کمک فنر","فروش دینام خودرو","فروش اگزوز"];
+ const retrievalQueries=["فروش دیسک ترمز","فروش لنت ترمز","فروش باتری خودرو","فروش گیربکس"];
  const reportPath=join(process.cwd(),"engine-v3-issue16-capture-06a.json");
  const oldBuffer=process.env.SLUG_CAPTURE_BUFFER_PATH; const oldCap=process.env.HUNT_MAX_DETAILS;
  process.env.SLUG_CAPTURE_BUFFER_PATH=join(process.env.RUNNER_TEMP??process.cwd(),"engine-v3-issue16-capture-06a-slugs.jsonl");
@@ -145,18 +145,22 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-pa
    const retrievalDef=resolve(query,category);
    if(!retrievalDef) {queryReports.push({query,status:"unresolved"});continue;}
    const events:HuntEvent[]=[];
-   const {candidates,stats,endCursor}=await collectCandidates(retrievalDef,{maxPages:2,emit:e=>events.push(e)});
-   const eligiblePool=candidates.filter(c=>{
-    if(previouslyInspectedIds.has(c.sourceAdId)){overlap.add(c.sourceAdId);return false;}
-    if(seen.has(c.sourceAdId)||!isOtherPartTitle(c.title))return false;
-    return true;
-   });
-   let added=0;
-   const candidate=eligiblePool[0];
-   if(candidate && pool.length<8) {
-    seen.add(candidate.sourceAdId);pool.push({candidate,stats,query});added=1;
+   try {
+    const {candidates,stats,endCursor}=await collectCandidates(retrievalDef,{maxPages:2,emit:e=>events.push(e)});
+    const eligiblePool=candidates.filter(c=>{
+     if(previouslyInspectedIds.has(c.sourceAdId)){overlap.add(c.sourceAdId);return false;}
+     if(seen.has(c.sourceAdId)||!isOtherPartTitle(c.title))return false;
+     return true;
+    });
+    const candidate=eligiblePool[0];
+    let added=0;
+    if(candidate && pool.length<8) {
+     seen.add(candidate.sourceAdId);pool.push({candidate,stats,query});added=1;
+    }
+    queryReports.push({query,status:added?"candidates-selected":"no-new-title-heads",pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,candidatesSelected:added,cursorReturned:endCursor!=null});
+   } catch(error) {
+    queryReports.push({query,status:"provider-error",error:error instanceof Error?error.message:String(error),pagesCompleted:events.filter(e=>e.type==="lists-progress").length});
    }
-   queryReports.push({query,status:added?"candidates-selected":"no-new-title-heads",pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,candidatesSelected:added,cursorReturned:endCursor!=null});
    if(pool.length>=8)break;
   }
   const listings:Array<Record<string,unknown>>=[];
