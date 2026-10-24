@@ -74,3 +74,34 @@ The synthetic counterexample is now test-validated as a mechanism-level demonstr
 - Workflow job details confirm focused suite, full portable suite, TypeScript typecheck, and production build all passed in both runs. ESLint failed separately in both runs; overall workflow status remains failure due to lint, not test failure.
 - The test-only role-prefix characterization is validated. It documents the current production parser's unknown outcomes for the frozen role-prefixed titles alongside isolated shadow classifications. It does not establish that the shadow classifications are production-ready.
 - Decision unchanged: no production `HEAD_KIND` / `PART_MARKERS` edits, parser, ranking, or eligibility changes. Continue only with source-grounded diagnostic design and paired controls; no merge, deployment, or `main` modification.
+
+
+## Next design step — separate subject identity from broad kind (2026-10-24)
+
+### Source-code finding
+
+The current `assessModelSpecificity` performs both a strong subject-phrase pass and a weak adjacency pass. In both passes, the shared-kind exemption is effectively:
+
+`HEAD_KIND[marker] === queryKind`
+
+That comparison knows only the broad kind, not whether the marker is the hunted part. Exact query-token markers are already skipped separately by `queryTokens.has(marker)`. Consequently, for a direct hunt for one part, the same-kind exemption can suppress a different part marker simply because both are `vehicle-part`. The synthetic counterexample captures that mechanism.
+
+### Safer candidate policy to test (not implemented)
+
+Do not use broad `vehicle-part` equality alone as permission to skip a different part marker. Separate:
+1. **Broad kind** — vehicle vs vehicle-part, useful for rejecting whole-item/part-only contradictions.
+2. **Principal subject identity** — the specific item named as the offer, when confidently recoverable.
+3. **Co-offer evidence** — explicit evidence that the hunted subject and another item are both offered, rather than the hunted word appearing only in description context.
+
+Candidate behavior:
+- Whole-car hunt + part marker before the vehicle subject: reject (B03 negative).
+- Whole-car title whose description mentions `کمک فنر`/`تایر` secondarily: preserve (D05 grade 3).
+- Specific-part hunt + a different part as the principal title subject, with the target only mentioned in the description: do not let shared broad kind suppress the wrong-subject marker (mechanism-level synthetic counterexample; real source-matched case still missing).
+- Specific-part hunt + title explicitly offering the target part alongside another part: allow only if the title-level subject/co-offer evidence actually establishes the target as an offered item; mere description mention is insufficient.
+- Unknown principal subject or ambiguous title: no hard rejection from the proposed identity layer; preserve existing unknown/no-op behavior unless another independent guard fires.
+
+### Evidence boundary and next gate
+
+The frozen 05F source packet gives source-backed role-prefix and parts-inventory controls; D05 gives a human-grade-3 whole-vehicle positive with secondary part mentions. It does **not** yet contain a source-matched, human-graded false acceptance for a direct specific-part hunt where another same-kind part is the principal subject and the target is only contextual. Keep that counter-risk labelled synthetic until such a case is found or captured under a new, immutable experiment ID.
+
+Next work is a test-only identity/co-offer prototype with a compact matrix for the cases above, then inspect both false-reject and false-accept outcomes. No changes to production `HEAD_KIND`, `PART_MARKERS`, `assessModelSpecificity`, ranking, or eligibility until that matrix is source-grounded and passes CI. No merge, deployment, or `main` modification.
