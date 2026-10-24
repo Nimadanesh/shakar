@@ -47,3 +47,16 @@ This addendum supersedes only the earlier statement above that a source-matched 
 - Updated disposition: the secondary-mention marker-guard evidence gap is **closed for this specific existing-marker path**. It is not evidence for adding any new `HEAD_KIND` entries, nor does it prove every secondary-part phrase is safe.
 - Remaining gates: (1) query-subject same-kind marker-skip counter-risk for specific part hunts, (2) role-prefix parsing such as `خرید فروش کاتالیزور`, and (3) whole-vehicle vs part-inventory outcomes across all three `HEAD_KIND` readers. Keep these in shadow/test-only analysis until paired source-grounded controls and a safe design exist.
 - No production lexicon/parser/ranking/eligibility changes, merge, deployment, or `main` modification are authorized by this evidence.
+
+## Follow-up diagnostic — specific-part false-acceptance counter-risk (2026-10-24)
+
+A synthetic, explicitly non-source-grounded test was added to `issue16-shadow-kind.test.ts` to isolate the third-reader risk:
+
+- Listing title: `دیسک ترمز پراید سالم`.
+- Listing text mentions `کاتالیزور` only secondarily in a contextual phrase.
+- With the current category-fallback query kind (`vehicle`), the existing `دیسک` part marker produces a subject mismatch and reject.
+- With a hypothetical broad query kind (`vehicle-part`), the kind-aware marker guard skips `دیسک` because `HEAD_KIND["دیسک"] === "vehicle-part"`; the mismatch disappears.
+
+This is a mechanism-level counterexample, **not** a real Divar sample, a human grade, or a measured production false positive. It establishes why the third reader must not be ignored when considering new part-kind entries. Baseline #172 was triggered on test commit `f60241139d96be2bba82e274ffdbab0a04ce93f4`; focused/full test status is pending at the time of this note.
+
+Decision remains unchanged: do not edit production `HEAD_KIND`, `PART_MARKERS`, parser, ranking, or eligibility until a safe three-reader design handles specific-part subject identity and transaction-role prefixes with paired evidence.
