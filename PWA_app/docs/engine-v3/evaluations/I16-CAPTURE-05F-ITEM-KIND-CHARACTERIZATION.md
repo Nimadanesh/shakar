@@ -87,3 +87,22 @@ A deterministic, source-grounded fixture is still required before changing the l
 Evidence points to a **closed title-head coverage gap**: known whole-item heads are classifiable, but several wrong-kind listings start with unrecognized principal-item nouns and therefore bypass the kind gate under the deliberate unknown-no-op contract. This is a plausible mechanism, not yet proof that adding `کاتالیزور`, `بدنه`, or other nouns to `HEAD_KIND` is safe. The lexicon contract says each new entry must be valid in all three uses: ad head, query subject, and co-offered sibling marker. A future fix must satisfy that three-reader constraint and preserve whole-vehicle buyer/dealer controls.
 
 No engine or ranking logic changed. No merge, deployment, or `main` change.
+
+
+## Capture selector integrity correction (2026-10-24)
+
+An audit of the raw Capture 05F artifacts found that the **capture-cell selector**, not the engine, had mislabeled some listings:
+
+- Artifact `12552478200` (run [40075265983](https://github.com/Nimadanesh/shakar/actions/runs/40075265983)) placed the body-parts inventory `فروش بدنه استوک فابریک پژو، پراید، تیبا، دنا، سمند` in `whole-clean` because it searched for any vehicle-model token anywhere in the title.
+- The same artifact placed the tire-only exchange `لاستیک تیبا 95درصد معاوضه با پراید` in `whole-with-part-mention`; the mention of Tiba/Pride made the part listing look like a whole-vehicle ad to the broad regex.
+- It placed the FMC511 dealer offer `فردا موتور FMC511/صفر و خشک برج روز/نمایندگی` in `other-part` because the substring `موتور` was treated as a part signal, despite the listing being a whole-vehicle offer. These are selector-label errors; the underlying raw engine outputs and separate human grades must not be conflated with the cell names.
+
+The helper `isCell` in `live-issue16-capture-05f.test.ts` was corrected in commits `ce66d0f` and `99172c9`: part heads now take precedence, whole-car matching is anchored to the title head, and the FMC511 dealer title is explicitly recognized as a whole-vehicle positive. No production code changed.
+
+Validation on branch head `99172c9ca8dc9ace47953dc40245ba8f5829d45f`:
+- Run [40077666348](https://github.com/Nimadanesh/shakar/actions/runs/40077666348) completed successfully.
+- The focused `kindLexicon.test.ts` step passed; the bounded Capture 05F step and artifact upload also succeeded.
+- Artifact `12554390133` now correctly records `whole-with-part-mention` as `missing-cell` rather than falsely selecting the tire-only exchange. The other seven scenarios captured: one whole-car sale, one whole-vehicle buyer/exchange candidate, two catalyst-only candidates, one catalyst-service candidate, and two parts candidates. This means the selector integrity issue is corrected, but the whole-car-with-secondary-part-mention positive control is **still missing** and must be captured before that contrast is considered tested.
+- These newly captured rows are raw diagnostic observations, not human grades. Do not add them to the locked 05F graded sample or treat repeated workflow invocations as independent observations.
+
+No full-pipeline paired fixture exists yet. The next step remains to use exact source snapshots for a deterministic fixture that records the title-head kind, gate verdict, semantic verdict, and final verdict separately. No engine/ranking change, merge, deployment, or `main` change.
