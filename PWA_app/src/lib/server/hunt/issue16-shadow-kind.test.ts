@@ -303,6 +303,19 @@ function shadowSpecificSubjectVerdict(
   const normalizedTitle = normalizeForMatch(title);
   const normalizedDescription = normalizeForMatch(description);
   const target = normalizeForMatch(querySubject);
+
+  // Capture 06C C01 is human grade 1 for «کاتالیزور خودرو»: its principal
+  // product is catalyst dust («خاک کاتالیزور»), not a catalytic converter.
+  // Keep this subtype distinction local to the experiment until more paired
+  // evidence exists; a later direct occurrence of «کاتالیزور» can still count.
+  if (target === normalizeForMatch("کاتالیزور")) {
+    const dustStart = normalizedTitle.indexOf(normalizeForMatch("خاک کاتالیزور"));
+    const firstTargetStart = normalizedTitle.indexOf(target);
+    if (dustStart >= 0 && firstTargetStart === dustStart + normalizeForMatch("خاک ").length) {
+      return "reject";
+    }
+  }
+
   const knownTitleSubjects = SHADOW_PART_SUBJECTS.filter((subject) =>
     normalizedTitle.includes(normalizeForMatch(subject))
   );
@@ -536,7 +549,7 @@ describe("Issue 16 — Capture 06C shadow subject-policy replay (test-only)", ()
         title: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی",
         description: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی با بالاترین قیمت درایران توسط مهندس محمدی در محل شما",
         humanGrade: 1,
-        expectedShadow: "allow",
+        expectedShadow: "reject",
       },
       {
         code: "C02",
@@ -575,9 +588,9 @@ describe("Issue 16 — Capture 06C shadow subject-policy replay (test-only)", ()
       ).toBe(row.expectedShadow);
     }
 
-    // The important residual counterexample: C01 is grade 1 but the shadow
-    // policy allows it because "خاک کاتالیزور" appears as the title subject.
-    // Thus subject identity alone is not a sufficient product-offer test.
+    // C01 is a source-backed subtype distinction («خاک کاتالیزور» vs the
+    // hunted converter). The new guard is still test-local and based on one
+    // graded item, so it must not be promoted into production yet.
     expect(rows.find((row) => row.code === "C01")?.humanGrade).toBe(1);
     expect(
       shadowSpecificSubjectVerdict(
@@ -585,6 +598,6 @@ describe("Issue 16 — Capture 06C shadow subject-policy replay (test-only)", ()
         rows[0].title,
         rows[0].description
       )
-    ).toBe("allow");
+    ).toBe("reject");
   });
 });
