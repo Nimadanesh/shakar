@@ -3,7 +3,7 @@
 Updated: 2026-10-24
 Branch: `engine_v3`
 Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: a66e7001b6de35618bd4582b11de9d11bdcdc04c
+Current source/test head: 8b96c3af9674231fa0cf6c2403bb0a79f9fc3475
 
 ## Mission
 
@@ -642,3 +642,10 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - ESLint failed separately with 8 errors / 42 warnings in existing UI and other unrelated files; this is not a clean workflow pass. The focused/full test steps succeeded.
 - The new service-title and `موجود` co-offer controls pass. They remain synthetic test-local diagnostics; source-matched human-graded specific-part false-acceptance evidence is still missing. Continue to keep production behavior unchanged.
 - No merge, deployment, or `main` modification.
+
+
+## Issue 16 — service-intent adversarial test queued (2026-10-24)
+
+- Test-only commit [8b96c3af](https://github.com/Nimadanesh/shakar/commit/8b96c3af9674231fa0cf6c2403bb0a79f9fc3475) adds a counterexample where `فروش` appears in a service-package title: `فروش خدمات تعویض دیسک ترمز و کاتالیزور`. The prototype must not infer that both parts are offered as products from the generic sale cue alone.
+- Baseline [#179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171) is queued. Inspect focused/full tests, typecheck/build, and ESLint separately before proceeding.
+- No production behavior change, merge, deployment, or `main` modification.
