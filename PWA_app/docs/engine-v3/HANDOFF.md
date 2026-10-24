@@ -649,3 +649,12 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Test-only commit [8b96c3af](https://github.com/Nimadanesh/shakar/commit/8b96c3af9674231fa0cf6c2403bb0a79f9fc3475) adds a counterexample where `فروش` appears in a service-package title: `فروش خدمات تعویض دیسک ترمز و کاتالیزور`. The prototype must not infer that both parts are offered as products from the generic sale cue alone.
 - Baseline [#179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171) is queued. Inspect focused/full tests, typecheck/build, and ESLint separately before proceeding.
 - No production behavior change, merge, deployment, or `main` modification.
+
+
+## Issue 16 — Baseline #179 validated; evidence gate unchanged (2026-10-24)
+
+- Baseline [#179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171) on test-only source commit `8b96c3af9674231fa0cf6c2403bb0a79f9fc3475` completed: **330 focused tests passed (15 skipped), 923 full portable tests passed (16 skipped)**. TypeScript typecheck and production build passed. ESLint is the workflow failure source (**8 errors / 42 warnings**); do not describe the full workflow as green.
+- The new service-intent adversarial case passes, but it remains synthetic and test-local. It establishes only that the diagnostic helper rejects a generic sale cue when explicit service intent is present.
+- Next priority is evidence, not another speculative parser rule: recover or capture a new immutable, source-matched Divar case for a specific-part hunt where a different part is the principal title subject and the hunted part appears only as context/body text. Preserve a blind packet and separate internal source mapping; obtain the owner's blind grade before reconciling. Do not invent or infer the grade.
+- If no such live/source-backed case is available, record that limitation and stop expanding the synthetic matrix rather than treating extra synthetic cases as product-quality evidence.
+- No production source/ranking/eligibility behavior changed; no merge, deployment, or `main` modification. Current source/test head remains `8b96c3af9674231fa0cf6c2403bb0a79f9fc3475`; docs are being updated separately on `engine_v3`.
