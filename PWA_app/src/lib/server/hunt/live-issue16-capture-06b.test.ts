@@ -121,6 +121,11 @@ function isOtherPartTitle(title:string):boolean {
  return otherPartHead && !/کاتالیزور|کاتالیز/.test(t);
 }
 const idsFromRecentCaptures = [
+ // IDs opened by the 2026-10-24 Capture 06B/06C runs and their PR-triggered duplicate captures; never reuse.
+ "Qa9ZMSg8","gaZbNGXg","gaPD6_BG","gaQbKcvc",
+ "gaw4-0TS","AazPR38_","QaVRxMZC","gacTasmJ","Qa62T2Jf",
+ "gaPT4jAd","gaVv-2zg","gaODFbLY","gaTnu9bU",
+
  "gacnoPzO","gazms9IA","gaLn95G9","gag94ErP","gacD4av1","gaM76Zea","QadoH4Gg","ga5ZHsBZ",
  "gacfYpsl","gacn4OE_","gac_3fOf","ga4OPbgu","gaAIGhOy","gaI-nHG5","gaACDACa","gacPG9Wy",
  "gaUTKxZ6","ga5KkOrN","gauW_tpf","gaLrFFB1","gaPvRl88","gaZnu0t_","gaT3FZE5","QZhvyaLi",
