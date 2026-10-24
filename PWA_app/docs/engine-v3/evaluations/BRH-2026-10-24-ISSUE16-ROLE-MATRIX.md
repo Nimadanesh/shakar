@@ -40,3 +40,8 @@ No buyer-role, voucher semantics, whole-vehicle eligibility, catalytic-converter
 - Four fresh unique candidates are frozen in [cross-cell blind packet](BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md); the source/engine map is in the separate [internal key](BRH-2026-10-24-ISSUE16-CROSS-CELL-INTERNAL-KEY.md). Owner grades are pending. Do not open/join the key for a quality conclusion until grades are recorded in a separate third file.
 - This packet provides bounded E3 capture only until owner grades arrive (E4); it is not E5 paired comparison. It does not fill the missing buyer/cash/installment cells or establish general ranking quality.
 - PR #41 remains Draft/unmerged. No source/ranking behavior change, merge, or deployment is authorized.
+## Cross-cell human grades now locked — 2026-10-24
+
+- Owner grades for the fresh four-item packet are recorded before diagnostic join: [locked grades](BRH-2026-10-24-ISSUE16-CROSS-CELL-HUMAN-GRADES.md).
+- Reconciliation: [cross-cell reconciliation](BRH-2026-10-24-ISSUE16-CROSS-CELL-RECONCILIATION.md). All four items graded 3/3; only F16-02 (`معاوضه خودرو`) diverged from engine kind/score (human 3, engine `near`/1.5). This is a relevant positive under-described by the engine, not evidence by itself for a scoring patch.
+- Packet is positive-heavy, convenience-sampled E4, not E5. Buyer-fridge, vehicle-cash, and vehicle-installment cells remain missing. Seek paired positive/negative controls before proposing an exchange-role or ranking change.
