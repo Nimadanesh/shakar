@@ -25,7 +25,7 @@ function selectionCell(scenarioId: string, title: string): Cell | null {
   const model = /(پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|۲۰۶|206|۲۰۷|207|۴۰۵|405|ال\s?۹۰|ال\s?90|l90|زانتیا|ام\s?وی\s?ام|چری|جک\s?s|هایما|فیدلیتی|دیگنیتی|آریزو|اطلس|نیسان|تویوتا|هیوندای|کیا|بنز|بی\s?ام\s?و|مزدا|ری\s?را)/.test(text);
   const wholeVehicle = !adjacent && model;
 
-  if (scenarioId === "A-refrigerator-seller-direction") {
+  if (scenarioId.startsWith("A-refrigerator-")) {
     // Require the target appliance itself, not an ad that only buys a motor/part.
     const applianceTarget = /یخچال|فریزر|ساید/.test(text);
     const partsOnly = /موتور|کمپرسور|قطعه|قطعات/.test(text) &&
@@ -34,12 +34,12 @@ function selectionCell(scenarioId: string, title: string): Cell | null {
     const cue = roleCue(title);
     return cue === "seller" || cue === "buyer" || cue === "mixed" ? cue : null;
   }
-  if (scenarioId === "B-whole-vehicle-vs-voucher-service") {
+  if (scenarioId.startsWith("B-vehicle-")) {
     if (/حواله|دفتر/.test(text)) return "voucher";
     if (wholeVehicle && /فروش|فروشی|معاوضه|فوری|نقد|اقساط/.test(text)) return "whole-vehicle";
     return null;
   }
-  if (scenarioId === "C-broad-vehicle-match-kind") {
+  if (scenarioId.startsWith("C-vehicle-")) {
     if (!wholeVehicle) return null;
     if (/اقساطی?|قسط|پیش\s?قسط|چک\s?صیادی/.test(text)) return "installment";
     if (/معاوضه|تهاتر|بدل/.test(text)) return "exchange";
@@ -60,29 +60,21 @@ type Scenario = {
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures independent Issue 16 Follow-up 03 evidence within fixed budgets",
   async () => {
-    // 3 direction controls + 2 kind controls + 3 transaction/match-kind cells = 8 details.
-    // Each query is capped at two list pages; missing cells stay missing.
+    // 3 role controls + 2 vehicle-kind controls + 3 transaction-kind controls = 8 details.
+    // Each targeted query is capped at two list pages; missing cells stay missing.
     const scenarios: Scenario[] = [
-      {
-        id: "A-refrigerator-seller-direction",
-        query: "فروشنده یخچال",
-        category: "home",
-        cells: ["seller", "buyer", "mixed"],
-      },
-      {
-        id: "B-whole-vehicle-vs-voucher-service",
-        query: "خریدوفروش خودرو",
-        category: "vehicles",
-        cells: ["whole-vehicle", "voucher"],
-      },
-      {
-        id: "C-broad-vehicle-match-kind",
-        query: "خرید و فروش خودرو",
-        category: "vehicles",
-        cells: ["cash", "installment", "exchange"],
-      },
+      // Separate role-targeted queries reduce dependence on finding all roles in one result page.
+      { id: "A-refrigerator-seller", query: "فروش یخچال", category: "home", cells: ["seller"] },
+      { id: "A-refrigerator-buyer", query: "خریدار یخچال", category: "home", cells: ["buyer"] },
+      { id: "A-refrigerator-mixed", query: "خرید و فروش یخچال", category: "home", cells: ["mixed"] },
+      // Keep whole-vehicle and voucher/service controls independently targeted.
+      { id: "B-vehicle-whole", query: "خریدوفروش خودرو", category: "vehicles", cells: ["whole-vehicle"] },
+      { id: "B-vehicle-voucher", query: "حواله خودرو", category: "vehicles", cells: ["voucher"] },
+      // Transaction type has its own query, while the selector still requires explicit title evidence.
+      { id: "C-vehicle-cash", query: "خودرو نقدی", category: "vehicles", cells: ["cash"] },
+      { id: "C-vehicle-installment", query: "خودرو اقساطی", category: "vehicles", cells: ["installment"] },
+      { id: "C-vehicle-exchange", query: "معاوضه خودرو", category: "vehicles", cells: ["exchange"] },
     ];
-
     const priorPacketIds = new Set([
       "gab_aV8W", "gaLNJNwu", "ga4iPfzH", "gaPHaEfq", "gaRj-fI_", "gaqV1O58",
       "galu34HS", "gavSad4q", "Qa4_oh_e", "gabPa811", "gaIL7h0B",
