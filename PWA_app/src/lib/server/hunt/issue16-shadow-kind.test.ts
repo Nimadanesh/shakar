@@ -163,6 +163,7 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
   });
 
   it("keeps role-prefix parsing separate from the item-kind dictionary", () => {
+    const queryKind = "vehicle";
     const title = "خرید فروش کاتالیزور";
     expect(adKindForTitle(title)).toBeNull();
     expect(shadowAdKindForTitle(title)).toBe("vehicle-part");
