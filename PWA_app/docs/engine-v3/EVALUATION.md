@@ -185,3 +185,9 @@ See [Issue 16 controlled role matrix](evaluations/BRH-2026-10-24-ISSUE16-ROLE-MA
 - The Follow-up 03 artifact used 7/8 detail calls and 7 unique IDs; refrigerator-buyer, vehicle-cash, and vehicle-installment cells remain missing. Previously human-graded source IDs were not recycled into the next blind packet.
 - New four-item blind packet: [BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md). Separate diagnostic map: [internal key](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-INTERNAL-KEY.md). Await owner grades; record them in a third file before joining the key.
 - Evidence is E3 until owner grades make it E4. It is not E5 and does not justify role/ranking changes. PR #41 remains Draft; no merge/deploy; `main` untouched.
+
+## Issue 16 cross-cell grades — 2026-10-24
+
+- Locked grades: [cross-cell human grades](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-HUMAN-GRADES.md); post-grade join: [reconciliation](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-RECONCILIATION.md).
+- All four items received human grade 3. F16-02 (`معاوضه خودرو`) is the only mismatch: human 3, engine `near` / 1.5. This is a follow-up hypothesis, not sufficient evidence for a scoring change.
+- Positive-heavy convenience sample; E4, not E5 or a population estimate. Buyer-fridge, vehicle-cash, and vehicle-installment remain missing. PR #41 stays Draft; no merge/deploy; `main` untouched.
