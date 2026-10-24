@@ -115,3 +115,10 @@ No full-pipeline paired fixture exists yet. The next step remains to use exact s
 - The workflow now runs both `kindLexicon.test.ts` and `pipeline.test.ts` before the bounded live capture. The first execution on the updated head is pending; no test pass is claimed until its job reports success.
 - The valid whole-car-with-secondary-part-mention positive remains unavailable in the locked source set. The test therefore covers the existing whole-vehicle buyer/dealer positives and the tire-only negative, but cannot fully close the secondary-mention counter-control. Do not use the older misclassified tire row as a substitute.
 - No production code or ranking behavior changed. PR #42 remains Draft/open/unmerged; `main` untouched; no deployment.
+
+
+### Validation correction — pipeline-suite environment cap (2026-10-24)
+
+- The first combined run [40078999302](https://github.com/Nimadanesh/shakar/actions/runs/40078999302) executed the new source-pinned Issue 16 pipeline test successfully, but the overall focused command failed one unrelated existing batching test: the workflow-level `HUNT_MAX_DETAILS=8` changed its expected 25-detail test budget. Result: 123 tests passed, 1 unrelated test failed; live capture was skipped.
+- Corrected the focused test command to set `HUNT_MAX_DETAILS=25` for the unit/pipeline test invocation. The live capture step retains its separate bounded budget of 8. Rerun is pending; do not claim the combined suite is green until it completes.
+- This is test-environment isolation only; no production code or ranking logic changed.
