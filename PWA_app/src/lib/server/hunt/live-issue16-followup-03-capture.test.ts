@@ -69,14 +69,14 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
     const scenarios: Scenario[] = [
       // Reserve the eight-detail budget for the role and transaction cells with the highest current evidence gaps.
       { id: "A-refrigerator-seller", query: "فروش یخچال", category: "home", cells: ["seller"] },
-      { id: "A-refrigerator-buyer", query: "خریدار یخچال", category: "home", cells: ["buyer"] },
+      { id: "A-refrigerator-buyer", query: "خریدار یخچال خراب", category: "home", cells: ["buyer"] },
       { id: "A-refrigerator-mixed", query: "خرید و فروش یخچال", category: "home", cells: ["mixed"] },
       // Keep whole-vehicle and voucher/service controls independently targeted.
       { id: "B-vehicle-whole", query: "خریدوفروش خودرو", category: "vehicles", cells: ["whole-vehicle"] },
       { id: "B-vehicle-voucher", query: "حواله خودرو", category: "vehicles", cells: ["voucher"] },
       // Transaction type has its own query, while the selector still requires explicit title evidence.
       { id: "C-vehicle-cash", query: "خودرو نقدی", category: "vehicles", cells: ["cash"] },
-      { id: "C-vehicle-installment", query: "ماشین قسطی", category: "vehicles", cells: ["installment"] },
+      { id: "C-vehicle-installment", query: "فروش اقساطی خودرو", category: "vehicles", cells: ["installment"] },
       // Narrow to a vehicle model + explicit exchange cue after the generic query missed this cell.
       { id: "C-vehicle-exchange", query: "معاوضه با سمند", category: "vehicles", cells: ["exchange"] },
       // Lower-priority paired kind controls remain in the scenario matrix but may be missing under the fixed global cap.
@@ -95,6 +95,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gaQ7okv9", "gaNhm4BK", "ga1M_D8i", "gac7D9Tv", "gaMPHkWW",
       "gaanVfX4", "gacLUYlL", "gaaPW6zt", "Aa5suyBE", "gajmIwfW",
       "gacjTTyh", "gayVhzOr", "gaSLpCEY",
+      // Exclude all newly inspected IDs from the retargeted 2026-10-24 captures.
+      "gavBLU60", "gaVn-dm2", "gabvBEiY", "ga7dAoCa", "gaKufbEV", "gabP-8po",
+      "gaVP5Rtf", "gaXTjbv8", "gaTI-Kn3", "Qa8HqiWJ",
     ]);
     const reportPath = join(process.cwd(), "engine-v3-issue16-followup-03-capture.json");
     const previousBufferPath = process.env.SLUG_CAPTURE_BUFFER_PATH;
