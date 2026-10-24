@@ -1,0 +1,231 @@
+import { it, expect } from "vitest";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import { normalizeForMatch } from "@/lib/persianNormalize";
+import { resolveHuntDefinition } from "./definition";
+import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
+
+type RoleCue = "mixed" | "buyer" | "seller" | "other";
+
+function roleCue(title: string): RoleCue {
+  const text = normalizeForMatch(title);
+  const buyer = /خریدار|خریدارم|خریداریم|می\s?خرم|می\s?خوام|می\s?خواهم/.test(text);
+  const seller = /فروش|فروشی|فروشنده|به\s?فروش/.test(text);
+  if (buyer && seller) return "mixed";
+  if (buyer) return "buyer";
+  if (seller) return "seller";
+  return "other";
+}
+
+type Scenario = {
+  id: string;
+  query: string;
+  category: string;
+  detailBudget: number;
+  desired: RoleCue[];
+};
+
+/**
+ * Independent Issue 16 Follow-up 03 capture. Raw evidence only:
+ * no grading, no production-rank claim, and no search-behavior changes.
+ */
+it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
+  "captures independent Issue 16 Follow-up 03 evidence within fixed budgets",
+  async () => {
+    const scenarios: Scenario[] = [
+      {
+        id: "A-refrigerator-seller-direction",
+        query: "فروشنده یخچال",
+        category: "home",
+        detailBudget: 3,
+        desired: ["seller", "buyer", "mixed", "other"],
+      },
+      {
+        id: "B-whole-vehicle-vs-voucher-service",
+        query: "خریدوفروش خودرو",
+        category: "vehicles",
+        detailBudget: 3,
+        desired: ["seller", "mixed", "buyer", "other"],
+      },
+      {
+        id: "C-broad-vehicle-match-kind",
+        query: "خرید و فروش خودرو",
+        category: "vehicles",
+        detailBudget: 2,
+        desired: ["seller", "mixed", "buyer", "other"],
+      },
+    ];
+
+    const reportPath = join(process.cwd(), "engine-v3-issue16-followup-03-capture.json");
+    const previousBufferPath = process.env.SLUG_CAPTURE_BUFFER_PATH;
+    const previousDetailCap = process.env.HUNT_MAX_DETAILS;
+    process.env.SLUG_CAPTURE_BUFFER_PATH = join(
+      process.env.RUNNER_TEMP ?? process.cwd(),
+      "engine-v3-issue16-followup-03-slugs.jsonl"
+    );
+
+    const globallySeen = new Set<string>();
+    const reports: Array<Record<string, unknown>> = [];
+    let detailsUsed = 0;
+    const overlapWithPriorPackets: string[] = [];
+
+    try {
+      for (const scenario of scenarios) {
+        const remaining = 8 - detailsUsed;
+        const budget = Math.min(scenario.detailBudget, remaining);
+        if (budget <= 0) break;
+        process.env.HUNT_MAX_DETAILS = String(budget);
+
+        const def = resolveHuntDefinition({
+          query: scenario.query,
+          include: [],
+          exclude: [],
+          should: [],
+          city: "all",
+          category: scenario.category,
+          priceMin: "",
+          priceMax: "",
+          transaction: "",
+          condition: "",
+        });
+        expect(def, `definition must resolve for ${scenario.query}`).not.toBeNull();
+        if (!def) {
+          reports.push({ id: scenario.id, query: scenario.query, status: "definition-unresolved", listings: [] });
+          continue;
+        }
+
+        const events: HuntEvent[] = [];
+        const { candidates, stats, endCursor } = await collectCandidates(def, {
+          maxPages: 2,
+          emit: (event) => events.push(event),
+        });
+
+        // Candidate selection is deterministic and prefers unseen source IDs.
+        const unused = candidates.filter((candidate) => !globallySeen.has(candidate.sourceAdId));
+        const selected: typeof candidates = [];
+        for (const cue of scenario.desired) {
+          const match = unused.find((candidate) =>
+            roleCue(candidate.title) === cue &&
+            !selected.some((picked) => picked.sourceAdId === candidate.sourceAdId)
+          );
+          if (match) selected.push(match);
+          if (selected.length >= budget) break;
+        }
+        for (const candidate of unused) {
+          if (selected.length >= budget) break;
+          if (!selected.some((picked) => picked.sourceAdId === candidate.sourceAdId)) selected.push(candidate);
+        }
+        selected.forEach((candidate) => globallySeen.add(candidate.sourceAdId));
+
+        const candidatePool = selected.map((candidate) => ({
+          sourceAdId: candidate.sourceAdId,
+          title: candidate.title,
+          city: candidate.city,
+          price: candidate.price,
+          titleRoleCue: roleCue(candidate.title),
+        }));
+        const scored = await confirmCandidates(selected, def, stats, () => {});
+        detailsUsed += stats.detailsChecked;
+
+        const rejectedById = new Map<string, (typeof stats.rejectedSample)[number]>(
+          stats.rejectedSample.flatMap((item) =>
+            item.sourceAdId ? [[item.sourceAdId, item] as const] : []
+          )
+        );
+        const scoredById = new Map<string, { item: (typeof scored)[number]; sampleRank: number }>(
+          scored.map((item, index) => [item.sourceAdId, { item, sampleRank: index + 1 }] as const)
+        );
+
+        const listings = candidatePool.map((candidate) => {
+          const scoredEntry = scoredById.get(candidate.sourceAdId);
+          const rejectedEntry = rejectedById.get(candidate.sourceAdId);
+          const item = scoredEntry?.item;
+          const description = item?.descAuditText ?? rejectedEntry?.descAuditText ?? "";
+          return {
+            sourceAdId: candidate.sourceAdId,
+            query: scenario.query,
+            scenario: scenario.id,
+            requestedCategory: scenario.category,
+            title: candidate.title,
+            descriptionSnapshot: description,
+            descriptionSnapshotAvailable: description.length > 0,
+            city: candidate.city,
+            price: candidate.price,
+            titleRoleCue: candidate.titleRoleCue,
+            roleMode: def.roleMode ?? null,
+            eligible: Boolean(item),
+            sampleRank: scoredEntry?.sampleRank ?? null,
+            productionRank: null,
+            matchKind: item?.matchKind ?? (rejectedEntry ? "rejected" : "unknown"),
+            score: item?.score ?? null,
+            evidence: item?.evidence ?? [],
+            missingInfo: item?.missingInfo ?? [],
+            detailUnknown: item?.detailUnknown ?? !description,
+            rejectedKind: rejectedEntry?.kind ?? null,
+          };
+        });
+
+        reports.push({
+          id: scenario.id,
+          query: scenario.query,
+          requestedCategory: scenario.category,
+          status: selected.length ? "captured" : "empty-within-budget",
+          resolved: {
+            include: def.include,
+            exclude: def.exclude,
+            should: def.should,
+            roleMode: def.roleMode ?? null,
+            serviceIntent: def.serviceIntent ?? false,
+            category: def.category,
+            city: def.city,
+          },
+          retrieval: {
+            maxPages: 2,
+            pagesCompleted: events.filter((event) => event.type === "lists-progress").length,
+            adsSeen: stats.adsSeen,
+            candidatesAfterFilters: candidates.length,
+            cursorReturned: endCursor !== undefined && endCursor !== null,
+            detailBudget: budget,
+            detailsChecked: stats.detailsChecked,
+            candidatePool,
+          },
+          listings,
+        });
+      }
+    } finally {
+      if (previousBufferPath === undefined) delete process.env.SLUG_CAPTURE_BUFFER_PATH;
+      else process.env.SLUG_CAPTURE_BUFFER_PATH = previousBufferPath;
+      if (previousDetailCap === undefined) delete process.env.HUNT_MAX_DETAILS;
+      else process.env.HUNT_MAX_DETAILS = previousDetailCap;
+    }
+
+    expect(detailsUsed).toBeLessThanOrEqual(8);
+    expect(globallySeen.size).toBeLessThanOrEqual(8);
+
+    const report = {
+      kind: "read-only-issue16-followup-03-capture",
+      warning: "Raw bounded evidence only. Not a blinded packet, not human grades, and not a production-rank comparison.",
+      createdAt: new Date().toISOString(),
+      branch: process.env.GITHUB_REF_NAME ?? "local",
+      commit: process.env.GITHUB_SHA ?? "local",
+      runtime: process.version,
+      limits: {
+        maxPagesPerQuery: 2,
+        maxDetailsTotal: 8,
+        maxDetailsUsed: detailsUsed,
+        uniqueListingIds: globallySeen.size,
+        scenarios: scenarios.length,
+        scenarioDetailBudgets: scenarios.map(({ id, detailBudget }) => ({ id, detailBudget })),
+        overlapWithPriorPackets,
+        mizanShadow: process.env.MIZAN_SHADOW ?? "default",
+      },
+      scenarios: reports,
+    };
+    await writeFile(reportPath, JSON.stringify(report, null, 2), "utf8");
+    console.log("ENGINE_V3_ISSUE16_FOLLOWUP_03_JSON_BEGIN");
+    console.log(JSON.stringify(report, null, 2));
+    console.log("ENGINE_V3_ISSUE16_FOLLOWUP_03_JSON_END");
+  },
+  180_000
+);
