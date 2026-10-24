@@ -60,3 +60,9 @@ A synthetic, explicitly non-source-grounded test was added to `issue16-shadow-ki
 This is a mechanism-level counterexample, **not** a real Divar sample, a human grade, or a measured production false positive. It establishes why the third reader must not be ignored when considering new part-kind entries. Baseline #172 was triggered on test commit `f60241139d96be2bba82e274ffdbab0a04ce93f4`; focused/full test status is pending at the time of this note.
 
 Decision remains unchanged: do not edit production `HEAD_KIND`, `PART_MARKERS`, parser, ranking, or eligibility until a safe three-reader design handles specific-part subject identity and transaction-role prefixes with paired evidence.
+
+### Validation update — Baseline #172 (2026-10-24)
+
+Baseline [#172](https://github.com/Nimadanesh/shakar/actions/runs/40090307284) completed on test commit `f60241139d96be2bba82e274ffdbab0a04ce93f4`. The focused suite, full portable suite, TypeScript typecheck, and production build passed; ESLint failed separately. Exact test counts were not available in the returned job summary, and the downloadable logs endpoint was unavailable, so this audit does not assert counts.
+
+The synthetic counterexample is now test-validated as a mechanism-level demonstration of the third-reader hazard. It does not change the evidence boundary or authorize production changes.
