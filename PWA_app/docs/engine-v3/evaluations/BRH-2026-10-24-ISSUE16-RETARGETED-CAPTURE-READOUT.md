@@ -30,3 +30,13 @@ These records were inspected diagnostically, not human-graded. They cannot be tu
 
 ## Decision
 This remains E3 live diagnostic evidence only; no human grades, no production-rank comparison, and no quality-uplift claim. Add all newly inspected IDs to the exclusion list for future blind packets/captures. The exchange target now has a plausible live candidate, but installment and a fresh refrigerator-buyer target remain missing. No buyer-role, voucher, vehicle eligibility, hard-rejection, or ranking changes are authorized. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
+
+## Retargeted-v2 capture — 2026-10-24
+
+- Follow-up 03 run [40067010071](https://github.com/Nimadanesh/shakar/actions/runs/40067010071), artifact `12549831722`, and cross-category run [40067010065](https://github.com/Nimadanesh/shakar/actions/runs/40067010065), artifact `12550305076`, completed successfully on PR head `49a564a7e1123452ab4930d52a2619dedcdb980e`. Kind regression/portable suite/typecheck also passed in [run 40067010122](https://github.com/Nimadanesh/shakar/actions/runs/40067010122).
+- The retargeted buyer query `خریدار یخچال خراب` captured `gabzLV7f` (`خرید یخچال سالم و خراب همچی پقمق`), engine exact/4.5. Mixed refrigerator query returned `QaoPqC7X`, a buyer of broken refrigerators despite a mixed title, exact/3.5. Seller query returned `gac7TJRT`, `فروش یخچال فریزر الکترو استیل`, exact/3.5.
+- Whole-vehicle query returned `gaO7GNJh`, `خریدوفروش نیسان تناژ پایین`, near/-1.5. Voucher query returned `gaE5qO5h`, `حواله خودرو`, exact/3.5. Exchange query returned `gabjtdOw`, `سمند ۹۸ معاوضه با ۲۰۶`, exact/3.5. Ordinary appliance control `gaay7dtd` was an appliance sale with cash/installment wording, exact/3.5. Wrong-kind control `gaDkHop1` was a mixed refrigerator buying/selling ad mentioning a burnt motor, near/-1.5.
+- Cash query `خودرو نقدی` and retargeted installment query `فروش اقساطی خودرو` both remained missing within the bounded pool. Do not broaden the cap or claim these cells were tested successfully.
+- Cross-category capture returned `gayyxUTa`, `خریدار و فروشنده یخچال فریزر سالم و خراب`, near/0.5 for `فروشنده یخچال`; compact vehicle buy/sell returned `gaMPHkWW`, `خریدوفروش حواله خودرو`, near/0.5. These and the other captured IDs are inspected and must not be reused in a blind packet.
+- New capture tests now exclude the newly inspected IDs. Cross-category capture also filters previously inspected IDs before selection and reports any overlap.
+- E3 bounded live diagnostic only: no human grades, no production-rank comparison (`productionRank=null`), no quality-uplift claim. No behavior/ranking/eligibility changes authorized; PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
