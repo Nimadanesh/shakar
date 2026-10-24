@@ -150,3 +150,15 @@ No full-pipeline paired fixture exists yet. The next step remains to use exact s
 - Remaining gap: a valid whole-car positive whose secondary detail mentions a part is still missing from the exact-source set. The tire-only exchange is not a substitute. Keep production behavior unchanged until this counter-control is found or explicitly closed as unavailable and a narrowly scoped candidate is reviewed against the locked controls.
 
 No production engine/ranking logic changed. PR #42 remains Draft/open/unmerged; `main` remains untouched; no deployment.
+
+## Candidate-fix triage after the expanded baseline (2026-10-24)
+
+The next experiment should separate **transaction-role parsing** from **principal-item-kind parsing**. A token-only addition is not sufficient:
+
+- Adding `کاتالیزور` to `HEAD_KIND` alone would not classify titles such as `خرید فروش کاتالیزور` or `فروش خرید انواع کاتالیزور...` while `خرید` remains an unskipped leading token. It also would not solve the service-on-goods policy, which deliberately demotes service ads to `near` instead of rejecting them.
+- Adding `بدنه` broadly is high-risk: it is an ambiguous noun and occurs in body-parts inventory, while later model names must not turn a part listing into a whole car. Prefer an explicit compound such as `لوازم یدکی` only as a candidate to evaluate, not as an approved lexicon edit.
+- The strongest candidate experiment is a test-only shadow parse with two independent outputs: (a) transaction role/cues (buy, sell, exchange, service), and (b) principal item kind from the title head. It should compare the current parser with a proposed role-skipping set on the exact source-pinned fixtures, without changing production behavior.
+- Before proposing a production patch, test all three lexicon-reader contexts for each candidate phrase: (1) ad title head, (2) query subject resolution, and (3) co-offered sibling/marker guard. In particular, confirm that `خرید و فروش خودرو` still resolves to `vehicle`, a parts-only head resolves to a vehicle-part kind, and a genuine whole-vehicle title that mentions a secondary part remains eligible.
+- Required paired assertions for any future candidate: B02/D02/D05/D07 whole-vehicle buyer/dealer/direct-sale positives stay eligible; B01/B03/B04/B05 and D03 wrong-kind examples stop being `exact`/eligible where the evidence supports exclusion; B06 tire-only exchange and D08 catalyst/exhaust control remain rejected; and unknown item kinds still no-op rather than causing broad false rejection.
+
+Decision: **do not edit `HEAD_KIND`, `HEAD_SKIP_TOKENS`, production gate logic, or ranking yet.** The successful characterization establishes a target for the next isolated shadow experiment, not authorization or proof for a production fix.
