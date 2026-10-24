@@ -112,7 +112,7 @@ No full-pipeline paired fixture exists yet. The next step remains to use exact s
 
 - Added a source-pinned characterization test to `PWA_app/src/lib/server/hunt/pipeline.test.ts` for all seven rows in the locked 05F blind packet. It uses the exact source-matched titles and descriptions, the resolved target query `خرید و فروش خودرو`, and mocked Divar I/O; it does not contact live services.
 - The baseline expectations encode the observed 05F outcomes: B01/B03/B04/B05 wrong-kind catalyst/body/service rows are `near`; B02 and B07 human-grade-3 whole-vehicle buyer/dealer controls are also `near`; B06 tire-only exchange is rejected. This test is a regression baseline, not an assertion that the current behavior is desirable.
-- The workflow now runs both `kindLexicon.test.ts` and `pipeline.test.ts` before the bounded live capture. The first execution on the updated head is pending; no test pass is claimed until its job reports success.
+- The workflow runs both `kindLexicon.test.ts` and `pipeline.test.ts` before the bounded live capture. The later validation section below records the successful run on head `78dcc3bd2722d196b1d2e7877c40aeeb153e3144`.
 - The valid whole-car-with-secondary-part-mention positive remains unavailable in the locked source set. The test therefore covers the existing whole-vehicle buyer/dealer positives and the tire-only negative, but cannot fully close the secondary-mention counter-control. Do not use the older misclassified tire row as a substitute.
 - No production code or ranking behavior changed. PR #42 remains Draft/open/unmerged; `main` untouched; no deployment.
 
@@ -120,7 +120,7 @@ No full-pipeline paired fixture exists yet. The next step remains to use exact s
 ### Validation correction — pipeline-suite environment cap (2026-10-24)
 
 - The first combined run [40078999302](https://github.com/Nimadanesh/shakar/actions/runs/40078999302) executed the new source-pinned Issue 16 pipeline test successfully, but the overall focused command failed one unrelated existing batching test: the workflow-level `HUNT_MAX_DETAILS=8` changed its expected 25-detail test budget. Result: 123 tests passed, 1 unrelated test failed; live capture was skipped.
-- Corrected the focused test command to set `HUNT_MAX_DETAILS=25` for the unit/pipeline test invocation. The live capture step retains its separate bounded budget of 8. Rerun is pending; do not claim the combined suite is green until it completes.
+- Corrected the focused test command to set `HUNT_MAX_DETAILS=25` for the unit/pipeline test invocation. The live capture step retains its separate bounded budget of 8. This correction was verified by successful run [40079121984](https://github.com/Nimadanesh/shakar/actions/runs/40079121984), documented below.
 - This is test-environment isolation only; no production code or ranking logic changed.
 
 
