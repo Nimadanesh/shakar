@@ -1,9 +1,9 @@
 # Engine V3 — Current Handoff
 
-Updated: 2026-10-23
+Updated: 2026-10-24
 Branch: `engine_v3`
 Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: 2054d6b9f18fcdf52b996a94852ff81c7da0bf84
+Current source/test head: 61ede4c9cde19c6ff8855b268b1be28c182e3c4b
 
 ## Mission
 
