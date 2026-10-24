@@ -90,3 +90,13 @@ This remains E3 live diagnostic evidence only; no human grades, no production-ra
 - Follow-up 03 still has three missing cells within the bounded pool: whole vehicle, installment, and wrong-kind control. Cash was captured. Missing cells remain missing; they were not filled with substitutes.
 - All 12 unique selected IDs from these artifacts have now been added to both capture tests' exclusion sets so later captures do not reuse them. Fresh CI/capture runs on the updated test source must be checked before another packet is considered.
 - These remain E3 live diagnostics until human grades are locked; `productionRank` is null. No uplift/population-level claim and no production behavior/ranking/eligibility change is authorized. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
+
+
+## Post-packet exclusion verification — 2026-10-24 (current source commit `0263a37530ba5565e94ead11445aae5b85849cb2`)
+
+- Updated-source cross-category capture [40068648616](https://github.com/Nimadanesh/shakar/actions/runs/40068648616), artifact `12549584003`, succeeded; Follow-up 03 [40068648631](https://github.com/Nimadanesh/shakar/actions/runs/40068648631), artifact `12550392619`, succeeded; kind regression [40068648621](https://github.com/Nimadanesh/shakar/actions/runs/40068648621) passed focused kind regression, portable hunt/search tests, and TypeScript typecheck.
+- Both fresh artifacts report synthetic merge-ref commit `54a344b7520d931904b344f21ee3c9ee3ca6ebdd` for the updated PR source. Cross-category selected 6 unique IDs; Follow-up 03 selected 6 unique IDs within its 8-detail cap.
+- Exclusion invariant passed again: no selected cross-category ID appeared in `overlapWithInspected`; no selected Follow-up ID appeared in `overlapWithPriorPackets`. This verifies that the newly added exclusions for Retargeted Capture 03 are being applied in the current workflow snapshot.
+- Cross-category new selected IDs: `QaM0ztoJ`, `gaUnfe_p`, `gaaTQEb7`, `gaN3EAVR`, `ga2qQAPq`, `gallxRrN`. Follow-up 03 new selected IDs: `AZYprmyz`, `gacdDbtu`, `gaH0zc7w`, `gabKdk6q`, `gabvI8Fm`, `gaLHGW9W`. These artifacts are fresh E3 diagnostics only and are not included in the already-frozen Retargeted Capture 03 blind packet. Record these IDs as inspected and exclude them before any future capture or blind packet.
+- Follow-up 03 still missed whole vehicle, cash, installment, and wrong-kind control under the fixed two-page pool; no substitute cells were used. Cross-category run stayed within its fixed budget.
+- No human grades or production-rank comparison are available from these runs; `productionRank=null`. No ranking/eligibility/production behavior change authorized. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
