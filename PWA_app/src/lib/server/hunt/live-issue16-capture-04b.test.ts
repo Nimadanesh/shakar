@@ -89,7 +89,7 @@ const previouslyInspectedIds = new Set([
 function matchesCell(id:string,title:string,description:string):boolean{
  const t=normalizeForMatch(title); const role=roleCue(title);
  const model=/(پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|۲۰۶|206|۲۰۷|207|۴۰۵|405|ال\s?۹۰|ال\s?90|l90|زانتیا|چری|جک|هایما|فیدلیتی|دیگنیتی|آریزو|اطلس|نیسان|تویوتا|هیوندای|کیا|بنز|مزدا)/.test(t);
-const part=/کاتالیزور|کاتالیز|موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|جک|قطعه|قطعات|اگزوز/.test(t);
+const part=/کاتالیزور|کاتالیز|موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|قطعه|قطعات|اگزوز/.test(t);
 if(id.startsWith("B-whole"))return (model||/خودرو|ماشین|سواری/.test(t))&&!part&&/فروش|فروشی|معاوضه|خرید/.test(t);
 if(id.startsWith("B-catalyst"))return /کاتالیزور|کاتالیز/.test(t)&&!/تعمیر|خدمات|تعمیرکار/.test(t);
 if(id==="B-service")return /کاتالیزور|کاتالیز/.test(t)&&/تعمیر|خدمات|تعمیرکار/.test(t);
