@@ -1,5 +1,5 @@
-name: Engine V3 Issue 16 Capture 05E
-# Unseen, bounded read-only follow-up for the whole-car-vs-parts hypothesis.
+name: Engine V3 Issue 16 Capture 05F
+# Fresh, bounded read-only counter-controls after the human-graded 05E subset.
 
 on:
   pull_request:
@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/engine-v3-issue16-capture05e.yml"
       - "PWA_app/src/lib/server/hunt/live-issue16-capture-05e.test.ts"
+      - "PWA_app/src/lib/server/hunt/live-issue16-capture-05f.test.ts"
       - "PWA_app/src/lib/server/hunt/pipeline.ts"
       - "PWA_app/src/lib/server/hunt/semantics.ts"
       - "PWA_app/src/lib/server/hunt/definition.ts"
@@ -38,13 +39,13 @@ jobs:
       - run: npm ci
       - name: Capture 05E — unseen whole car vs parts
         env:
-          SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-issue16-capture-05e-slugs.jsonl
-        run: npx vitest run src/lib/server/hunt/live-issue16-capture-05e.test.ts --reporter=verbose
+          SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-issue16-capture-05f-slugs.jsonl
+        run: npx vitest run src/lib/server/hunt/live-issue16-capture-05f.test.ts --reporter=verbose
       - name: Upload Capture 05E report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: engine-v3-issue16-capture-05e
-          path: PWA_app/engine-v3-issue16-capture-05e.json
+          name: engine-v3-issue16-capture-05f
+          path: PWA_app/engine-v3-issue16-capture-05f.json
           if-no-files-found: warn
           retention-days: 14
