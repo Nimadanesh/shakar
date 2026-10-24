@@ -69,6 +69,20 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "engine-v3-issue16-cross-category-slugs.jsonl"
     );
 
+    const previouslyInspectedIds = new Set([
+      // IDs already opened in earlier Issue 16 packets and diagnostic captures.
+      "gac_yx5p", "ga9Nx1wE", "gaFLygmQ", "gab7c23g", "gac7yxi1",
+      "gajmIwfW", "gaQjucWz", "QaPvpvjd", "gaVXpJTP", "gaWDC3Xz",
+      "gaf4cqwp", "gaU-i7iQ", "gac3hpjw", "gaAnK9CM", "gaA_eiS8",
+      "gaQ7okv9", "gaNhm4BK", "ga1M_D8i", "gac7D9Tv", "gaMPHkWW",
+      "gaanVfX4", "gacLUYlL", "gaaPW6zt", "Aa5suyBE", "gacjTTyh",
+      "gayVhzOr", "gaSLpCEY", "gavBLU60", "gaVn-dm2", "gabvBEiY",
+      "ga7dAoCa", "gaKufbEV", "gabP-8po", "gaVP5Rtf", "gaXTjbv8",
+      "gaTI-Kn3", "Qa8HqiWJ", "gac7TJRT", "gabzLV7f", "QaoPqC7X",
+      "gaO7GNJh", "gaE5qO5h", "gabjtdOw", "gaay7dtd", "gaDkHop1",
+      "gayyxUTa",
+    ]);
+    const overlapWithInspected = new Set<string>();
     const globallySeen = new Set<string>();
     const reports: Array<Record<string, unknown>> = [];
     let detailsUsed = 0;
@@ -100,7 +114,14 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           emit: (event) => events.push(event),
         });
 
-        const unused = candidates.filter((candidate) => !globallySeen.has(candidate.sourceAdId));
+        const unused = candidates.filter((candidate) => {
+          if (globallySeen.has(candidate.sourceAdId)) return false;
+          if (previouslyInspectedIds.has(candidate.sourceAdId)) {
+            overlapWithInspected.add(candidate.sourceAdId);
+            return false;
+          }
+          return true;
+        });
         const selected: typeof candidates = [];
         for (const cue of scenario.desired) {
           const match = unused.find((candidate) =>
@@ -211,6 +232,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         uniqueListingIds: globallySeen.size,
         scenarios: scenarios.length,
         scenarioDetailBudgets: scenarios.map(({ id, detailBudget }) => ({ id, detailBudget })),
+        overlapWithInspected: [...overlapWithInspected],
         requestedCategories: ["home", "vehicles"],
         mizanShadow: process.env.MIZAN_SHADOW ?? "default",
       },
