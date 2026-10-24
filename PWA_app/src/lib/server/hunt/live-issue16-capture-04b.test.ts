@@ -84,31 +84,36 @@ const previouslyInspectedIds = new Set([
       // Exclude every listing opened in the first, invalid-context Capture 04 attempt.
       "gaEbOtwX", "gaXy6CJ8", "gaRDeA35", "gacDldw5", "gaDn0jsk", "ga6WBlxy", "gaDZ88Mm", "gaaHGbGp",
       "gaTzFnuN", "gacHlCAO", "gaU33g50", "QaorO0r9", "gaa9oSP6", "ga-x6Euu", "gaTTRdcp", "gaXzUyYo",
+      // Exclude every listing inspected in the same-query Capture 04 attempt.
+      "gawRFk9i", "gacfUjkL", "gaTTl0z-", "gabDsiQo", "gaczT30z", "gaPXd9Pv",
+      "gaYr2XQZ", "gaUDI9Xs", "gaoK-BMS", "gacHFp_T",
       // IDs from earlier bounded diagnostic captures; exclude across future packets.
 
 ]);
+function resolve(query:string,category:string){return resolveHuntDefinition({query,include:[],exclude:[],should:[],city:"all",category,priceMin:"",priceMax:"",transaction:"",condition:""});}
 
-function cellsFor(title:string):string[]{const t=normalizeForMatch(title);const part=/کاتالیزور|کاتالیز|موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|قطعه|قطعات|اگزوز/.test(t);const service=/تعمیر|خدمات|تعمیرکار|سرویس/.test(t);const whole=/خودرو|ماشین|سواری|پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|۲۰۶|206|۲۰۷|207|۴۰۵|405|ال\s?۹۰|ال\s?90|l90|زانتیا|چری|هایما|فیدلیتی|دیگنیتی|آریزو|اطلس|نیسان|تویوتا|هیوندای|کیا|بنز|مزدا/.test(t);
- const cells:string[]=[];
- if(whole&&!part&&!service&&/فروش|فروشی|معاوضه|خرید/.test(t))cells.push("whole-vehicle-positive");
- if(/کاتالیزور|کاتالیز/.test(t)&&!service)cells.push("catalyst-only-negative");
- if(part&&service)cells.push("part-service-negative");
- if(part&&!service&&!/کاتالیزور|کاتالیز/.test(t))cells.push("other-part-negative");
- return cells;}
-it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 04B — whole-car eligibility in one fixed broad hunt",async()=>{
- const query="خرید و فروش خودرو";const category="vehicles";const reportPath=join(process.cwd(),"engine-v3-issue16-capture-04b.json");
- const oldBuffer=process.env.SLUG_CAPTURE_BUFFER_PATH;const oldCap=process.env.HUNT_MAX_DETAILS;process.env.SLUG_CAPTURE_BUFFER_PATH=join(process.env.RUNNER_TEMP??process.cwd(),"engine-v3-issue16-capture-04b-slugs.jsonl");process.env.HUNT_MAX_DETAILS="8";
- try{
-  const def=resolveHuntDefinition({query,include:[],exclude:[],should:[],city:"all",category,priceMin:"",priceMax:"",transaction:"",condition:""});expect(def).not.toBeNull();if(!def)return;
-  const events:HuntEvent[]=[];const {candidates,stats,endCursor}=await collectCandidates(def,{maxPages:2,emit:e=>events.push(e)});
-  const overlap=new Set<string>();const pool=candidates.filter(c=>{if(previouslyInspectedIds.has(c.sourceAdId)){overlap.add(c.sourceAdId);return false;}return true;});
-  const desired=["whole-vehicle-positive","whole-vehicle-positive","whole-vehicle-positive","catalyst-only-negative","catalyst-only-negative","catalyst-only-negative","part-service-negative","other-part-negative"];
-  const selected:typeof candidates=[];const labels:string[]=[];
-  for(const cell of desired){const match=pool.find(c=>!selected.some(x=>x.sourceAdId===c.sourceAdId)&&cellsFor(c.title).includes(cell));if(match){selected.push(match);labels.push(cell);}}
-  const scored=await confirmCandidates(selected,def,stats,()=>{});
-  const rejected=new Map(stats.rejectedSample.flatMap(x=>x.sourceAdId?[[x.sourceAdId,x] as const]:[]));const scoredMap=new Map(scored.map(x=>[x.sourceAdId,x] as const));
-  const listings=selected.map((c,i)=>{const hit=scoredMap.get(c.sourceAdId);const rej=rejected.get(c.sourceAdId);const description=hit?.descAuditText??rej?.descAuditText??"";return {cell:labels[i],sourceAdId:c.sourceAdId,title:c.title,descriptionSnapshot:description,descriptionSnapshotAvailable:!!description,descriptionContainsPartCue:/کاتالیزور|کاتالیز|موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|قطعه|قطعات|اگزوز/.test(normalizeForMatch(description)),eligible:!!hit,matchKind:hit?.matchKind??(rej?"rejected":"unknown"),score:hit?.score??null,evidence:hit?.evidence??[],missingInfo:hit?.missingInfo??[],detailUnknown:hit?.detailUnknown??!description,rejectedKind:rej?.kind??null};});
-  const report={kind:"issue16-retargeted-capture-04B-wrong-item-type",warning:"Single fixed whole-car hunt; raw live diagnostics only, not human grades. Missing cells are not substituted.",createdAt:new Date().toISOString(),branch:process.env.GITHUB_REF_NAME??"local",commit:process.env.GITHUB_SHA??"local",runtime:process.version,query,requestedCategory:category,limits:{maxPagesPerQuery:2,maxDetailsTotal:8,detailsChecked:stats.detailsChecked,uniqueListingIds:selected.length,overlapWithPreviouslyInspected:[...overlap],missingCells:desired.filter((c,i)=>desired.slice(0,i+1).filter(x=>x===c).length>labels.filter(x=>x===c).length),mizanShadow:process.env.MIZAN_SHADOW??"default"},resolved:{include:def.include,exclude:def.exclude,should:def.should,roleMode:def.roleMode??null,serviceIntent:def.serviceIntent??false,category:def.category},retrieval:{pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,cursorReturned:endCursor!=null},listings};
-  await writeFile(reportPath,JSON.stringify(report,null,2),"utf8");console.log("ISSUE16_CAPTURE_04B_JSON_BEGIN");console.log(JSON.stringify(report,null,2));console.log("ISSUE16_CAPTURE_04B_JSON_END");
- }finally{if(oldBuffer===undefined)delete process.env.SLUG_CAPTURE_BUFFER_PATH;else process.env.SLUG_CAPTURE_BUFFER_PATH=oldBuffer;if(oldCap===undefined)delete process.env.HUNT_MAX_DETAILS;else process.env.HUNT_MAX_DETAILS=oldCap;}
+function isCell(cell:string,title:string):boolean{const t=normalizeForMatch(title);const service=/تعمیر|خدمات|تعمیرکار|سرویس/.test(t);const catalyst=/کاتالیزور|کاتالیز/.test(t);const part=/موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|قطعه|قطعات|اگزوز/.test(t);const whole=/خودرو|ماشین|سواری|پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|۲۰۶|206|۲۰۷|207|۴۰۵|405|ال\s?۹۰|ال\s?90|l90|زانتیا|چری|هایما|فیدلیتی|دیگنیتی|آریزو|اطلس|نیسان|تویوتا|هیوندای|کیا|بنز|مزدا/.test(t);const year=/۱۳[۷-۹]\d|۱۴\d{2}|19\d{2}|20\d{2}/.test(t);
+ if(cell==="whole-vehicle-positive")return whole&&!part&&!catalyst&&!service&&/فروش|فروشی|معاوضه|خرید/.test(t);
+ if(cell==="catalyst-only-negative")return catalyst&&!service;
+ if(cell==="part-service-negative")return (part||catalyst)&&service;
+ if(cell==="other-part-negative")return part&&!catalyst&&!service&&!(whole&&year&&/فروش|فروشی|معاوضه|خرید/.test(t));
+ return false;}
+it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 04B — score targeted controls under one fixed whole-car hunt",async()=>{
+ const targetQuery="خرید و فروش خودرو";const category="vehicles";const targetDef=resolve(targetQuery,category);expect(targetDef).not.toBeNull();if(!targetDef)return;
+ const scenarios=[{id:"whole-1",query:"فروش خودرو",cell:"whole-vehicle-positive"},{id:"whole-2",query:"معاوضه خودرو",cell:"whole-vehicle-positive"},{id:"whole-3",query:"فروش خودرو مدل",cell:"whole-vehicle-positive"},{id:"catalyst-1",query:"فروش کاتالیزور خودرو",cell:"catalyst-only-negative"},{id:"catalyst-2",query:"خریدار کاتالیزور",cell:"catalyst-only-negative"},{id:"catalyst-3",query:"کاتالیزور ماشین سنگین",cell:"catalyst-only-negative"},{id:"service",query:"تعمیر کاتالیزور خودرو",cell:"part-service-negative"},{id:"other-part",query:"فروش موتور خودرو استوک",cell:"other-part-negative"}] as const;
+ const reportPath=join(process.cwd(),"engine-v3-issue16-capture-04b.json");const oldBuffer=process.env.SLUG_CAPTURE_BUFFER_PATH;const oldCap=process.env.HUNT_MAX_DETAILS;process.env.SLUG_CAPTURE_BUFFER_PATH=join(process.env.RUNNER_TEMP??process.cwd(),"engine-v3-issue16-capture-04b-slugs.jsonl");process.env.HUNT_MAX_DETAILS="8";
+ const seen=new Set<string>();const overlap=new Set<string>();const listings:Array<Record<string,unknown>>=[];const reports:Array<Record<string,unknown>>=[];let detailsUsed=0;
+ try{for(const sc of scenarios){if(detailsUsed>=8){reports.push({id:sc.id,status:"budget-exhausted",cell:sc.cell});continue;}
+  const retrievalDef=resolve(sc.query,category);expect(retrievalDef).not.toBeNull();if(!retrievalDef)continue;
+  const events:HuntEvent[]=[];const {candidates,stats,endCursor}=await collectCandidates(retrievalDef,{maxPages:2,emit:e=>events.push(e)});
+  const pool=candidates.filter(c=>{if(previouslyInspectedIds.has(c.sourceAdId)){overlap.add(c.sourceAdId);return false;}if(seen.has(c.sourceAdId))return false;return true;});
+  const selected=pool.find(c=>isCell(sc.cell,c.title));
+  if(!selected){reports.push({id:sc.id,query:sc.query,status:"missing-cell",cell:sc.cell,retrieval:{pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length}});continue;}
+  seen.add(selected.sourceAdId);const scored=await confirmCandidates([selected],targetDef,stats,()=>{});detailsUsed+=stats.detailsChecked;
+  const hit=scored.find(x=>x.sourceAdId===selected.sourceAdId);const rej=stats.rejectedSample.find(x=>x.sourceAdId===selected.sourceAdId);const description=hit?.descAuditText??rej?.descAuditText??"";
+  listings.push({cell:sc.cell,sourceAdId:selected.sourceAdId,retrievalQuery:sc.query,targetQuery,title:selected.title,descriptionSnapshot:description,descriptionSnapshotAvailable:!!description,descriptionContainsVehiclePartCue:/کاتالیزور|کاتالیز|موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|قطعه|قطعات|اگزوز/.test(normalizeForMatch(description)),eligible:!!hit,matchKind:hit?.matchKind??(rej?"rejected":"unknown"),score:hit?.score??null,evidence:hit?.evidence??[],missingInfo:hit?.missingInfo??[],detailUnknown:hit?.detailUnknown??!description,rejectedKind:rej?.kind??null});
+  reports.push({id:sc.id,query:sc.query,status:"captured",cell:sc.cell,retrieval:{maxPages:2,pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,cursorReturned:endCursor!=null,detailsChecked:stats.detailsChecked}});
+ }}finally{if(oldBuffer===undefined)delete process.env.SLUG_CAPTURE_BUFFER_PATH;else process.env.SLUG_CAPTURE_BUFFER_PATH=oldBuffer;if(oldCap===undefined)delete process.env.HUNT_MAX_DETAILS;else process.env.HUNT_MAX_DETAILS=oldCap;}
+ const desired=scenarios.map(x=>x.cell);const report={kind:"issue16-retargeted-capture-04B-wrong-item-type",warning:"Target contract is fixed to whole-car buy/sell hunt. Targeted queries only retrieve controls; all candidates are scored against targetQuery. Raw evidence only, not human grades.",createdAt:new Date().toISOString(),branch:process.env.GITHUB_REF_NAME??"local",commit:process.env.GITHUB_SHA??"local",runtime:process.version,targetQuery,requestedCategory:category,limits:{maxPagesPerRetrievalQuery:2,maxDetailsTotal:8,detailsUsed,uniqueListingIds:seen.size,overlapWithPreviouslyInspected:[...overlap],missingCells:desired.filter((c,i)=>desired.slice(0,i+1).filter(x=>x===c).length>listings.filter(x=>x.cell===c).length),mizanShadow:process.env.MIZAN_SHADOW??"default"},targetResolved:{include:targetDef.include,exclude:targetDef.exclude,should:targetDef.should,roleMode:targetDef.roleMode??null,serviceIntent:targetDef.serviceIntent??false,category:targetDef.category},scenarios:reports,listings};
+ await writeFile(reportPath,JSON.stringify(report,null,2),"utf8");console.log("ISSUE16_CAPTURE_04B_JSON_BEGIN");console.log(JSON.stringify(report,null,2));console.log("ISSUE16_CAPTURE_04B_JSON_END");
 },180_000);
