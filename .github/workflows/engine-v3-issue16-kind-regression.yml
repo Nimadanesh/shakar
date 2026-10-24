@@ -1,0 +1,57 @@
+name: Engine V3 Issue 16 Kind Regression
+
+on:
+  pull_request:
+    branches:
+      - engine_v3
+    paths:
+      - ".github/workflows/engine-v3-issue16-kind-regression.yml"
+      - "PWA_app/src/lib/server/hunt/kindLexicon.ts"
+      - "PWA_app/src/lib/server/hunt/kindLexicon.test.ts"
+      - "PWA_app/package.json"
+      - "PWA_app/package-lock.json"
+      - "PWA_app/vitest.config.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue16-kind-regression-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    name: Query-kind regression and portable tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: PWA_app
+    steps:
+      - name: Checkout pull request revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Focused kind lexicon regression
+        run: npx vitest run src/lib/server/hunt/kindLexicon.test.ts
+
+      - name: Portable hunt/search suite
+        run: >-
+          npx vitest run src/lib/server/hunt
+          --exclude src/lib/server/hunt/contractDeleteAudit.test.ts
+          --exclude src/lib/server/hunt/contractGate.test.ts
+          --exclude src/lib/server/hunt/expAFeatures.test.ts
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
