@@ -272,6 +272,76 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
 
 });
 
+
+/**
+ * Subject-identity/co-offer prototype, deliberately test-local and not wired
+ * into production. It is intentionally conservative: only a clear title-level
+ * target offer can override a different known part subject; description-only
+ * target mentions cannot. Unknown principal subjects return "unknown".
+ */
+type ShadowSubjectVerdict = "reject" | "allow" | "unknown";
+
+const SHADOW_PART_SUBJECTS = [
+  "کاتالیزور",
+  "دیسک ترمز",
+  "دیسک",
+  "لنت ترمز",
+  "لنت",
+  "باتری",
+  "لاستیک",
+  "چراغ",
+  "سپر",
+  "گلگیر",
+  "کاپوت",
+] as const;
+
+function shadowSpecificSubjectVerdict(
+  querySubject: string,
+  title: string,
+  description: string
+): ShadowSubjectVerdict {
+  const normalizedTitle = normalizeForMatch(title);
+  const normalizedDescription = normalizeForMatch(description);
+  const target = normalizeForMatch(querySubject);
+  const knownTitleSubjects = SHADOW_PART_SUBJECTS.filter((subject) =>
+    normalizedTitle.includes(normalizeForMatch(subject))
+  );
+  if (knownTitleSubjects.length === 0) return "unknown";
+
+  // A direct target mention in the title is not enough by itself: require an
+  // explicit co-offer connector between the target and a different known part.
+  const hasTargetInTitle = normalizedTitle.includes(target);
+  const hasOtherPart = knownTitleSubjects.some(
+    (subject) => normalizeForMatch(subject) !== target
+  );
+  const explicitCoOffer =
+    hasTargetInTitle &&
+    hasOtherPart &&
+    /(?: و | همراه با | به همراه | به‌همراه )/.test(` ${normalizedTitle} `);
+
+  if (explicitCoOffer) return "allow";
+
+  // If a different recognized part leads the title and the target appears only
+  // in the description, do not let broad same-kind compatibility erase subject
+  // identity. This remains a diagnostic policy, not a production verdict.
+  const firstSubject = knownTitleSubjects
+    .slice()
+    .sort((a, b) => normalizedTitle.indexOf(normalizeForMatch(a)) - normalizedTitle.indexOf(normalizeForMatch(b)))[0];
+  const firstSubjectNormalized = normalizeForMatch(firstSubject);
+  if (
+    firstSubjectNormalized !== target &&
+    !hasTargetInTitle &&
+    normalizedDescription.includes(target)
+  ) {
+    return "reject";
+  }
+
+  // A known different principal subject without an explicit target co-offer is
+  // a counter-signal; the prototype does not silently accept it.
+  if (firstSubjectNormalized !== target) return "reject";
+  return "allow";
+}
+
 describe("Issue 16 — source-backed secondary-part marker controls (test-only)", () => {
   it("preserves the D05 whole-vehicle positive when existing part markers occur after the clean subject", () => {
     // Frozen source snapshot: I16-CAPTURE-05D-BLIND.md D05, source ID
@@ -311,5 +381,66 @@ describe("Issue 16 — source-backed secondary-part marker controls (test-only)"
 
     expect(result.mismatch).toBe(true);
     expect(result.tier).toBe("reject");
+  });
+});
+
+
+describe("Issue 16 — subject identity / explicit co-offer prototype (test-only)", () => {
+  it("preserves the source-backed D05 whole-car positive with secondary parts in description", () => {
+    const title = "دنا پلاس توربو اتومات بدون رنگ 1400 فروش فوری";
+    const description = "کمک فنر عقب نو و تایر جلو نو؛ خودرو دست خودم بوده";
+    // Item-kind parser remains the authority for this whole-car control.
+    expect(shadowAdKindForTitle(title)).toBe("vehicle");
+    const markerResult = assessModelSpecificity(
+      ["دنا", "پلاس", "توربو", "اتومات"],
+      `${title} ${description}`,
+      "vehicles",
+      "vehicle",
+      "دنا پلاس توربو اتومات",
+      title
+    );
+    expect(markerResult.mismatch).toBe(false);
+    // Part identity logic is scoped to direct specific-part hunts, not this car hunt.
+    expect(shadowSpecificSubjectVerdict("کاتالیزور", title, description)).toBe("unknown");
+  });
+
+  it("keeps the source-backed B03 parts inventory rejected for a whole-vehicle hunt", () => {
+    const title = "بدنه کاپوت گلگیر سپر چراغ قیمت عمده";
+    const description = "پخش قطعات بدنه محصولات سایپا و ایران خودرو کاپوت پراید گلگیر پراید";
+    expect(shadowAdKindForTitle(title)).toBe("vehicle-part");
+    expect(kindGateRejects("vehicle", shadowAdKindForTitle(title))?.tier).toBe("reject");
+    expect(shadowSpecificSubjectVerdict("پراید", title, description)).not.toBe("allow");
+  });
+
+  it("rejects a different principal part when the hunted part appears only in description", () => {
+    // Synthetic counter-risk only; not a source ad and not a human grade.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "دیسک ترمز پراید سالم",
+        "دیسک ترمز پراید سالم؛ کاتالیزور فابریک خودرو نیز موجود است"
+      )
+    ).toBe("reject");
+  });
+
+  it("allows a specific-part title only when title-level text explicitly co-offers both parts", () => {
+    // Synthetic positive control for the rule's intended boundary, not a graded ad.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "فروش دیسک ترمز و کاتالیزور پراید",
+        "هر دو قطعه موجود است"
+      )
+    ).toBe("allow");
+  });
+
+  it("leaves an unknown principal subject as unknown rather than hard-rejecting", () => {
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "خدمات خودرو با قیمت مناسب",
+        "کاتالیزور در توضیحات ذکر شده"
+      )
+    ).toBe("unknown");
   });
 });
