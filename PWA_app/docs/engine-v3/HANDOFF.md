@@ -416,3 +416,84 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Keep the two primary issues separate: (1) I16-R05, grade 3, rejected as appliance-not-home-goods; (2) I16-R03 and I16-R12, grade 1 each, catalyst listings retained for a whole-car hunt. The grade-3 near cases I16-R01/R06/R08 are a separate under-scoring signal.
 - Next: design two preregistered controlled tests with unseen IDs only, each with positive and negative controls; freeze the blinded packet before opening its key. No ranking or hard-rejection changes until failures repeat across independent ads and controls remain healthy.
 - PR #41 remains Draft/unmerged. Keep main untouched; no merge or deployment. Phase 1 remains active. Baseline status is not all-green: portable tests/typecheck/build are the relevant gates, while the known ESLint UI errors must be reported separately.
+
+
+## Current handoff — Issue 16 Capture 05F grades locked (2026-10-24)
+
+- Human grades are recorded in [I16-CAPTURE-05F-FRESH-SUBSET-GRADED.md](evaluations/I16-CAPTURE-05F-FRESH-SUBSET-GRADED.md); the source-ID/engine join is separate in [I16-CAPTURE-05F-FRESH-SUBSET-INTERNAL-KEY.md](evaluations/I16-CAPTURE-05F-FRESH-SUBSET-INTERNAL-KEY.md).
+- Locked grades: B01=1, B02=3, B03=1, B04=1, B05=1, B06=1, B07=3; mean 1.57/3. The blind packet remains unchanged.
+- Capture 05F repeats the wrong-item-kind symptom across catalyst listings, catalyst repair service, and body-parts inventory. A body-parts listing (B04) received engine score 2.8333/`near` but human grade 1. The whole-vehicle buyer/exchange and dealer controls (B02/B07) were grade 3 but engine `near`; preserve buyer-role behavior and do not conflate transaction direction with item kind.
+- B06 is a healthy negative control: tire-only exchange was rejected and human grade 1. Exclude source `gapYR7Ug` from analysis because it overlaps concurrent Capture 04B. The seven blind rows were freshness-reconciled; duplicate 05F workflow invocations are not independent samples.
+- Next technical step remains evidence-led characterization of the item-kind boundary, not a global keyword or buyer rule. Before any code change, inspect the current typed-kind/head-kind tests and design a small deterministic paired fixture covering (a) whole-vehicle sale/buyer positives, (b) part-only and service negatives, and (c) vehicle/part mentions in the opposite role or description. The evidence collection itself does not authorize a behavior change.
+- PR #42 remains Draft/open and unmerged; no engine/ranking change, merge, deployment, or `main` change. Keep Issue 16 evidence-only until the paired characterization is reviewed.
+
+
+## Continuation — Issue 16 item-kind code-path characterized (2026-10-24)
+
+- Inspected the current `kindLexicon.ts`, `kindLexicon.test.ts`, and pipeline evaluation path on the Issue 16 branch. The vehicle-category bridge can resolve the hunt kind to `vehicle`, but `adKindForTitle` only classifies a small set of title heads. The kind gate intentionally no-ops when the ad head is unknown; it is reached after MUST evidence is present. This explains a plausible route for wrong-kind ads to survive, but does not by itself prove a safe lexicon patch.
+- Wrote the source-based code-path analysis and preregistered paired-fixture plan in [I16-CAPTURE-05F-ITEM-KIND-CHARACTERIZATION.md](evaluations/I16-CAPTURE-05F-ITEM-KIND-CHARACTERIZATION.md). It separates known vehicle-head positives from unknown catalyst/body-parts heads and explicitly preserves the human-grade-3 whole-vehicle buyer/dealer controls plus the B06 tire-only negative.
+- Important caveat: predicted `adKindForTitle` outcomes are code inspection, not a claimed runtime trace. Next: recover exact source snapshots from the internal key/raw capture, then add a deterministic characterization fixture that logs query kind, ad kind, gate verdict, semantic verdict, and final verdict. If immutable descriptions are missing, record the gap rather than reconstructing them.
+- No source/test behavior changes, no engine/ranking changes, no workflow run claimed. PR #42 remains Draft/open/unmerged; `main` untouched; no deployment.
+
+
+## Issue 16 characterization fixture added — validation pending (2026-10-24)
+
+- Added evidence-only characterization assertions to `kindLexicon.test.ts` in commit `03520ed119e6198e2604ad0d0b360f0be9481590`. The tests document current unknown title-head outcomes for all seven source-matched 05F titles, retain the known `فروش پراید` vehicle-head positive, and demonstrate that category fallback `vehicle` plus unknown ad head currently yields no kind-gate verdict.
+- These assertions intentionally characterize the gap; they are not a proposed final contract. They do not alter runtime behavior and must be replaced/refined alongside any future approved fix rather than mistaken for a passing quality solution.
+- No test run is claimed: this session's GitHub connection does not expose workflow dispatch or local test execution. Next: validate the branch's focused test workflow if an automatic run is available; then add the full-pipeline paired fixture only after exact snapshots and expected baseline verdicts are source-matched. Keep PR #42 Draft/open; no merge, deployment, or `main` change.
+
+
+## Deterministic validation path added (2026-10-24)
+
+- Added `.github/workflows/engine-v3-issue16-kind-characterization.yml` in commit `a8953f4cf2ddf9212b67a5c826d176a5b85b5363`. Unlike the bounded live-capture workflows, it runs only the deterministic `kindLexicon.test.ts` suite on relevant PR changes; it does not call Divar or use live-observation environment flags.
+- GitHub's commit-associated workflow-run query currently returns no run for that commit, so validation is still pending and no pass is claimed. If PR checks do not appear, inspect the PR's check suite/trigger state rather than assuming the tests passed.
+- Scope remains characterization only: the added assertions document current behavior and are not an endorsed fix. No production code changed. PR #42 remains Draft/open/unmerged; `main` untouched; no deployment.
+
+
+## Correction — validation workflow (2026-10-24)
+
+The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` was removed in commit `e2163611e297b2a8e86a24d56ff071337518b7cd` because no run was observed. The characterization tests remain unexecuted; no pass is claimed. PR #42 stays Draft and unmerged; no production behavior change, deployment, or `main` change.
+
+
+## Validation update — focused kind-lexicon suite passed (2026-10-24)
+
+- Updated `.github/workflows/engine-v3-issue16-capture05f.yml` to run `npx vitest run src/lib/server/hunt/kindLexicon.test.ts --reporter=verbose` before its bounded capture, and included that test file in the workflow path filter. This provides an automatic validation path instead of the removed temporary workflow.
+- On PR head commit `0439ceb71f234990cf54a52bcfea94a42eba4604`, GitHub Actions run [40077450054](https://github.com/Nimadanesh/shakar/actions/runs/40077450054) completed `npm ci` and the **kind-lexicon unit/characterization test step succeeded**. The overall workflow is not yet complete because the bounded 05F live capture is still running; therefore this is a focused test-step pass, not a claim that the whole workflow or full-pipeline fixture passed.
+- Updating PR #42 caused other pre-existing capture workflows whose path filters match the cumulative PR diff to start as well (runs 40077450012, 40077450018, 40077450020, 40077450044, 40077450077). Their observations are not independent samples and must not be merged into the existing graded evidence without artifact reconciliation.
+- Next: let the bounded runs reach terminal states, inspect only the relevant test step and reports, and then implement a source-grounded deterministic paired fixture. No production behavior change, merge, deployment, or `main` change. PR #42 remains Draft/open/unmerged.
+
+
+## Capture 05F selector audit and focused validation (2026-10-24)
+
+- Auditing raw artifact `12552478200` exposed capture-cell selection errors: a body-parts inventory was labelled `whole-clean` because later vehicle names appeared in its title; a tire-only exchange was labelled `whole-with-part-mention`; and the FMC511 whole-vehicle dealer offer was labelled `other-part` because of the substring `موتور`. These are capture-helper errors, not engine verdict changes.
+- Corrected `isCell` in `live-issue16-capture-05f.test.ts` to prioritize part heads and anchor whole-vehicle matches to the title head, with an explicit FMC511 dealer control. This changes diagnostic selection only, not production code.
+- On branch head `99172c9ca8dc9ace47953dc40245ba8f5829d45f`, [run 40077666348](https://github.com/Nimadanesh/shakar/actions/runs/40077666348) completed successfully: the focused `kindLexicon.test.ts` step passed, the bounded Capture 05F step completed, and artifact `12554390133` was uploaded.
+- The corrected selector now reports the whole-car-with-secondary-part-mention cell as `missing-cell` rather than falsely using the tire-only exchange. That positive counter-control remains an evidence gap. Seven other raw cells were captured; no human grades have been assigned, and these rows must not be merged into the locked graded sample or counted as independent of duplicate workflow runs.
+- Next: capture a valid whole-car listing with a secondary part mention, then construct the deterministic full-pipeline paired fixture from immutable source snapshots. Do not change production behavior before that. PR #42 remains Draft/open/unmerged; no deployment; `main` untouched.
+
+
+## Capture 05F rerun — rim/whole-car positive remains missing (2026-10-24)
+
+- Bounded run [40078480388](https://github.com/Nimadanesh/shakar/actions/runs/40078480388) completed successfully on PR head `19f6b781019748a57356fb83ccdac9091eb521b3`. The focused `kindLexicon.test.ts` step passed and Capture 05F uploaded raw artifact `12553809257`.
+- The adjusted retrieval query `پراید رینگ اسپرت` still yielded `missing-cell` for `whole-with-part-mention` after two pages / 50 ads. This is a bounded retrieval/selector gap, not evidence that no such Divar listing exists. Do not keep changing query terms blindly.
+- This artifact again captured seven diagnostic rows against the fixed target `خرید و فروش خودرو`: a clean Dena sale, a whole-car damaged-vehicle buyer, two catalyst-only offers, a catalyst repair/buy/sell service, a bumper inventory offer, and a complete engine offer. All seven were engine-eligible `near`; the catalyst/service/parts rows are raw diagnostics, not new human grades. This repeat corroborates the existing symptom but is not an independent human-quality sample.
+- Next: stop live-query iteration for this cell. Build the deterministic paired characterization from exact immutable snapshots already present in the locked 05F internal key and raw artifacts, explicitly marking the whole-car-with-secondary-part-mention case as unavailable unless an exact source snapshot can be recovered. Include grade-3 whole-vehicle buyer/dealer positives, part/service negatives, and the grade-1 tire-only exchange negative; assert current query-kind, ad-kind, gate, semantic, and final outcomes before proposing any behavior change. If the secondary-mention positive cannot be source-matched, keep that as an explicit test limitation rather than fabricating it.
+- No production behavior or ranking change. PR #42 remains Draft/open/unmerged; `main` untouched; no deployment.
+
+
+## Continuation — HEAD_KIND three-reader audit (2026-10-24)
+
+- Added [I16-HEAD-KIND-THREE-READER-AUDIT-2026-10-24.md](evaluations/I16-HEAD-KIND-THREE-READER-AUDIT-2026-10-24.md), commit `a2591d59c09acfcc6b0ddb0da820642f8107d412`. This is documentation/diagnosis only; no production code, ranking, or eligibility behavior changed.
+- The three readers are ad title-head classification, query-subject resolution, and the same-kind co-offered-marker guard. A `HEAD_KIND` entry is not safe merely because it correctly labels a part-headed ad.
+- Key counter-risk: mapping `کاتالیزور` to `vehicle-part` can make a direct catalyst hunt resolve to the broad `vehicle-part` kind, causing existing same-kind part markers (e.g. battery/disc/brake markers) to be skipped. A catalyst-specific hunt may then admit a different part. Also, a dictionary entry alone does not repair `خرید فروش کاتالیزور`, because production `adKindForTitle` does not skip leading `خرید`.
+- `بدنه` remains too ambiguous for a broad entry. `لوازم یدکی` is a stronger shadow-test candidate but still needs the query-subject and same-kind marker counter-tests.
+- Next: extend the test-only shadow matrix with direct specific-part queries, unrelated same-kind part controls, and role-prefixed title cases. Keep B02/B07/D02/D05/D07 whole-vehicle positives and B06 tire-only negative intact. The whole-car-with-secondary-part-mention source cell remains missing; do not fabricate it or substitute the tire-only exchange.
+- No production lexicon/marker edits, rank changes, merge, deployment, or `main` change. PR #42 remains Draft/open/unmerged.
+
+
+## Follow-up — test-only same-kind counter-risk captured (2026-10-24)
+
+- Extended `issue16-shadow-kind.test.ts` in commits `c7af4487bd3f47e9756aa26ffd02ea94ec8d84ec` and `62185a97f51797d3e2e215215c4d43a2598972bd`. The added assertions compare current vehicle-category fallback with a hypothetical `vehicle-part` query kind and show that the existing `دیسک` part marker is rejected under the current kind but skipped by the same-kind marker guard under the hypothetical broad part kind.
+- This is a **counter-risk characterization**, not a recommendation to preserve the current behavior or a production change. It demonstrates why a new `HEAD_KIND` entry can affect direct part hunts, not only whole-car false positives.
+- A commit-associated workflow query for the latest test commit returned no runs. The new assertions are therefore **not yet validated**; do not claim they passed. The previously reported 131-test green run predates these additions.
+- Next: obtain a real focused test run through the existing workflow path, or inspect the relevant PR check suite if available. If no run is triggered, report validation pending rather than adding another workflow or inferring success. PR #42 stays Draft/open; no production logic, ranking, merge, deployment, or `main` change.

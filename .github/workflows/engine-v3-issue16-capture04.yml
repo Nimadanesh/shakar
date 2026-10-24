@@ -1,0 +1,63 @@
+name: Engine V3 Issue 16 Capture 04
+# Two separate read-only hypotheses; each test is capped at eight detail fetches.
+
+on:
+  pull_request:
+    branches: [engine_v3]
+    paths:
+      - ".github/workflows/engine-v3-issue16-capture04.yml"
+      - "PWA_app/src/lib/server/hunt/live-issue16-capture-04a.test.ts"
+      - "PWA_app/src/lib/server/hunt/live-issue16-capture-04b.test.ts"
+      - "PWA_app/src/lib/server/hunt/pipeline.ts"
+      - "PWA_app/src/lib/server/hunt/semantics.ts"
+      - "PWA_app/src/lib/server/hunt/definition.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: engine-v3-issue16-capture04
+  cancel-in-progress: false
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: PWA_app
+    env:
+      LIVE_DIVAR_OBSERVATION: "1"
+      HUNT_MAX_DETAILS: "8"
+      MIZAN_SHADOW: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+      - run: npm ci
+      - name: Capture 04A — appliance eligibility
+        env:
+          SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-issue16-capture-04a-slugs.jsonl
+        run: npx vitest run src/lib/server/hunt/live-issue16-capture-04a.test.ts --reporter=verbose
+      - name: Capture 04B — whole car vs parts
+        env:
+          SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-issue16-capture-04b-slugs.jsonl
+        run: npx vitest run src/lib/server/hunt/live-issue16-capture-04b.test.ts --reporter=verbose
+      - name: Upload Capture 04A report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-v3-issue16-capture-04a
+          path: PWA_app/engine-v3-issue16-capture-04a.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload Capture 04B report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-v3-issue16-capture-04b
+          path: PWA_app/engine-v3-issue16-capture-04b.json
+          if-no-files-found: warn
+          retention-days: 14

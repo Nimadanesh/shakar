@@ -173,3 +173,13 @@ A wider bounded read-only replay now completed 8/8 pages for `معاوضه سم�
 - Wrong item type retained: I16-R03 and I16-R12 are catalyst listings, both human grade 1, yet retained as eligible for a whole-car hunt. They are two independent witnesses to the same candidate error type, not separate failure families.
 - Separate under-scoring signal: I16-R01, I16-R06, and I16-R08 are human grade 3 while the engine labeled them `near`. Do not conflate this with the I16-R05 eligibility rejection or catalyst item-type error.
 - Gate: build a new frozen, blinded packet from unseen IDs only, with preregistered positive and negative controls for each of the two primary hypotheses. Keep hypotheses separate. No ranker change, hard rejection, or generalized rule until each pattern repeats across independent listings and controls remain healthy. Do not reuse IDs from prior packets or open the key before grades are locked.
+
+
+## Issue 16 — Capture 05F human-grade reconciliation (2026-10-24)
+
+- Seven freshness-reconciled rows were graded and recorded in [I16-CAPTURE-05F-FRESH-SUBSET-GRADED.md](evaluations/I16-CAPTURE-05F-FRESH-SUBSET-GRADED.md); source/engine join is separate in [I16-CAPTURE-05F-FRESH-SUBSET-INTERNAL-KEY.md](evaluations/I16-CAPTURE-05F-FRESH-SUBSET-INTERNAL-KEY.md).
+- Grades: H05F-B01=1, B02=3, B03=1, B04=1, B05=1, B06=1, B07=3. Total 11/7, mean 1.57/3.
+- Wrong-kind eligible near-misses repeated across catalyst sale/buying, catalyst service, and body-parts inventory (B01/B03/B04/B05). B04 is especially important: engine score 2.8333 and `near`, while the human judged the body-parts inventory weak for a whole-vehicle hunt.
+- Whole-vehicle positive controls B02 (damaged-vehicle buyer/exchange) and B07 (FMC511 dealer sale/exchange) were human grade 3 but engine `near`. Preserve transaction-role vs item-kind separation; do not reject buyers globally.
+- B06 (tire-only exchange) was rejected by the typed-kind gate and human grade 1, a healthy negative control. One other selected row (`gapYR7Ug`) was excluded from the blind subset because it overlapped Capture 04B.
+- This adds an independent E4 sample consistent with the earlier Capture 03/04/05E wrong-kind observations, but the targeted, small sample is not a population estimate and is not a paired comparison. It does not alone authorize an engine change. Continue evidence-only work; no engine/ranking change, merge, deployment, or `main` change.
