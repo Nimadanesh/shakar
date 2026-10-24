@@ -618,3 +618,12 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - The new cases guard against an unrelated conjunction elsewhere in the title and against treating `دیسک` inside `دیسک ترمز` as a second part. These cases are synthetic diagnostics, not source ads or human grades.
 - The new commit has not yet had a Baseline run. Do not transfer #175's test counts to it. Next: run focused/full tests, typecheck and build; inspect ESLint separately.
 - No production logic changed, no merge/deployment, and `main` remains untouched.
+
+
+## Issue 16 — Baselines #176/#177 adversarial validation (2026-10-24)
+
+- Baseline [#176](https://github.com/Nimadanesh/shakar/actions/runs/40091509616) on `866fcd2` failed the focused and full portable test steps: the explicit simultaneous-offer case returned `reject` instead of `allow`. Typecheck/build passed; ESLint also failed separately.
+- Baseline [#177](https://github.com/Nimadanesh/shakar/actions/runs/40091527448) on `61ede4c9cde19c6ff8855b268b1be28c182e3c4b` completed with **327 focused tests passed and 920 full portable tests passed**, as reported by the owner. GitHub job steps confirm both test steps, TypeScript typecheck, and production build succeeded; ESLint remains the overall workflow failure. This is not a fully green workflow.
+- The regression in the co-offer control is fixed in the latest test-only commit. The conjunction-noise and overlapping-span edge cases are also included. These are synthetic, test-local diagnostics, not source ads/human grades or proof of production quality.
+- Next: keep this prototype test-only and continue seeking a source-matched, blinded human-graded specific-part false-acceptance example. Do not broaden `HEAD_KIND` / `PART_MARKERS` or wire the helper into production based on synthetic tests alone.
+- No production behavior changed. No merge, deployment, or `main` change.
