@@ -575,3 +575,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - The GitHub job details independently confirm for both runs: focused suite PASS, full portable suite PASS, TypeScript typecheck PASS, and production build PASS. ESLint is the only failed step; therefore the overall workflow is not green, but the failure is not from the test suites.
 - The role-prefix characterization is validated as test-only current-vs-shadow behavior. It does not resolve the production three-reader risk or authorize edits to `HEAD_KIND`, `PART_MARKERS`, parsing, ranking, or eligibility.
 - Next: continue the source-grounded, read-only Issue 16 audit and design the missing paired controls. Keep production behavior unchanged; no merge, deployment, or `main` changes without explicit authorization.
+
+
+## Issue 16 — next design gate after Baselines #173/#174 (2026-10-24)
+
+- Read-through of production `assessModelSpecificity` confirms the same-kind exemption is broad: in both strong subject-phrase and weak marker passes, a marker is skipped when `HEAD_KIND[marker] === queryKind`. This does not compare the marker's identity to the specific part hunted; a different part can therefore lose its wrong-subject guard if the query is broadened to `vehicle-part`.
+- Proposed next experiment is **test-only**: distinguish broad kind, principal subject identity, and explicit title-level co-offer evidence. Preserve D05 (grade-3 whole car with secondary `کمک فنر`/`تایر`) and H05F-B03 (parts inventory before model names); ensure a different part as principal title subject is not accepted merely because the hunted part is mentioned secondarily in the description.
+- Evidence limitation: no source-matched human-graded false acceptance for that specific-part counter-risk is present in the current frozen packet. Keep the existing example labelled synthetic; do not represent it as a Divar observation. Any fresh live case must use a new immutable experiment/capture ID and separate blinded grading.
+- This is still investigation only. No production `HEAD_KIND`, `PART_MARKERS`, parser, ranking, or eligibility changes; no merge/deploy; `main` remains untouched.
