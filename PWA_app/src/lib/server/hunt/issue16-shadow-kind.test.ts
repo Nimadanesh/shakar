@@ -13,6 +13,7 @@ import { adKindForTitle, kindGateRejects, queryKindForDef } from "./kindLexicon"
  */
 const LEADING_ROLE_CUES = new Set([
   "خرید",
+  "و",
   "خریدار",
   "فروش",
   "فروشی",
@@ -57,15 +58,26 @@ function shadowAdKindForTitle(title: string): string | null {
   // whole vehicle even though the title begins with an appraisal phrase.
   if (tokens.join(" ").includes("خودرو تصادفی")) return "vehicle";
 
-  // Longest explicit candidate head wins, but only at the principal title head.
-  for (const [phrase, kind] of [...CANDIDATE_HEADS].sort((a, b) => b[0].length - a[0].length)) {
-    if (tokens.join(" ").startsWith(phrase) || tokens.slice(0, phrase.split(" ").length).join(" ") === phrase) {
-      return kind;
-    }
+  // Candidate component heads are checked first so later model names cannot
+  // turn a part listing into a whole vehicle.
+  const partHeads = CANDIDATE_HEADS.filter(([, kind]) => kind === "vehicle-part")
+    .sort((a, b) => b[0].length - a[0].length);
+  for (const [phrase, kind] of partHeads) {
+    if (tokens.join(" ").startsWith(phrase)) return kind;
   }
 
-  // Keep the existing parser as a conservative fallback for established kinds.
-  return adKindForTitle(tokens.join(" "));
+  // Preserve established compound-head rules before broad vehicle aliases:
+  // e.g. "ماشین لباسشویی" must remain an appliance, not a vehicle.
+  const established = adKindForTitle(tokens.join(" "));
+  if (established !== null) return established;
+
+  // Only then use candidate whole-vehicle aliases absent from the frozen lexicon.
+  const vehicleHeads = CANDIDATE_HEADS.filter(([, kind]) => kind === "vehicle")
+    .sort((a, b) => b[0].length - a[0].length);
+  for (const [phrase, kind] of vehicleHeads) {
+    if (tokens.join(" ").startsWith(phrase)) return kind;
+  }
+  return null;
 }
 
 describe("Issue 16 — candidate transaction-role / principal-item shadow parser (test-only)", () => {
@@ -105,6 +117,7 @@ describe("Issue 16 — candidate transaction-role / principal-item shadow parser
   });
 
   it("does not turn transaction role itself into item kind", () => {
+    expect(shadowAdKindForTitle("ماشین لباسشویی پاکشوما")).toBe("appliance");
     expect(shadowAdKindForTitle("خریدار خودرو تصادفی")).toBe("vehicle");
     expect(shadowAdKindForTitle("لاستیک تیبا معاوضه با پراید")).toBe("vehicle-part");
     expect(kindGateRejects(queryKind, shadowAdKindForTitle("لاستیک تیبا معاوضه با پراید"))?.tier).toBe("reject");
