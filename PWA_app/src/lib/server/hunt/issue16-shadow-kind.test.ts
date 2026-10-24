@@ -141,19 +141,19 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
 
     const currentKind = assessModelSpecificity(
       ["کاتالیزور"],
-      "لنت و کاتالیزور پراید",
+      "دیسک و کاتالیزور پراید",
       "vehicles",
       "vehicle",
       "کاتالیزور",
-      "لنت و کاتالیزور پراید"
+      "دیسک و کاتالیزور پراید"
     );
     const hypotheticalBroadPartKind = assessModelSpecificity(
       ["کاتالیزور"],
-      "لنت و کاتالیزور پراید",
+      "دیسک و کاتالیزور پراید",
       "vehicles",
       "vehicle-part",
       "کاتالیزور",
-      "لنت و کاتالیزور پراید"
+      "دیسک و کاتالیزور پراید"
     );
 
     expect(currentKind.mismatch).toBe(true);
