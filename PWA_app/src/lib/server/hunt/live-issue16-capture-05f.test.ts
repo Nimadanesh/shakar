@@ -137,7 +137,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 05F — whole-vehic
  expect(targetDef).not.toBeNull(); if(!targetDef)return;
  const scenarios=[
   {id:"whole-clean-dena",query:"فروش دنا پلاس",cell:"whole-clean"},
-  {id:"whole-with-rim",query:"فروش پراید رینگ اسپرت",cell:"whole-with-part-mention"},
+  {id:"whole-with-rim",query:"پراید رینگ اسپرت",cell:"whole-with-part-mention"},
   {id:"whole-buyer",query:"خریدار خودرو تصادفی",cell:"whole-buyer"},
   {id:"catalyst-seller",query:"فروش کاتالیزور خودرو",cell:"catalyst-only"},
   {id:"catalyst-buyer",query:"خریدار کاتالیزور فرسوده",cell:"catalyst-only"},
