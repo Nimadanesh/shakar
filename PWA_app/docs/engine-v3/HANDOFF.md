@@ -610,3 +610,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - The test-only subject-identity / explicit co-offer prototype is validated as passing its defined examples. This does not establish live-search quality uplift or justify production integration.
 - Next: inspect substring collisions, overlapping marker matches, conjunctions elsewhere in a title, and whether the first matched part is actually the principal subject. Add adversarial test-only cases before drawing conclusions, and seek a source-matched, blinded human-graded specific-part false-acceptance example.
 - No production behavior changed. No merge, deployment, or `main` change.
+
+
+## Issue 16 — adversarial co-offer tests added; CI pending (2026-10-24)
+
+- Following the owner-reported Baseline #175 result on `e8353365` (325 focused / 918 full portable tests passed; ESLint remains the workflow failure), two synthetic edge cases were added in test-only commit [61ede4c9cde19c6ff8855b268b1be28c182e3c4b](https://github.com/Nimadanesh/shakar/commit/61ede4c9cde19c6ff8855b268b1be28c182e3c4b). The helper now requires a co-offer connector between non-overlapping part mentions.
+- The new cases guard against an unrelated conjunction elsewhere in the title and against treating `دیسک` inside `دیسک ترمز` as a second part. These cases are synthetic diagnostics, not source ads or human grades.
+- The new commit has not yet had a Baseline run. Do not transfer #175's test counts to it. Next: run focused/full tests, typecheck and build; inspect ESLint separately.
+- No production logic changed, no merge/deployment, and `main` remains untouched.
