@@ -19,6 +19,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   capture:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
