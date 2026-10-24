@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/engine-v3-issue16-capture05f.yml"
       - "PWA_app/src/lib/server/hunt/kindLexicon.test.ts"
+      - "PWA_app/src/lib/server/hunt/pipeline.test.ts"
       - "PWA_app/src/lib/server/hunt/live-issue16-capture-05f.test.ts"
       - "PWA_app/src/lib/server/hunt/pipeline.ts"
       - "PWA_app/src/lib/server/hunt/semantics.ts"
@@ -36,7 +37,7 @@ jobs:
           cache-dependency-path: PWA_app/package-lock.json
       - run: npm ci
       - name: Run kind-lexicon unit and characterization tests
-        run: npx vitest run src/lib/server/hunt/kindLexicon.test.ts --reporter=verbose
+        run: npx vitest run src/lib/server/hunt/kindLexicon.test.ts src/lib/server/hunt/pipeline.test.ts --reporter=verbose
       - name: Capture 05F — whole-vehicle and counter-controls
         env:
           SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-issue16-capture-05f-slugs.jsonl
