@@ -37,7 +37,7 @@ jobs:
           cache-dependency-path: PWA_app/package-lock.json
       - run: npm ci
       - name: Run kind-lexicon unit and characterization tests
-        run: npx vitest run src/lib/server/hunt/kindLexicon.test.ts src/lib/server/hunt/pipeline.test.ts --reporter=verbose
+        run: HUNT_MAX_DETAILS=25 npx vitest run src/lib/server/hunt/kindLexicon.test.ts src/lib/server/hunt/pipeline.test.ts --reporter=verbose
       - name: Capture 05F — whole-vehicle and counter-controls
         env:
           SLUG_CAPTURE_BUFFER_PATH: /tmp/engine-v3-issue16-capture-05f-slugs.jsonl
