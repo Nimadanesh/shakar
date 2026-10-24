@@ -148,6 +148,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-pa
    const events:HuntEvent[]=[];
    try {
     const {candidates,stats,endCursor}=await collectCandidates(retrievalDef,{maxPages:2,emit:e=>events.push(e)});
+    const titleSamples=candidates.slice(0,12).map(c=>({id:c.sourceAdId,title:c.title,normalizedHead:normalizedTitleHead(c.title),otherPartHead:isOtherPartTitle(c.title),previouslyInspected:previouslyInspectedIds.has(c.sourceAdId)}));
     const eligiblePool=candidates.filter(c=>{
      if(previouslyInspectedIds.has(c.sourceAdId)){overlap.add(c.sourceAdId);return false;}
      if(seen.has(c.sourceAdId)||!isOtherPartTitle(c.title))return false;
@@ -158,7 +159,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-pa
     if(candidate && pool.length<8) {
      seen.add(candidate.sourceAdId);pool.push({candidate,stats,query});added=1;
     }
-    queryReports.push({query,status:added?"candidates-selected":"no-new-title-heads",pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,candidatesSelected:added,cursorReturned:endCursor!=null});
+    queryReports.push({query,status:added?"candidates-selected":"no-new-title-heads",pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,candidatesSelected:added,cursorReturned:endCursor!=null,titleSamples});
    } catch(error) {
     queryReports.push({query,status:"provider-error",error:error instanceof Error?error.message:String(error),pagesCompleted:events.filter(e=>e.type==="lists-progress").length});
    }
