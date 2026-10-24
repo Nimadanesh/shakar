@@ -14,7 +14,7 @@ Grade each listing for the target hunt, not for writing quality, condition, or w
 - **0** — irrelevant
 - **unknown** — insufficient information to judge
 
-Please return one score per label (D01–D08). Labels are shuffled and do not reveal the retrieval cell, source ID, or engine outcome. Descriptions are source snapshots, not paraphrased summaries.
+Please return one score per label (D01–D08). Labels are shuffled and do not reveal the retrieval cell, source ID, or engine outcome. The descriptions are excerpts from source snapshots; grade only from the evidence shown and use unknown if a key distinction cannot be judged.
 
 ## D01
 
