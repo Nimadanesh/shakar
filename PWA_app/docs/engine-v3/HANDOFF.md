@@ -469,3 +469,12 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Follow-up 03 still missed the buyer-fridge, installment, and exchange cells. A test-only query targeting change is committed as `7ee2274821f4b725807fa671ba5f014ddbda7a77`: `C-vehicle-exchange` now searches `سمند معاوضه` rather than `معاوضه خودرو`. No search logic changed.
 - No workflow run is currently visible for that commit. The test-only query change remains unvalidated; do not claim a fresh capture, create a blind packet, or request grades from it until a new run completes.
 - Next: trigger/obtain the revised bounded capture; if it finds an unseen exchange candidate, freeze blind text first and keep the diagnostic key separate until grades are locked. If it still misses, record the gap rather than broadening selection heuristics. PR #41 remains Draft; no merge/deploy; `main` and `engine_v3` untouched.
+
+
+## Latest handoff — Retargeted Capture 03 graded; Capture 04 preregistered (2026-10-24)
+
+- Capture 03 human grades are now locked in [BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-03-HUMAN-GRADES.md](evaluations/BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-03-HUMAN-GRADES.md), separate from the internal key. Total 32/36; ten grade 3 and two grade 1.
+- Human/engine reconciliation is appended to [BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-READOUT.md](evaluations/BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-READOUT.md). Two primary hypotheses remain separate: I16-R05 eligibility false rejection; I16-R03/R12 catalyst-as-whole-car false positives. I16-R01/R06/R08 remain the established under-scoring thread.
+- Preregistered next protocol: [BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-04-PLAN.md](evaluations/BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-04-PLAN.md). It specifies separate positive/negative controls, unseen-ID requirements, capture integrity gates, and no behavior change until recurrence is established.
+- Do not reuse any Capture 03 IDs or later inspected diagnostic IDs. Capture 04 has not been run; no new blind packet is frozen yet. This plan is not a claim that either failure family is proven.
+- PR #41 remains Draft/unmerged. Do not merge, change main, or deploy. Engine behavior is unchanged.
