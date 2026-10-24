@@ -673,7 +673,7 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 ## Issue 16 — Capture 06C grades locked; source join complete (2026-10-24)
 
 - Capture 06C run [#1](https://github.com/Nimadanesh/shakar/actions/runs/40100799513), artifact ID `12563205197`, artifact SHA-256 `c321b97cfefce573c6956b15e52c451e34915d1749e8c2a8541a681dcd82d198`. Blind packet preserved unchanged.
-- Owner-locked independent grades: C01=1, C02=1, C03=3, C04=3, C05=1. Denominator 5, no UNKNOWN, distribution 1:3 and 3:2, mean 2.00/3. No human note supplied. See [human grades](evaluations/ISSUE16-CAPTURE-06C-HUMAN-GRADES.md).
+- Owner-locked independent grades: C01=1, C02=1, C03=3, C04=3, C05=1. Denominator 5, no UNKNOWN, distribution 1:3 and 3:2, mean 1.80/3. No human note supplied. See [human grades](evaluations/ISSUE16-CAPTURE-06C-HUMAN-GRADES.md).
 - Post-grade source mapping and engine reconciliation are in [ISSUE16-CAPTURE-06C-SOURCE-MAP.md](evaluations/ISSUE16-CAPTURE-06C-SOURCE-MAP.md). Join integrity passed 5/5. Four title-term candidates yielded only two grade-3 controls (C03/C04). Body-only C05 was grade 1 while engine labeled it eligible/near, score 1.0: a narrow, source-backed false-acceptance signal for a service mention.
 - Evidence remains E4 on a small targeted sample, not E5 or a population estimate. Capture 06B stays separate. Next: inspect whether this specific failure can be isolated to service-intent vs item-offer semantics in an existing test-only diagnostic; if not, preserve the limitation and seek another independently sampled source. Do not alter production behavior from this sample alone.
 - No production logic, ranking, eligibility, `HEAD_KIND`, `main`, merge, or deployment change. PR #43 remains Draft and unmerged.
