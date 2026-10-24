@@ -67,13 +67,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
     // 5 appliance role/kind controls + 2 vehicle-kind controls + 3 transaction-kind controls; strict total remains 8 details.
     // Each targeted query is capped at two list pages; missing cells stay missing.
     const scenarios: Scenario[] = [
-      // Separate role-targeted queries reduce dependence on finding all roles in one result page.
+      // Reserve the eight-detail budget for the role and transaction cells with the highest current evidence gaps.
       { id: "A-refrigerator-seller", query: "فروش یخچال", category: "home", cells: ["seller"] },
       { id: "A-refrigerator-buyer", query: "خریدار یخچال", category: "home", cells: ["buyer"] },
       { id: "A-refrigerator-mixed", query: "خرید و فروش یخچال", category: "home", cells: ["mixed"] },
-      // Paired controls for the query-kind change: ordinary appliance and part-only.
-      { id: "A-refrigerator-ordinary", query: "یخچال", category: "home", cells: ["ordinary-appliance"] },
-      { id: "A-refrigerator-wrong-kind", query: "قطعه یخچال", category: "home", cells: ["wrong-kind-control"] },
       // Keep whole-vehicle and voucher/service controls independently targeted.
       { id: "B-vehicle-whole", query: "خریدوفروش خودرو", category: "vehicles", cells: ["whole-vehicle"] },
       { id: "B-vehicle-voucher", query: "حواله خودرو", category: "vehicles", cells: ["voucher"] },
@@ -82,6 +79,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       { id: "C-vehicle-installment", query: "خودرو اقساطی", category: "vehicles", cells: ["installment"] },
       // Narrow to a vehicle model + explicit exchange cue after the generic query missed this cell.
       { id: "C-vehicle-exchange", query: "سمند معاوضه", category: "vehicles", cells: ["exchange"] },
+      // Lower-priority paired kind controls remain in the scenario matrix but may be missing under the fixed global cap.
+      { id: "A-refrigerator-ordinary", query: "یخچال", category: "home", cells: ["ordinary-appliance"] },
+      { id: "A-refrigerator-wrong-kind", query: "قطعه یخچال", category: "home", cells: ["wrong-kind-control"] },
     ];
     const priorPacketIds = new Set([
       "gab_aV8W", "gaLNJNwu", "ga4iPfzH", "gaPHaEfq", "gaRj-fI_", "gaqV1O58",
