@@ -497,3 +497,14 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - This is a **counter-risk characterization**, not a recommendation to preserve the current behavior or a production change. It demonstrates why a new `HEAD_KIND` entry can affect direct part hunts, not only whole-car false positives.
 - A commit-associated workflow query for the latest test commit returned no runs. The new assertions are therefore **not yet validated**; do not claim they passed. The previously reported 131-test green run predates these additions.
 - Next: obtain a real focused test run through the existing workflow path, or inspect the relevant PR check suite if available. If no run is triggered, report validation pending rather than adding another workflow or inferring success. PR #42 stays Draft/open; no production logic, ranking, merge, deployment, or `main` change.
+
+
+## Continuation — paired shadow-kind controls prepared (2026-10-24)
+
+- Created isolated test branch `experiment/issue16-shadow-paired-20261024` from merged `engine_v3` commit `c2f7eaf5232addab48752d61cfa5622fc232a039`. No PR was opened, because the Capture 05F workflow's PR path filter includes the shadow test and could start a live Divar capture unintentionally.
+- Extended `PWA_app/src/lib/server/hunt/issue16-shadow-kind.test.ts` only. The shadow parser's local role-cue list now includes `پخش`, allowing the source-matched D08 exhaust/catalyst title to expose its principal part head after the distribution cue.
+- Added a source-title paired table covering B01–B07 and D02/D03/D05/D07/D08. It asserts candidate shadow kind and the corresponding kind-gate verdict separately: part-only controls should reject for a broad vehicle hunt; known whole-vehicle controls should pass; unknown FMC511 dealer head remains unknown/no-op. These are test-only candidate outcomes, not production behavior and not human grades.
+- This extends the existing full-pipeline characterization on `engine_v3`; it does not modify `kindLexicon.ts`, `pipeline.ts`, production ranking, or the merged branch.
+- Validation is pending. No local runner/network access is available in this session, and no Actions run has been claimed. Safest validation is to manually run **Engine V3 Baseline** on branch `experiment/issue16-shadow-paired-20261024`; this workflow does not perform live Capture. Inspect the focused Vitest output for `issue16-shadow-kind.test.ts` and `kindLexicon.test.ts` before deciding the next step.
+- The genuine whole-car-with-secondary-part-mention control is still missing from the locked source set. Do not claim that counter-control is covered, and do not promote the candidate parser or change production classification until an exact-source positive is found or the cell is explicitly closed as unavailable and the risk is reviewed.
+- `main` remains untouched; no deployment, production behavior change, or merge was performed.
