@@ -434,3 +434,10 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Wrote the source-based code-path analysis and preregistered paired-fixture plan in [I16-CAPTURE-05F-ITEM-KIND-CHARACTERIZATION.md](evaluations/I16-CAPTURE-05F-ITEM-KIND-CHARACTERIZATION.md). It separates known vehicle-head positives from unknown catalyst/body-parts heads and explicitly preserves the human-grade-3 whole-vehicle buyer/dealer controls plus the B06 tire-only negative.
 - Important caveat: predicted `adKindForTitle` outcomes are code inspection, not a claimed runtime trace. Next: recover exact source snapshots from the internal key/raw capture, then add a deterministic characterization fixture that logs query kind, ad kind, gate verdict, semantic verdict, and final verdict. If immutable descriptions are missing, record the gap rather than reconstructing them.
 - No source/test behavior changes, no engine/ranking changes, no workflow run claimed. PR #42 remains Draft/open/unmerged; `main` untouched; no deployment.
+
+
+## Issue 16 characterization fixture added — validation pending (2026-10-24)
+
+- Added evidence-only characterization assertions to `kindLexicon.test.ts` in commit `03520ed119e6198e2604ad0d0b360f0be9481590`. The tests document current unknown title-head outcomes for all seven source-matched 05F titles, retain the known `فروش پراید` vehicle-head positive, and demonstrate that category fallback `vehicle` plus unknown ad head currently yields no kind-gate verdict.
+- These assertions intentionally characterize the gap; they are not a proposed final contract. They do not alter runtime behavior and must be replaced/refined alongside any future approved fix rather than mistaken for a passing quality solution.
+- No test run is claimed: this session's GitHub connection does not expose workflow dispatch or local test execution. Next: validate the branch's focused test workflow if an automatic run is available; then add the full-pipeline paired fixture only after exact snapshots and expected baseline verdicts are source-matched. Keep PR #42 Draft/open; no merge, deployment, or `main` change.
