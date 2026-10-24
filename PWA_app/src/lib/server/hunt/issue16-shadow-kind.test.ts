@@ -204,6 +204,43 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
     expect(kindGateRejects(queryKind, shadowAdKindForTitle("لاستیک تیبا معاوضه با پراید"))?.tier).toBe("reject");
   });
 
+  it("characterizes production-versus-shadow outcomes for frozen role-prefixed titles", () => {
+    const cases: Array<{ id: string; title: string; candidate: string }> = [
+      {
+        id: "05F-B01 catalyst inventory",
+        title: "خرید فروش انواع کاتالیزور خارجی ایران فرسوده",
+        candidate: "vehicle-part",
+      },
+      {
+        id: "05F-B04 body-parts inventory",
+        title: "فروش بدنه استوک فابریک پژو، پراید، تیبا، دنا، سمند",
+        candidate: "vehicle-part",
+      },
+      {
+        id: "05F-B07 whole-vehicle dealer",
+        title: "فردا موتور FMC511/صفر و خشک برج روز/نمایندگی",
+        candidate: null as unknown as string,
+      },
+      {
+        id: "05F-B02 buyer-seeking vehicle",
+        title: "خریدار خودرو تصادفی",
+        candidate: "vehicle",
+      },
+      {
+        id: "05F-D08 exhaust/catalyst inventory",
+        title: "پخش انواع اگزوز.طرح تعویض کاتالیزورهای فرسوده",
+        candidate: "vehicle-part",
+      },
+    ];
+
+    for (const row of cases) {
+      // The current production head parser does not consume these leading
+      // transaction-role prefixes; unknown must remain a no-op.
+      expect(adKindForTitle(row.title), row.id).toBeNull();
+      expect(shadowAdKindForTitle(row.title), row.id).toBe(row.candidate);
+    }
+  });
+
   it("runs the candidate parser against the locked Issue 16 source-title controls", () => {
     const queryKind = queryKindForDef(["خرید", "و", "فروش", "خودرو"], false, "vehicles");
     expect(queryKind).toBe("vehicle");
