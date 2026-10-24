@@ -153,3 +153,10 @@ The helper now checks whether the co-offer connector lies between non-overlappin
 - Baseline [#177](https://github.com/Nimadanesh/shakar/actions/runs/40091527448), on `61ede4c9cde19c6ff8855b268b1be28c182e3c4b`, has the owner-reported result **327 focused tests passed and 920 full portable tests passed**. Both test steps, TypeScript typecheck, and production build passed; ESLint remains the separate workflow failure source. Do not call the entire workflow green.
 - The two added adversarial cases and the corrected explicit co-offer case are now test-validated on the latest source/test commit. This remains a synthetic test-local diagnostic, not a production parser and not evidence of real-world quality uplift.
 - Decision unchanged: no production `HEAD_KIND`, `PART_MARKERS`, parser, ranking, or eligibility changes; no merge/deployment; `main` remains untouched.
+
+
+## Follow-up — service-title co-offer counterexample (2026-10-24)
+
+- Test-only commit [a66e7001](https://github.com/Nimadanesh/shakar/commit/a66e7001b6de35618bd4582b11de9d11bdcdc04c) adds a conservative offer-cue requirement to the shadow co-offer helper and two synthetic controls: a service title (`تعویض دیسک ترمز و کاتالیزور فرسوده`) must not be accepted as a product co-offer; a clear `موجود` title can still pass without the word `فروش`.
+- Baseline [#178](https://github.com/Nimadanesh/shakar/actions/runs/40092192113) was queued when this note was written; validation is pending. Do not claim the new cases pass until its test steps finish.
+- This addresses one additional ambiguity in the synthetic prototype only. It does not solve principal-subject identification generally and does not provide a source-matched human-graded false-acceptance example. No production behavior change, merge, deployment, or `main` change.
