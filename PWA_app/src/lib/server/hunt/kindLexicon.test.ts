@@ -154,3 +154,33 @@ describe("Issue 16 — Capture 05F title-head characterization (evidence-only)",
     expect(kindGateRejects(queryKind, adKindForTitle("خرید فروش انواع کاتالیزور خارجی ایران فرسوده"))).toBeNull();
   });
 });
+
+describe("Issue 16 — Capture 05F supplement 02 title-head characterization (evidence-only)", () => {
+  it("records current item-head parsing for the seven newly graded source titles", () => {
+    // These assertions freeze observed behavior for the paired evaluation;
+    // they do not assert that the current outcomes are desirable.
+    expect(adKindForTitle("فروش موتور کامل پژو پراید نیسان سمند تیبا xu7 tu5")).toBeNull(); // S01, engine/components
+    expect(adKindForTitle("فروش فوری دنا پلاس توربو اتومات")).toBe("vehicle"); // S02, whole-vehicle sale
+    expect(adKindForTitle("تعمیر تخصصی کاتالیزور با ضمانت 1ساله")).toBe("service"); // S03, catalyst service
+    expect(adKindForTitle("خرید فروش کاتالیزور")).toBeNull(); // S04, transaction prefix blocks head parse
+    expect(adKindForTitle("فروش سپر جلوپنجره چراغ پراید پژو سمند ساینا کوئیک")).toBeNull(); // S05, parts; later vehicle names
+    expect(adKindForTitle("پارس1400 معاوضه (خریدار)خودرو تصادفی وچپیوکاردار")).toBeNull(); // S06, damaged whole-vehicle buyer
+    expect(adKindForTitle("فروش خرید انواع کاتالیزور خارجی ایران فرسوده")).toBeNull(); // S07, catalyst buying/selling
+  });
+
+  it("shows that unknown heads make the vehicle-category kind gate a no-op", () => {
+    const queryKind = queryKindForDef(["خرید", "و", "فروش", "خودرو"], false, "vehicles");
+    expect(queryKind).toBe("vehicle");
+    for (const title of [
+      "فروش موتور کامل پژو پراید نیسان سمند تیبا xu7 tu5",
+      "خرید فروش کاتالیزور",
+      "فروش سپر جلوپنجره چراغ پراید پژو سمند ساینا کوئیک",
+      "پارس1400 معاوضه (خریدار)خودرو تصادفی وچپیوکاردار",
+      "فروش خرید انواع کاتالیزور خارجی ایران فرسوده",
+    ]) {
+      expect(kindGateRejects(queryKind, adKindForTitle(title))).toBeNull();
+    }
+    // Known direct whole-vehicle title is classifiable and remains compatible.
+    expect(kindGateRejects(queryKind, adKindForTitle("فروش فوری دنا پلاس توربو اتومات"))).toBeNull();
+  });
+});
