@@ -107,3 +107,11 @@ For every meaningful experiment, record:
 - Denominator: 4; grade 1 = 4/4 (100%); no INSUFFICIENT items. Every item was weak/tangential or wrong transaction direction for its exact query.
 - This is E4 human judgment over a non-random supplemental retrieval sample, not E5 paired comparison, not a population precision estimate, and not evidence of ranking uplift. The barter target was absent from the bounded capture, so the existing human-graded sale/exchange control remains the positive control for that matrix cell.
 - Decision: no new regex, broad buyer cue, hard rejection, or ranking change from these four items. PR #28 remains draft/unmerged; `main` and deployment untouched.
+
+
+## E4 — Issue 16 Capture 06A: specific-part body-only candidates (2026-10-24)
+
+- Live capture [run #10](https://github.com/Nimadanesh/shakar/actions/runs/40096410639), artifact ID `12560808508`; query `کاتالیزور خودرو`, four source-backed body-only candidates, bounded to two list pages per retrieval query and four detail reads total.
+- Locked human grades: C01=2, C02=1, C03=2, C04=2; no note; denominator 4, no insufficient grades, mean 1.75/3. Human judgments are preserved separately from engine labels in [the human-grade record](evaluations/ISSUE16-CAPTURE-06A-HUMAN-GRADES.md); exact source IDs and original engine fields are joined in [the source map](evaluations/ISSUE16-CAPTURE-06A-SOURCE-MAP.md).
+- Source join integrity passed: all four blind codes map one-to-one to exact `listings[].sourceAdId` records in the original artifact. Engine rejected C03 (`gaODFbLY`) and C04 (`gaTnu9bU`) even though the human judged both grade 2. Preserve these as targeted false-rejection signals for follow-up; do not overwrite the human grades or generalize from this small sample.
+- Evidence is E4 over a bounded, non-random live sample, not E5 paired comparison and not a population precision estimate. No production source/ranking/eligibility/`HEAD_KIND` change, merge to `main`, or deployment is authorized.
