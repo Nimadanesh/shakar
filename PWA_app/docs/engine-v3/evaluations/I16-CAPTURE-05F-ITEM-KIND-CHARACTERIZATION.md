@@ -13,13 +13,15 @@ Why can a broad whole-vehicle hunt (`خرید و فروش خودرو`, category 
 Inspected current branch source:
 
 - `PWA_app/src/lib/server/hunt/kindLexicon.ts` (blob `4665b0d848fb1229250a508a73d3b4b64e62cc17`)
-- `PWA_app/src/lib/server/hunt/kindLexicon.test.ts` (blob `1da0fcfef7e307410bcf931d6fee5610b0d7f4ad`)
+- `PWA_app/src/lib/server/hunt/kindLexicon.test.ts` (current blob `adb9b2301248d3ee8ef590651796ee2063b3aa04`; includes the Issue 16 characterization assertions described below)
 - `PWA_app/src/lib/server/hunt/pipeline.ts` (blob `ce180f10b0055b4e3a05c300aa9866deefa85f33`)
 
-Current code path:
+The exact 05F source snapshots and raw engine outcomes were independently re-opened from Actions artifact `12552478200` (run [40075265983](https://github.com/Nimadanesh/shakar/actions/runs/40075265983), raw commit `5cfeff0e8ea70936839e674306566963b006eaf2`). The seven graded IDs and their titles/descriptions in that artifact match the internal-key and graded reports. The overlapping row `gapYR7Ug` is excluded from the graded fixture.
+
+## Current code path
 
 1. `queryKindForDef(include, serviceIntent, category)` checks the closed `HEAD_KIND` phrase lexicon, then uses the category bridge. For a vehicle-category hunt whose include phrase has no lexicon hit, the category bridge resolves the query kind to `vehicle`.
-2. `adKindForTitle(title)` only classifies the normalized title head after skipping a small list of sale cues. It returns `null` for unknown heads.
+2. `adKindForTitle(title)` classifies the normalized title head after skipping a small list of sale cues. It returns `null` for unknown heads.
 3. `kindGateRejects(queryKind, adKind, ...)` explicitly returns `null` when either side is unknown. This is an intentional anti-overfilter rule.
 4. The pipeline invokes the kind gate only after the listing has MUST evidence (`missingInfo.length === 0`). A null title-head kind therefore cannot structurally reject a wrong-kind ad; other semantic rules may still cap it, but lexical/MUST evidence can leave it eligible as `near`.
 
@@ -37,15 +39,26 @@ Current code path:
 
 “Unknown” in this table is a source-based prediction from the current title-head algorithm, not a claimed runtime trace. The human grades and engine outcomes are taken from the locked 05F report; no unseen listing text or grade has been reconstructed.
 
-## Falsifiable characterization fixture — next step
+## Characterization assertions already added
 
-Build a deterministic, source-grounded fixture before changing the lexicon or gate. It should assert the current classification and full pipeline verdict separately, so a future patch cannot pass by merely changing one layer.
+The current `kindLexicon.test.ts` now includes an Issue 16 section that asserts:
+
+- `فروش پراید` remains classifiable as `vehicle`.
+- The seven source-matched 05F titles currently classify as unknown at the title-head layer.
+- The vehicle-category fallback resolves the broad query kind to `vehicle`.
+- Unknown ad kinds for the B01 and B03 title examples produce no kind-gate verdict.
+
+These are characterization assertions of current behavior, **not** the desired future behavior. They do not execute the full pipeline against immutable listing snapshots and do not prove a fix. Test execution has **not** been verified in this session; no test pass is claimed.
+
+## Falsifiable full-pipeline fixture — next step
+
+A deterministic, source-grounded fixture is still required before changing the lexicon or gate. It should assert the current classification and full pipeline verdict separately, so a future patch cannot pass by merely changing one layer.
 
 ### A. Whole-vehicle positives (must remain eligible)
 
 - Direct whole-car sale: `فروش پراید` → `adKindForTitle = vehicle`.
-- Damaged whole-vehicle buyer/exchange: use the exact source-matched B02 title/body from the internal key; it must remain eligible for the broad hunt.
-- Dealer whole-vehicle offer/exchange: use the exact source-matched B07 title/body; it must remain eligible.
+- Damaged whole-vehicle buyer/exchange: exact source-matched B02 title/body from the raw artifact; it must remain eligible for the broad hunt.
+- Dealer whole-vehicle offer/exchange: exact source-matched B07 title/body; it must remain eligible.
 
 ### B. Wrong-kind negatives (should not be primary whole-vehicle results)
 
@@ -63,7 +76,7 @@ Build a deterministic, source-grounded fixture before changing the lexicon or ga
 
 ### Acceptance gate
 
-1. Pin exact source IDs, titles, and the available immutable descriptions before coding; keep internal IDs out of the blind packet.
+1. Pin exact source IDs, titles, and available immutable descriptions before coding; keep internal IDs out of the blind packet.
 2. Record current `queryKind`, `adKindForTitle`, gate verdict, semantic verdict, and final pipeline verdict for every fixture row.
 3. Verify the paired positives and negatives against the locked human grades; unknown kind must not silently become a hard rejection.
 4. If source snapshots are incomplete, report the gap instead of recreating ad descriptions from memory.
