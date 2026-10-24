@@ -308,16 +308,26 @@ function shadowSpecificSubjectVerdict(
   );
   if (knownTitleSubjects.length === 0) return "unknown";
 
-  // A direct target mention in the title is not enough by itself: require an
-  // explicit co-offer connector between the target and a different known part.
-  const hasTargetInTitle = normalizedTitle.includes(target);
-  const hasOtherPart = knownTitleSubjects.some(
-    (subject) => normalizeForMatch(subject) !== target
-  );
-  const explicitCoOffer =
-    hasTargetInTitle &&
-    hasOtherPart &&
-    /(?: و | همراه با | به همراه | به‌همراه )/.test(` ${normalizedTitle} `);
+  // A direct target mention is not enough. Require a connector located
+  // between two non-overlapping known part mentions; an unrelated "و" elsewhere
+  // in the title must not turn two mentions into an explicit co-offer.
+  const targetStart = normalizedTitle.indexOf(target);
+  const hasTargetInTitle = targetStart >= 0;
+  const targetEnd = targetStart + target.length;
+  const explicitCoOffer = hasTargetInTitle && knownTitleSubjects.some((subject) => {
+    const other = normalizeForMatch(subject);
+    if (other === target) return false;
+    const otherStart = normalizedTitle.indexOf(other);
+    if (otherStart < 0) return false;
+    const otherEnd = otherStart + other.length;
+    // Overlapping aliases (e.g. "دیسک" inside "دیسک ترمز") are one
+    // mention, not evidence that two different items are co-offered.
+    if (targetStart < otherEnd && otherStart < targetEnd) return false;
+    const between = targetEnd <= otherStart
+      ? normalizedTitle.slice(targetEnd, otherStart)
+      : normalizedTitle.slice(otherEnd, targetStart);
+    return /^(?:\\s*و\\s*|\\s*همراه با\\s*|\\s*به همراه\\s*|\\s*به‌همراه\\s*)$/.test(between);
+  });
 
   if (explicitCoOffer) return "allow";
 
@@ -432,6 +442,28 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
         "هر دو قطعه موجود است"
       )
     ).toBe("allow");
+  });
+
+  it("does not mistake an unrelated conjunction elsewhere in the title for a part co-offer", () => {
+    // Synthetic adversarial case: "و" connects service wording, not the two parts.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "فروش و خدمات دیسک ترمز، کاتالیزور در صورت نیاز",
+        "اطلاعات بیشتر تماس بگیرید"
+      )
+    ).toBe("reject");
+  });
+
+  it("does not count an overlapping short/long marker as two co-offered parts", () => {
+    // Synthetic adversarial case: "دیسک" is contained in "دیسک ترمز".
+    expect(
+      shadowSpecificSubjectVerdict(
+        "دیسک",
+        "فروش دیسک ترمز و کاتالیزور",
+        "فروش قطعات خودرو"
+      )
+    ).toBe("reject");
   });
 
   it("leaves an unknown principal subject as unknown rather than hard-rejecting", () => {
