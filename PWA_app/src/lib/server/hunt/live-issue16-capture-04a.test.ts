@@ -84,34 +84,39 @@ const previouslyInspectedIds = new Set([
       // Exclude every listing opened in the first, invalid-context Capture 04 attempt.
       "gaEbOtwX", "gaXy6CJ8", "gaRDeA35", "gacDldw5", "gaDn0jsk", "ga6WBlxy", "gaDZ88Mm", "gaaHGbGp",
       "gaTzFnuN", "gacHlCAO", "gaU33g50", "QaorO0r9", "gaa9oSP6", "ga-x6Euu", "gaTTRdcp", "gaXzUyYo",
+      // Exclude every listing inspected in the same-query Capture 04 attempt.
+      "gawRFk9i", "gacfUjkL", "gaTTl0z-", "gabDsiQo", "gaczT30z", "gaPXd9Pv",
+      "gaYr2XQZ", "gaUDI9Xs", "gaoK-BMS", "gacHFp_T",
       // IDs from earlier bounded diagnostic captures; exclude across future packets.
 
 ]);
+function resolve(query:string,category:string){return resolveHuntDefinition({query,include:[],exclude:[],should:[],city:"all",category,priceMin:"",priceMax:"",transaction:"",condition:""});}
 
-function cellsFor(title:string):string[]{const t=normalizeForMatch(title);const role=roleCue(title);const appliance=/یخچال|فریزر|ساید/.test(t);const part=/موتور|کمپرسور|قطعه|قطعات/.test(t);const service=/تعمیر|خدمات|سرویس|تعمیرکار/.test(t);
- const cells:string[]=[];
- if(appliance&&!part&&!service&&role==="buyer")cells.push("buyer-positive");
- if(appliance&&!part&&!service&&role==="mixed")cells.push("mixed-positive");
- if(appliance&&!part&&!service&&role==="seller")cells.push("seller-positive");
- if(appliance&&!part&&!service&&role==="other")cells.push("ordinary-appliance-positive");
- if(appliance&&part&&!service)cells.push("part-only-negative");
- if(appliance&&service)cells.push("service-only-negative");
- if(!appliance&&!part&&!service)cells.push("unrelated-negative");
- return cells;}
-it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 04A — appliance eligibility in one fixed broad hunt",async()=>{
- const query="خرید و فروش یخچال";const category="home";const reportPath=join(process.cwd(),"engine-v3-issue16-capture-04a.json");
- const oldBuffer=process.env.SLUG_CAPTURE_BUFFER_PATH;const oldCap=process.env.HUNT_MAX_DETAILS;process.env.SLUG_CAPTURE_BUFFER_PATH=join(process.env.RUNNER_TEMP??process.cwd(),"engine-v3-issue16-capture-04a-slugs.jsonl");process.env.HUNT_MAX_DETAILS="8";
- try{
-  const def=resolveHuntDefinition({query,include:[],exclude:[],should:[],city:"all",category,priceMin:"",priceMax:"",transaction:"",condition:""});expect(def).not.toBeNull();if(!def)return;
-  const events:HuntEvent[]=[];const {candidates,stats,endCursor}=await collectCandidates(def,{maxPages:2,emit:e=>events.push(e)});
-  const overlap=new Set<string>();const pool=candidates.filter(c=>{if(previouslyInspectedIds.has(c.sourceAdId)){overlap.add(c.sourceAdId);return false;}return true;});
-  const desired=["buyer-positive","buyer-positive","mixed-positive","seller-positive","ordinary-appliance-positive","part-only-negative","service-only-negative","unrelated-negative"];
-  const selected:typeof candidates=[];const labels:string[]=[];
-  for(const cell of desired){const match=pool.find(c=>!selected.some(x=>x.sourceAdId===c.sourceAdId)&&cellsFor(c.title).includes(cell));if(match){selected.push(match);labels.push(cell);}}
-  const scored=await confirmCandidates(selected,def,stats,()=>{});
-  const rejected=new Map(stats.rejectedSample.flatMap(x=>x.sourceAdId?[[x.sourceAdId,x] as const]:[]));const scoredMap=new Map(scored.map(x=>[x.sourceAdId,x] as const));
-  const listings=selected.map((c,i)=>{const hit=scoredMap.get(c.sourceAdId);const rej=rejected.get(c.sourceAdId);const description=hit?.descAuditText??rej?.descAuditText??"";return {cell:labels[i],sourceAdId:c.sourceAdId,title:c.title,descriptionSnapshot:description,descriptionSnapshotAvailable:!!description,roleCue:roleCue(c.title),eligible:!!hit,matchKind:hit?.matchKind??(rej?"rejected":"unknown"),score:hit?.score??null,evidence:hit?.evidence??[],missingInfo:hit?.missingInfo??[],detailUnknown:hit?.detailUnknown??!description,rejectedKind:rej?.kind??null};});
-  const report={kind:"issue16-retargeted-capture-04A-eligibility",warning:"Single fixed broad hunt; raw live diagnostics only, not human grades. Missing cells are not substituted.",createdAt:new Date().toISOString(),branch:process.env.GITHUB_REF_NAME??"local",commit:process.env.GITHUB_SHA??"local",runtime:process.version,query,requestedCategory:category,limits:{maxPagesPerQuery:2,maxDetailsTotal:8,detailsChecked:stats.detailsChecked,uniqueListingIds:selected.length,overlapWithPreviouslyInspected:[...overlap],missingCells:desired.filter((c,i)=>desired.slice(0,i+1).filter(x=>x===c).length>labels.filter(x=>x===c).length),mizanShadow:process.env.MIZAN_SHADOW??"default"},resolved:{include:def.include,exclude:def.exclude,should:def.should,roleMode:def.roleMode??null,serviceIntent:def.serviceIntent??false,category:def.category},retrieval:{pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,cursorReturned:endCursor!=null},listings};
-  await writeFile(reportPath,JSON.stringify(report,null,2),"utf8");console.log("ISSUE16_CAPTURE_04A_JSON_BEGIN");console.log(JSON.stringify(report,null,2));console.log("ISSUE16_CAPTURE_04A_JSON_END");
- }finally{if(oldBuffer===undefined)delete process.env.SLUG_CAPTURE_BUFFER_PATH;else process.env.SLUG_CAPTURE_BUFFER_PATH=oldBuffer;if(oldCap===undefined)delete process.env.HUNT_MAX_DETAILS;else process.env.HUNT_MAX_DETAILS=oldCap;}
+function isCell(cell:string,title:string):boolean{const t=normalizeForMatch(title);const role=roleCue(title);const appliance=/یخچال|فریزر|ساید/.test(t);const part=/موتور|کمپرسور|قطعه|قطعات/.test(t);const service=/تعمیر|خدمات|سرویس|تعمیرکار/.test(t);
+ if(cell==="buyer-positive")return appliance&&!part&&!service&&role==="buyer";
+ if(cell==="mixed-positive")return appliance&&!part&&!service&&role==="mixed";
+ if(cell==="seller-positive")return appliance&&!part&&!service&&role==="seller";
+ if(cell==="ordinary-appliance-positive")return appliance&&!part&&!service&&role==="other";
+ if(cell==="part-only-negative")return appliance&&part&&!service;
+ if(cell==="service-only-negative")return appliance&&service;
+ if(cell==="unrelated-negative")return !appliance&&!part&&!service;
+ return false;}
+it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 04A — score targeted controls under one fixed broad refrigerator hunt",async()=>{
+ const targetQuery="خرید و فروش یخچال";const category="home";const targetDef=resolve(targetQuery,category);expect(targetDef).not.toBeNull();if(!targetDef)return;
+ const scenarios=[{id:"buyer-1",query:"خریدار یخچال دست دوم",cell:"buyer-positive"},{id:"buyer-2",query:"خریدار یخچال سوخته",cell:"buyer-positive"},{id:"mixed",query:"خرید و فروش یخچال",cell:"mixed-positive"},{id:"seller",query:"فروش یخچال دست دوم",cell:"seller-positive"},{id:"ordinary",query:"فروش یخچال",cell:"ordinary-appliance-positive"},{id:"part",query:"فروش موتور یخچال",cell:"part-only-negative"},{id:"service",query:"تعمیر یخچال",cell:"service-only-negative"},{id:"unrelated",query:"خریدار لوازم منزل",cell:"unrelated-negative"}] as const;
+ const reportPath=join(process.cwd(),"engine-v3-issue16-capture-04a.json");const oldBuffer=process.env.SLUG_CAPTURE_BUFFER_PATH;const oldCap=process.env.HUNT_MAX_DETAILS;process.env.SLUG_CAPTURE_BUFFER_PATH=join(process.env.RUNNER_TEMP??process.cwd(),"engine-v3-issue16-capture-04a-slugs.jsonl");process.env.HUNT_MAX_DETAILS="8";
+ const seen=new Set<string>();const overlap=new Set<string>();const listings:Array<Record<string,unknown>>=[];const reports:Array<Record<string,unknown>>=[];let detailsUsed=0;
+ try{for(const sc of scenarios){if(detailsUsed>=8){reports.push({id:sc.id,status:"budget-exhausted",cell:sc.cell});continue;}
+  const retrievalDef=resolve(sc.query,category);expect(retrievalDef).not.toBeNull();if(!retrievalDef)continue;
+  const events:HuntEvent[]=[];const {candidates,stats,endCursor}=await collectCandidates(retrievalDef,{maxPages:2,emit:e=>events.push(e)});
+  const pool=candidates.filter(c=>{if(previouslyInspectedIds.has(c.sourceAdId)){overlap.add(c.sourceAdId);return false;}if(seen.has(c.sourceAdId))return false;return true;});
+  const selected=pool.find(c=>isCell(sc.cell,c.title));
+  if(!selected){reports.push({id:sc.id,query:sc.query,status:"missing-cell",cell:sc.cell,retrieval:{pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length}});continue;}
+  seen.add(selected.sourceAdId);const scored=await confirmCandidates([selected],targetDef,stats,()=>{});detailsUsed+=stats.detailsChecked;
+  const hit=scored.find(x=>x.sourceAdId===selected.sourceAdId);const rej=stats.rejectedSample.find(x=>x.sourceAdId===selected.sourceAdId);const description=hit?.descAuditText??rej?.descAuditText??"";
+  listings.push({cell:sc.cell,sourceAdId:selected.sourceAdId,retrievalQuery:sc.query,targetQuery,title:selected.title,descriptionSnapshot:description,descriptionSnapshotAvailable:!!description,roleCue:roleCue(selected.title),eligible:!!hit,matchKind:hit?.matchKind??(rej?"rejected":"unknown"),score:hit?.score??null,evidence:hit?.evidence??[],missingInfo:hit?.missingInfo??[],detailUnknown:hit?.detailUnknown??!description,rejectedKind:rej?.kind??null});
+  reports.push({id:sc.id,query:sc.query,status:"captured",cell:sc.cell,retrieval:{maxPages:2,pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,cursorReturned:endCursor!=null,detailsChecked:stats.detailsChecked}});
+ }}finally{if(oldBuffer===undefined)delete process.env.SLUG_CAPTURE_BUFFER_PATH;else process.env.SLUG_CAPTURE_BUFFER_PATH=oldBuffer;if(oldCap===undefined)delete process.env.HUNT_MAX_DETAILS;else process.env.HUNT_MAX_DETAILS=oldCap;}
+ const desired=scenarios.map(x=>x.cell);const report={kind:"issue16-retargeted-capture-04A-eligibility",warning:"Target contract is fixed to the broad refrigerator buy/sell hunt. Targeted queries only retrieve controls; all candidates are scored against targetQuery. Raw evidence only, not human grades.",createdAt:new Date().toISOString(),branch:process.env.GITHUB_REF_NAME??"local",commit:process.env.GITHUB_SHA??"local",runtime:process.version,targetQuery,requestedCategory:category,limits:{maxPagesPerRetrievalQuery:2,maxDetailsTotal:8,detailsUsed,uniqueListingIds:seen.size,overlapWithPreviouslyInspected:[...overlap],missingCells:desired.filter((c,i)=>desired.slice(0,i+1).filter(x=>x===c).length>listings.filter(x=>x.cell===c).length),mizanShadow:process.env.MIZAN_SHADOW??"default"},targetResolved:{include:targetDef.include,exclude:targetDef.exclude,should:targetDef.should,roleMode:targetDef.roleMode??null,serviceIntent:targetDef.serviceIntent??false,category:targetDef.category},scenarios:reports,listings};
+ await writeFile(reportPath,JSON.stringify(report,null,2),"utf8");console.log("ISSUE16_CAPTURE_04A_JSON_BEGIN");console.log(JSON.stringify(report,null,2));console.log("ISSUE16_CAPTURE_04A_JSON_END");
 },180_000);
