@@ -455,3 +455,10 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Frozen four-item owner review: [blind packet](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md). Separate [internal key](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-INTERNAL-KEY.md) is already committed after the blind packet. Wait for owner grades and record them separately before diagnostic join.
 - Next action: ask owner for F16-01 through F16-04 grades and brief reasons. Until then, no grade comparison or quality conclusion. After grades, create a third immutable grade file, then reconcile against the key. Do not change buyer role, voucher semantics, kind gate, or ranking from this small sample.
 - PR #41 remains Draft and unmerged. `main` and `engine_v3` remain unchanged; no deployment.
+
+## Cross-cell grades received — 2026-10-24
+
+- Locked owner grades: [cross-cell human grades](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-HUMAN-GRADES.md). Reconciliation: [cross-cell reconciliation](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-RECONCILIATION.md).
+- All four items were graded 3/3. F16-02 (`معاوضه خودرو`) is the only engine/human mismatch: human grade 3, engine `near` / 1.5. Treat this as a follow-up hypothesis only, not a rule change.
+- This is positive-heavy E4 evidence from a bounded convenience sample, not E5 and not a population estimate. Buyer-fridge, vehicle-cash, and vehicle-installment cells remain missing.
+- Next: keep PR #41 Draft; seek fresh exchange positive/negative controls and fixed-candidate comparison if feasible. No source/ranking change, merge, or deployment; `main` and `engine_v3` untouched.
