@@ -7,6 +7,11 @@ on:
       - "PWA_app/src/lib/server/hunt/issue16-shadow-kind.test.ts"
       - "PWA_app/src/lib/server/hunt/kindLexicon.test.ts"
   workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Branch or commit to test (e.g. experiment/issue16-capture04-20261024)"
+        required: true
+        default: "engine_v3"
 
 permissions:
   contents: read
@@ -25,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || inputs.target_ref || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
