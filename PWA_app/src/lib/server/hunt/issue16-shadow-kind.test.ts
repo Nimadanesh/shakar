@@ -205,7 +205,7 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
   });
 
   it("characterizes production-versus-shadow outcomes for frozen role-prefixed titles", () => {
-    const cases: Array<{ id: string; title: string; candidate: string }> = [
+    const cases: Array<{ id: string; title: string; candidate: string | null }> = [
       {
         id: "05F-B01 catalyst inventory",
         title: "خرید فروش انواع کاتالیزور خارجی ایران فرسوده",
@@ -219,7 +219,7 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
       {
         id: "05F-B07 whole-vehicle dealer",
         title: "فردا موتور FMC511/صفر و خشک برج روز/نمایندگی",
-        candidate: null as unknown as string,
+        candidate: null,
       },
       {
         id: "05F-B02 buyer-seeking vehicle",
