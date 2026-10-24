@@ -126,14 +126,17 @@ const idsFromRecentCaptures = [
  "gaUTKxZ6","ga5KkOrN","gauW_tpf","gaLrFFB1","gaPvRl88","gaZnu0t_","gaT3FZE5","QZhvyaLi",
  "gaT_9Tmj","gac7VDBQ","QanNEG_8",
  // Source IDs actually opened in Capture 06A run 8; never reuse them.
- "gaNWVCNg","ga0ujTj5","Qa7VnXMI","gac3oiQx","gammdA01","gaNTLxd5"
+ "gaNWVCNg","ga0ujTj5","Qa7VnXMI","gac3oiQx","gammdA01","gaNTLxd5",
+ // Source IDs actually opened in Capture 06A run 9; never reuse them.
+ "Qad2FY4b","gakKPX6R","gaCF0xHF","QaTXVmJj","gaZ_C25X","gaMX7t8J"
 ];
 for (const id of idsFromRecentCaptures) previouslyInspectedIds.add(id);
 
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-part body-only false-acceptance candidates",async()=>{
  const targetQuery="کاتالیزور خودرو"; const category="vehicles"; const targetDef=resolve(targetQuery,category);
  expect(targetDef).not.toBeNull(); if(!targetDef)return;
- const retrievalQueries=["فروش دیسک ترمز","فروش لنت ترمز","فروش باتری خودرو","فروش گیربکس"];
+ // Combine the hunted part with a different title-head part so retrieval can surface body-only mentions.
+ const retrievalQueries=["کاتالیزور لنت ترمز","کاتالیزور دیسک ترمز","کاتالیزور باتری خودرو","کاتالیزور گیربکس"];
  const reportPath=join(process.cwd(),"engine-v3-issue16-capture-06a.json");
  const oldBuffer=process.env.SLUG_CAPTURE_BUFFER_PATH; const oldCap=process.env.HUNT_MAX_DETAILS;
  process.env.SLUG_CAPTURE_BUFFER_PATH=join(process.env.RUNNER_TEMP??process.cwd(),"engine-v3-issue16-capture-06a-slugs.jsonl");
