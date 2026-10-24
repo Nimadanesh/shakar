@@ -226,14 +226,16 @@ describe("Issue 16 — source-backed secondary-part marker controls (test-only)"
     expect(result.mismatch).toBe(false);
   });
 
-  it("still rejects the B04 body-parts inventory when a part marker leads the subject", () => {
-    // Frozen source snapshot: I16-CAPTURE-05F-FRESH-SUBSET-BLIND.md H05F-B04,
-    // human grade 1. This paired negative must not be relaxed by the D05
-    // positive: «بدنه» is the offering before the vehicle model names.
-    const title = "فروش بدنه استوک فابریک پژو، پراید، تیبا، دنا، سمند";
+  it("still rejects the B03 parts-only inventory when an existing part marker leads the subject", () => {
+    // Frozen source snapshot: I16-CAPTURE-05F-FRESH-SUBSET-BLIND.md H05F-B03,
+    // human grade 1. «چراغ» is an existing PART_MARKERS entry before the
+    // vehicle model name in the body, so this is a true paired marker control.
+    const title = "بدنه کاپوت گلگیر سپر چراغ قیمت عمده";
+    const listingText =
+      `${title} پخش قطعات بدنه محصولات سایپا و ایران خودرو کاپوت پراید گلگیر پراید روکش در پراید`;
     const result = assessModelSpecificity(
       ["پراید"],
-      title,
+      listingText,
       "vehicles",
       "vehicle",
       "پراید",
