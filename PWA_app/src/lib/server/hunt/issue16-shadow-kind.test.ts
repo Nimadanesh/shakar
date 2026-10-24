@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeForMatch } from "@/lib/persianNormalize";
 import { adKindForTitle, kindGateRejects, queryKindForDef } from "./kindLexicon";
+import { assessModelSpecificity } from "./semantics";
 
 /**
  * Issue 16 shadow experiment ONLY.
@@ -124,6 +125,50 @@ describe("Issue 16 — candidate transaction-role / principal-item shadow parser
   it("does not turn transaction role itself into item kind", () => {
     expect(shadowAdKindForTitle("ماشین لباسشویی پاکشوما")).toBe("appliance");
     expect(shadowAdKindForTitle("خریدار خودرو تصادفی")).toBe("vehicle");
+    expect(shadowAdKindForTitle("لاستیک تیبا معاوضه با پراید")).toBe("vehicle-part");
+    expect(kindGateRejects(queryKind, shadowAdKindForTitle("لاستیک تیبا معاوضه با پراید"))?.tier).toBe("reject");
+  });
+});
+
+
+describe("Issue 16 — three-reader counter-risk (test-only)", () => {
+  it("shows a candidate part kind can broaden same-kind marker skipping on a specific-part hunt", () => {
+    // Today, because «کاتالیزور» is not in HEAD_KIND, category fallback says
+    // vehicle. If it were added as vehicle-part, queryKindForDef would resolve
+    // the direct hunt to vehicle-part. The marker guard then treats *all*
+    // vehicle-part markers as compatible siblings, not just the hunted part.
+    expect(queryKindForDef(["کاتالیزور"], false, "vehicles")).toBe("vehicle");
+
+    const currentKind = assessModelSpecificity(
+      ["کاتالیزور"],
+      "لنت و کاتالیزور پراید",
+      "vehicles",
+      "vehicle",
+      "کاتالیزور",
+      "لنت و کاتالیزور پراید"
+    );
+    const hypotheticalBroadPartKind = assessModelSpecificity(
+      ["کاتالیزور"],
+      "لنت و کاتالیزور پراید",
+      "vehicles",
+      "vehicle-part",
+      "کاتالیزور",
+      "لنت و کاتالیزور پراید"
+    );
+
+    expect(currentKind.mismatch).toBe(true);
+    expect(currentKind.tier).toBe("reject");
+    // This assertion records the counter-risk; it is not an endorsed outcome.
+    expect(hypotheticalBroadPartKind.mismatch).toBe(false);
+  });
+
+  it("keeps role-prefix parsing separate from the item-kind dictionary", () => {
+    const title = "خرید فروش کاتالیزور";
+    expect(adKindForTitle(title)).toBeNull();
+    expect(shadowAdKindForTitle(title)).toBe("vehicle-part");
+
+    // The whole-car positive and tire-only negative remain role-independent.
+    expect(shadowAdKindForTitle("کارشناسی وقیمت گذاری خودرو تصادفی وخریدار تصادفی")).toBe("vehicle");
     expect(shadowAdKindForTitle("لاستیک تیبا معاوضه با پراید")).toBe("vehicle-part");
     expect(kindGateRejects(queryKind, shadowAdKindForTitle("لاستیک تیبا معاوضه با پراید"))?.tier).toBe("reject");
   });
