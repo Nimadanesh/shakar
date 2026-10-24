@@ -447,3 +447,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Added [Issue 16 controlled role matrix](evaluations/BRH-2026-10-24-ISSUE16-ROLE-MATRIX.md), explicitly marking missing controls rather than assuming historical observations are usable.
 - Current-head regression workflow [40063098453](https://github.com/Nimadanesh/shakar/actions/runs/40063098453) passed; cross-category capture [40063098439](https://github.com/Nimadanesh/shakar/actions/runs/40063098439) succeeded but remains diagnostic-only.
 - Next: bounded capture with inspected-ID exclusions, blind packet frozen before key review, owner grades locked, then diagnostic join. Prefer same-candidate old/new comparison before any ranking/role proposal. No role or ranking changes authorized; PR #41 Draft/unmerged; `main` and deployment untouched.
+
+## Latest handoff — fresh cross-cell blind review (2026-10-24)
+
+- All three latest workflows passed on the experiment PR: [kind regression #40063359204](https://github.com/Nimadanesh/shakar/actions/runs/40063359204), [Follow-up 03 capture #40063359140](https://github.com/Nimadanesh/shakar/actions/runs/40063359140), and [cross-category capture #40063359355](https://github.com/Nimadanesh/shakar/actions/runs/40063359355).
+- Captured fresh evidence within the existing read-only budgets. Buyer-fridge, vehicle-cash, and vehicle-installment cells were not found; do not describe them as covered.
+- Frozen four-item owner review: [blind packet](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md). Separate [internal key](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-INTERNAL-KEY.md) is already committed after the blind packet. Wait for owner grades and record them separately before diagnostic join.
+- Next action: ask owner for F16-01 through F16-04 grades and brief reasons. Until then, no grade comparison or quality conclusion. After grades, create a third immutable grade file, then reconcile against the key. Do not change buyer role, voucher semantics, kind gate, or ranking from this small sample.
+- PR #41 remains Draft and unmerged. `main` and `engine_v3` remain unchanged; no deployment.
