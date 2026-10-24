@@ -560,5 +560,5 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 
 - Added a test-only paired characterization over frozen 05F titles: B01 catalyst inventory, B04 body-parts inventory, B07 dealer/unknown head, B02 buyer-seeking vehicle, and D08 exhaust/catalyst inventory.
 - The test asserts current production `adKindForTitle` returns unknown for these role-prefixed titles, while the isolated shadow parser classifies known part heads as `vehicle-part`, the buyer-seeking vehicle as `vehicle`, and the unknown dealer as null. This deliberately separates item kind from transaction role.
-- The test does not change the production parser or role assessment. Baseline #173 was triggered on test commit `85cd0c40a75963a73ac3ce809441e5a94cfaef0d`; validation pending: https://github.com/Nimadanesh/shakar/actions/runs/40090415120
+- The test does not change the production parser or role assessment. Baseline #173 on commit `f020a45a3afbeb008c89a94e1ae6a14fa2fbaa46` is in progress: https://github.com/Nimadanesh/shakar/actions/runs/40090483865. A follow-up type-only cleanup commit `85cd0c40a75963a73ac3ce809441e5a94cfaef0d` has queued Baseline #174: https://github.com/Nimadanesh/shakar/actions/runs/40090490072.
 - No production logic, merge, deployment, or `main` change.
