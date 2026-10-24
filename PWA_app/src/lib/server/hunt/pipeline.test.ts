@@ -2748,6 +2748,31 @@ describe("Issue 16 — source-pinned whole-vehicle item-kind characterization (C
       },
     ];
 
+      {
+        sourceAdId: "I16-D02",
+        title: "فروش فوری اقساطی تویوتا/بیمه گارانتی/سندبنام شما",
+        description: "عاملیت فروش خودروهای وارداتی، مونتاژی و ایرانی؛ تحویل فوری، خرید اقساطی، گارانتی و انتخاب مدل و رنگ دلخواه.",
+      },
+      {
+        sourceAdId: "I16-D03",
+        title: "فروش لوازم یدکی لیفان بدنه ، موتوری و جلوبندی",
+        description: "آریان یدک وارد کننده لوازم یدکی لیفان؛ قطعات موتوری، بدنه، جلو بندی خودروهای لیفان 620، x60، x50، 820،520؛ ارسال و خرید حضوری.",
+      },
+      {
+        sourceAdId: "I16-D05",
+        title: "دنا پلاس توربو اتومات بدون رنگ 1400 فروش فوری",
+        description: "دنا پلاس توربو اتومات 1400 بدون رنگ کامل بدون ضربه شاسی جلو عقب پلمپ؛ ماشین دست خودم بوده و به دلیل نیاز مالی میفروشم.",
+      },
+      {
+        sourceAdId: "I16-D07",
+        title: "فروش اقساطی خودرو",
+        description: "فروش اقساطی تمامی خودروها؛ محصولات ایران خودرو، سایپا، مدیران خودرو، بهمن موتور و کرمان موتور؛ پیش‌پرداخت و اقساط بلندمدت.",
+      },
+      {
+        sourceAdId: "I16-D08",
+        title: "پخش انواع اگزوز.طرح تعویض کاتالیزورهای فرسوده",
+        description: "انواع اگزوز و کاتالیست ایرانی و خارجی؛ طرح تعویض کاتالیزورهای فرسوده با نو، ساخت اگزوز و خرید ضایعات کاتالیزور.",
+      },
     mockSearchLists.mockResolvedValueOnce({
       listings: rows.map(({ sourceAdId, title }) => summary({ sourceAdId, title })),
       hasMore: false,
@@ -2779,10 +2804,11 @@ describe("Issue 16 — source-pinned whole-vehicle item-kind characterization (C
       })
     );
 
-    // Baseline characterization observed in Capture 05F: all four wrong-kind
-    // catalyst/body/service rows survive as near; both grade-3 whole-vehicle
-    // transactions also survive as near; the grade-1 tire-only exchange is
-    // rejected. Future changes must pair improvements with these controls.
+    // Baseline characterization observed in Capture 05F and Capture 05D.
+    // Wrong-kind catalyst/body/service rows survive as near, except D03's
+    // parts-only listing is classified exact; whole-vehicle positives survive
+    // as near, while tire-only exchange and D08 catalyst/exhaust control reject.
+    // Future changes must pair improvements with these positive/negative controls.
     expect(outcomes).toEqual({
       "I16-B01": "near",
       "I16-B02": "near",
@@ -2791,6 +2817,11 @@ describe("Issue 16 — source-pinned whole-vehicle item-kind characterization (C
       "I16-B05": "near",
       "I16-B06": "rejected",
       "I16-B07": "near",
+      "I16-D02": "near",
+      "I16-D03": "exact",
+      "I16-D05": "near",
+      "I16-D07": "near",
+      "I16-D08": "rejected",
     });
   });
 });
