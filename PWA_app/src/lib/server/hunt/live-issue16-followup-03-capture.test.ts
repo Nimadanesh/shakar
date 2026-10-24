@@ -65,6 +65,11 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "engine-v3-issue16-followup-03-slugs.jsonl"
     );
 
+    const priorPacketIds = new Set([
+      "gab_aV8W", "gaLNJNwu", "ga4iPfzH", "gaPHaEfq", "gaRj-fI_", "gaqV1O58",
+      "galu34HS", "gavSad4q", "Qa4_oh_e", "gabPa811", "gaIL7h0B",
+      "gaYvJrs6", "wZcsAVgg", "gab7Jmnv", "gabLLuzd", "gaP28UXT",
+    ]);
     const globallySeen = new Set<string>();
     const reports: Array<Record<string, unknown>> = [];
     let detailsUsed = 0;
@@ -102,7 +107,14 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         });
 
         // Candidate selection is deterministic and prefers unseen source IDs.
-        const unused = candidates.filter((candidate) => !globallySeen.has(candidate.sourceAdId));
+        const unused = candidates.filter((candidate) => {
+          if (globallySeen.has(candidate.sourceAdId)) return false;
+          if (priorPacketIds.has(candidate.sourceAdId)) {
+            overlapWithPriorPackets.push(candidate.sourceAdId);
+            return false;
+          }
+          return true;
+        });
         const selected: typeof candidates = [];
         for (const cue of scenario.desired) {
           const match = unused.find((candidate) =>
