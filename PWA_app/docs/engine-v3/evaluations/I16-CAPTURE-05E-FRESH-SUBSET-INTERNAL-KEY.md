@@ -19,3 +19,16 @@ Only the five blind records in `I16-CAPTURE-05E-FRESH-SUBSET-BLIND.md` passed th
 - The two excluded 05E rows were `gaE35qnd` and `Qa53P1Rc`; both were also selected by the parallel 05D run.
 - This is a five-item valid subset, not a full eight-item packet. One planned whole-car cell was missing in retrieval, and the full 05E run remains invalid as a whole.
 - Raw diagnostics only; no human grades are inferred from engine output.
+
+
+## Human grades (received 2026-10-24)
+
+| Blind label | Human grade | Interpretation |
+|---|---:|---|
+| H05E-F01 | 3 | Whole-vehicle transaction-role positive: buying damaged vehicles is relevant to broad `خرید و فروش خودرو`. |
+| H05E-F02 | 1 | Catalyst-only listing; false positive for whole-vehicle hunt. |
+| H05E-F03 | 1 | Catalyst-only listing; false positive for whole-vehicle hunt. |
+| H05E-F04 | 1 | Catalyst repair/replacement service; wrong item/service kind for whole-vehicle hunt. |
+| H05E-F05 | 1 | Vehicle part/accessory (Pride bumper), not a whole vehicle. |
+
+Graded subset: 1 grade-3, 4 grade-1; mean grade 1.4/3. All five were engine-eligible and marked `near`. Among the four non-whole-vehicle records, all four were admitted as near-misses. This supports the observed wrong-kind eligibility problem across catalyst purchase/sale, catalyst service, and another vehicle part; it does not by itself establish the best implementation or population-wide error rate. Keep this evidence-only: no source/ranking changes authorized by these grades alone.
