@@ -416,3 +416,13 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Keep the two primary issues separate: (1) I16-R05, grade 3, rejected as appliance-not-home-goods; (2) I16-R03 and I16-R12, grade 1 each, catalyst listings retained for a whole-car hunt. The grade-3 near cases I16-R01/R06/R08 are a separate under-scoring signal.
 - Next: design two preregistered controlled tests with unseen IDs only, each with positive and negative controls; freeze the blinded packet before opening its key. No ranking or hard-rejection changes until failures repeat across independent ads and controls remain healthy.
 - PR #41 remains Draft/unmerged. Keep main untouched; no merge or deployment. Phase 1 remains active. Baseline status is not all-green: portable tests/typecheck/build are the relevant gates, while the known ESLint UI errors must be reported separately.
+
+
+## Current handoff — Issue 16 Capture 05F grades locked (2026-10-24)
+
+- Human grades are recorded in [I16-CAPTURE-05F-FRESH-SUBSET-GRADED.md](evaluations/I16-CAPTURE-05F-FRESH-SUBSET-GRADED.md); the source-ID/engine join is separate in [I16-CAPTURE-05F-FRESH-SUBSET-INTERNAL-KEY.md](evaluations/I16-CAPTURE-05F-FRESH-SUBSET-INTERNAL-KEY.md).
+- Locked grades: B01=1, B02=3, B03=1, B04=1, B05=1, B06=1, B07=3; mean 1.57/3. The blind packet remains unchanged.
+- Capture 05F repeats the wrong-item-kind symptom across catalyst listings, catalyst repair service, and body-parts inventory. A body-parts listing (B04) received engine score 2.8333/`near` but human grade 1. The whole-vehicle buyer/exchange and dealer controls (B02/B07) were grade 3 but engine `near`; preserve buyer-role behavior and do not conflate transaction direction with item kind.
+- B06 is a healthy negative control: tire-only exchange was rejected and human grade 1. Exclude source `gapYR7Ug` from analysis because it overlaps concurrent Capture 04B. The seven blind rows were freshness-reconciled; duplicate 05F workflow invocations are not independent samples.
+- Next technical step remains evidence-led characterization of the item-kind boundary, not a global keyword or buyer rule. Before any code change, inspect the current typed-kind/head-kind tests and design a small deterministic paired fixture covering (a) whole-vehicle sale/buyer positives, (b) part-only and service negatives, and (c) vehicle/part mentions in the opposite role or description. The evidence collection itself does not authorize a behavior change.
+- PR #42 remains Draft/open and unmerged; no engine/ranking change, merge, deployment, or `main` change. Keep Issue 16 evidence-only until the paired characterization is reviewed.
