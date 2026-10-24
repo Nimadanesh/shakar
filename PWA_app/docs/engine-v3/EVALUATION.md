@@ -191,3 +191,11 @@ See [Issue 16 controlled role matrix](evaluations/BRH-2026-10-24-ISSUE16-ROLE-MA
 - Locked grades: [cross-cell human grades](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-HUMAN-GRADES.md); post-grade join: [reconciliation](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-RECONCILIATION.md).
 - All four items received human grade 3. F16-02 (`معاوضه خودرو`) is the only mismatch: human 3, engine `near` / 1.5. This is a follow-up hypothesis, not sufficient evidence for a scoring change.
 - Positive-heavy convenience sample; E4, not E5 or a population estimate. Buyer-fridge, vehicle-cash, and vehicle-installment remain missing. PR #41 stays Draft; no merge/deploy; `main` untouched.
+
+## Exchange-capture targeting follow-up — 2026-10-24
+
+- Latest docs-head captures completed successfully on commit `8b2aff3cb3443aff0e5a374785183973dbbe5c25`: kind regression [40065914050](https://github.com/Nimadanesh/shakar/actions/runs/40065914050), Follow-up 03 [40065914069](https://github.com/Nimadanesh/shakar/actions/runs/40065914069), and cross-category [40065914086](https://github.com/Nimadanesh/shakar/actions/runs/40065914086). These reruns are not independent quality evidence.
+- The latest Follow-up 03 artifact used 7 details / 7 unique IDs under the fixed cap, but buyer-fridge, installment, and exchange cells remained missing. The latest cross-category artifact also contained a previously inspected catalytic-converter candidate and is diagnostic-only.
+- To improve retrieval targeting without changing search behavior, commit `7ee2274821f4b725807fa671ba5f014ddbda7a77` changes only the Follow-up 03 exchange query from `معاوضه خودرو` to `سمند معاوضه`. This is an experiment in the capture harness only; no engine/ranking/eligibility code changed.
+- No workflow run is currently associated with that commit through the available run lookup. Therefore the revised query is **not yet validated**, no new artifact or blind packet is authorized from it, and no human grade should be requested until a new bounded capture completes.
+- Next gate: get the revised bounded capture to run, inspect whether it finds a new whole-vehicle exchange listing, then freeze a blind packet before joining any new diagnostics. Keep all caps, exclusions, Mizan shadow off, and `productionRank=null`. No merge/deploy; `main` and `engine_v3` remain unchanged.
