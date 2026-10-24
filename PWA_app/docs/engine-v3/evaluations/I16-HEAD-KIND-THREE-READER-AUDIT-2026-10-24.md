@@ -145,3 +145,11 @@ After Baseline #175, two additional synthetic edge cases were added on the test-
 - A short marker embedded in a longer marker (e.g. `دیسک` within `دیسک ترمز`) must not count as a second, distinct co-offered part.
 
 The helper now checks whether the co-offer connector lies between non-overlapping part spans. These additions have **not yet been validated by a subsequent Baseline run**; the passing #175 counts apply to the earlier `e8353365` commit only. No production behavior changed. Next, run the focused and full portable suites on the latest test commit and inspect the result. Even if they pass, this remains a synthetic diagnostic policy, not a production-ready Persian subject parser.
+
+
+## Validation update — Baselines #176 and #177 (2026-10-24)
+
+- Baseline [#176](https://github.com/Nimadanesh/shakar/actions/runs/40091509616), on `866fcd2`, failed both focused and full portable test steps because the simultaneous-offer control returned `reject` instead of the intended `allow`. Typecheck and build passed; ESLint also failed separately.
+- Baseline [#177](https://github.com/Nimadanesh/shakar/actions/runs/40091527448), on `61ede4c9cde19c6ff8855b268b1be28c182e3c4b`, has the owner-reported result **327 focused tests passed and 920 full portable tests passed**. Both test steps, TypeScript typecheck, and production build passed; ESLint remains the separate workflow failure source. Do not call the entire workflow green.
+- The two added adversarial cases and the corrected explicit co-offer case are now test-validated on the latest source/test commit. This remains a synthetic test-local diagnostic, not a production parser and not evidence of real-world quality uplift.
+- Decision unchanged: no production `HEAD_KIND`, `PART_MARKERS`, parser, ranking, or eligibility changes; no merge/deployment; `main` remains untouched.
