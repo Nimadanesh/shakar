@@ -453,3 +453,11 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 ## Correction — validation workflow (2026-10-24)
 
 The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` was removed in commit `e2163611e297b2a8e86a24d56ff071337518b7cd` because no run was observed. The characterization tests remain unexecuted; no pass is claimed. PR #42 stays Draft and unmerged; no production behavior change, deployment, or `main` change.
+
+
+## Validation update — focused kind-lexicon suite passed (2026-10-24)
+
+- Updated `.github/workflows/engine-v3-issue16-capture05f.yml` to run `npx vitest run src/lib/server/hunt/kindLexicon.test.ts --reporter=verbose` before its bounded capture, and included that test file in the workflow path filter. This provides an automatic validation path instead of the removed temporary workflow.
+- On PR head commit `0439ceb71f234990cf54a52bcfea94a42eba4604`, GitHub Actions run [40077450054](https://github.com/Nimadanesh/shakar/actions/runs/40077450054) completed `npm ci` and the **kind-lexicon unit/characterization test step succeeded**. The overall workflow is not yet complete because the bounded 05F live capture is still running; therefore this is a focused test-step pass, not a claim that the whole workflow or full-pipeline fixture passed.
+- Updating PR #42 caused other pre-existing capture workflows whose path filters match the cumulative PR diff to start as well (runs 40077450012, 40077450018, 40077450020, 40077450044, 40077450077). Their observations are not independent samples and must not be merged into the existing graded evidence without artifact reconciliation.
+- Next: let the bounded runs reach terminal states, inspect only the relevant test step and reports, and then implement a source-grounded deterministic paired fixture. No production behavior change, merge, deployment, or `main` change. PR #42 remains Draft/open/unmerged.
