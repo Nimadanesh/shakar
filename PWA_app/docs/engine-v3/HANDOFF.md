@@ -555,3 +555,10 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - The GitHub job summary exposed step conclusions but not test counts, and downloadable job logs were unavailable in this session. Do not claim exact #172 test counts from this inspection.
 - The synthetic third-reader counterexample therefore passed the automated suites: it documents a mechanism-level false-acceptance risk if a direct part query is broadened to the shared `vehicle-part` kind. It is not a real listing or human-quality finding.
 - Next: do a bounded, read-only characterization of current production versus shadow outcomes for the frozen role-prefix titles (including `خرید فروش کاتالیزور`, `فروش لوازم یدکی...`, and `خریدار خودرو تصادفی`), keeping item-kind and transaction-role verdicts separate. No production change, merge, deployment, or `main` modification.
+
+## Issue 16 — frozen role-prefix parser characterization (2026-10-24)
+
+- Added a test-only paired characterization over frozen 05F titles: B01 catalyst inventory, B04 body-parts inventory, B07 dealer/unknown head, B02 buyer-seeking vehicle, and D08 exhaust/catalyst inventory.
+- The test asserts current production `adKindForTitle` returns unknown for these role-prefixed titles, while the isolated shadow parser classifies known part heads as `vehicle-part`, the buyer-seeking vehicle as `vehicle`, and the unknown dealer as null. This deliberately separates item kind from transaction role.
+- The test does not change the production parser or role assessment. Baseline #173 was triggered on test commit `85cd0c40a75963a73ac3ce809441e5a94cfaef0d`; validation pending: https://github.com/Nimadanesh/shakar/actions/runs/40090415120
+- No production logic, merge, deployment, or `main` change.
