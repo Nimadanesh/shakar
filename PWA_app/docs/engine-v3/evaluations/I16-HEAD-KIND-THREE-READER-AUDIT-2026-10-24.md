@@ -66,3 +66,11 @@ Decision remains unchanged: do not edit production `HEAD_KIND`, `PART_MARKERS`, 
 Baseline [#172](https://github.com/Nimadanesh/shakar/actions/runs/40090307284) completed on test commit `f60241139d96be2bba82e274ffdbab0a04ce93f4`. The focused suite, full portable suite, TypeScript typecheck, and production build passed; ESLint failed separately. Exact test counts were not available in the returned job summary, and the downloadable logs endpoint was unavailable, so this audit does not assert counts.
 
 The synthetic counterexample is now test-validated as a mechanism-level demonstration of the third-reader hazard. It does not change the evidence boundary or authorize production changes.
+
+
+## Validation update — role-prefix characterization Baselines #173 and #174 (2026-10-24)
+
+- Baseline [#173](https://github.com/Nimadanesh/shakar/actions/runs/40090483865) on `f020a45a3afbeb008c89a94e1ae6a14fa2fbaa46` and Baseline [#174](https://github.com/Nimadanesh/shakar/actions/runs/40090490072) on `85cd0c40a75963a73ac3ce809441e5a94cfaef0d` both completed with **320 focused tests passed** and **913 full portable tests passed**. Both runs have the same counts, each +2 focused and +2 full versus #171 (318 / 911).
+- Workflow job details confirm focused suite, full portable suite, TypeScript typecheck, and production build all passed in both runs. ESLint failed separately in both runs; overall workflow status remains failure due to lint, not test failure.
+- The test-only role-prefix characterization is validated. It documents the current production parser's unknown outcomes for the frozen role-prefixed titles alongside isolated shadow classifications. It does not establish that the shadow classifications are production-ready.
+- Decision unchanged: no production `HEAD_KIND` / `PART_MARKERS` edits, parser, ranking, or eligibility changes. Continue only with source-grounded diagnostic design and paired controls; no merge, deployment, or `main` modification.
