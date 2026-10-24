@@ -139,6 +139,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-pa
  const seen=new Set<string>(); const overlap=new Set<string>();
  const pool:Array<{candidate:any;stats:any;query:string}>=[];
  const queryReports:Array<Record<string,unknown>>=[];
+ const listings:Array<Record<string,unknown>>=[];
  let detailsUsed=0;
  try {
   for(const query of retrievalQueries) {
@@ -163,7 +164,6 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-pa
    }
    if(pool.length>=8)break;
   }
-  const listings:Array<Record<string,unknown>>=[];
   for(const entry of pool) {
    if(detailsUsed>=8)break;
    const {candidate,stats,query}=entry;
