@@ -163,3 +163,13 @@ A wider bounded read-only replay now completed 8/8 pages for `معاوضه سم�
 - All four surfaced ads are weak for their query: a buyer/dismantler-style refrigerator ad without exchange for `یخچال معاوضه`; two direct seller offers for `خریدار یخچال`; and a direct retailer for `یخچال معاوضه`. Sample is non-random, denominator 4, all grade 1.
 - This confirms a local result-quality problem in the selected sample, but does not isolate one shared classifier defect: the cases differ by transaction role and query mismatch. X01's slash/truncated wording is not enough evidence to expand the existing normalized `فروشگاه خریدار` cue. Do not add a global buyer cue or hard rejection from this packet.
 - The clean barter target was not retrieved within the bounded two-detail selection. Retain the existing human-graded sale/exchange control; avoid rerunning the same bounded path without a changed retrieval hypothesis. PR #28 remains draft/unmerged; no rank behavior, `main`, or deployment change.
+
+
+## Issue 16 — Retargeted Capture 03 grade-to-engine reconciliation (2026-10-24)
+
+- Durable human grades: [I16-RETARGETED-CAPTURE-03-HUMAN-GRADES.md](evaluations/I16-RETARGETED-CAPTURE-03-HUMAN-GRADES.md). The diagnostic/internal key remains separate.
+- Locked packet total: 32/36 across 12 scored items; ten grade 3 and two grade 1.
+- Eligibility false rejection: I16-R05 is a human grade 3 (buyer-seeking used refrigerator) but was rejected by the engine as `appliance-not-home-goods`. This is the strongest false-rejection witness in this packet. A shared family with other refrigerator/home-goods failures is only a hypothesis until independently reproduced with controlled examples.
+- Wrong item type retained: I16-R03 and I16-R12 are catalyst listings, both human grade 1, yet retained as eligible for a whole-car hunt. They are two independent witnesses to the same candidate error type, not separate failure families.
+- Separate under-scoring signal: I16-R01, I16-R06, and I16-R08 are human grade 3 while the engine labeled them `near`. Do not conflate this with the I16-R05 eligibility rejection or catalyst item-type error.
+- Gate: build a new frozen, blinded packet from unseen IDs only, with preregistered positive and negative controls for each of the two primary hypotheses. Keep hypotheses separate. No ranker change, hard rejection, or generalized rule until each pattern repeats across independent listings and controls remain healthy. Do not reuse IDs from prior packets or open the key before grades are locked.
