@@ -32,3 +32,11 @@ This is a design checklist, not a claim these fresh controls have been collected
 ## Decision
 
 No buyer-role, voucher semantics, whole-vehicle eligibility, catalytic-converter filtering, or ranking-score changes are authorized. Continue the narrow query-kind experiment only. Missing cells remain missing. PR #41 stays Draft; `main` and deployment remain untouched.
+
+## Latest bounded capture and regression status — 2026-10-24
+
+- On the PR's current tested head, [kind regression #40063359204](https://github.com/Nimadanesh/shakar/actions/runs/40063359204), [Follow-up 03 capture #40063359140](https://github.com/Nimadanesh/shakar/actions/runs/40063359140), and [cross-category capture #40063359355](https://github.com/Nimadanesh/shakar/actions/runs/40063359355) all completed successfully.
+- Follow-up 03 artifact `12548536646` used 7 details / 7 unique IDs within the configured budget, but missed refrigerator-buyer, vehicle-cash, and vehicle-installment cells. Some selected records had already been graded; those were excluded from the new blind packet.
+- Four fresh unique candidates are frozen in [cross-cell blind packet](BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md); the source/engine map is in the separate [internal key](BRH-2026-10-24-ISSUE16-CROSS-CELL-INTERNAL-KEY.md). Owner grades are pending. Do not open/join the key for a quality conclusion until grades are recorded in a separate third file.
+- This packet provides bounded E3 capture only until owner grades arrive (E4); it is not E5 paired comparison. It does not fill the missing buyer/cash/installment cells or establish general ranking quality.
+- PR #41 remains Draft/unmerged. No source/ranking behavior change, merge, or deployment is authorized.
