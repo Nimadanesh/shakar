@@ -27,6 +27,12 @@ describe("kindLexicon — R7 subject-kind gate (DeepSeek P1)", () => {
   it("query kinds", () => {
     expect(queryKindForDef(["ماشین"], false, "vehicles")).toBe("vehicle");
     expect(queryKindForDef(["ماشین", "لباسشویی"], false, "")).toBe("appliance");
+    // Sale modifier before the subject must not force the generic home fallback.
+    expect(queryKindForDef(["فروش", "یخچال"], false, "home")).toBe("appliance");
+    expect(queryKindForDef(["یخچال"], false, "home")).toBe("appliance");
+    // Existing intent precedence and unknown fallback stay unchanged.
+    expect(queryKindForDef(["تعمیر", "یخچال"], true, "")).toBe("service");
+    expect(queryKindForDef(["چیز", "عجیب"], false, "home")).toBe("home-goods");
     expect(queryKindForDef(["باطری", "ماشین"], false, "")).toBe("vehicle-part");
     expect(queryKindForDef(["کره", "بادوم", "زمینی"], false, "")).toBe("food-derived");
     expect(queryKindForDef(["تعمیر", "یخچال"], true, "")).toBe("service");
