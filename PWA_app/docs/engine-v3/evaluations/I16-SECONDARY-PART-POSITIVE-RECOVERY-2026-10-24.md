@@ -1,23 +1,30 @@
-# Issue 16 — Recovery of a source-backed secondary-part positive
+# Issue 16 — Recovery of source-backed secondary-part positives
 
 Date: 2026-10-24
 Branch: `engine_v3`
-Status: recovered from an already-frozen, human-graded source snapshot; not a new live capture.
+Status: recovered from already-frozen, human-graded source snapshots; no new live capture.
 
-## Recovered record
+## Strong direct control: whole vehicle with existing part markers
+
+- Blind packet: [I16-CAPTURE-05D-BLIND.md](./I16-CAPTURE-05D-BLIND.md), record D05.
+- Internal mapping: [I16-CAPTURE-05D-INTERNAL-KEY.md](./I16-CAPTURE-05D-INTERNAL-KEY.md), D05 → source ad `gacTnnuH`.
+- Human-graded reconciliation: [I16-CAPTURE-05D-GRADED.md](./I16-CAPTURE-05D-GRADED.md), D05 = grade 3.
+- Frozen title: `دنا پلاس توربو اتومات بدون رنگ 1400 فروش فوری`.
+- Frozen description includes: `کمک فنر عقب نو کمک فنر جلو تازه پیچی شده ... تایر جلو نو`.
+- This is a direct whole-vehicle sale (human grade 3) whose description mentions existing production part markers `کمک` and `تایر` as secondary vehicle features/maintenance details. It is the strongest recovered source-backed positive for checking that a clean whole-vehicle subject is not hard-rejected by part markers in the body.
+
+## Additional semantic control
 
 - Blind packet: [I16-CAPTURE-05F-SUPPLEMENT-02-BLIND.md](./I16-CAPTURE-05F-SUPPLEMENT-02-BLIND.md), record S02.
 - Internal mapping: [I16-CAPTURE-05F-SUPPLEMENT-02-INTERNAL-KEY.md](./I16-CAPTURE-05F-SUPPLEMENT-02-INTERNAL-KEY.md), S02 → source ad `gac3G6Ob`.
-- Human-graded reconciliation: [I16-CAPTURE-05F-SUPPLEMENT-02-GRADED.md](./I16-CAPTURE-05F-SUPPLEMENT-02-GRADED.md), S02 = grade 3.
-- The frozen title is `فروش فوری دنا پلاس توربو اتومات`. Its description includes: `ماشین زاپاس و آچار چرخ زیرش نرفته` (the spare tire and wheel wrench have not been used).
-- The record is a direct whole-vehicle sale (grade 3) and mentions a vehicle part/tool secondarily in the description. It is therefore a source-backed positive for the semantic requirement that a real vehicle listing must not be rejected merely because it mentions a secondary part.
+- Human grade: 3.
+- Title: `فروش فوری دنا پلاس توربو اتومات`. Description mentions `ماشین زاپاس و آچار چرخ زیرش نرفته`.
+- This is another source-backed whole-vehicle positive with a secondary part/tool mention, but `زاپاس` and `آچار چرخ` are not entries in the current `PART_MARKERS`; do not use it as proof of those marker paths.
 
-## Important provenance boundary
+## Provenance and limits
 
-The original capture's internal key labels S02 as `whole-clean`, because that was its retrieval/capture cell. Do **not** rewrite the immutable cell label or claim the capture selector intentionally found a `whole-with-part-mention` record. This is a post-capture, source-text audit that found the secondary mention inside a record already graded by the human. Keep the original title, description, source ID, and grade unchanged.
+The original capture cell labels are immutable. D05's original cell was `whole-vehicle-positive`; S02's original cell was `whole-clean`. This audit re-reads the frozen source text and human grades; it does not rewrite either label, fabricate a new capture, or change any human score.
 
-This is a useful positive control, but it does not establish that every relevant marker path has been exercised. In particular, `زاپاس` and `آچار چرخ` are not themselves entries in the current `PART_MARKERS` list; the source-backed excerpt is useful to check the subject-aware handling of the existing part marker `لاستیک` only if the exact source text actually contains that marker. It does not. So do not claim that this one record directly proves the `لاستیک` marker's behavior: its value is as a whole-vehicle positive with a secondary parts/tools mention, not as a direct test of the existing marker trigger.
+The source-recovery gap is therefore **partially closed**: a valid whole-vehicle positive exercising current part-marker vocabulary exists (D05). The next evidence step is a test-only regression using D05's exact source title/body and a paired part-only negative (for example, the already-graded D03 spare-parts inventory or B04 body-parts inventory). Check the actual production guard path, not only the Issue 16 shadow title parser. The three-reader `HEAD_KIND` risk remains a separate gate; this finding does not authorize a production lexicon change.
 
-## Consequence
-
-The blanket statement “no source-backed whole-vehicle positive with any secondary part mention exists” is too broad and is superseded by this audit. The narrower gate remains open: a source-backed positive that actually exercises a production marker/guard path must be paired with a part-only negative, and the three-reader `HEAD_KIND` counter-risk must still be resolved before any production change. No source code, grades, or production behavior were changed by this audit.
+No production source, ranking, eligibility logic, human grade, or `main` branch was changed by this audit.
