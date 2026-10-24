@@ -318,7 +318,10 @@ function shadowSpecificSubjectVerdict(
   // title cue that the listing is offering items, not merely discussing them.
   const hasExplicitOfferCue =
     /(?:^| )(?:فروش|عرضه|موجود|فروشی)(?: |$)/.test(normalizedTitle);
-  const explicitCoOffer = hasTargetInTitle && hasExplicitOfferCue && knownTitleSubjects.some((subject) => {
+  const hasServiceCue =
+    /(?:^| )(?:خدمات|تعمیر|تعویض|اجرت|نصب)(?: |$)/.test(normalizedTitle);
+  const explicitCoOffer =
+    hasTargetInTitle && hasExplicitOfferCue && !hasServiceCue && knownTitleSubjects.some((subject) => {
     const other = normalizeForMatch(subject);
     if (other === target) return false;
     const otherStart = normalizedTitle.indexOf(other);
@@ -490,6 +493,18 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
         "هر دو قطعه موجود است"
       )
     ).toBe("allow");
+  });
+
+  it("does not let a generic فروش cue override explicit service intent", () => {
+    // Synthetic adversarial case: "فروش" refers to the service package, not
+    // necessarily sale of the two parts as products.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "فروش خدمات تعویض دیسک ترمز و کاتالیزور",
+        "خدمات تعویض قطعات خودرو"
+      )
+    ).toBe("reject");
   });
 
   it("leaves an unknown principal subject as unknown rather than hard-rejecting", () => {
