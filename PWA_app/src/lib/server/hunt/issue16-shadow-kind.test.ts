@@ -311,7 +311,11 @@ function shadowSpecificSubjectVerdict(
   if (target === normalizeForMatch("کاتالیزور")) {
     const dustStart = normalizedTitle.indexOf(normalizeForMatch("خاک کاتالیزور"));
     const firstTargetStart = normalizedTitle.indexOf(target);
-    if (dustStart >= 0 && firstTargetStart === dustStart + normalizeForMatch("خاک ").length) {
+    if (
+      dustStart >= 0 &&
+      firstTargetStart === dustStart + "خاک ".length &&
+      normalizedTitle.slice(dustStart, firstTargetStart).trim() === normalizeForMatch("خاک")
+    ) {
       return "reject";
     }
   }
@@ -451,6 +455,18 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
         "دیسک ترمز پراید سالم؛ کاتالیزور فابریک خودرو نیز موجود است"
       )
     ).toBe("reject");
+  });
+
+  it("preserves a direct converter offer when catalyst dust is mentioned secondarily", () => {
+    // Synthetic co-occurrence counterexample: a genuine converter offer appears
+    // first; the later dust phrase must not trigger the subtype rejection.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "فروش کاتالیزور خودرو و خاک کاتالیزور",
+        "کاتالیزور خودرو موجود است؛ خاک کاتالیزور نیز خریداری می‌شود"
+      )
+    ).toBe("allow");
   });
 
   it("allows a specific-part title only when title-level text explicitly co-offers both parts", () => {
