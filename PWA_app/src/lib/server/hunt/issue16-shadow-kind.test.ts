@@ -205,3 +205,42 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
   });
 
 });
+
+describe("Issue 16 — source-backed secondary-part marker controls (test-only)", () => {
+  it("preserves the D05 whole-vehicle positive when existing part markers occur after the clean subject", () => {
+    // Frozen source snapshot: I16-CAPTURE-05D-BLIND.md D05, source ID
+    // gacTnnuH, human grade 3. Exact title; description excerpt preserves
+    // the existing PART_MARKERS «کمک» and «تایر» as secondary details.
+    const title = "دنا پلاس توربو اتومات بدون رنگ 1400 فروش فوری";
+    const description =
+      "دنا پلاس توربو اتومات 1400 بدون رنگ کامل بدون ضربه شاسی جلو عقب پلمپ بدون صافکاری و پی دی آر بدنه مثل آینه داخل کابین در حد صفر همه مصرفیها تعویض رو 120 تا تسمه تایم روغن گیربکس خنک کن روغن موتور تازه تعویض شده کمک فنر عقب نو کمک فنر جلو تازه پیچی شده ماشین نرم و بی صر و صدا تایر جلو نو چینی خلاصه ماشین دست خودم بوده با وسواس نگهداری شده و تو پارکینگ بوده اکثرا مناسب مصرف کننده به دلیل نیاز مالی میفروشم";
+    const result = assessModelSpecificity(
+      ["دنا"],
+      `${title} ${description}`,
+      "vehicles",
+      "vehicle",
+      "دنا",
+      title
+    );
+
+    expect(result.mismatch).toBe(false);
+  });
+
+  it("still rejects the B04 body-parts inventory when a part marker leads the subject", () => {
+    // Frozen source snapshot: I16-CAPTURE-05F-FRESH-SUBSET-BLIND.md H05F-B04,
+    // human grade 1. This paired negative must not be relaxed by the D05
+    // positive: «بدنه» is the offering before the vehicle model names.
+    const title = "فروش بدنه استوک فابریک پژو، پراید، تیبا، دنا، سمند";
+    const result = assessModelSpecificity(
+      ["پراید"],
+      title,
+      "vehicles",
+      "vehicle",
+      "پراید",
+      title
+    );
+
+    expect(result.mismatch).toBe(true);
+    expect(result.tier).toBe("reject");
+  });
+});
