@@ -76,9 +76,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       { id: "B-vehicle-voucher", query: "حواله خودرو", category: "vehicles", cells: ["voucher"] },
       // Transaction type has its own query, while the selector still requires explicit title evidence.
       { id: "C-vehicle-cash", query: "خودرو نقدی", category: "vehicles", cells: ["cash"] },
-      { id: "C-vehicle-installment", query: "خودرو اقساطی", category: "vehicles", cells: ["installment"] },
+      { id: "C-vehicle-installment", query: "ماشین قسطی", category: "vehicles", cells: ["installment"] },
       // Narrow to a vehicle model + explicit exchange cue after the generic query missed this cell.
-      { id: "C-vehicle-exchange", query: "سمند معاوضه", category: "vehicles", cells: ["exchange"] },
+      { id: "C-vehicle-exchange", query: "معاوضه با سمند", category: "vehicles", cells: ["exchange"] },
       // Lower-priority paired kind controls remain in the scenario matrix but may be missing under the fixed global cap.
       { id: "A-refrigerator-ordinary", query: "یخچال", category: "home", cells: ["ordinary-appliance"] },
       { id: "A-refrigerator-wrong-kind", query: "قطعه یخچال", category: "home", cells: ["wrong-kind-control"] },
@@ -91,6 +91,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gac_yx5p", "ga9Nx1wE", "gaFLygmQ", "gab7c23g", "gac7yxi1",
       "gajmIwfW", "gaQjucWz", "QaPvpvjd", "gaVXpJTP", "gaWDC3Xz",
       "gaf4cqwp", "gaU-i7iQ", "gac3hpjw", "gaAnK9CM", "gaA_eiS8",
+      // Exclude every listing inspected in the reordered 2026-10-24 capture artifacts.
+      "gaQ7okv9", "gaNhm4BK", "ga1M_D8i", "gac7D9Tv", "gaMPHkWW",
+      "gaanVfX4", "gacLUYlL", "gaaPW6zt", "Aa5suyBE", "gajmIwfW",
+      "gacjTTyh", "gayVhzOr", "gaSLpCEY",
     ]);
     const reportPath = join(process.cwd(), "engine-v3-issue16-followup-03-capture.json");
     const previousBufferPath = process.env.SLUG_CAPTURE_BUFFER_PATH;
