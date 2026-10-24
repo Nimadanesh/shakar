@@ -66,17 +66,21 @@ function shadowAdKindForTitle(title: string): string | null {
     if (tokens.join(" ").startsWith(phrase)) return kind;
   }
 
-  // Preserve established compound-head rules before broad vehicle aliases:
-  // e.g. "ماشین لباسشویی" must remain an appliance, not a vehicle.
-  const established = adKindForTitle(tokens.join(" "));
-  if (established !== null) return established;
+  // Candidate whole-vehicle aliases are checked before the existing parser,
+  // but compound appliance heads are protected explicitly. This avoids an
+  // existing parser's unknown result masking an unambiguous vehicle head.
+  const normalizedHead = tokens.join(" ");
+  if (normalizedHead.startsWith("ماشین لباسشویی")) return "appliance";
 
-  // Only then use candidate whole-vehicle aliases absent from the frozen lexicon.
   const vehicleHeads = CANDIDATE_HEADS.filter(([, kind]) => kind === "vehicle")
     .sort((a, b) => b[0].length - a[0].length);
   for (const [phrase, kind] of vehicleHeads) {
-    if (tokens.join(" ").startsWith(phrase)) return kind;
+    if (normalizedHead.startsWith(phrase)) return kind;
   }
+
+  // Preserve all other established compound-head rules before returning unknown.
+  const established = adKindForTitle(normalizedHead);
+  if (established !== null) return established;
   return null;
 }
 
