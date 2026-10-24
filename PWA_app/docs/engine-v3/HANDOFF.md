@@ -3,7 +3,7 @@
 Updated: 2026-10-24
 Branch: `engine_v3`
 Starting baseline: `10f3c40d70748ff27d6928eaed0875e10dab1c56`
-Current source/test head: 61ede4c9cde19c6ff8855b268b1be28c182e3c4b
+Current source/test head: a66e7001b6de35618bd4582b11de9d11bdcdc04c
 
 ## Mission
 
@@ -627,3 +627,10 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - The regression in the co-offer control is fixed in the latest test-only commit. The conjunction-noise and overlapping-span edge cases are also included. These are synthetic, test-local diagnostics, not source ads/human grades or proof of production quality.
 - Next: keep this prototype test-only and continue seeking a source-matched, blinded human-graded specific-part false-acceptance example. Do not broaden `HEAD_KIND` / `PART_MARKERS` or wire the helper into production based on synthetic tests alone.
 - No production behavior changed. No merge, deployment, or `main` change.
+
+
+## Issue 16 — service-title co-offer counterexample added (2026-10-24)
+
+- Test-only commit [a66e7001](https://github.com/Nimadanesh/shakar/commit/a66e7001b6de35618bd4582b11de9d11bdcdc04c) now requires an explicit item-offer cue for the prototype's title-level co-offer path. It adds synthetic controls for a service/repair title that must not be treated as a product co-offer and an `موجود` title that can be accepted without the word `فروش`.
+- Baseline [#178](https://github.com/Nimadanesh/shakar/actions/runs/40092192113) is queued; test validation pending. Inspect focused/full tests, typecheck/build, and ESLint separately before advancing.
+- The prototype remains test-local. Source-matched human-graded specific-part false-acceptance evidence is still missing. No production behavior change, merge, deployment, or `main` modification.
