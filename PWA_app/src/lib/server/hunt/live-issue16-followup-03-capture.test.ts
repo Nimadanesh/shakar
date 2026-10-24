@@ -127,6 +127,19 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gaEWi1OQ",
       "gacjUsaz",
       "gaPj2RbK",
+      // IDs selected by fresh diagnostic captures on 2026-10-24; keep excluded from future packets.
+      "ga6CSfMM",
+      "gaNc5fRN",
+      "gaH0zc7w",
+      "gaFHdnop",
+      "gabvI8Fm",
+      "gacrEnA2",
+      "gaeWepTl",
+      "gaUnfe_p",
+      "gaE75Gsi",
+      "gaNDASAL",
+      "gaJ_sXNx",
+      "gaaTQEb7",
 ]);
     const reportPath = join(process.cwd(), "engine-v3-issue16-followup-03-capture.json");
     const previousBufferPath = process.env.SLUG_CAPTURE_BUFFER_PATH;
