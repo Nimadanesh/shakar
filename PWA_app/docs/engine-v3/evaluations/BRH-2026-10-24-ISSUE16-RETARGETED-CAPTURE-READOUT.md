@@ -127,3 +127,33 @@ This remains E3 live diagnostic evidence only; no human grades, no production-ra
 - Cross-category IDs: `gaNPt8S1`, `QayHkCbV`, `gaZv_XY2`, `gacLDpNd`, `ga-WGGa3`, `Qa2-kxhw`. Follow-up 03 IDs: `gacz0OBI`, `gacTkXT-`, `gaM7pCwJ`, `gaYLMGDX`, `gaXXVKQX`, `gaabz4PD`. Treat these as inspected and exclude them before any future capture. No further blind packet is being created while Capture 03 still awaits human grades.
 - Follow-up 03 again missed whole vehicle, cash, installment, and wrong-kind control within the fixed two-page pool; no substitutions were used. Both artifacts remain E3 diagnostics, `productionRank=null`; no uplift or population-level claim follows.
 - No production behavior, ranking, or eligibility changes were made. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
+
+
+## Retargeted Capture 03 — human/motor reconciliation (2026-10-24)
+
+Human grades are locked in the separate file [BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-03-HUMAN-GRADES.md](BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-03-HUMAN-GRADES.md). The internal key remains separate. Grade sum is 32/36 across 12 items (ten 3s, two 1s).
+
+| ID | Human grade | Engine eligibility / verdict | Reconciliation |
+|---|---:|---|---|
+| I16-R01 | 3 | eligible; near, score 3 | Under-scored relevant cash-vehicle listing. |
+| I16-R02 | 3 | eligible; exact, score 3.5 | Aligned. |
+| I16-R03 | 1 | eligible; near, score -2.5 | Catalyst listing retained for whole-car hunt: wrong-item-type false positive. |
+| I16-R04 | 3 | eligible; exact, score 3.5 | Aligned. |
+| I16-R05 | 3 | rejected; appliance-not-home-goods | Critical eligibility false rejection of a relevant used-refrigerator buyer/seller listing. Highest-priority witness in this packet. |
+| I16-R06 | 3 | eligible; near, score 0.5 | Under-scored relevant damaged-car buyer/consultation listing for the stated buyer hunt. |
+| I16-R07 | 3 | eligible; near, score 3.5 | Under-scored relevant ordinary refrigerator listing. |
+| I16-R08 | 3 | eligible; near, score 0.5 | Under-scored relevant whole-vehicle dealer/listing. |
+| I16-R09 | 3 | eligible; exact, score 4.5 | Aligned. |
+| I16-R10 | 3 | eligible; exact, score 3 | Aligned. |
+| I16-R11 | 3 | eligible; near, score 3.5 | Relevant exchange listing labeled near; under-scoring signal. |
+| I16-R12 | 1 | eligible; near, score -1.5 | Catalyst listing retained for whole-car hunt: same wrong-item-type failure as R03. |
+
+### Failure hypotheses kept separate
+
+1. **Eligibility false rejection:** I16-R05 is grade 3 but rejected as appliance-not-home-goods. This may resemble the direct refrigerator-sale/home-goods eligibility family, but that family must be independently reproduced; do not infer one shared root cause from this item alone.
+2. **Wrong item type retained:** I16-R03 and I16-R12 are independent catalyst listings, each grade 1 and both eligible for a whole-car hunt. They are two witnesses to one error type, not two error families.
+3. **Under-scoring:** I16-R01, I16-R06, I16-R07, I16-R08, and I16-R11 are grade 3 but engine-near. Keep this separate from the two primary failure hypotheses; do not use it as a reason to weaken hard eligibility checks.
+
+### Next controlled gate
+
+Prepare two separate frozen blinded tests using only IDs unseen in all prior packets: (A) appliance/home-goods eligibility with multiple relevant buyer/seller refrigerator positives plus genuine wrong-category negatives; (B) whole-car vs catalyst/part subject-type with whole-car positives and part-only negatives, including a whole-car listing that merely mentions a part. Predeclare controls and acceptance criteria, keep keys separate, and lock human grades before opening either key. No ranking or hard-rejection change until each error repeats across independent ads with controls intact. PR #41 stays Draft/unmerged; main and deployment remain untouched.
