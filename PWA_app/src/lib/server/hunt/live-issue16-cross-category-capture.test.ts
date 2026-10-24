@@ -71,6 +71,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
 
     const previouslyInspectedIds = new Set([
       // IDs already opened in earlier Issue 16 packets and diagnostic captures.
+      "gab_aV8W", "gaLNJNwu", "ga4iPfzH", "gaPHaEfq", "gaRj-fI_", "gaqV1O58",
+      "galu34HS", "gavSad4q", "Qa4_oh_e", "gabPa811", "gaIL7h0B",
+      "gaYvJrs6", "wZcsAVgg", "gab7Jmnv", "gabLLuzd", "gaP28UXT",
+      "gaZ6xXmW", "gaaLQFAi", "gabztl8G", "gaUrFcFK", "gaJaHd6y",
       "gac_yx5p", "ga9Nx1wE", "gaFLygmQ", "gab7c23g", "gac7yxi1",
       "gajmIwfW", "gaQjucWz", "QaPvpvjd", "gaVXpJTP", "gaWDC3Xz",
       "gaf4cqwp", "gaU-i7iQ", "gac3hpjw", "gaAnK9CM", "gaA_eiS8",
@@ -81,6 +85,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gaTI-Kn3", "Qa8HqiWJ", "gac7TJRT", "gabzLV7f", "QaoPqC7X",
       "gaO7GNJh", "gaE5qO5h", "gabjtdOw", "gaay7dtd", "gaDkHop1",
       "gayyxUTa",
+      // IDs opened by the exclusion-validation capture; never reuse for blind review.
+      "gaZ6xXmW", "gaIL7h0B", "gaaLQFAi", "gabztl8G", "gaUrFcFK", "gaJaHd6y",
     ]);
     const overlapWithInspected = new Set<string>();
     const globallySeen = new Set<string>();
