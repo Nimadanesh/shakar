@@ -7,6 +7,7 @@ import { resolveHuntDefinition } from "./definition";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
 
 type RoleCue = "mixed" | "buyer" | "seller" | "other";
+type Cell = "seller" | "buyer" | "mixed" | "voucher" | "whole-vehicle" | "cash" | "installment" | "exchange";
 
 function roleCue(title: string): RoleCue {
   const text = normalizeForMatch(title);
@@ -18,45 +19,69 @@ function roleCue(title: string): RoleCue {
   return "other";
 }
 
+function selectionCell(scenarioId: string, title: string): Cell | null {
+  const text = normalizeForMatch(title);
+  const adjacent = /دفتر|حواله|کارشناسی|مشاوره|خدمات|تعمیر|لوازم|ضبط|باند|قطعه|قطعات|مکانیک|واسطه|نمایندگی/.test(text);
+  const wholeVehicle = !adjacent &&
+    /(پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|خودرو|ماشین)/.test(text);
+
+  if (scenarioId === "A-refrigerator-seller-direction") {
+    const cue = roleCue(title);
+    return cue === "seller" || cue === "buyer" || cue === "mixed" ? cue : null;
+  }
+  if (scenarioId === "B-whole-vehicle-vs-voucher-service") {
+    if (/حواله|دفتر/.test(text)) return "voucher";
+    if (wholeVehicle) return "whole-vehicle";
+    return null;
+  }
+  if (scenarioId === "C-broad-vehicle-match-kind") {
+    if (!wholeVehicle) return null;
+    if (/اقساط|قسط|پیش\s?قسط/.test(text)) return "installment";
+    if (/معاوضه|تهاتر|بدل/.test(text)) return "exchange";
+    if (/نقدی|نقد|فوری|تسویه/.test(text)) return "cash";
+    return null;
+  }
+  return null;
+}
+
 type Scenario = {
   id: string;
   query: string;
   category: string;
-  detailBudget: number;
-  desired: RoleCue[];
+  cells: Cell[];
 };
 
-/**
- * Independent Issue 16 Follow-up 03 capture. Raw evidence only:
- * no grading, no production-rank claim, and no search-behavior changes.
- */
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures independent Issue 16 Follow-up 03 evidence within fixed budgets",
   async () => {
+    // 3 direction controls + 2 kind controls + 3 transaction/match-kind cells = 8 details.
+    // Each query is capped at two list pages; missing cells stay missing.
     const scenarios: Scenario[] = [
       {
         id: "A-refrigerator-seller-direction",
         query: "فروشنده یخچال",
         category: "home",
-        detailBudget: 3,
-        desired: ["seller", "buyer", "mixed", "other"],
+        cells: ["seller", "buyer", "mixed"],
       },
       {
         id: "B-whole-vehicle-vs-voucher-service",
         query: "خریدوفروش خودرو",
         category: "vehicles",
-        detailBudget: 3,
-        desired: ["seller", "mixed", "buyer", "other"],
+        cells: ["whole-vehicle", "voucher"],
       },
       {
         id: "C-broad-vehicle-match-kind",
         query: "خرید و فروش خودرو",
         category: "vehicles",
-        detailBudget: 2,
-        desired: ["seller", "mixed", "buyer", "other"],
+        cells: ["cash", "installment", "exchange"],
       },
     ];
 
+    const priorPacketIds = new Set([
+      "gab_aV8W", "gaLNJNwu", "ga4iPfzH", "gaPHaEfq", "gaRj-fI_", "gaqV1O58",
+      "galu34HS", "gavSad4q", "Qa4_oh_e", "gabPa811", "gaIL7h0B",
+      "gaYvJrs6", "wZcsAVgg", "gab7Jmnv", "gabLLuzd", "gaP28UXT",
+    ]);
     const reportPath = join(process.cwd(), "engine-v3-issue16-followup-03-capture.json");
     const previousBufferPath = process.env.SLUG_CAPTURE_BUFFER_PATH;
     const previousDetailCap = process.env.HUNT_MAX_DETAILS;
@@ -65,22 +90,18 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "engine-v3-issue16-followup-03-slugs.jsonl"
     );
 
-    const priorPacketIds = new Set([
-      "gab_aV8W", "gaLNJNwu", "ga4iPfzH", "gaPHaEfq", "gaRj-fI_", "gaqV1O58",
-      "galu34HS", "gavSad4q", "Qa4_oh_e", "gabPa811", "gaIL7h0B",
-      "gaYvJrs6", "wZcsAVgg", "gab7Jmnv", "gabLLuzd", "gaP28UXT",
-    ]);
     const globallySeen = new Set<string>();
     const reports: Array<Record<string, unknown>> = [];
     let detailsUsed = 0;
-    const overlapWithPriorPackets: string[] = [];
+    const overlapWithPriorPackets = new Set<string>();
 
     try {
       for (const scenario of scenarios) {
-        const remaining = 8 - detailsUsed;
-        const budget = Math.min(scenario.detailBudget, remaining);
-        if (budget <= 0) break;
-        process.env.HUNT_MAX_DETAILS = String(budget);
+        const budget = Math.min(scenario.cells.length, 8 - detailsUsed);
+        if (budget <= 0) {
+          reports.push({ id: scenario.id, query: scenario.query, status: "budget-exhausted", missingCells: scenario.cells });
+          continue;
+        }
 
         const def = resolveHuntDefinition({
           query: scenario.query,
@@ -96,7 +117,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         });
         expect(def, `definition must resolve for ${scenario.query}`).not.toBeNull();
         if (!def) {
-          reports.push({ id: scenario.id, query: scenario.query, status: "definition-unresolved", listings: [] });
+          reports.push({ id: scenario.id, query: scenario.query, status: "definition-unresolved", missingCells: scenario.cells });
           continue;
         }
 
@@ -106,27 +127,29 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           emit: (event) => events.push(event),
         });
 
-        // Candidate selection is deterministic and prefers unseen source IDs.
         const unused = candidates.filter((candidate) => {
           if (globallySeen.has(candidate.sourceAdId)) return false;
           if (priorPacketIds.has(candidate.sourceAdId)) {
-            overlapWithPriorPackets.push(candidate.sourceAdId);
+            overlapWithPriorPackets.add(candidate.sourceAdId);
             return false;
           }
           return true;
         });
+
         const selected: typeof candidates = [];
-        for (const cue of scenario.desired) {
+        const selectedCells: Array<{ cell: Cell; sourceAdId: string }> = [];
+        const missingCells: Cell[] = [];
+        for (const cell of scenario.cells) {
           const match = unused.find((candidate) =>
-            roleCue(candidate.title) === cue &&
+            selectionCell(scenario.id, candidate.title) === cell &&
             !selected.some((picked) => picked.sourceAdId === candidate.sourceAdId)
           );
-          if (match) selected.push(match);
-          if (selected.length >= budget) break;
-        }
-        for (const candidate of unused) {
-          if (selected.length >= budget) break;
-          if (!selected.some((picked) => picked.sourceAdId === candidate.sourceAdId)) selected.push(candidate);
+          if (!match || selected.length >= budget) {
+            missingCells.push(cell);
+            continue;
+          }
+          selected.push(match);
+          selectedCells.push({ cell, sourceAdId: match.sourceAdId });
         }
         selected.forEach((candidate) => globallySeen.add(candidate.sourceAdId));
 
@@ -136,6 +159,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           city: candidate.city,
           price: candidate.price,
           titleRoleCue: roleCue(candidate.title),
+          selectionCell: selectionCell(scenario.id, candidate.title),
         }));
         const scored = await confirmCandidates(selected, def, stats, () => {});
         detailsUsed += stats.detailsChecked;
@@ -159,6 +183,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             query: scenario.query,
             scenario: scenario.id,
             requestedCategory: scenario.category,
+            selectionCell: candidate.selectionCell,
             title: candidate.title,
             descriptionSnapshot: description,
             descriptionSnapshotAvailable: description.length > 0,
@@ -183,6 +208,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           query: scenario.query,
           requestedCategory: scenario.category,
           status: selected.length ? "captured" : "empty-within-budget",
+          missingCells,
+          selectedCells,
           resolved: {
             include: def.include,
             exclude: def.exclude,
@@ -228,8 +255,13 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         maxDetailsUsed: detailsUsed,
         uniqueListingIds: globallySeen.size,
         scenarios: scenarios.length,
-        scenarioDetailBudgets: scenarios.map(({ id, detailBudget }) => ({ id, detailBudget })),
-        overlapWithPriorPackets,
+        scenarioCells: scenarios.map(({ id, cells }) => ({ id, cells })),
+        missingCells: reports.flatMap((scenario) =>
+          Array.isArray(scenario.missingCells)
+            ? scenario.missingCells.map((cell) => ({ scenario: scenario.id, cell }))
+            : []
+        ),
+        overlapWithPriorPackets: [...overlapWithPriorPackets],
         mizanShadow: process.env.MIZAN_SHADOW ?? "default",
       },
       scenarios: reports,
