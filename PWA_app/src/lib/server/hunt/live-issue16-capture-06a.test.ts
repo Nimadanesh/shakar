@@ -124,7 +124,9 @@ const idsFromRecentCaptures = [
  "gacnoPzO","gazms9IA","gaLn95G9","gag94ErP","gacD4av1","gaM76Zea","QadoH4Gg","ga5ZHsBZ",
  "gacfYpsl","gacn4OE_","gac_3fOf","ga4OPbgu","gaAIGhOy","gaI-nHG5","gaACDACa","gacPG9Wy",
  "gaUTKxZ6","ga5KkOrN","gauW_tpf","gaLrFFB1","gaPvRl88","gaZnu0t_","gaT3FZE5","QZhvyaLi",
- "gaT_9Tmj","gac7VDBQ","QanNEG_8"
+ "gaT_9Tmj","gac7VDBQ","QanNEG_8",
+ // Source IDs actually opened in Capture 06A run 8; never reuse them.
+ "gaNWVCNg","ga0ujTj5","Qa7VnXMI","gac3oiQx","gammdA01","gaNTLxd5"
 ];
 for (const id of idsFromRecentCaptures) previouslyInspectedIds.add(id);
 
@@ -173,8 +175,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-pa
   for(const entry of pool) {
    if(detailsUsed>=8)break;
    const {candidate,stats,query}=entry;
+   const detailsBefore=stats.detailsChecked;
    const scored=await confirmCandidates([candidate],targetDef,stats,()=>{});
-   detailsUsed+=stats.detailsChecked;
+   // stats is shared by candidates from the same retrieval query, so count only this call\x27s delta.
+   const detailsDelta=stats.detailsChecked-detailsBefore;
+   detailsUsed+=detailsDelta;
+   if(detailsUsed>8) throw new Error(`Capture 06A exceeded detail budget: ${detailsUsed}/8`);
    const hit=scored.find(x=>x.sourceAdId===candidate.sourceAdId);
    const rej=stats.rejectedSample.find(x=>x.sourceAdId===candidate.sourceAdId);
    const description=hit?.descAuditText??rej?.descAuditText??"";
