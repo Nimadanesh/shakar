@@ -592,3 +592,12 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - The two synthetic direct-part cases are mechanism-level policy tests, not Divar captures or human grades. Title-level co-mention is accepted only with an explicit conjunction/co-offer phrase in this prototype; this is not yet a validated production parser.
 - Commit-associated status query currently returns no checks/workflow runs. Validation is pending; do not infer success. Next: inspect the actual Baseline workflow run if one appears or trigger it manually through GitHub Actions on `engine_v3` if available, then inspect focused/full tests. Keep all production files unchanged.
 - No merge, deployment, or `main` change. `main` remains the protected red line.
+
+
+## Issue 16 — Baseline #175 validation received (2026-10-24)
+
+- Owner-reported Baseline #175 on test commit `e8353365` completed: **325 focused tests passed; 918 full portable tests passed**, exactly five more in each suite than #173/#174 (320/913).
+- ESLint remains the workflow failure source; the user reports failures are lint-related, not test failures. Do not call the entire workflow green.
+- The test-only subject-identity / explicit co-offer prototype is validated as a passing test suite. This validates the diagnostic helper's defined examples only; it does not establish live-search quality uplift or justify production integration.
+- Next: inspect the helper for edge cases where substring matching or first-occurrence ordering could overstate “principal subject” or co-offer evidence, then strengthen test-only adversarial cases and record the boundary. Seek a source-matched, blinded human-graded specific-part false-acceptance example before considering production logic.
+- No production behavior changed. No merge, deployment, or `main` change.
