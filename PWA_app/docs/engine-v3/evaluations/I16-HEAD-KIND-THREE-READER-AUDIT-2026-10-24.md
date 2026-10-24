@@ -37,3 +37,13 @@ Do **not** add `کاتالیزور`, `لوازم یدکی`, or `بدنه` to pro
 ## Recommendation
 
 Continue with a test-only shadow matrix, adding the query-subject counter-risk and transaction-prefix cases above. Do not modify `HEAD_KIND`, `PART_MARKERS`, production parsing, ranking, or eligibility in this step. Human grades remain the quality authority; test success only validates the diagnostic contract.
+
+## Addendum — evidence recovery and regression status (2026-10-24)
+
+This addendum supersedes only the earlier statement above that a source-matched whole-vehicle positive with a secondary part mention was unavailable. The original audit text is retained as the historical state at the time it was written.
+
+- The positive was recovered from frozen packet 05D: D05 → source ad `gacTnnuH`, human grade 3. Its title is `دنا پلاس توربو اتومات بدون رنگ 1400 فروش فوری`; its description mentions `کمک فنر` and `تایر` secondarily. See [the recovery record](./I16-SECONDARY-PART-POSITIVE-RECOVERY-2026-10-24.md).
+- A paired test-only control now uses that source-backed positive and H05F-B03's frozen parts-inventory title/body as the negative. Baseline #171 on `93109026e28a7cccbd359be884be1a8d697b86fe` passed **318 focused tests** and **911 full portable tests**; the user reports the workflow's overall failure remains the separate ESLint step. This validates the paired regression assertions, not production behavior changes.
+- Updated disposition: the secondary-mention marker-guard evidence gap is **closed for this specific existing-marker path**. It is not evidence for adding any new `HEAD_KIND` entries, nor does it prove every secondary-part phrase is safe.
+- Remaining gates: (1) query-subject same-kind marker-skip counter-risk for specific part hunts, (2) role-prefix parsing such as `خرید فروش کاتالیزور`, and (3) whole-vehicle vs part-inventory outcomes across all three `HEAD_KIND` readers. Keep these in shadow/test-only analysis until paired source-grounded controls and a safe design exist.
+- No production lexicon/parser/ranking/eligibility changes, merge, deployment, or `main` modification are authorized by this evidence.
