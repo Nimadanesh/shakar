@@ -175,3 +175,13 @@ The helper now checks whether the co-offer connector lies between non-overlappin
 
 - Test-only commit [8b96c3af](https://github.com/Nimadanesh/shakar/commit/8b96c3af9674231fa0cf6c2403bb0a79f9fc3475) adds a synthetic counterexample: `فروش خدمات تعویض دیسک ترمز و کاتالیزور`. A generic `فروش` token must not override explicit service/repair intent and turn a service listing into a product co-offer.
 - Baseline [#179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171) is queued; validation pending. The change remains test-local; no source-matched human-grade claim is made.
+
+
+## Validation update — Baseline #179 (2026-10-24)
+
+- Baseline [#179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171) on test-only commit `8b96c3af9674231fa0cf6c2403bb0a79f9fc3475` completed.
+- Focused suite: **330 passed, 15 skipped**. Full portable suite: **923 passed, 16 skipped**. TypeScript typecheck and production build passed.
+- ESLint remains the only failing workflow step: **8 errors / 42 warnings**, in existing UI and unrelated files. The overall workflow is not fully green; the focused/full test steps succeeded.
+- The additional synthetic service-intent control (`فروش خدمات تعویض دیسک ترمز و کاتالیزور`) passed: a generic `فروش` cue must not override explicit service intent. This validates the test-local diagnostic case only, not live search quality.
+- Evidence gate unchanged: no source-matched, blinded human-graded false acceptance for a specific-part query where a different part is principal and the hunted part is only contextual. Continue to label that counter-risk synthetic.
+- No production behavior change; no merge, deployment, or `main` modification.
