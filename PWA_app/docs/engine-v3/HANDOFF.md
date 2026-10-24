@@ -634,3 +634,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Test-only commit [a66e7001](https://github.com/Nimadanesh/shakar/commit/a66e7001b6de35618bd4582b11de9d11bdcdc04c) now requires an explicit item-offer cue for the prototype's title-level co-offer path. It adds synthetic controls for a service/repair title that must not be treated as a product co-offer and an `موجود` title that can be accepted without the word `فروش`.
 - Baseline [#178](https://github.com/Nimadanesh/shakar/actions/runs/40092192113) is queued; test validation pending. Inspect focused/full tests, typecheck/build, and ESLint separately before advancing.
 - The prototype remains test-local. Source-matched human-graded specific-part false-acceptance evidence is still missing. No production behavior change, merge, deployment, or `main` modification.
+
+
+## Issue 16 — Baseline #178 validation (2026-10-24)
+
+- Baseline [#178](https://github.com/Nimadanesh/shakar/actions/runs/40092192113) on test-only commit `a66e7001b6de35618bd4582b11de9d11bdcdc04c`: **329 focused tests passed (15 skipped); 922 full portable tests passed (16 skipped)**. TypeScript typecheck and production build passed.
+- ESLint failed separately with 8 errors / 42 warnings in existing UI and other unrelated files; this is not a clean workflow pass. The focused/full test steps succeeded.
+- The new service-title and `موجود` co-offer controls pass. They remain synthetic test-local diagnostics; source-matched human-graded specific-part false-acceptance evidence is still missing. Continue to keep production behavior unchanged.
+- No merge, deployment, or `main` modification.
