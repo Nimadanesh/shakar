@@ -102,6 +102,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gac7TJRT", "gabzLV7f", "QaoPqC7X", "gaO7GNJh", "gaE5qO5h",
       "gabjtdOw", "gaay7dtd", "gaDkHop1", "gayyxUTa", "gaMPHkWW",
       "gajmIwfW", "gacjTTyh", "gaSLpCEY",
+      // IDs opened by the cross-category exclusion-validation run.
+      "gaZ6xXmW", "gaIL7h0B", "gaaLQFAi", "gabztl8G", "gaUrFcFK", "gaJaHd6y",
     ]);
     const reportPath = join(process.cwd(), "engine-v3-issue16-followup-03-capture.json");
     const previousBufferPath = process.env.SLUG_CAPTURE_BUFFER_PATH;
