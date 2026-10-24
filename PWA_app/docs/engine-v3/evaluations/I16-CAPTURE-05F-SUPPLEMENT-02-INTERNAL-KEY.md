@@ -23,3 +23,5 @@ Source: live capture run [40079121984](https://github.com/Nimadanesh/shakar/acti
 - The selector did not find a valid `whole-with-part-mention` positive in this capture. A seventh retrieved `missing-cell` row had no source ID and was not graded.
 
 This remains a small bounded sample. Raw engine outcomes are diagnostics, not human labels. Keep the earlier locked B01–B07 grades unchanged.
+
+**Deduplication note:** S07 (`gaLrFFB1`) is the same source ad as H05F-B01; it is a repeat, not a seventh distinct fresh example.
