@@ -275,13 +275,29 @@ export function queryKindForDef(
   category: string
 ): string | null {
   const phrase = include.join(" ");
-  // Longest lexicon key that opens the phrase (the subject comes first).
-  let best: string | null = null;
-  let bestLen = 0;
-  for (const key of Object.keys(HEAD_KIND)) {
-    if ((phrase === key || phrase.startsWith(`${key} `)) && key.length > bestLen) {
-      best = HEAD_KIND[key];
-      bestLen = key.length;
+  // First honor the existing subject-first contract. If no subject opens
+  // the phrase, strip only leading generic listing modifiers (e.g. «فروش»)
+  // and retry. Do not search arbitrary interior words: service intent and
+  // compounds must retain their established precedence.
+  const findOpeningKind = (candidate: string): string | null => {
+    let best: string | null = null;
+    let bestLen = 0;
+    for (const key of Object.keys(HEAD_KIND)) {
+      if ((candidate === key || candidate.startsWith(`${key} `)) && key.length > bestLen) {
+        best = HEAD_KIND[key];
+        bestLen = key.length;
+      }
+    }
+    return best;
+  };
+  let best = findOpeningKind(phrase);
+  if (!best) {
+    const subjectTokens = [...include];
+    while (subjectTokens.length > 0 && HEAD_SKIP_TOKENS.has(subjectTokens[0])) {
+      subjectTokens.shift();
+    }
+    if (subjectTokens.length !== include.length) {
+      best = findOpeningKind(subjectTokens.join(" "));
     }
   }
   if (best) return best;
