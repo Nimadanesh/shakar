@@ -131,3 +131,22 @@ No full-pipeline paired fixture exists yet. The next step remains to use exact s
 - Raw engine outcomes in this capture: whole-car sale, buyer/exchange, dealer, catalyst-only, catalyst service, and the two part listings all landed as `near`; this includes obvious wrong-kind ads such as `خرید فروش کاتالیزور`, `تعمیر تخصصی کاتالیزور با ضمانت 1ساله`, `فروش سپر جلوپنجره چراغ پراید پژو سمند ساینا کوئیک`, and `فروش موتور کامل پژو پراید نیسان سمند تیبا xu7 tu5`. The tire-only exchange remains rejected in the locked source-pinned fixture. These new live rows are ungraded diagnostics and are not independent human-quality samples.
 - Interpretation remains unchanged: the code-path gap is reproducible in a deterministic full-pipeline baseline, and the live capture is consistent with it; the missing secondary-part-mention positive prevents closing that counter-control. Do not add a lexicon entry or hard gate yet. Next high-value step is to obtain an exact-source whole-car-with-secondary-part positive (or explicitly close that cell as unavailable), then design a candidate fix against the locked positives/negatives and test all three lexicon reader contexts before any production behavior change.
 - PR #42 remains Draft/open/unmerged. No production logic, ranking, `main`, or deployment changed.
+
+## Expanded full-pipeline characterization — Capture 05D controls (2026-10-24)
+
+- Expanded the deterministic test in `PWA_app/src/lib/server/hunt/pipeline.test.ts` with exact source-matched 05D controls, using the same broad target query `خرید و فروش خودرو` and mocked Divar I/O. No live calls occur in this test.
+- Current full-pipeline outcomes asserted by the characterization:
+  - D02 — whole-vehicle Toyota dealership/installment offer, human grade 3: `near` (eligible).
+  - D03 — Lifan parts-only inventory, human grade 1: `exact` (eligible). This is the strongest counterexample: the engine can classify a parts-only listing as exact for the whole-vehicle hunt.
+  - D05 — direct Dena Plus whole-vehicle sale, human grade 3: `near` (eligible).
+  - D07 — whole-vehicle installment sales, human grade 3: `near` (eligible).
+  - D08 — exhaust/catalyst replacement control, human grade 1: `rejected` (ineligible).
+- D03 duplicates an invalid-selection record from Capture 05E. It remains useful as a regression fixture, but it is not a fresh independent observation and must not be counted twice in sample metrics. The locked 05D per-row grades are unchanged.
+- Validation on current PR head `639ed262f4f28b8c5057bc683816f133d73b5331`:
+  - [Run 40082025322](https://github.com/Nimadanesh/shakar/actions/runs/40082025322): unit/kind-lexicon and full-pipeline characterization tests passed; bounded read-only Capture 05F passed and artifact `12555228673` was uploaded.
+  - [Run 40082025317](https://github.com/Nimadanesh/shakar/actions/runs/40082025317): the companion bounded Capture 05E workflow completed successfully on the same head.
+  - The earlier parse failure on parent commit `04eaf109d48a2b6141919a58e99974f858f350b3` is superseded by the corrected fixture-array commit; do not treat that old run as the status of the current head.
+- Interpretation: the evidence now includes a reproducible exact-grade mismatch for parts-only inventory (D03), repeated near-miss wrong-kind catalyst/parts examples, and several whole-vehicle grade-3 controls that are only `near`. The catalyst/exhaust D08 negative control is rejected, demonstrating that behavior is not a universal pass-through. This still does **not** establish a safe global lexicon token or a safe hard gate.
+- Remaining gap: a valid whole-car positive whose secondary detail mentions a part is still missing from the exact-source set. The tire-only exchange is not a substitute. Keep production behavior unchanged until this counter-control is found or explicitly closed as unavailable and a narrowly scoped candidate is reviewed against the locked controls.
+
+No production engine/ranking logic changed. PR #42 remains Draft/open/unmerged; `main` remains untouched; no deployment.
