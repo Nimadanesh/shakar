@@ -80,6 +80,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       // Transaction type has its own query, while the selector still requires explicit title evidence.
       { id: "C-vehicle-cash", query: "خودرو نقدی", category: "vehicles", cells: ["cash"] },
       { id: "C-vehicle-installment", query: "خودرو اقساطی", category: "vehicles", cells: ["installment"] },
+      // Narrow to a vehicle model + explicit exchange cue after the generic query missed this cell.
       { id: "C-vehicle-exchange", query: "سمند معاوضه", category: "vehicles", cells: ["exchange"] },
     ];
     const priorPacketIds = new Set([
