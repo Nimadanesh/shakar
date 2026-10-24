@@ -174,3 +174,7 @@ The matrix is a design checklist, not a claim that these fresh controls have alr
 ### Current decision
 
 No buyer-role, voucher semantics, whole-vehicle eligibility, catalytic-converter filtering, or ranking-score changes are authorized. Continue the narrow query-kind experiment only. Missing cells stay missing. PR #41 remains Draft; `main` and deployment untouched.
+
+## Next controlled gate — role matrix
+
+See [Issue 16 controlled role matrix](evaluations/BRH-2026-10-24-ISSUE16-ROLE-MATRIX.md). The current head's focused kind regression, portable hunt/search suite, and typecheck passed in [run 40063098453](https://github.com/Nimadanesh/shakar/actions/runs/40063098453). Cross-category capture [run 40063098439](https://github.com/Nimadanesh/shakar/actions/runs/40063098439) is diagnostic only. Fresh source-matched controls are still needed for whole-vehicle vs part/accessory, buyer-role vs seller-only, and voucher vs incidental mention. Do not change role semantics or ranking from P03-05 alone; prefer fixed-candidate old/new comparison and keep PR #41 Draft.
