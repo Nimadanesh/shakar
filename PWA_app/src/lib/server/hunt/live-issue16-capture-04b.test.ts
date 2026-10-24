@@ -87,10 +87,10 @@ const previouslyInspectedIds = new Set([
 ]);
 
 function matchesCell(id:string,title:string,description:string):boolean{
- const t=normalizeForMatch(title); const d=normalizeForMatch(description); const role=roleCue(title);
+ const t=normalizeForMatch(title); const role=roleCue(title);
  const model=/(پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|۲۰۶|206|۲۰۷|207|۴۰۵|405|ال\s?۹۰|ال\s?90|l90|زانتیا|چری|جک|هایما|فیدلیتی|دیگنیتی|آریزو|اطلس|نیسان|تویوتا|هیوندای|کیا|بنز|مزدا)/.test(t);
 const part=/کاتالیزور|کاتالیز|موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|جک|قطعه|قطعات|اگزوز/.test(t);
-if(id.startsWith("B-whole"))return model&&!part&&/فروش|فروشی|معاوضه|خرید/.test(t);
+if(id.startsWith("B-whole"))return (model||/خودرو|ماشین|سواری/.test(t))&&!part&&/فروش|فروشی|معاوضه|خرید/.test(t);
 if(id.startsWith("B-catalyst"))return /کاتالیزور|کاتالیز/.test(t)&&!/تعمیر|خدمات|تعمیرکار/.test(t);
 if(id==="B-service")return /کاتالیزور|کاتالیز/.test(t)&&/تعمیر|خدمات|تعمیرکار/.test(t);
 if(id==="B-other-part")return /قطعه|قطعات|موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|جک|اگزوز/.test(t)&&!/تعمیر|خدمات|تعمیرکار/.test(t);
@@ -164,7 +164,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("issue16-retargeted-capture-
    const scored=await confirmCandidates([selected],def,stats,()=>{});detailsUsed+=stats.detailsChecked;
    const rejected=new Map(stats.rejectedSample.flatMap(x=>x.sourceAdId?[[x.sourceAdId,x] as const]:[]));
    const hit=scored.find(x=>x.sourceAdId===selected.sourceAdId);const rej=rejected.get(selected.sourceAdId);const description=hit?.descAuditText??rej?.descAuditText??"";
-   reports.push({id:sc.id,query:sc.query,requestedCategory:sc.category,status:"captured",cell:sc.cell,cellMatchedAfterDetail:matchesCell(sc.id,selected.title,description),listing:{sourceAdId:selected.sourceAdId,title:selected.title,descriptionSnapshot:description,descriptionSnapshotAvailable:!!description,city:selected.city,price:selected.price,roleCue:roleCue(selected.title),roleMode:def.roleMode??null,eligible:!!hit,matchKind:hit?.matchKind??(rej?"rejected":"unknown"),score:hit?.score??null,evidence:hit?.evidence??[],missingInfo:hit?.missingInfo??[],detailUnknown:hit?.detailUnknown??!description,rejectedKind:rej?.kind??null},retrieval:{maxPages:2,pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,cursorReturned:endCursor!=null,detailsChecked:stats.detailsChecked}});
+   reports.push({id:sc.id,query:sc.query,requestedCategory:sc.category,status:"captured",cell:sc.cell,cellMatchedAfterDetail:matchesCell(sc.id,selected.title,description),listing:{sourceAdId:selected.sourceAdId,title:selected.title,descriptionSnapshot:description,descriptionSnapshotAvailable:!!description,descriptionContainsVehiclePartCue:/کاتالیزور|کاتالیز|موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|جک|قطعه|قطعات|اگزوز/.test(normalizeForMatch(description)),city:selected.city,price:selected.price,roleCue:roleCue(selected.title),roleMode:def.roleMode??null,eligible:!!hit,matchKind:hit?.matchKind??(rej?"rejected":"unknown"),score:hit?.score??null,evidence:hit?.evidence??[],missingInfo:hit?.missingInfo??[],detailUnknown:hit?.detailUnknown??!description,rejectedKind:rej?.kind??null},retrieval:{maxPages:2,pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,cursorReturned:endCursor!=null,detailsChecked:stats.detailsChecked}});
   }
  }finally{if(oldBuffer===undefined)delete process.env.SLUG_CAPTURE_BUFFER_PATH;else process.env.SLUG_CAPTURE_BUFFER_PATH=oldBuffer;if(oldCap===undefined)delete process.env.HUNT_MAX_DETAILS;else process.env.HUNT_MAX_DETAILS=oldCap;}
  const report={kind:"issue16-retargeted-capture-04B-wrong-item-type",warning:"Raw bounded live evidence only; not human grades and not authorization for code changes.",createdAt:new Date().toISOString(),branch:process.env.GITHUB_REF_NAME??"local",commit:process.env.GITHUB_SHA??"local",runtime:process.version,limits:{maxPagesPerQuery:2,maxDetailsTotal:8,detailsUsed,uniqueListingIds:seen.size,overlapWithPreviouslyInspected:[...overlap],mizanShadow:process.env.MIZAN_SHADOW??"default",scenarios:scenarios.map(x=>({id:x.id,cell:x.cell}))},scenarios:reports};
