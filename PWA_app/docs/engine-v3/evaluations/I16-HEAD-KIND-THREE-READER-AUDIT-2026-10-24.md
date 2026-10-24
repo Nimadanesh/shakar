@@ -135,3 +135,13 @@ This confirms the test-local prototype is executable and its defined examples pa
 - the first matched known part not being the listing's principal subject.
 
 Next: add test-only edge cases for these risks and refine the prototype only where the examples show a deterministic distinction. Keep synthetic cases explicitly labelled. Continue seeking a source-matched, blinded human-graded specific-part false-acceptance case. No production change, merge, deployment, or `main` modification.
+
+
+## Follow-up adversarial prototype cases (2026-10-24)
+
+After Baseline #175, two additional synthetic edge cases were added on the test-only helper in commits `866fcd2` and `61ede4c`:
+
+- A conjunction elsewhere in the title (e.g. service wording) must not count as a connector between the two part mentions.
+- A short marker embedded in a longer marker (e.g. `دیسک` within `دیسک ترمز`) must not count as a second, distinct co-offered part.
+
+The helper now checks whether the co-offer connector lies between non-overlapping part spans. These additions have **not yet been validated by a subsequent Baseline run**; the passing #175 counts apply to the earlier `e8353365` commit only. No production behavior changed. Next, run the focused and full portable suites on the latest test commit and inspect the result. Even if they pass, this remains a synthetic diagnostic policy, not a production-ready Persian subject parser.
