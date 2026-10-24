@@ -448,3 +448,8 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Added `.github/workflows/engine-v3-issue16-kind-characterization.yml` in commit `a8953f4cf2ddf9212b67a5c826d176a5b85b5363`. Unlike the bounded live-capture workflows, it runs only the deterministic `kindLexicon.test.ts` suite on relevant PR changes; it does not call Divar or use live-observation environment flags.
 - GitHub's commit-associated workflow-run query currently returns no run for that commit, so validation is still pending and no pass is claimed. If PR checks do not appear, inspect the PR's check suite/trigger state rather than assuming the tests passed.
 - Scope remains characterization only: the added assertions document current behavior and are not an endorsed fix. No production code changed. PR #42 remains Draft/open/unmerged; `main` untouched; no deployment.
+
+
+## Correction — validation workflow (2026-10-24)
+
+The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` was removed in commit `e2163611e297b2a8e86a24d56ff071337518b7cd` because no run was observed. The characterization tests remain unexecuted; no pass is claimed. PR #42 stays Draft and unmerged; no production behavior change, deployment, or `main` change.
