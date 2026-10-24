@@ -517,3 +517,74 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
     ).toBe("unknown");
   });
 });
+
+
+describe("Issue 16 — Capture 06C shadow subject-policy replay (test-only)", () => {
+  it("compares the candidate subject policy against all five locked human grades", () => {
+    // Exact source text is pinned in the immutable Capture 06C blind packet
+    // and mapped only after grade lock in ISSUE16-CAPTURE-06C-SOURCE-MAP.md.
+    // These are diagnostic policy outputs, not production verdicts.
+    const rows: Array<{
+      code: string;
+      title: string;
+      description: string;
+      humanGrade: 1 | 3;
+      expectedShadow: "allow" | "reject" | "unknown";
+    }> = [
+      {
+        code: "C01",
+        title: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی",
+        description: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی با بالاترین قیمت درایران توسط مهندس محمدی در محل شما",
+        humanGrade: 1,
+        expectedShadow: "allow",
+      },
+      {
+        code: "C02",
+        title: "تعمیر وفروش اگزوز خرید کاتالیزور",
+        description: "با سلام خدمت دوستان عزیز فروش و تعمیر اگزوز با بهترین کیفیت و کمترین زمان ممکن فروش انواع اگزوزهای بلوچی و معمولی و دست ساز و فابریک برای ماشین‌های پراید پژو نیسان پیکان و غیر با یکبار تجربه مشتری همیشگی ما باشید 100 % لطفا از ساعت 8 شب ب بعد دیگ تماس نگیرید معاوضه اگزوز نداریم پس سوال الکی نپرسید ممنون جوشکاری شاسی ماشین هم پذیرفته میشود خرید کاتالیزور 99 %تعمیر 1 %تعویض آدرس نگین شهر روبروی چهارراه مدرسه اتوبان آزادشهر به گنبد برجاده اصلی اگزوزسازی بهروز بامدی ساعت کاری8 تا7 حتی روز های تعطیل اگزوز ن خرید دارم ن معاوضه فقط فروش",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+      {
+        code: "C03",
+        title: "فروش وخریدانواع کاتالیزور و خاک۲۰۶ پژو ال۹۰ نیسان",
+        description: "خرید در محل انواع کاتالیزور های ایرانی نو کاتالیزور استوک و زیر صفری ب شرط انواع منبع جایگزین بدون تعطیلی در سراسر تهران",
+        humanGrade: 3,
+        expectedShadow: "allow",
+      },
+      {
+        code: "C04",
+        title: "جایگزین کاتالیزور xu7 پژو پارس و ۴۰۵و اگزوز بلوچی",
+        description: "یدونه جایگزین کاتالیزور یورو چهار کلا یک هفته رو ماشین بود کاملا نو ب مبلغ ۱,۶۵۰۰ اگزوز منبع بلوجی شرکتی ورق ضخیم مارک لیزر با صدای ریزوعالی نوعه نو ب مبلغ ۲,۳۰۰",
+        humanGrade: 3,
+        expectedShadow: "allow",
+      },
+      {
+        code: "C05",
+        title: "اگزوز (بیات)تیبا.کوییک پژو سمند مارک مشهد",
+        description: "با سلام خدمات رایگان ما تست وبازدید ..دیاگ..تست کاتالیزور..جوشکاری و وصل اگزوز..بازدید چشمی از سراسر اگزوز ..تست شمع وایر کویل سنسور اکسیژن کمپرس متور خام سوزی تمام این خدمات رایگان میباشد لیست قیمت ها نصب اگزوز کاملا رایگان است اگزوز عقب پراید۱۹۰۰ رضا مشهد اگزوز تیبا مشهد ۲۹۰۰ اگزوز پژو 2900 رضا مشهد اگزوز تیبا2.کوییک ۳۳۰۰ رضا مشهد اگزوز بلوچی پراید۲۱۰۰ اگزوز سورن توربویی۳۵۰۰ اگزوز سمند ساینا سورن و......موجود میباشد با مدیریت استاد بیات (همدانی) چهار راه سیلو به سمت رشیدی روبه رویه استخر خلیج فارس",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+    ];
+
+    for (const row of rows) {
+      expect(
+        shadowSpecificSubjectVerdict("کاتالیزور", row.title, row.description),
+        row.code
+      ).toBe(row.expectedShadow);
+    }
+
+    // The important residual counterexample: C01 is grade 1 but the shadow
+    // policy allows it because "خاک کاتالیزور" appears as the title subject.
+    // Thus subject identity alone is not a sufficient product-offer test.
+    expect(rows.find((row) => row.code === "C01")?.humanGrade).toBe(1);
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        rows[0].title,
+        rows[0].description
+      )
+    ).toBe("allow");
+  });
+});
