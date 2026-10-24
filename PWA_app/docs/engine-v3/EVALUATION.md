@@ -178,3 +178,10 @@ No buyer-role, voucher semantics, whole-vehicle eligibility, catalytic-converter
 ## Next controlled gate — role matrix
 
 See [Issue 16 controlled role matrix](evaluations/BRH-2026-10-24-ISSUE16-ROLE-MATRIX.md). The current head's focused kind regression, portable hunt/search suite, and typecheck passed in [run 40063098453](https://github.com/Nimadanesh/shakar/actions/runs/40063098453). Cross-category capture [run 40063098439](https://github.com/Nimadanesh/shakar/actions/runs/40063098439) is diagnostic only. Fresh source-matched controls are still needed for whole-vehicle vs part/accessory, buyer-role vs seller-only, and voucher vs incidental mention. Do not change role semantics or ranking from P03-05 alone; prefer fixed-candidate old/new comparison and keep PR #41 Draft.
+
+## Issue 16 latest capture gate — 2026-10-24
+
+- Latest PR-head workflows all passed: [kind regression #40063359204](https://github.com/Nimadanesh/shakar/actions/runs/40063359204), [Follow-up 03 #40063359140](https://github.com/Nimadanesh/shakar/actions/runs/40063359140), and [cross-category #40063359355](https://github.com/Nimadanesh/shakar/actions/runs/40063359355).
+- The Follow-up 03 artifact used 7/8 detail calls and 7 unique IDs; refrigerator-buyer, vehicle-cash, and vehicle-installment cells remain missing. Previously human-graded source IDs were not recycled into the next blind packet.
+- New four-item blind packet: [BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md). Separate diagnostic map: [internal key](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-INTERNAL-KEY.md). Await owner grades; record them in a third file before joining the key.
+- Evidence is E3 until owner grades make it E4. It is not E5 and does not justify role/ranking changes. PR #41 remains Draft; no merge/deploy; `main` untouched.
