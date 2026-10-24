@@ -154,10 +154,15 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-pa
      if(seen.has(c.sourceAdId)||!isOtherPartTitle(c.title))return false;
      return true;
     });
-    const candidate=eligiblePool[0];
     let added=0;
-    if(candidate && pool.length<8) {
-     seen.add(candidate.sourceAdId);pool.push({candidate,stats,query});added=1;
+    // Spend the bounded detail budget on two distinct candidates per retrieval query,
+    // rather than one candidate per query; body-only mentions are not visible until detail reads.
+    for (const candidate of eligiblePool) {
+     if (added>=2 || pool.length>=8) break;
+     if (seen.has(candidate.sourceAdId)) continue;
+     seen.add(candidate.sourceAdId);
+     pool.push({candidate,stats,query});
+     added++;
     }
     queryReports.push({query,status:added?"candidates-selected":"no-new-title-heads",pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,candidatesSelected:added,cursorReturned:endCursor!=null,titleSamples});
    } catch(error) {
