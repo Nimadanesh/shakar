@@ -152,9 +152,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 06A — specific-pa
     return true;
    });
    let added=0;
-   for(const candidate of eligiblePool) {
-    if(pool.length>=8)break;
-    seen.add(candidate.sourceAdId);pool.push({candidate,stats,query});added++;
+   const candidate=eligiblePool[0];
+   if(candidate && pool.length<8) {
+    seen.add(candidate.sourceAdId);pool.push({candidate,stats,query});added=1;
    }
    queryReports.push({query,status:added?"candidates-selected":"no-new-title-heads",pagesCompleted:events.filter(e=>e.type==="lists-progress").length,adsSeen:stats.adsSeen,candidatesAfterFilters:candidates.length,candidatesSelected:added,cursorReturned:endCursor!=null});
    if(pool.length>=8)break;
