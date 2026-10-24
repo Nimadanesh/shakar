@@ -668,3 +668,13 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Next action is a new immutable, bounded live capture with a distinct artifact and fresh IDs, then a blind packet and owner grading. Existing completed captures must remain immutable. Keep source IDs/engine outputs separate from the blind packet. No production changes until grades support a paired change.
 - Validation source: [Baseline #179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171), 330 focused and 923 full tests passed; typecheck/build passed; ESLint still fails (8 errors / 42 warnings). Full workflow is not green.
 - Current source/test code head remains `8b96c3af9674231fa0cf6c2403bb0a79f9fc3475`; latest docs-only updates are on `engine_v3`. `main` remains untouched.
+
+
+## Issue 16 — Capture 06C ready for blind grading (2026-10-24)
+
+- Current PR #43 head is being advanced on `experiment/issue16-specific-part-body-20261024`; base remains `engine_v3`. Capture 06C run [40100799513](https://github.com/Nimadanesh/shakar/actions/runs/40100799513) succeeded with artifact ID `12563205197` (SHA-256 `c321b97cfefce573c6956b15e52c451e34915d1749e8c2a8541a681dcd82d198`).
+- Blind packet: [ISSUE16-CAPTURE-06C-BLIND.md](evaluations/ISSUE16-CAPTURE-06C-BLIND.md). Five candidates (four target-in-title candidate controls, one other-part-title/body-only candidate); human grades not yet received. Do not expose source IDs or engine diagnostics until grades are locked.
+- The PR update also launched incidental Capture 06A #19 and Capture 06B #6 runs. Treat both as separate, immutable unplanned artifacts, not as replacements for the original 06A/06B captures or their human grades. Capture 06C's selection audit excluded overlapping previously inspected IDs, including the IDs surfaced by these concurrent runs.
+- The three capture workflows now gate live jobs to explicit manual dispatch only. Capture test ID lists include all source IDs opened in 06B/06C and the concurrent 06A/06B reruns to avoid future reuse.
+- Next action: collect independent human grades for C01–C05; then create a separate post-grade source map, join source IDs and engine diagnostics, and update this handoff. If no true direct-offer positive receives grade 3, preserve that limitation and do not claim the positive control arm succeeded.
+- No production logic changed, no merge/deployment, and `main` remains untouched.
