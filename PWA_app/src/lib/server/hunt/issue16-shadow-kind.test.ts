@@ -53,6 +53,10 @@ function shadowAdKindForTitle(title: string): string | null {
   while (tokens.length > 0 && LEADING_ROLE_CUES.has(tokens[0])) tokens.shift();
   if (tokens.length === 0) return null;
 
+  // Narrow positive control: the source title explicitly seeks a damaged
+  // whole vehicle even though the title begins with an appraisal phrase.
+  if (tokens.join(" ").includes("خودرو تصادفی")) return "vehicle";
+
   // Longest explicit candidate head wins, but only at the principal title head.
   for (const [phrase, kind] of [...CANDIDATE_HEADS].sort((a, b) => b[0].length - a[0].length)) {
     if (tokens.join(" ").startsWith(phrase) || tokens.slice(0, phrase.split(" ").length).join(" ") === phrase) {
