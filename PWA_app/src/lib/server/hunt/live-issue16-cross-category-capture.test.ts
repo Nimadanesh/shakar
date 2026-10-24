@@ -123,6 +123,24 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gaNDASAL",
       "gaJ_sXNx",
       "gaaTQEb7",
+      // IDs from earlier bounded diagnostic captures; exclude across future packets.
+      "QaM0ztoJ",
+      "gaN3EAVR",
+      "ga2qQAPq",
+      "gallxRrN",
+      "AZYprmyz",
+      "gacdDbtu",
+      "gabKdk6q",
+      "gaYz4Oi-",
+      "gaVrrHpB",
+      "ga5OBB6n",
+      "gac3D4fJ",
+      "gaU7IS1j",
+      "gaWHIDAt",
+      "gacvUdQ_",
+      "gabT47tX",
+      "ga36JfvB",
+      "gabnYS2G",
 ]);
     const overlapWithInspected = new Set<string>();
     const globallySeen = new Set<string>();
