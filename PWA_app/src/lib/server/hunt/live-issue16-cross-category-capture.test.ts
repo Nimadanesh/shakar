@@ -87,6 +87,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gayyxUTa",
       // IDs opened by the exclusion-validation capture; never reuse for blind review.
       "gaZ6xXmW", "gaIL7h0B", "gaaLQFAi", "gabztl8G", "gaUrFcFK", "gaJaHd6y",
+      // Previously graded IDs from the fresh paired and cross-cell blind packets.
+      "gab_ekWg", "Qa9fP53U", "gaKTlAwq", "gaaPW6zt", "gabvBEiY", "ga726UUL",
+      "gacXDBWE", "gacbznRe", "wZ-6rn1v", "gacTj43d",
+      // IDs inspected in the exclusion-validation captures (including parallel run overlap).
+      "gacT0u2G", "garWfS78", "gaVv8W6C", "gacXDBWE", "gaFzv-Qd",
+      "gahEL1JU", "gaLHWNrk", "galqJmNl", "ga4d_A6Z", "gaPfmFQa", "gaUP4Rl-", "ga9KvfNV",
     ]);
     const overlapWithInspected = new Set<string>();
     const globallySeen = new Set<string>();
