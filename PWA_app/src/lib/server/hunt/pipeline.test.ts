@@ -2699,3 +2699,98 @@ describe("BRH-2026-10-23 buyer-seeking exact source replay — B11/B12", () => {
     expect(isMixedTransactionTitle("فروشنده و (خریدار)انواع مدل یخچال کل کرج")).toBe(true);
   });
 });
+
+
+describe("Issue 16 — source-pinned whole-vehicle item-kind characterization (Capture 05F)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("locks current outcomes for source-matched positives, wrong-kind ads, and the tire-only negative", async () => {
+    // Exact titles/descriptions are from the immutable, human-graded blind
+    // packet. This is a characterization of today's full pipeline, not a
+    // desired future contract. Never treat these engine outcomes as grades.
+    const rows = [
+      {
+        sourceAdId: "I16-B01",
+        title: "خرید فروش انواع کاتالیزور خارجی ایران فرسوده",
+        description: "تعویض کاتالیزور نو فروش انواع طرح های کاتالیز ساخت طرح کاتالیز خریدار کاتالیز شما با بالاترین قیمت پرداخت نقدی درب محل",
+      },
+      {
+        sourceAdId: "I16-B02",
+        title: "کارشناسی وقیمت گذاری خودرو تصادفی /وخریدار تصادفی",
+        description: "پارس مدل 99 تیوفایو معاوضه با خودرو تصادفی باما در تماس باشید",
+      },
+      {
+        sourceAdId: "I16-B03",
+        title: "بدنه کاپوت گلگیر سپر چراغ قیمت عمده",
+        description: "باسلام پخش قطعات بدنه محصولات سایپا و ایران خودرو به تک فروشی به قیمت عمده کاپوت پراید 8200 گلگیر پراید3100 روکش در پراید 2900 گلگیر عقب پراید6300 کاپوت ۱۳۲. 9300 گلگیر ۱۳۲. 3600 کاپوت پژو 12800 گلگیر پژو3400 روکش درب پژو 3400 رکاب ۴۰۵ 3500 گلگیر عقب پژو 13500 کاپوت پارس14100 گلکیر پارس3150 رکاب پارس3280 کاپوت ۲۰۶ 11500 گلگیر ۲۰۶ 3850 روکش درب 3500 کاپوت سمند 14200 گلگیر سمند 3300 رکاب سمند 3800 روکش درب سمند 3500 گلگیر تیبا 4100 و.... قطعات بدنه را از صفر تا صد از ما بخواهید",
+      },
+      {
+        sourceAdId: "I16-B04",
+        title: "فروش بدنه استوک فابریک پژو، پراید، تیبا، دنا، سمند",
+        description: "فروش انواع بدنه استوک فابریک خودرو | قطعات بدنه رنگ فابریک فروش انواع قطعات و بدنه استوک فابریک خودرو با تنوع بالا، مناسب تعویض و تعمیر خودرو. موجودی قط ایران خودرو: پژو ۴۰۵، پژو پارس، پژو پرشیا، پژو ۲۰۶، پژو ۲۰۶ تیپ ۲، پژو ۲۰۶ تیپ ۳، پژو ۲۰۶ تیپ ۵، پژو ۲۰۷، سمند، سمند LX، سمند EF7، سورن، سورن پلاس، دنا، دنا پلاس، دنا پلاس توربو، رانا،تارا. سایپا: پراید صبا، پراید نسیم، پراید ۱۳۱، پراید ۱۳۲، پراید ۱۴۱، پراید ۱۵۱، تیبا، تیبا ۲، ساینا، ساینا S، کوییک، کوییک R، کوییک ، شاهین، چانگان CS35. قطعات موجود: درب جلو، درب عقب، درب صندوق، کاپوت، گلگیر جلو، گلگیر عقب، صندوق عقب، و سایر قطعات بدنه خودرو. بدنه استوک فابریک و قطعات سالم و قابل استفاده؛ مناسب خودروهای تصادفی و تعویض قطعه",
+      },
+      {
+        sourceAdId: "I16-B05",
+        title: "کاتالیزور o. تعمیر. o خرید خاک و منبع",
+        description: "تعمیر انواع کاتالیزور ماشین های خارجی چینی و ایرانی با ضمانت و بهترین کیفیت و ده سال سابقه در تعمیر خرید خاک و منبع مستهلک شما با بهترین قیمت تی هشت جک اس ۵ سراتو پژو ال نود ساندرو ماکسیما بنز بی ام و ون ایسزو بهترین دستگاه های تعمیر کاتالیزور برایه دریافت نوبت دهی تماس بگیرید",
+      },
+      {
+        sourceAdId: "I16-B06",
+        title: "لاستیک تیبا 95درصد معاوضه با پراید",
+        description: "لاستیکا فاق بلند هست 165هست مال تیبا معاوضه با لاستیک پراید نقدیم 9تومن خودم صفر خریدم کویر تایر",
+      },
+      {
+        sourceAdId: "I16-B07",
+        title: "فردا موتور FMC511/صفر و خشک برج روز/نمایندگی",
+        description: "صنعت خودرو جباری با بیش از ۱۵ سال سابقه درخشان. سند آزاد و هزینه انتقال سند بر عهده نمایندگی است. شرایط فروش ویژه: فروش نقدی و تحویل فوری، ۲۴ ساعت مهلت کارشناسی، امکان معاوضه با خودروهای صفر و کارکرده، تسویه پس از تحویل و تایید کارشناس.",
+      },
+    ];
+
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map(({ sourceAdId, title }) => summary({ sourceAdId, title })),
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => {
+      const row = rows.find((item) => item.sourceAdId === id);
+      return {
+        sourceAdId: id,
+        title: row?.title ?? id,
+        price: null,
+        city: "تهران",
+        description: row?.description ?? "",
+        images: [],
+        categorySlug: "",
+      };
+    });
+
+    const def = resolveHuntDefinition({ query: "خرید و فروش خودرو" });
+    if (!def) throw new Error("could not resolve pinned Issue 16 target query");
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (event) => events.push(event));
+    const done = events.find((event) => event.type === "done");
+    if (done?.type !== "done") throw new Error("pipeline did not emit done");
+
+    const outcomes = Object.fromEntries(
+      rows.map((row) => {
+        const result = done.results.find((candidate) => candidate.sourceAdId === row.sourceAdId);
+        return [row.sourceAdId, result?.matchKind ?? "rejected"];
+      })
+    );
+
+    // Baseline characterization observed in Capture 05F: all four wrong-kind
+    // catalyst/body/service rows survive as near; both grade-3 whole-vehicle
+    // transactions also survive as near; the grade-1 tire-only exchange is
+    // rejected. Future changes must pair improvements with these controls.
+    expect(outcomes).toEqual({
+      "I16-B01": "near",
+      "I16-B02": "near",
+      "I16-B03": "near",
+      "I16-B04": "near",
+      "I16-B05": "near",
+      "I16-B06": "rejected",
+      "I16-B07": "near",
+    });
+  });
+});
