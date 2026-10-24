@@ -159,6 +159,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gabT47tX",
       "ga36JfvB",
       "gabnYS2G",
+      // IDs from earlier bounded diagnostic captures; exclude across future packets.
+
 ]);
     const reportPath = join(process.cwd(), "engine-v3-issue16-followup-03-capture.json");
     const previousBufferPath = process.env.SLUG_CAPTURE_BUFFER_PATH;
