@@ -43,7 +43,8 @@ function selectionCell(scenarioId: string, title: string): Cell | null {
     if (!wholeVehicle) return null;
     if (/اقساطی?|قسط|پیش\s?قسط|چک\s?صیادی/.test(text)) return "installment";
     if (/معاوضه|تهاتر|بدل/.test(text)) return "exchange";
-    if (/نقدی|نقد|فوری|تسویه/.test(text) && !/اقساط|قسط/.test(text)) return "cash";
+    // Do not infer cash terms from "immediate delivery" or settlement-after-inspection.
+    if (/نقدی|پرداخت\s?نقد|فروش\s?نقد/.test(text) && !/اقساط|قسط/.test(text)) return "cash";
     return null;
   }
   return null;
