@@ -11,7 +11,7 @@ type Cell = "seller" | "buyer" | "mixed" | "voucher" | "whole-vehicle" | "cash" 
 
 function roleCue(title: string): RoleCue {
   const text = normalizeForMatch(title);
-  const buyer = /خریدار|خریدارم|خریداریم|می\s?خرم|می\s?خوام|می\s?خواهم/.test(text);
+  const buyer = /خریدار|خریدارم|خریداریم|خرید|می\s?خرم|می\s?خوام|می\s?خواهم/.test(text);
   const seller = /فروش|فروشی|فروشنده|به\s?فروش/.test(text);
   if (buyer && seller) return "mixed";
   if (buyer) return "buyer";
