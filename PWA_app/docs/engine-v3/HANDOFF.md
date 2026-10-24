@@ -441,3 +441,9 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - Frozen blind packet: `PWA_app/docs/engine-v3/evaluations/BRH-2026-10-24-ISSUE16-FRESH-PAIRED-BLIND.md`, commit `e4f83a3de9896e52ba21d953b7d21f4b00d711d1`. Separate internal key: `PWA_app/docs/engine-v3/evaluations/BRH-2026-10-24-ISSUE16-FRESH-PAIRED-INTERNAL-KEY.md`, commit `501dcbc5428a3e8f4f93ea0b27e3efc8a299997f`. The blind file was committed before opening the key.
 - Six items cover direct fridge seller, mixed-role fridge, ordinary fridge, fridge part, whole vehicle buy/sell, and voucher. Owner grades are still needed; do not use the key for a quality conclusion until grades are locked.
 - Missing buyer/cash/installment/exchange cells remain explicitly missing. Keep PR #41 Draft; no merge/deploy; `main` untouched.
+
+## Current handoff — next controlled role matrix
+
+- Added [Issue 16 controlled role matrix](evaluations/BRH-2026-10-24-ISSUE16-ROLE-MATRIX.md), explicitly marking missing controls rather than assuming historical observations are usable.
+- Current-head regression workflow [40063098453](https://github.com/Nimadanesh/shakar/actions/runs/40063098453) passed; cross-category capture [40063098439](https://github.com/Nimadanesh/shakar/actions/runs/40063098439) succeeded but remains diagnostic-only.
+- Next: bounded capture with inspected-ID exclusions, blind packet frozen before key review, owner grades locked, then diagnostic join. Prefer same-candidate old/new comparison before any ranking/role proposal. No role or ranking changes authorized; PR #41 Draft/unmerged; `main` and deployment untouched.
