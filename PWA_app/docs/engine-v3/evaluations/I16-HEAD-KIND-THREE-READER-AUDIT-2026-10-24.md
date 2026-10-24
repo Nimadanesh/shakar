@@ -122,3 +122,16 @@ A test-local helper and five assertions were added in commit `e8353365fb2a0e6536
 The prototype uses a deliberately small local list of part subjects and explicit co-offer wording. It is a policy-boundary experiment, not a complete Persian title parser. In particular, the synthetic co-offer does not establish that conjunction detection is sufficient for production. No source-matched human-graded specific-part false acceptance has been recovered, so that evidence gap remains open.
 
 The commit-associated status query returned no checks or workflow runs at the time of this update. Focused/full test validation is pending; do not claim the new assertions passed until an actual run is inspected. Decision remains: no production dictionary/parser/marker/ranking/eligibility change, no merge/deploy, and no `main` modification.
+
+
+## Baseline #175 result and next audit boundary (2026-10-24)
+
+Owner-reported run on test commit `e8353365`: **325 focused tests passed and 918 full portable tests passed**, +5 in each suite relative to #173/#174 (320/913). ESLint remains the workflow failure source; this is not a fully green workflow, although both test suites passed.
+
+This confirms the test-local prototype is executable and its defined examples pass. It does not validate the prototype as a production parser or establish real-world search-quality improvement. Adversarially inspect:
+- substring collisions, such as a shorter marker embedded in a longer word;
+- overlapping matches, such as `دیسک ترمز` and `دیسک` matching the same title span;
+- a generic conjunction elsewhere in the title being mistaken for a connector between target and another part;
+- the first matched known part not being the listing's principal subject.
+
+Next: add test-only edge cases for these risks and refine the prototype only where the examples show a deterministic distinction. Keep synthetic cases explicitly labelled. Continue seeking a source-matched, blinded human-graded specific-part false-acceptance case. No production change, merge, deployment, or `main` modification.
