@@ -98,6 +98,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       // Exclude all newly inspected IDs from the retargeted 2026-10-24 captures.
       "gavBLU60", "gaVn-dm2", "gabvBEiY", "ga7dAoCa", "gaKufbEV", "gabP-8po",
       "gaVP5Rtf", "gaXTjbv8", "gaTI-Kn3", "Qa8HqiWJ",
+      // IDs inspected in the retargeted-v2 captures (commit 49a564a).
+      "gac7TJRT", "gabzLV7f", "QaoPqC7X", "gaO7GNJh", "gaE5qO5h",
+      "gabjtdOw", "gaay7dtd", "gaDkHop1", "gayyxUTa", "gaMPHkWW",
+      "gajmIwfW", "gacjTTyh", "gaSLpCEY",
     ]);
     const reportPath = join(process.cwd(), "engine-v3-issue16-followup-03-capture.json");
     const previousBufferPath = process.env.SLUG_CAPTURE_BUFFER_PATH;
