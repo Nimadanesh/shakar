@@ -562,3 +562,8 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - The test asserts current production `adKindForTitle` returns unknown for these role-prefixed titles, while the isolated shadow parser classifies known part heads as `vehicle-part`, the buyer-seeking vehicle as `vehicle`, and the unknown dealer as null. This deliberately separates item kind from transaction role.
 - The test does not change the production parser or role assessment. Baseline #173 on commit `f020a45a3afbeb008c89a94e1ae6a14fa2fbaa46` is in progress: https://github.com/Nimadanesh/shakar/actions/runs/40090483865. A follow-up type-only cleanup commit `85cd0c40a75963a73ac3ce809441e5a94cfaef0d` has queued Baseline #174: https://github.com/Nimadanesh/shakar/actions/runs/40090490072.
 - No production logic, merge, deployment, or `main` change.
+
+### Role-prefix characterization — interim CI status
+
+- On Baseline #173, the focused hunt/search suite and full portable suite have passed; TypeScript typecheck has passed. ESLint is still running at the last poll, with production build not yet started. Do not call this run complete or green until all steps finish.
+- Baseline #174 is queued on the type-only cleanup commit. The test semantics are unchanged between #173 and #174.
