@@ -115,15 +115,21 @@ function isCell(cell:string,title:string):boolean {
  const t=normalizeForMatch(title);
  const service=/تعمیر|خدمات|تعمیرکار|سرویس|احیا/.test(t);
  const catalyst=/کاتالیزور|کاتالیز/.test(t);
- const part=/موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|قطعه|قطعات|اگزوز|لوازم یدکی/.test(t);
- const whole=/خودرو|ماشین|سواری|پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|۲۰۶|206|۲۰۷|207|۴۰۵|405|ال\s?۹۰|ال\s?90|l90|زانتیا|چری|هایما|فیدلیتی|دیگنیتی|آریزو|اطلس|نیسان|تویوتا|هیوندای|کیا|بنز|مزدا/.test(t);
+ // Determine the principal item from the title head, not any later make/model
+ // mention. This avoids classifying body-parts inventories as whole cars.
+ const head=t.replace(/^(?:(?:خرید\s+و\s+فروش|فروش|فروشی|معاوضه|خریدار|خرید|فوری|نقدی)\s+)+/,"");
+ const partHead=/^(?:لاستیک|رینگ|سپر|چراغ|آینه|باتری|کاپوت|گلگیر|بدنه|قطعه|قطعات|لوازم یدکی|کاتالیزور|کاتالیز|گیربکس|اگزوز|کمک|موتور خودرو)\b?/.test(head);
+ const partMention=/موتور|گیربکس|سپر|چراغ|آینه|باتری|لاستیک|رینگ|کمک|قطعه|قطعات|اگزوز|لوازم یدکی|کاپوت|گلگیر|بدنه|کاتالیزور|کاتالیز/.test(t);
+ const wholeHead=/^(?:پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|۲۰۶|206|۲۰۷|207|۴۰۵|405|ال\s?۹۰|ال\s?90|l90|زانتیا|چری|هایما|فیدلیتی|دیگنیتی|آریزو|اطلس|نیسان|تویوتا|هیوندای|کیا|بنز|مزدا)\b?/.test(head)
+   || /^فردا موتور\s*fmc511/.test(head);
+ const wholeBuyer=/خودرو\s+تصادفی/.test(t)&&/خریدار|خرید|کارشناسی|قیمت گذاری/.test(t);
  const transaction=/فروش|فروشی|معاوضه|خریدار|خرید/.test(t);
- if(cell==="whole-clean") return whole&&!part&&!catalyst&&!service&&transaction;
- if(cell==="whole-with-part-mention") return whole&&part&&!catalyst&&!service&&transaction;
- if(cell==="whole-buyer") return whole&&!catalyst&&!service&&/خریدار|خرید/.test(t);
+ if(cell==="whole-clean") return wholeHead&&!partHead&&!partMention&&!catalyst&&!service&&transaction;
+ if(cell==="whole-with-part-mention") return wholeHead&&!partHead&&partMention&&!catalyst&&!service&&transaction;
+ if(cell==="whole-buyer") return (wholeHead||wholeBuyer)&&!partHead&&!catalyst&&!service&&/خریدار|خرید|معاوضه/.test(t);
  if(cell==="catalyst-only") return catalyst&&!service;
  if(cell==="catalyst-service") return catalyst&&service;
- if(cell==="other-part") return part&&!catalyst&&!service&&!whole;
+ if(cell==="other-part") return (partHead||(partMention&&!wholeHead))&&!catalyst&&!service;
  return false;
 }
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION!=="1")("Capture 05F — whole-vehicle positives with part mentions vs component/service negatives",async()=>{
