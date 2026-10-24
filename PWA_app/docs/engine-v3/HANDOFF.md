@@ -518,3 +518,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Keep `HEAD_KIND`, `PART_MARKERS`, the production parser, ranking, and eligibility unchanged. Preserve B02/B07/D02/D05/D07 whole-vehicle controls, B06 tire-only negative, and the direct-specific-part same-kind counter-risk. Unknown remains no-op.
 - Next: seek the missing positive only in immutable, source-identifiable capture records already available; do not iterate live search terms blindly or reconstruct listing text. If no exact source snapshot is recoverable, explicitly close the source-recovery attempt as unavailable and retain the risk in the decision record. A production fix still requires a safe three-reader design and source-grounded paired controls.
 - No production behavior change, merge, deployment, or `main` change.
+
+## Issue 16 — source-backed part-marker control recovered (2026-10-24)
+
+- New audit: [I16-SECONDARY-PART-POSITIVE-RECOVERY-2026-10-24.md](evaluations/I16-SECONDARY-PART-POSITIVE-RECOVERY-2026-10-24.md).
+- The missing semantic positive was found in the already-frozen 05D blind packet: D05, source ad `gacTnnuH`, human grade 3. Its whole-vehicle title is `دنا پلاس توربو اتومات بدون رنگ 1400 فروش فوری`; its body mentions `کمک فنر` and `تایر` secondarily. This directly exercises existing `PART_MARKERS` vocabulary while preserving a clean whole-vehicle subject.
+- A test-only regression was added to `issue16-shadow-kind.test.ts`: source-backed D05 must not mismatch/reject, paired with source-backed B04 body-parts inventory (human grade 1), which must still reject. These assertions target `assessModelSpecificity` itself, unlike the existing shadow title parser assertions.
+- This is a post-capture audit of immutable, human-graded source text; it does not alter original cell labels, IDs, or grades. It partially closes the positive-control gap, but does not establish a safe production `HEAD_KIND` change. The three-reader counter-risk and transaction-prefix parsing remain separate.
+- The new test has been committed on `engine_v3`; its CI run must be checked before treating the regression as validated. Keep production logic, ranking, eligibility, and `main` unchanged. No merge/deploy authorized.
