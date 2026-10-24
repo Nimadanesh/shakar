@@ -7,7 +7,7 @@ import { resolveHuntDefinition } from "./definition";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
 
 type RoleCue = "mixed" | "buyer" | "seller" | "other";
-type Cell = "seller" | "buyer" | "mixed" | "voucher" | "whole-vehicle" | "cash" | "installment" | "exchange";
+type Cell = "seller" | "buyer" | "mixed" | "ordinary-appliance" | "wrong-kind-control" | "voucher" | "whole-vehicle" | "cash" | "installment" | "exchange";
 
 function roleCue(title: string): RoleCue {
   const text = normalizeForMatch(title);
@@ -26,11 +26,15 @@ function selectionCell(scenarioId: string, title: string): Cell | null {
   const wholeVehicle = !adjacent && model;
 
   if (scenarioId.startsWith("A-refrigerator-")) {
-    // Require the target appliance itself, not an ad that only buys a motor/part.
+    // Paired kind controls: ordinary target appliance vs. a part-only listing.
     const applianceTarget = /یخچال|فریزر|ساید/.test(text);
     const partsOnly = /موتور|کمپرسور|قطعه|قطعات/.test(text) &&
       !/یخچال\s?فریزر|فریزر\s?یخچال|ساید\s?بای\s?ساید|یخچال\s?ساید/.test(text);
+    if (scenarioId === "A-refrigerator-wrong-kind") {
+      return applianceTarget && partsOnly ? "wrong-kind-control" : null;
+    }
     if (!applianceTarget || partsOnly) return null;
+    if (scenarioId === "A-refrigerator-ordinary") return "ordinary-appliance";
     const cue = roleCue(title);
     return cue === "seller" || cue === "buyer" || cue === "mixed" ? cue : null;
   }
@@ -60,13 +64,16 @@ type Scenario = {
 it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
   "captures independent Issue 16 Follow-up 03 evidence within fixed budgets",
   async () => {
-    // 3 role controls + 2 vehicle-kind controls + 3 transaction-kind controls = 8 details.
+    // 5 appliance role/kind controls + 2 vehicle-kind controls + 3 transaction-kind controls; strict total remains 8 details.
     // Each targeted query is capped at two list pages; missing cells stay missing.
     const scenarios: Scenario[] = [
       // Separate role-targeted queries reduce dependence on finding all roles in one result page.
       { id: "A-refrigerator-seller", query: "فروش یخچال", category: "home", cells: ["seller"] },
       { id: "A-refrigerator-buyer", query: "خریدار یخچال", category: "home", cells: ["buyer"] },
       { id: "A-refrigerator-mixed", query: "خرید و فروش یخچال", category: "home", cells: ["mixed"] },
+      // Paired controls for the query-kind change: ordinary appliance and part-only.
+      { id: "A-refrigerator-ordinary", query: "یخچال", category: "home", cells: ["ordinary-appliance"] },
+      { id: "A-refrigerator-wrong-kind", query: "قطعه یخچال", category: "home", cells: ["wrong-kind-control"] },
       // Keep whole-vehicle and voucher/service controls independently targeted.
       { id: "B-vehicle-whole", query: "خریدوفروش خودرو", category: "vehicles", cells: ["whole-vehicle"] },
       { id: "B-vehicle-voucher", query: "حواله خودرو", category: "vehicles", cells: ["voucher"] },
@@ -79,6 +86,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gab_aV8W", "gaLNJNwu", "ga4iPfzH", "gaPHaEfq", "gaRj-fI_", "gaqV1O58",
       "galu34HS", "gavSad4q", "Qa4_oh_e", "gabPa811", "gaIL7h0B",
       "gaYvJrs6", "wZcsAVgg", "gab7Jmnv", "gabLLuzd", "gaP28UXT",
+      // Exclude every listing already opened during the 2026-10-24 diagnostic captures.
+      "gac_yx5p", "ga9Nx1wE", "gaFLygmQ", "gab7c23g", "gac7yxi1",
+      "gajmIwfW", "gaQjucWz", "QaPvpvjd", "gaVXpJTP", "gaWDC3Xz",
+      "gaf4cqwp", "gaU-i7iQ", "gac3hpjw", "gaAnK9CM", "gaA_eiS8",
     ]);
     const reportPath = join(process.cwd(), "engine-v3-issue16-followup-03-capture.json");
     const previousBufferPath = process.env.SLUG_CAPTURE_BUFFER_PATH;
