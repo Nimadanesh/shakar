@@ -17,7 +17,7 @@
 
 - **Denominator:** 5
 - **Distribution:** grade 1 = 3/5 (60%); grade 3 = 2/5 (40%); grade 0 = 0; grade 2 = 0; UNKNOWN = 0.
-- **Mean:** 2.00/3.
+- **Mean:** 1.80/3.
 - This is a targeted, non-random, five-item live sample. The mean is descriptive only, not a population precision estimate or a paired old-vs-new metric.
 - C03 and C04 are the only title-term candidate controls that received grade 3. C01 and C02 demonstrate that a target-term title mention is not sufficient for grade 3. C05 is a service/test mention in the body, not an offered catalytic converter product.
 - The grades are authoritative human judgments and remain separate from engine diagnostics. Source IDs and diagnostic fields are documented only in the post-grade source map.
