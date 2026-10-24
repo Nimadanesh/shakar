@@ -540,3 +540,10 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - The workflow's overall failure remains attributable to the separate ESLint step, per the reported run; do not describe CI as fully green. Typecheck/build status should only be repeated if independently confirmed for #171.
 - The test pair is now evidence-backed and regression-tested, but it validates the current guard behavior only. It does **not** resolve the production `HEAD_KIND` three-reader design risk or transaction-role-prefix parsing, and does not authorize a production lexicon/parser/ranking/eligibility change.
 - Next safe step: update the Issue 16 decision/audit record to distinguish (a) recovered and validated marker-guard positive/negative controls from (b) unresolved production design risks; then continue a read-only source-grounded three-reader/role-prefix audit. No production code, merge, deploy, or `main` change without explicit approval.
+
+## Issue 16 — specific-part same-kind counter-risk diagnostic (2026-10-24)
+
+- Added a synthetic test-only counterexample in `PWA_app/src/lib/server/hunt/issue16-shadow-kind.test.ts`: the listing subject is `دیسک ترمز پراید سالم`, while `کاتالیزور` appears only secondarily in the body. Current `vehicle` query kind rejects on the `دیسک` marker; hypothetical `vehicle-part` causes the shared-kind guard to skip that marker and the mismatch disappears.
+- This is a mechanism-level diagnostic fixture only, not a source ad, human grade, or claim of a measured production false positive.
+- Baseline #172 on test commit `f60241139d96be2bba82e274ffdbab0a04ce93f4` was triggered and is pending: https://github.com/Nimadanesh/shakar/actions/runs/40090307284
+- Audit addendum updated in [I16-HEAD-KIND-THREE-READER-AUDIT-2026-10-24.md](evaluations/I16-HEAD-KIND-THREE-READER-AUDIT-2026-10-24.md). The decision remains no production lexicon/parser/ranking/eligibility change; no merge, deployment, or `main` modification.
