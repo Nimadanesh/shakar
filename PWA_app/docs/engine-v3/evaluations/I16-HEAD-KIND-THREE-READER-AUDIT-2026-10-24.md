@@ -105,3 +105,20 @@ Candidate behavior:
 The frozen 05F source packet gives source-backed role-prefix and parts-inventory controls; D05 gives a human-grade-3 whole-vehicle positive with secondary part mentions. It does **not** yet contain a source-matched, human-graded false acceptance for a direct specific-part hunt where another same-kind part is the principal subject and the target is only contextual. Keep that counter-risk labelled synthetic until such a case is found or captured under a new, immutable experiment ID.
 
 Next work is a test-only identity/co-offer prototype with a compact matrix for the cases above, then inspect both false-reject and false-accept outcomes. No changes to production `HEAD_KIND`, `PART_MARKERS`, `assessModelSpecificity`, ranking, or eligibility until that matrix is source-grounded and passes CI. No merge, deployment, or `main` modification.
+
+
+## Subject identity / co-offer prototype — validation pending (2026-10-24)
+
+A test-local helper and five assertions were added in commit `e8353365fb2a0e65362f06a871cde9ef4e3d2c0b`. The helper is not wired into production and does not alter `assessModelSpecificity`, `HEAD_KIND`, `PART_MARKERS`, ranking, or eligibility.
+
+| Control | Evidence status | Intended diagnostic outcome |
+|---|---|---|
+| D05: whole Dena vehicle, `کمک فنر`/`تایر` only in description | Frozen source, human grade 3 | Preserve whole-car result; no specific-part identity rejection |
+| H05F-B03: parts inventory with part marker before model names | Frozen source, human grade 1 | Reject for whole-car hunt |
+| Brake disc principal title, catalyst only in body | Synthetic only | Reject direct catalyst hunt in subject-identity prototype |
+| Brake disc and catalyst explicitly co-offered in title | Synthetic only | Allow only the explicit title-level co-offer in prototype |
+| Unknown service-like principal subject | Synthetic only | Return unknown/no hard rejection |
+
+The prototype uses a deliberately small local list of part subjects and explicit co-offer wording. It is a policy-boundary experiment, not a complete Persian title parser. In particular, the synthetic co-offer does not establish that conjunction detection is sufficient for production. No source-matched human-graded specific-part false acceptance has been recovered, so that evidence gap remains open.
+
+The commit-associated status query returned no checks or workflow runs at the time of this update. Focused/full test validation is pending; do not claim the new assertions passed until an actual run is inspected. Decision remains: no production dictionary/parser/marker/ranking/eligibility change, no merge/deploy, and no `main` modification.
