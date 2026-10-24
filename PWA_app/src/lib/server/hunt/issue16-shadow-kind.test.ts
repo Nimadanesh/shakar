@@ -28,6 +28,7 @@ const LEADING_ROLE_CUES = new Set([
   "تعویض",
   "نیازمند",
   "میخر",
+  "پخش",
 ]);
 
 const CANDIDATE_HEADS: Array<[string, string]> = [
@@ -173,4 +174,34 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
     expect(shadowAdKindForTitle("لاستیک تیبا معاوضه با پراید")).toBe("vehicle-part");
     expect(kindGateRejects(queryKind, shadowAdKindForTitle("لاستیک تیبا معاوضه با پراید"))?.tier).toBe("reject");
   });
+
+  it("runs the candidate parser against the locked Issue 16 source-title controls", () => {
+    const queryKind = queryKindForDef(["خرید", "و", "فروش", "خودرو"], false, "vehicles");
+    expect(queryKind).toBe("vehicle");
+
+    // Source-pinned titles only. These are shadow outcomes, not production
+    // outcomes and not human grades. Unknown dealer heads must remain no-op.
+    const cases: Array<{ id: string; title: string; expected: string | null; gate: string | null }> = [
+      { id: "B01 catalyst", title: "خرید فروش انواع کاتالیزور خارجی ایران فرسوده", expected: "vehicle-part", gate: "reject" },
+      { id: "B02 damaged-vehicle buyer", title: "کارشناسی وقیمت گذاری خودرو تصادفی /وخریدار تصادفی", expected: "vehicle", gate: null },
+      { id: "B03 bulk body parts", title: "بدنه کاپوت گلگیر سپر چراغ قیمت عمده", expected: "vehicle-part", gate: "reject" },
+      { id: "B04 stock body-parts inventory", title: "فروش بدنه استوک فابریک پژو، پراید، تیبا، دنا، سمند", expected: "vehicle-part", gate: "reject" },
+      { id: "B05 catalyst repair", title: "کاتالیزور o. تعمیر. o خرید خاک و منبع", expected: "vehicle-part", gate: "reject" },
+      { id: "B06 tire-only exchange", title: "لاستیک تیبا 95درصد معاوضه با پراید", expected: "vehicle-part", gate: "reject" },
+      { id: "B07 whole-vehicle dealer", title: "فردا موتور FMC511/صفر و خشک برج روز/نمایندگی", expected: null, gate: null },
+      { id: "D02 Toyota vehicle offer", title: "فروش فوری اقساطی تویوتا/بیمه گارانتی/سندبنام شما", expected: "vehicle", gate: null },
+      { id: "D03 Lifan parts inventory", title: "فروش لوازم یدکی لیفان بدنه ، موتوری و جلوبندی", expected: "vehicle-part", gate: "reject" },
+      { id: "D05 direct Dena sale", title: "دنا پلاس توربو اتومات بدون رنگ 1400 فروش فوری", expected: "vehicle", gate: null },
+      { id: "D07 vehicle installment sales", title: "فروش اقساطی خودرو", expected: "vehicle", gate: null },
+      { id: "D08 exhaust/catalyst control", title: "پخش انواع اگزوز.طرح تعویض کاتالیزورهای فرسوده", expected: "vehicle-part", gate: "reject" },
+    ];
+
+    for (const row of cases) {
+      const actualKind = shadowAdKindForTitle(row.title);
+      expect(actualKind, row.id).toBe(row.expected);
+      const verdict = kindGateRejects(queryKind, actualKind);
+      expect(verdict?.tier ?? null, row.id).toBe(row.gate);
+    }
+  });
+
 });
