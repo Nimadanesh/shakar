@@ -658,3 +658,13 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Next priority is evidence, not another speculative parser rule: recover or capture a new immutable, source-matched Divar case for a specific-part hunt where a different part is the principal title subject and the hunted part appears only as context/body text. Preserve a blind packet and separate internal source mapping; obtain the owner's blind grade before reconciling. Do not invent or infer the grade.
 - If no such live/source-backed case is available, record that limitation and stop expanding the synthetic matrix rather than treating extra synthetic cases as product-quality evidence.
 - No production source/ranking/eligibility behavior changed; no merge, deployment, or `main` modification. Current source/test head remains `8b96c3af9674231fa0cf6c2403bb0a79f9fc3475`; docs are being updated separately on `engine_v3`.
+
+
+## Issue 16 follow-up after Baseline #179 (2026-10-24)
+
+- The source-pinned full-pipeline characterization was already present in `PWA_app/src/lib/server/hunt/pipeline.test.ts` and was included in Baseline #179. It covers 12 frozen rows across Capture 05F/05D; the broad hunt's D03 parts-inventory false positive remains `exact`, while D05 whole-vehicle positive remains eligible as `near`. This is a reproduced, human-graded broad-hunt failure—not a fix.
+- Recovery status: the whole-vehicle secondary-part positive D05 is real, source-matched, human grade 3; D03 is a real, source-matched parts-only negative, human grade 1. The full-pipeline fixture gap is closed.
+- Still open: a source-matched, human-graded case for a **specific-part hunt** where a different part is the principal title subject and the hunted part appears only in the description. Synthetic tests do not close this gate. Do not add more synthetic permutations unless they test a clearly new invariant.
+- Next action is a new immutable, bounded live capture with a distinct artifact and fresh IDs, then a blind packet and owner grading. Existing completed captures must remain immutable. Keep source IDs/engine outputs separate from the blind packet. No production changes until grades support a paired change.
+- Validation source: [Baseline #179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171), 330 focused and 923 full tests passed; typecheck/build passed; ESLint still fails (8 errors / 42 warnings). Full workflow is not green.
+- Current source/test code head remains `8b96c3af9674231fa0cf6c2403bb0a79f9fc3475`; latest docs-only updates are on `engine_v3`. `main` remains untouched.
