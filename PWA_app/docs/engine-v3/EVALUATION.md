@@ -107,3 +107,95 @@ For every meaningful experiment, record:
 - Denominator: 4; grade 1 = 4/4 (100%); no INSUFFICIENT items. Every item was weak/tangential or wrong transaction direction for its exact query.
 - This is E4 human judgment over a non-random supplemental retrieval sample, not E5 paired comparison, not a population precision estimate, and not evidence of ranking uplift. The barter target was absent from the bounded capture, so the existing human-graded sale/exchange control remains the positive control for that matrix cell.
 - Decision: no new regex, broad buyer cue, hard rejection, or ranking change from these four items. PR #28 remains draft/unmerged; `main` and deployment untouched.
+
+## Issue 16 Follow-up 03 — targeted-query capture (2026-10-24)
+
+- Capture run [40061183031](https://github.com/Nimadanesh/shakar/actions/runs/40061183031), artifact `12546903271`, on experiment PR #41 head `de2b83c9d158b017f4235d65c18b35963ab17387`. Read-only; Node 24; Mizan shadow disabled; 8 targeted queries, maximum 2 list pages/query, 8-detail and 8-unique-ID caps. Six detail reads / six unique IDs were used; `productionRank` is null for every record.
+- Captured cells: refrigerator seller, buyer, mixed; whole vehicle; voucher; vehicle exchange. Missing within budget: explicit cash and installment controls. The selector recorded encountered overlap with prior packet IDs (`wZcsAVgg`, `gaIL7h0B`, `gaPHaEfq`) but excluded those IDs from selected records. This remains a selected, ungraded live snapshot, not a blind packet or quality metric.
+- **Important new diagnostic lead:** query `فروش یخچال` resolved to include terms `فروش`, `یخچال`, category `home`; its directly relevant refrigerator-for-sale listing `gaWDC3Xz` (`یخچال فریزر فروش فوری فوری زیر قیمت`) was hard-rejected with `kind:domain:appliance-not-home-goods`. The same run's explicit buyer query returned a refrigerator buyer listing and classified it exact; the mixed query returned a shop that both sells and buys refrigerators and was classified near. The seller rejection suggests a possible interaction between the category fallback (`home` → `home-goods`) and subject-kind resolution when the verb precedes the item term. It is a code-level hypothesis, not yet proven root cause or human-graded relevance evidence.
+- Follow-up investigation should inspect `queryKindForDef`/definition ordering and add a focused regression test for seller/buyer/ordinary refrigerator queries before proposing any fix. Require paired wrong-kind controls (e.g. refrigerator parts versus the appliance itself) and preserve unknown/no-op behavior. Do not globally relax the kind gate.
+- Vehicle whole-item and voucher controls were both captured; both are eligible in this diagnostic run and both carry `near`/low scores in the engine snapshot. Human grades for earlier Issue 16 packets do not transfer to these newly captured IDs. The vehicle exchange cell was retrieved; its title is a direct Tiba listing with explicit exchange wording, but engine match kind was near due missing `خودرو` evidence. These are hypotheses for a later blind evaluation only.
+- Protocol caveat: the artifact's diagnostic key was inspected before any new blind packet was frozen, so **do not derive a purported blind packet from this capture**. If the category/kind lead is pursued, first build a separate predeclared capture design and keep the blind presentation and source/diagnostic key isolated.
+- Decision: no ranking, eligibility, rejection, or category semantics change from this run. PR #41 remains Draft/unmerged; `main` and deployment untouched.
+
+
+## Issue 16 — narrow query-kind follow-up (2026-10-24; experimental)
+
+- Code inspection confirmed the candidate failure path: `queryKindForDef` only matched a lexicon subject at the start of the include phrase. For the captured `فروش یخچال` definition (`["فروش", "یخچال"]`, category `home`), this misses `یخچال → appliance` and falls through to `home-goods`; the live fridge seller was then rejected as `kind:domain:appliance-not-home-goods`.
+- Experimental branch change: preserve the original subject-first lookup; only if it finds no subject, strip leading tokens already classified in `HEAD_SKIP_TOKENS` and retry once. No arbitrary interior-token search, global kind-gate relaxation, buyer-role change, or ranking rule was added.
+- Regression coverage adds `فروش یخچال → appliance`, ordinary `یخچال → appliance`, and preserves `تعمیر یخچال → service` plus the existing unknown/category fallback. The existing kind-gate tests retain wrong-kind rejection and unknown/no-op controls.
+- This is an experimental code hypothesis tied to one live false rejection, not a measured population-level gain. The new PR-triggered bounded captures are execution side effects only and must not be treated as independent human-quality evidence or converted into a blind packet. Focused kind regression, portable hunt/search suite, and TypeScript typecheck passed on PR head `577a6eef9e681f0f2294b6275db0fbfb4289965a` in [run 40061786676](https://github.com/Nimadanesh/shakar/actions/runs/40061786676). This establishes regression compatibility, not live quality uplift. Fresh paired live validation is still required before merge consideration. No merge/deploy; `main` untouched.
+
+## Issue 16 — post-fix live capture readout (2026-10-24)
+
+- PR-head reruns completed successfully: [kind regression / portable hunt suite / typecheck run 40061855699](https://github.com/Nimadanesh/shakar/actions/runs/40061855699), [Follow-up 03 capture run 40061855750](https://github.com/Nimadanesh/shakar/actions/runs/40061855750), and [cross-category capture run 40061855683](https://github.com/Nimadanesh/shakar/actions/runs/40061855683). These are read-only runs; Mizan shadow remained off.
+- Latest Follow-up 03 artifact `12547791923` used 4 detail reads / 4 unique IDs (cap 8). `فروش یخچال` selected `gac_yx5p`, title `فروش یخچال و فریزر گلداستار سالم`, and it is now `eligible=true`, `matchKind=exact`, score `3.5`, with no kind rejection. This is a positive directional signal consistent with the query-kind fix, but it is one selected live listing, not a population-level uplift estimate.
+- Remaining control observations: `خرید و فروش یخچال` selected `ga9Nx1wE`, whose title is mixed-role but description snapshot says it buys refrigerators; it is still `exact` despite a negative score (`-4.5`). `حواله خودرو` selected `gab7c23g` (`خدمات حواله خودرو`), still eligible/near with score `3.5`. The cross-category capture also selected a catalytic-converter ad for `خریدوفروش خودرو` (`gac7yxi1`) and a catalytic-converter ad for `خرید و فروش خودرو` (`QaPvpvjd`), both accepted by the engine. These are separate transaction-role / whole-vehicle relevance concerns, not reasons to broaden the kind fix.
+- Missing cells in Follow-up 03: refrigerator buyer, cash, installment, exchange. The six-detail cross-category capture also lacks an ordinary-appliance positive/negative kind pair. The artifacts repeat at least one previously observed listing across capture jobs and their diagnostic fields have been inspected; do not count the reruns as independent evidence and do not create a blind packet from these artifacts.
+- Gate: keep PR #41 Draft. Automated tests pass, and one seller false rejection appears corrected, but before merge consideration obtain a fresh, non-overlapping blind review with a direct appliance seller plus ordinary-appliance and wrong-kind controls, and separately evaluate transaction-direction / whole-vehicle false positives. No ranking, role semantics, voucher policy, or kind-gate expansion is authorized by these selected observations.
+
+## Issue 16 — fresh paired blind packet frozen (2026-10-24)
+
+- Updated bounded capture [run 40062192939](https://github.com/Nimadanesh/shakar/actions/runs/40062192939), artifact `12547517801`, used 6 detail reads / 6 unique IDs within the 8-detail cap. It excluded all previously inspected capture IDs and prior human-packet IDs from selected records; some excluded IDs are still listed in the harness's `overlapWithPriorPackets` field, so that field should be read as excluded overlap, not selected-record overlap.
+- Before opening/reconciling the new diagnostic key, froze `evaluations/BRH-2026-10-24-ISSUE16-FRESH-PAIRED-BLIND.md` (commit `e4f83a3de9896e52ba21d953b7d21f4b00d711d1`). It contains six fresh records: direct refrigerator seller, mixed refrigerator query, ordinary refrigerator, refrigerator part query, whole-vehicle buy/sell, and vehicle voucher. Separate key: `evaluations/BRH-2026-10-24-ISSUE16-FRESH-PAIRED-INTERNAL-KEY.md` (commit `501dcbc5428a3e8f4f93ea0b27e3efc8a299997f`).
+- Diagnostics after blind freeze: direct seller `gab_ekWg` and ordinary refrigerator `gaKTlAwq` are eligible/exact (3.5); mixed query `Qa9fP53U` is eligible/exact (3.5); part query `gaaPW6zt` is eligible/near (1.5); whole vehicle `gabvBEiY` eligible/near (0); voucher `ga726UUL` eligible/exact (3.5). These are diagnostic only until owner grades are locked. The part result should be judged against the explicit query `قطعه یخچال`, not as a negative to the appliance query-kind fix.
+- Missing cells remain: refrigerator buyer, cash, installment, exchange. Do not fill these with unrelated ads. Keep PR #41 Draft pending owner blind grades and subsequent reconciliation. No merge/deploy; `main` untouched.
+
+## Next controlled gate — role and whole-item relevance (2026-10-24)
+
+### Current CI/status verification
+
+- On current PR head `27f7dea6d1decedeb81f167ec86320104dd0b83d`, [Issue 16 kind regression run 40063098453](https://github.com/Nimadanesh/shakar/actions/runs/40063098453) passed. The cross-category bounded capture run [40063098439](https://github.com/Nimadanesh/shakar/actions/runs/40063098439) also succeeded; its artifact is diagnostic capture only, not a blind-grade result.
+- PR #41 is Draft and unmerged. `main=10f3c40d70748ff27d6928eaed0875e10dab1c56`; `engine_v3=a2d8f269f32c9dcf3bf01dc960e8d12b4e8e1192`. No merge or deployment.
+
+### Why the next capture must be a separate experiment
+
+The latest human-graded packet was designed primarily around query-kind and cross-category cells. Its two engine/human divergences are informative but insufficient for a role/ranking patch. In particular, P03-05 is one ambiguous whole-vehicle result, and the previously observed catalytic-converter ads are diagnostic-only after their engine output was inspected. Do not recycle those IDs into a blind packet or count workflow reruns as independent evidence.
+
+### Predeclared vehicle-role matrix (not yet populated)
+
+| Query intent | Positive control required | Negative / contrast control required | Current status |
+|---|---|---|---|
+| `خریدوفروش خودرو` (whole vehicle, mixed direction) | Direct whole-car listing with clear buy/sell evidence | Vehicle part/accessory, e.g. catalytic converter, with no whole-car offer | Needs fresh source-matched pair and blind grading |
+| `خریدار خودرو تصادفی` (buyer role) | Explicit buyer listing for damaged/accident vehicle | Seller-only whole-car listing with no buying offer | Existing observations are diagnostic-only unless a prior human-grade record is verified; obtain a fresh pair |
+| `حواله خودرو` (voucher/transfer product) | Explicit voucher/transfer listing | Whole-car sale that only mentions a voucher incidentally, or a part listing | P03-06 is a human-grade 3 positive anchor; add independent contrast controls |
+| `قطعه یخچال` (explicit appliance part) | Direct motor/parts listing | Whole refrigerator listing without parts offer | P03-04 is a human-grade 3 positive anchor; this is not a negative against the narrow query-kind fix |
+
+The matrix is a design checklist, not a claim that these fresh controls have already been collected. Reuse a historical example only if its exact query, source ID, text snapshot, and human grade are present in the control documents; otherwise mark it missing.
+
+### Required protocol before any role/ranking change
+
+1. Build a bounded, read-only capture with fixed query cells and explicit exclusions for every inspected ID. Keep the existing caps; no Mizan shadow and no production-rank mutation.
+2. Freeze and commit a blind packet containing query + listing text only. Commit the diagnostic key separately and do not open it until owner grades are recorded in a third file.
+3. Compare the same judged candidate IDs under the relevant old/new logic where possible. A fresh-live snapshot alone is not an old/new paired comparison (E5); it remains bounded E3 capture plus E4 human judgment.
+4. Report per-cell grades, top-5 critical errors, and disagreements. Do not infer general uplift from a six-item convenience sample; no rule change on a single listing.
+5. If the fixed-candidate comparison is not technically feasible, record that limitation and keep the code experimental rather than manufacturing an E5 claim.
+
+### Current decision
+
+No buyer-role, voucher semantics, whole-vehicle eligibility, catalytic-converter filtering, or ranking-score changes are authorized. Continue the narrow query-kind experiment only. Missing cells stay missing. PR #41 remains Draft; `main` and deployment untouched.
+
+## Next controlled gate — role matrix
+
+See [Issue 16 controlled role matrix](evaluations/BRH-2026-10-24-ISSUE16-ROLE-MATRIX.md). The current head's focused kind regression, portable hunt/search suite, and typecheck passed in [run 40063098453](https://github.com/Nimadanesh/shakar/actions/runs/40063098453). Cross-category capture [run 40063098439](https://github.com/Nimadanesh/shakar/actions/runs/40063098439) is diagnostic only. Fresh source-matched controls are still needed for whole-vehicle vs part/accessory, buyer-role vs seller-only, and voucher vs incidental mention. Do not change role semantics or ranking from P03-05 alone; prefer fixed-candidate old/new comparison and keep PR #41 Draft.
+
+## Issue 16 latest capture gate — 2026-10-24
+
+- Latest PR-head workflows all passed: [kind regression #40063359204](https://github.com/Nimadanesh/shakar/actions/runs/40063359204), [Follow-up 03 #40063359140](https://github.com/Nimadanesh/shakar/actions/runs/40063359140), and [cross-category #40063359355](https://github.com/Nimadanesh/shakar/actions/runs/40063359355).
+- The Follow-up 03 artifact used 7/8 detail calls and 7 unique IDs; refrigerator-buyer, vehicle-cash, and vehicle-installment cells remain missing. Previously human-graded source IDs were not recycled into the next blind packet.
+- New four-item blind packet: [BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-BLIND.md). Separate diagnostic map: [internal key](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-INTERNAL-KEY.md). Await owner grades; record them in a third file before joining the key.
+- Evidence is E3 until owner grades make it E4. It is not E5 and does not justify role/ranking changes. PR #41 remains Draft; no merge/deploy; `main` untouched.
+
+## Issue 16 cross-cell grades — 2026-10-24
+
+- Locked grades: [cross-cell human grades](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-HUMAN-GRADES.md); post-grade join: [reconciliation](evaluations/BRH-2026-10-24-ISSUE16-CROSS-CELL-RECONCILIATION.md).
+- All four items received human grade 3. F16-02 (`معاوضه خودرو`) is the only mismatch: human 3, engine `near` / 1.5. This is a follow-up hypothesis, not sufficient evidence for a scoring change.
+- Positive-heavy convenience sample; E4, not E5 or a population estimate. Buyer-fridge, vehicle-cash, and vehicle-installment remain missing. PR #41 stays Draft; no merge/deploy; `main` untouched.
+
+## Exchange-capture targeting follow-up — 2026-10-24
+
+- Latest docs-head captures completed successfully on commit `8b2aff3cb3443aff0e5a374785183973dbbe5c25`: kind regression [40065914050](https://github.com/Nimadanesh/shakar/actions/runs/40065914050), Follow-up 03 [40065914069](https://github.com/Nimadanesh/shakar/actions/runs/40065914069), and cross-category [40065914086](https://github.com/Nimadanesh/shakar/actions/runs/40065914086). These reruns are not independent quality evidence.
+- The latest Follow-up 03 artifact used 7 details / 7 unique IDs under the fixed cap, but buyer-fridge, installment, and exchange cells remained missing. The latest cross-category artifact also contained a previously inspected catalytic-converter candidate and is diagnostic-only.
+- To improve retrieval targeting without changing search behavior, commit `7ee2274821f4b725807fa671ba5f014ddbda7a77` changes only the Follow-up 03 exchange query from `معاوضه خودرو` to `سمند معاوضه`. This is an experiment in the capture harness only; no engine/ranking/eligibility code changed.
+- No workflow run is currently associated with that commit through the available run lookup. Therefore the revised query is **not yet validated**, no new artifact or blind packet is authorized from it, and no human grade should be requested until a new bounded capture completes.
+- Next gate: get the revised bounded capture to run, inspect whether it finds a new whole-vehicle exchange listing, then freeze a blind packet before joining any new diagnostics. Keep all caps, exclusions, Mizan shadow off, and `productionRank=null`. No merge/deploy; `main` and `engine_v3` remain unchanged.

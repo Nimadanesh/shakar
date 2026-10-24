@@ -1,0 +1,129 @@
+# Issue 16 — retargeted capture readout (2026-10-24)
+
+## Provenance
+- Capture code head: `5d802bba3bf7361fe2db099da24548c057ae43a6`.
+- [Follow-up 03 run 40066771760](https://github.com/Nimadanesh/shakar/actions/runs/40066771760), artifact `12549078515`, completed successfully.
+- [Cross-category run 40066771757](https://github.com/Nimadanesh/shakar/actions/runs/40066771757), artifact `12550090272`, completed successfully.
+- [Kind regression run 40066771783](https://github.com/Nimadanesh/shakar/actions/runs/40066771783), completed successfully: focused kind regression, portable hunt/search suite, and TypeScript typecheck passed.
+- Follow-up budget: 2 list pages/query, 8 detail reads / 8 unique IDs; cross-category budget: 2 pages/query, 6 detail reads / 6 unique IDs. Mizan shadow off, `productionRank=null`.
+
+## Follow-up 03 observations
+- Refrigerator seller query selected `gavBLU60`, but this is primarily a water-filter installation/service ad that merely mentions refrigerator filters. Engine `near`, score 3.5: diagnostic warning that lexical evidence/score can be high despite weak target fit. It is not a human-graded false positive.
+- Buyer cell remained missing within the bounded query after excluding inspected/prior IDs.
+- Mixed refrigerator query selected `gaVn-dm2`, “خرید و فروش یخچال”; description explicitly advertises buying and selling working/broken refrigerators. Engine `near`, score 0.5.
+- Whole-vehicle query selected `gabvBEiY`, a dealer/group listing for zero-kilometer Dena/Tara/Soren/207 and broad vehicle buying/selling, with an incidental “حواله” mention. Engine `near`, score 0. This is a plausible positive but is not human-graded.
+- Voucher query selected `ga7dAoCa`, “خدمات حواله خودرو”; engine `near`, score 3.5. This appears service-oriented and is not human-graded.
+- Cash query selected `gaKufbEV`, Soren advertised as cash and installment; engine `near`, score 3.0.
+- Installment query `ماشین قسطی` remained missing within the two-page bounded pool.
+- Exchange query `معاوضه با سمند` selected `gabP-8po`, Samand 1384 explicitly offered for exchange with Pride; description notes serious engine damage. Engine `exact`, score 3.5. It appears to satisfy the exchange intent, but no human grade was collected.
+- Ordinary fridge control `gaVP5Rtf` was a fridge/freezer listing, engine exact 3.5.
+- Part control `gaXTjbv8` was a refrigerator motor/parts listing, engine near 1.5, with “قطعه” missing from evidence.
+
+## Cross-category observations
+- `gaTI-Kn3`: mixed “seller/buyer ... refrigerator” title, description says buyer of new household appliances; engine near 3.5.
+- `gac7yxi1`: catalytic-converter/exhaust service listing for `خریدوفروش خودرو`, engine near 0.5.
+- `gajmIwfW`: damaged-car buyer/consultation service, engine exact 3.5.
+- `gacjTTyh`: damaged Peugeot 206 for sale, engine near -1.
+- `Qa8HqiWJ`: catalytic-converter buying/repair service, engine near 2.1667.
+- `gaSLpCEY`: damaged-car buyer/seller service listing, engine near 0.5.
+These records were inspected diagnostically, not human-graded. They cannot be turned into a blind packet now.
+
+## Decision
+This remains E3 live diagnostic evidence only; no human grades, no production-rank comparison, and no quality-uplift claim. Add all newly inspected IDs to the exclusion list for future blind packets/captures. The exchange target now has a plausible live candidate, but installment and a fresh refrigerator-buyer target remain missing. No buyer-role, voucher, vehicle eligibility, hard-rejection, or ranking changes are authorized. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
+
+## Retargeted-v2 capture — 2026-10-24
+
+- Follow-up 03 run [40067010071](https://github.com/Nimadanesh/shakar/actions/runs/40067010071), artifact `12549831722`, and cross-category run [40067010065](https://github.com/Nimadanesh/shakar/actions/runs/40067010065), artifact `12550305076`, completed successfully on PR head `49a564a7e1123452ab4930d52a2619dedcdb980e`. Kind regression/portable suite/typecheck also passed in [run 40067010122](https://github.com/Nimadanesh/shakar/actions/runs/40067010122).
+- The retargeted buyer query `خریدار یخچال خراب` captured `gabzLV7f` (`خرید یخچال سالم و خراب همچی پقمق`), engine exact/4.5. Mixed refrigerator query returned `QaoPqC7X`, a buyer of broken refrigerators despite a mixed title, exact/3.5. Seller query returned `gac7TJRT`, `فروش یخچال فریزر الکترو استیل`, exact/3.5.
+- Whole-vehicle query returned `gaO7GNJh`, `خریدوفروش نیسان تناژ پایین`, near/-1.5. Voucher query returned `gaE5qO5h`, `حواله خودرو`, exact/3.5. Exchange query returned `gabjtdOw`, `سمند ۹۸ معاوضه با ۲۰۶`, exact/3.5. Ordinary appliance control `gaay7dtd` was an appliance sale with cash/installment wording, exact/3.5. Wrong-kind control `gaDkHop1` was a mixed refrigerator buying/selling ad mentioning a burnt motor, near/-1.5.
+- Cash query `خودرو نقدی` and retargeted installment query `فروش اقساطی خودرو` both remained missing within the bounded pool. Do not broaden the cap or claim these cells were tested successfully.
+- Cross-category capture returned `gayyxUTa`, `خریدار و فروشنده یخچال فریزر سالم و خراب`, near/0.5 for `فروشنده یخچال`; compact vehicle buy/sell returned `gaMPHkWW`, `خریدوفروش حواله خودرو`, near/0.5. These and the other captured IDs are inspected and must not be reused in a blind packet.
+- New capture tests now exclude the newly inspected IDs. Cross-category capture also filters previously inspected IDs before selection and reports any overlap.
+- E3 bounded live diagnostic only: no human grades, no production-rank comparison (`productionRank=null`), no quality-uplift claim. No behavior/ranking/eligibility changes authorized; PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
+## Exclusion-validation capture — 2026-10-24
+
+- Follow-up 03 run [40067384277](https://github.com/Nimadanesh/shakar/actions/runs/40067384277), artifact `12550440345`, cross-category run [40067384263](https://github.com/Nimadanesh/shakar/actions/runs/40067384263), artifact `12550375465`, and kind regression [40067384285](https://github.com/Nimadanesh/shakar/actions/runs/40067384285) all completed successfully. Artifact commit is PR merge ref `39e40642b67cd40830232d22c78979b18107dfa4`; the tested branch head before the latest exclusion-list amendments was `a8942737bb6d70194739064cb9029f6f022b83be`.
+- Follow-up 03 captured: `gacT0u2G` seller fridge; `garWfS78` buyer of good/broken fridges; `Qa9fP53U` mixed buyer/seller refrigerator listing; `gaVv8W6C` mixed whole-vehicle trade listing; `gacXDBWE` employee vehicle voucher; `gaFzv-Qd` Samand explicitly offered for exchange; `gahEL1JU` ordinary fridge sale; `gaLHWNrk` refrigerator motor/part. Cash `خودرو نقدی` and installment `فروش اقساطی خودرو` remained missing within the 2-page bounded pool.
+- Cross-category capture selected `gacT0u2G` seller fridge, `galqJmNl` `خریدوفروش حواله خودرو`, `ga4d_A6Z` `مزدا خریدار تصادفی`, `gaPfmFQa` damaged Peugeot seller, `gaUP4Rl-` Toyota Venza escrow/sale, and `ga9KvfNV` car-battery roadside service. The latter two were selected by broad `خرید و فروش خودرو` query despite only partial/adjacent fit, a diagnostic observation—not a human grade.
+- Important exclusion audit finding: the Follow-up 03 artifact still selected `Qa9fP53U` and `gacXDBWE`, both present in prior human-graded packets, because those two IDs were missing from its exclusion set. The cross-category artifact also selected `gacT0u2G`, which was inspected in parallel by Follow-up 03; parallel runs cannot share a live exclusion set. This is now corrected by adding the previously graded packet IDs and all selected IDs from both latest artifacts to both capture tests' exclusion sets. The next run must verify the correction before any new blind packet is considered.
+- `overlapWithPriorPackets` and `overlapWithInspected` are diagnostics over candidate pools, not evidence that selected listings were cleanly novel. Treat the current artifacts as E3-only and exclude every opened ID, including those listed above. No grades were assigned to the new listings; no production-rank comparison (`productionRank=null`) or uplift claim is available.
+- The corrected exclusion lists are test-only. No production behavior/ranking/eligibility change is authorized. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
+## Cross-category exclusion verification — 2026-10-24
+
+- Run [40067592333](https://github.com/Nimadanesh/shakar/actions/runs/40067592333) passed on test commit `29df89abc19bb42d1722d14521ac447745b076aa`; artifact `12549667333` was created at PR merge ref `699b354ef22ff2111800f852dfb34366b4dfceb8`. It selected six IDs not found in the then-current inspected-ID set and reported prior overlaps separately.
+- Newly inspected IDs: `gacXU-Wj` (water-filter service mentioning refrigerator filters), `gaoyGo-V` (catalytic-converter service), `gaRS8JbI` (damaged-car buyer/advisor), `gacfDsAU` (damaged-car sale, rejected), `gabf9GoW` (Chery sale/exchange), and `gaBO62kC` (Soren/vehicle delivery). All six have now been added to both capture tests' exclusion sets.
+- The most notable E3 diagnostic is `gacXU-Wj`: a water-filter service title mentioning refrigerator and washing-machine filters received `exact`/3.5 for `فروشنده یخچال`. This is a plausible high-severity false-positive hypothesis worth a future blinded human check, but not a confirmed human-grade failure and not grounds for an immediate patch. Likewise, `gaoyGo-V` scored near/0.5 for generic vehicle buy/sell, and the buyer-damaged-vehicle control included a service and a rejected seller. These are live observations, not population estimates.
+- The run's overlap list included several IDs from the current and prior capture sets, but those were filtered before selection. Because independent live runs can execute concurrently, the tests cannot share a single mutable exclusion set across jobs; therefore all selected IDs from each completed artifact must be copied into both test exclusion sets before a subsequent capture.
+- E3 only, bounded to two pages per query and six detail checks. No human grades, no production-rank comparison, no quality-uplift claim. The two newly edited exclusion sets need their own follow-up capture and regression runs to verify the latest additions.
+## Follow-up 03 exclusion verification — 2026-10-24
+
+- Run [40067592331](https://github.com/Nimadanesh/shakar/actions/runs/40067592331) succeeded on test commit `29df89abc19bb42d1722d14521ac447745b076aa`; artifact `12550290533` was created at PR merge ref `699b354ef22ff2111800f852dfb34366b4dfceb8`.
+- Newly selected IDs: `gaGTm9S0` (burnt/broken fridge buyer-seller), `gaHJo2YL` (heating-system listing mentioning a broken refrigerator; rejected), `gayyiAZb` (mixed fridge buyer/seller, near/0.5), `gaCPUsY9` (vehicle-voucher introduction office), `gabPbqO1` (Samand offered for exchange), `gaKHDJrP` (fridge buyer/seller), `gabzNkqG` (refrigerator motor overhaul). All are now excluded from both capture tests.
+- Three cells remained missing: whole-vehicle, cash, and installment. The explicit buyer query found a heating-system listing that mentioned a broken refrigerator but was rejected; do not treat it as a successful buyer capture. The voucher query found a service/office listing with engine score -0.5, which is another E3 diagnostic candidate rather than a human-graded verdict.
+- The run's overlap report surfaced previously graded packet IDs including `gab_ekWg`, `Qa9fP53U`, `ga726UUL`, and `gacXDBWE`; these were filtered before selection after the exclusion correction. This supports the exclusion filter's operation on the current branch but also shows why overlap diagnostics must be preserved. The next capture run must validate the most recent added IDs.
+- E3 only; no human grades, no production-rank comparison, no quality-uplift claim. No production behavior change authorized.
+
+## Latest exclusion-validation capture — 2026-10-24 (runs 40067753140 / 40067753141)
+
+- Both bounded read-only capture workflows succeeded on source branch head `4ced7068919f0b40c86ad6bbf9d376f0aab7420d`; query-kind regression run `40067753134` also succeeded. The artifacts report synthetic PR merge-ref commit `a33e3e191b1bbbf4e8db97a5f2f34b9180717bdd`.
+- Follow-up 03 artifact `12550336303`: 7 unique details used within the 8-detail cap. Newly selected IDs: `gaczD8Wv` (seller fridge), `gaaOqkhk` (buyer broken/good fridges), `galGk_Sk` (mixed fridge buyer/seller), `gab_pT7w` (vehicle voucher), `gaYrXwID` (cash vehicle sale), `gaYX7iQb` (vehicle exchange), and `gaPs0wws` (ordinary refrigerator). Missing cells: whole-vehicle, installment, and wrong-kind control.
+- Cross-category artifact `12550181563`: 6 unique details used within the 6-detail cap. Newly selected IDs: `gacbUjPx` (mixed refrigerator buyer/seller surfaced under seller intent), `gakSO3cA` (CNG cylinder sale/install service surfaced for compact vehicle buy/sell), `gaFbXSvI` (damaged-vehicle buyer), `gaZTNpHg` (damaged vehicle listing), `QaYHrsIF` (catalytic-converter service surfaced for vehicle buy/sell), and `gaZDO_b2` (whole vehicle with installment/exchange details).
+- Overlap diagnostics were extensive, but selected IDs above were not among the known exclusions in the pre-run test lists. All 13 newly selected IDs have now been added to **both** capture tests' exclusion lists to prevent reuse in subsequent packets/captures; the next run must verify these additions. As the two workflows run in parallel, neither shares mutable exclusion state with the other.
+- The buyer query for broken refrigerators produced a mixed buyer/seller listing with engine score `-0.5`; the compact vehicle query surfaced a CNG service at `-1.5`; the spaced vehicle query surfaced catalytic-converter service at `-1.5` and a whole-vehicle installment listing at `3.5`. These are E3 diagnostic observations only. The potentially concerning category/role examples require blinded human review before any rule or scoring change.
+- E3 only: no human grades, no production-rank comparison (`productionRank=null)), no quality-uplift claim. No production behavior change authorized; PR #41 remains Draft and no merge/deploy is authorized.
+
+## Exclusion-validation rerun required — 2026-10-24 (runs 40068033409 / 40068033410)
+
+- Both capture workflows and the kind-regression workflow report success on branch head `09aded672ac143f54ec5c168ec47bc6b7bf64403`.
+- However, the produced capture artifacts are **not valid proof that the latest exclusion list was applied**: Follow-up artifact `12549763968` selected `gaczD8Wv`, `gaaOqkhk`, `galGk_Sk`, `gab_pT7w`, `gaYrXwID`, and `gaYX7iQb`, while those IDs appear in the latest source's `priorPacketIds` exclusion set. The same artifact's `overlapWithPriorPackets` diagnostic also lists these IDs. This contradicts the test's filter-before-selection invariant.
+- Cross-category artifact `12549697709` selected `gacbEQj2`, `Aa66shzA`, `gaZ3fnHc`, `gacLDpNd`, `ga-y2uOM`, and `ga8mKjq_`. Several are diagnostic false-positive candidates (whole-appliance mixed listing; catalytic-converter service; buyer-role query yielding a title/description mismatch; installment whole-car listing under generic buy/sell). These remain E3 observations only.
+- The Follow-up artifact also left four cells missing: whole vehicle, cash, installment, and wrong-kind control. Do not treat this as a complete packet.
+- Because the artifact contradicts the source exclusion set, classify the exclusion verification as **inconclusive/stale execution snapshot until a fresh run demonstrates the current test source was actually executed**. Do not construct a blind packet from these artifacts. No human grades, no production-rank comparison (`productionRank=null`), no uplift claim, and no production behavior change authorized.
+
+
+## Fresh exclusion validation and blinded review packet — 2026-10-24 (runs 40068287579 / 40068287594)
+
+- Fresh Follow-up 03 run [40068287579](https://github.com/Nimadanesh/shakar/actions/runs/40068287579), artifact `12549687957`, and cross-category run [40068287594](https://github.com/Nimadanesh/shakar/actions/runs/40068287594), artifact `12550077918`, completed successfully. Kind regression [40068287642](https://github.com/Nimadanesh/shakar/actions/runs/40068287642) also passed the focused kind tests, portable hunt/search suite, and TypeScript typecheck.
+- Both capture artifacts were generated on synthetic PR merge ref `82f6718369e931a91df80c5470e773837be305a2`, corresponding to PR #41 head `aa2faf2a0f1f55c37af387ed7f79b31f40e7459e` at dispatch time. The Follow-up artifact selected 7 unique IDs within its 8-detail cap; the cross-category artifact selected 6 within its 6-detail cap.
+- Exclusion validation now passes for these two runs: none of the Follow-up selected IDs appeared in its `overlapWithPriorPackets` diagnostics, and none of the cross-category selected IDs appeared in `overlapWithInspected`. This is consistent with the filter-before-selection invariant and resolves the previous stale/mismatched snapshot concern for this capture pair.
+- The two parallel runs both selected `gacj0uNF` (the same refrigerator seller listing). It is represented only once in the frozen blind packet; the union is 12 unique listings. The packet is [`BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-03-BLIND.md`](https://github.com/Nimadanesh/shakar/blob/experiment/issue16-cross-category-capture-20261023/PWA_app/docs/engine-v3/evaluations/BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-03-BLIND.md); the separate diagnostic key is [`BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-03-INTERNAL-KEY.md`](https://github.com/Nimadanesh/shakar/blob/experiment/issue16-cross-category-capture-20261023/PWA_app/docs/engine-v3/evaluations/BRH-2026-10-24-ISSUE16-RETARGETED-CAPTURE-03-INTERNAL-KEY.md). The key must remain unopened for reconciliation until owner grades are locked.
+- Follow-up 03 still has three missing cells within the bounded pool: whole vehicle, installment, and wrong-kind control. Cash was captured. Missing cells remain missing; they were not filled with substitutes.
+- All 12 unique selected IDs from these artifacts have now been added to both capture tests' exclusion sets so later captures do not reuse them. Fresh CI/capture runs on the updated test source must be checked before another packet is considered.
+- These remain E3 live diagnostics until human grades are locked; `productionRank` is null. No uplift/population-level claim and no production behavior/ranking/eligibility change is authorized. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
+
+
+## Post-packet exclusion verification — 2026-10-24 (current source commit `0263a37530ba5565e94ead11445aae5b85849cb2`)
+
+- Updated-source cross-category capture [40068648616](https://github.com/Nimadanesh/shakar/actions/runs/40068648616), artifact `12549584003`, succeeded; Follow-up 03 [40068648631](https://github.com/Nimadanesh/shakar/actions/runs/40068648631), artifact `12550392619`, succeeded; kind regression [40068648621](https://github.com/Nimadanesh/shakar/actions/runs/40068648621) passed focused kind regression, portable hunt/search tests, and TypeScript typecheck.
+- Both fresh artifacts report synthetic merge-ref commit `54a344b7520d931904b344f21ee3c9ee3ca6ebdd` for the updated PR source. Cross-category selected 6 unique IDs; Follow-up 03 selected 6 unique IDs within its 8-detail cap.
+- Exclusion invariant passed again: no selected cross-category ID appeared in `overlapWithInspected`; no selected Follow-up ID appeared in `overlapWithPriorPackets`. This verifies that the newly added exclusions for Retargeted Capture 03 are being applied in the current workflow snapshot.
+- Cross-category new selected IDs: `QaM0ztoJ`, `gaUnfe_p`, `gaaTQEb7`, `gaN3EAVR`, `ga2qQAPq`, `gallxRrN`. Follow-up 03 new selected IDs: `AZYprmyz`, `gacdDbtu`, `gaH0zc7w`, `gabKdk6q`, `gabvI8Fm`, `gaLHGW9W`. These artifacts are fresh E3 diagnostics only and are not included in the already-frozen Retargeted Capture 03 blind packet. Record these IDs as inspected and exclude them before any future capture or blind packet.
+- Follow-up 03 still missed whole vehicle, cash, installment, and wrong-kind control under the fixed two-page pool; no substitute cells were used. Cross-category run stayed within its fixed budget.
+- No human grades or production-rank comparison are available from these runs; `productionRank=null`. No ranking/eligibility/production behavior change authorized. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
+
+
+## Fresh diagnostic capture 04 — 2026-10-24 (runs 40068799727 / 40068799691)
+
+- On the source revision that included the Capture 03 exclusions, Follow-up 03 run [40068799727](https://github.com/Nimadanesh/shakar/actions/runs/40068799727), artifact `12550273333`, and cross-category run [40068799691](https://github.com/Nimadanesh/shakar/actions/runs/40068799691), artifact `12549673855`, both completed successfully. Kind regression [40068799726](https://github.com/Nimadanesh/shakar/actions/runs/40068799726) passed focused kind regression, portable hunt/search suite, and TypeScript typecheck.
+- Both raw artifacts report synthetic merge-ref commit `c51120b0ec8f2c35523ad7f41723a797fb606119`, corresponding to the source revision before the new Capture 04 IDs were excluded. Follow-up 03 selected 6 unique IDs within its 8-detail cap; cross-category selected 6 within its 6-detail cap. Each artifact's selected IDs were disjoint from that artifact's prior-inspection overlap diagnostics.
+- Follow-up 03 missing cells: whole vehicle, cash, installment, wrong-kind control. Cross-category covered the refrigerator reference, compact vehicle buy/sell, damaged-vehicle buyer control, and spaced vehicle buy/sell scenarios. No substitute cells were inserted.
+- New IDs selected in Follow-up 03: `ga6CSfMM`, `gaNc5fRN`, `gaH0zc7w`, `gaFHdnop`, `gabvI8Fm`, `gacrEnA2`. New IDs selected in cross-category: `gaeWepTl`, `gaUnfe_p`, `gaE75Gsi`, `gaNDASAL`, `gaJ_sXNx`, `gaaTQEb7`. All 12 have now been added to both capture-test exclusion sets so future runs cannot reuse them.
+- Do not create a further blind packet yet: Capture 03 is still awaiting owner grades. Keep Capture 04 as raw E3 diagnostics only, to avoid growing the human-review queue before the previous packet is scored. No production-rank comparison is available (`productionRank=null`); no uplift or population-level claim follows. No engine/ranking/eligibility behavior change authorized.
+- The exclusion updates trigger another verification cycle on the current PR head. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
+
+
+## Cross-run dedup audit correction — 2026-10-24
+
+- A cross-artifact audit found reuse between independently dispatched capture runs that had been launched before all sibling-run IDs were added to both exclusion sets. Specifically, `gaUnfe_p` and `gaaTQEb7` repeated between artifacts `12549584003` and `12549673855`; `gaH0zc7w` and `gabvI8Fm` repeated between `12550392619` and `12550273333`; `gacdDbtu` and `gaLHGW9W` repeated between `12550392619` and `12550696546`.
+- These were not used to create an additional blind packet. Treat Capture 04 as diagnostic-only, and do not count the overlapping selections as independent observations. The per-artifact `overlapWithInspected` / `overlapWithPriorPackets` checks were empty for selected IDs, but those checks alone do not catch reuse between parallel workflows unless the other workflow's selected IDs were already in the source exclusion set.
+- The exclusion sets in both capture tests now include every selected ID from the relevant prior bounded artifacts, including the cross-run duplicates listed above. A fresh post-update run on the latest source is required before another capture is considered. This is a test/evaluation hygiene correction only; no engine or production behavior change.
+
+
+## Post-dedup-audit verification — current source commit `c2471c6adcc1fcd11c4e3aff79477aa3b29974cc`
+
+- Kind regression [40069218152](https://github.com/Nimadanesh/shakar/actions/runs/40069218152) passed the focused kind lexicon regression, portable hunt/search suite, and TypeScript typecheck.
+- Fresh cross-category capture [40069218091](https://github.com/Nimadanesh/shakar/actions/runs/40069218091), artifact `12550159245`, and Follow-up 03 capture [40069218112](https://github.com/Nimadanesh/shakar/actions/runs/40069218112), artifact `12550174273`, both completed their bounded capture and uploaded reports from synthetic merge-ref commit `5acb0b22b0b2d61135ac02f6663bccb67383cbae`.
+- Exclusion validation passes for both current artifacts: selected IDs have no intersection with their respective prior-inspection overlap arrays. The two sibling runs also selected disjoint IDs from each other.
+- Cross-category IDs: `gaNPt8S1`, `QayHkCbV`, `gaZv_XY2`, `gacLDpNd`, `ga-WGGa3`, `Qa2-kxhw`. Follow-up 03 IDs: `gacz0OBI`, `gacTkXT-`, `gaM7pCwJ`, `gaYLMGDX`, `gaXXVKQX`, `gaabz4PD`. Treat these as inspected and exclude them before any future capture. No further blind packet is being created while Capture 03 still awaits human grades.
+- Follow-up 03 again missed whole vehicle, cash, installment, and wrong-kind control within the fixed two-page pool; no substitutions were used. Both artifacts remain E3 diagnostics, `productionRank=null`; no uplift or population-level claim follows.
+- No production behavior, ranking, or eligibility changes were made. PR #41 remains Draft/unmerged; `main` and `engine_v3` remain untouched.
