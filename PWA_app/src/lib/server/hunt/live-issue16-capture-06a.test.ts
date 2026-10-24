@@ -113,11 +113,11 @@ const previouslyInspectedIds = new Set([
 
 function resolve(query:string,category:string){return resolveHuntDefinition({query,include:[],exclude:[],should:[],city:"all",category,priceMin:"",priceMax:"",transaction:"",condition:""});}
 function normalizedTitleHead(title:string):string {
- return normalizeForMatch(title).replace(/^(?:(?:خرید\\s+و\\s+فروش|فروش|فروشی|معاوضه|خریدار|خرید|فوری|نقدی|قیمت)\\s+)+/,"").trim();
+ return normalizeForMatch(title).replace(/^(?:(?:مرکز\s+فروش(?:\s+انواع)?|فروش\s+و\s+تعویض|خرید\s+و\s+فروش|فروش|فروشی|معاوضه|خریدار|خرید|فوری|نقدی|قیمت|انواع|مرکز)\s+)+/,"").trim();
 }
 function isOtherPartTitle(title:string):boolean {
  const t=normalizedTitleHead(title);
- const otherPartHead=/^(?:دیسک(?:\\s+ترمز)?|لنت(?:\\s+ترمز)?|باتری|گیربکس|رادیاتور|کمک(?:\\s+فنر)?|چراغ|سپر|اگزوز|موتور|تسمه(?:\\s+تایم)?|دینام|استارت|آینه|لاستیک|رینگ|پلوس|کلاچ|واشر سرسیلندر)(?=\\s|$)/.test(t);
+ const otherPartHead=/^(?:دیسک(?:\s+ترمز)?|لنت(?:\s+ترمز)?|باتری|گیربکس|رادیاتور|کمک(?:\s+فنر)?|چراغ|سپر|اگزوز|موتور|تسمه(?:\s+تایم)?|دینام|استارت|آینه|لاستیک|رینگ|پلوس|کلاچ|واشر\s+سرسیلندر)(?=\s|$)/.test(t);
  return otherPartHead && !/کاتالیزور|کاتالیز/.test(t);
 }
 const idsFromRecentCaptures = [
