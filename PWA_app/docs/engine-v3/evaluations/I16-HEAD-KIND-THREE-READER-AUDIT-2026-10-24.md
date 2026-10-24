@@ -169,3 +169,9 @@ The helper now checks whether the co-offer connector lies between non-overlappin
 - ESLint failed separately with **8 errors / 42 warnings** in existing UI and other unrelated files; therefore the workflow is not fully green. The new shadow tests did not fail.
 - The two new synthetic controls are validated: service/repair wording without a clear product-offer cue does not pass as co-offer, while a title marked `موجود` can pass. This remains only a local diagnostic policy; it does not solve all principal-subject ambiguity and is not a source-backed human-quality result.
 - No production behavior change, merge, deployment, or `main` modification.
+
+
+## Follow-up — service cue overrides generic sale cue (2026-10-24)
+
+- Test-only commit [8b96c3af](https://github.com/Nimadanesh/shakar/commit/8b96c3af9674231fa0cf6c2403bb0a79f9fc3475) adds a synthetic counterexample: `فروش خدمات تعویض دیسک ترمز و کاتالیزور`. A generic `فروش` token must not override explicit service/repair intent and turn a service listing into a product co-offer.
+- Baseline [#179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171) is queued; validation pending. The change remains test-local; no source-matched human-grade claim is made.
