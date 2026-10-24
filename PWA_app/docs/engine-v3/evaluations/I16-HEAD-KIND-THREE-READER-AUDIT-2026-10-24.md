@@ -160,3 +160,12 @@ The helper now checks whether the co-offer connector lies between non-overlappin
 - Test-only commit [a66e7001](https://github.com/Nimadanesh/shakar/commit/a66e7001b6de35618bd4582b11de9d11bdcdc04c) adds a conservative offer-cue requirement to the shadow co-offer helper and two synthetic controls: a service title (`تعویض دیسک ترمز و کاتالیزور فرسوده`) must not be accepted as a product co-offer; a clear `موجود` title can still pass without the word `فروش`.
 - Baseline [#178](https://github.com/Nimadanesh/shakar/actions/runs/40092192113) was queued when this note was written; validation is pending. Do not claim the new cases pass until its test steps finish.
 - This addresses one additional ambiguity in the synthetic prototype only. It does not solve principal-subject identification generally and does not provide a source-matched human-graded false-acceptance example. No production behavior change, merge, deployment, or `main` change.
+
+
+## Validation update — Baseline #178 (2026-10-24)
+
+- Baseline [#178](https://github.com/Nimadanesh/shakar/actions/runs/40092192113) ran on test-only commit `a66e7001b6de35618bd4582b11de9d11bdcdc04c`.
+- Focused suite: **329 passed, 15 skipped**. Full portable suite: **922 passed, 16 skipped**. TypeScript typecheck and production build passed.
+- ESLint failed separately with **8 errors / 42 warnings** in existing UI and other unrelated files; therefore the workflow is not fully green. The new shadow tests did not fail.
+- The two new synthetic controls are validated: service/repair wording without a clear product-offer cue does not pass as co-offer, while a title marked `موجود` can pass. This remains only a local diagnostic policy; it does not solve all principal-subject ambiguity and is not a source-backed human-quality result.
+- No production behavior change, merge, deployment, or `main` modification.
