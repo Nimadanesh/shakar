@@ -462,3 +462,10 @@ The allocation comparison is closed: preserve the current allocation; do not pro
 - All four items were graded 3/3. F16-02 (`معاوضه خودرو`) is the only engine/human mismatch: human grade 3, engine `near` / 1.5. Treat this as a follow-up hypothesis only, not a rule change.
 - This is positive-heavy E4 evidence from a bounded convenience sample, not E5 and not a population estimate. Buyer-fridge, vehicle-cash, and vehicle-installment cells remain missing.
 - Next: keep PR #41 Draft; seek fresh exchange positive/negative controls and fixed-candidate comparison if feasible. No source/ranking change, merge, or deployment; `main` and `engine_v3` untouched.
+
+## Continuation — exchange capture targeting (2026-10-24)
+
+- Verified the latest pre-change capture/regression runs passed on docs head `8b2aff3`: [kind regression 40065914050](https://github.com/Nimadanesh/shakar/actions/runs/40065914050), [Follow-up 03 40065914069](https://github.com/Nimadanesh/shakar/actions/runs/40065914069), [cross-category 40065914086](https://github.com/Nimadanesh/shakar/actions/runs/40065914086). These runs do not count as independent relevance evidence.
+- Follow-up 03 still missed the buyer-fridge, installment, and exchange cells. A test-only query targeting change is committed as `7ee2274821f4b725807fa671ba5f014ddbda7a77`: `C-vehicle-exchange` now searches `سمند معاوضه` rather than `معاوضه خودرو`. No search logic changed.
+- No workflow run is currently visible for that commit. The test-only query change remains unvalidated; do not claim a fresh capture, create a blind packet, or request grades from it until a new run completes.
+- Next: trigger/obtain the revised bounded capture; if it finds an unseen exchange candidate, freeze blind text first and keep the diagnostic key separate until grades are locked. If it still misses, record the gap rather than broadening selection heuristics. PR #41 remains Draft; no merge/deploy; `main` and `engine_v3` untouched.
