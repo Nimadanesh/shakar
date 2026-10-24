@@ -93,6 +93,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       // IDs inspected in the exclusion-validation captures (including parallel run overlap).
       "gacT0u2G", "garWfS78", "gaVv8W6C", "gacXDBWE", "gaFzv-Qd",
       "gahEL1JU", "gaLHWNrk", "galqJmNl", "ga4d_A6Z", "gaPfmFQa", "gaUP4Rl-", "ga9KvfNV",
+      // Newly opened in cross-category exclusion-verification run 40067592333.
+      "gacXU-Wj", "gaoyGo-V", "gaRS8JbI", "gacfDsAU", "gabf9GoW", "gaBO62kC",
     ]);
     const overlapWithInspected = new Set<string>();
     const globallySeen = new Set<string>();
