@@ -97,7 +97,20 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       "gacXU-Wj", "gaoyGo-V", "gaRS8JbI", "gacfDsAU", "gabf9GoW", "gaBO62kC", "gaczD8Wv", "gaaOqkhk", "galGk_Sk", "gab_pT7w", "gaYrXwID", "gaYX7iQb", "gaPs0wws", "gacbUjPx", "gakSO3cA", "gaFbXSvI", "gaZTNpHg", "QaYHrsIF", "gaZDO_b2",
       // Newly opened in Follow-up 03 exclusion-verification run 40067592331.
       "gaGTm9S0", "gaHJo2YL", "gayyiAZb", "gaCPUsY9", "gabPbqO1", "gaKHDJrP", "gabzNkqG",
-    ]);
+          // Selected IDs from the verified retargeted capture 03 blind packet; never reuse in later captures.
+      "gacj0uNF",
+      "QaRyXg2a",
+      "gaZX_Yj3",
+      "gaHbT4ov",
+      "gaTbR5Rb",
+      "gaBPPjUm",
+      "Qa0L6SxA",
+      "gaU2U0Mv",
+      "gaqu1hx_",
+      "gaEWi1OQ",
+      "gacjUsaz",
+      "gaPj2RbK",
+]);
     const overlapWithInspected = new Set<string>();
     const globallySeen = new Set<string>();
     const reports: Array<Record<string, unknown>> = [];
