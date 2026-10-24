@@ -1,0 +1,37 @@
+name: Engine V3 Issue 16 Shadow Tests
+
+on:
+  pull_request:
+    branches: [engine_v3]
+    paths:
+      - ".github/workflows/engine-v3-issue16-shadow-tests.yml"
+      - "PWA_app/src/lib/server/hunt/issue16-shadow-kind.test.ts"
+      - "PWA_app/src/lib/server/hunt/kindLexicon.test.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-v3-issue16-shadow-tests
+  cancel-in-progress: false
+
+jobs:
+  shadow-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: PWA_app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+      - run: npm ci
+      - name: Run isolated Issue 16 shadow and kind-lexicon tests
+        run: npx vitest run src/lib/server/hunt/issue16-shadow-kind.test.ts src/lib/server/hunt/kindLexicon.test.ts --reporter=verbose
