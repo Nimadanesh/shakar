@@ -26,6 +26,11 @@ function selectionCell(scenarioId: string, title: string): Cell | null {
   const wholeVehicle = !adjacent && model;
 
   if (scenarioId === "A-refrigerator-seller-direction") {
+    // Require the target appliance itself, not an ad that only buys a motor/part.
+    const applianceTarget = /یخچال|فریزر|ساید/.test(text);
+    const partsOnly = /موتور|کمپرسور|قطعه|قطعات/.test(text) &&
+      !/یخچال\s?فریزر|فریزر\s?یخچال|ساید\s?بای\s?ساید|یخچال\s?ساید/.test(text);
+    if (!applianceTarget || partsOnly) return null;
     const cue = roleCue(title);
     return cue === "seller" || cue === "buyer" || cue === "mixed" ? cue : null;
   }
@@ -36,9 +41,9 @@ function selectionCell(scenarioId: string, title: string): Cell | null {
   }
   if (scenarioId === "C-broad-vehicle-match-kind") {
     if (!wholeVehicle) return null;
-    if (/اقساط|قسط|پیش\s?قسط/.test(text)) return "installment";
+    if (/اقساطی?|قسط|پیش\s?قسط|چک\s?صیادی/.test(text)) return "installment";
     if (/معاوضه|تهاتر|بدل/.test(text)) return "exchange";
-    if (/نقدی|نقد|فوری|تسویه/.test(text)) return "cash";
+    if (/نقدی|نقد|فوری|تسویه/.test(text) && !/اقساط|قسط/.test(text)) return "cash";
     return null;
   }
   return null;
