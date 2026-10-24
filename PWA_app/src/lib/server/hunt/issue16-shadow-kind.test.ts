@@ -314,7 +314,11 @@ function shadowSpecificSubjectVerdict(
   const targetStart = normalizedTitle.indexOf(target);
   const hasTargetInTitle = targetStart >= 0;
   const targetEnd = targetStart + target.length;
-  const explicitCoOffer = hasTargetInTitle && knownTitleSubjects.some((subject) => {
+  // A connector alone can also join service/repair objects. Require a lexical
+  // title cue that the listing is offering items, not merely discussing them.
+  const hasExplicitOfferCue =
+    /(?:^| )(?:فروش|عرضه|موجود|فروشی)(?: |$)/.test(normalizedTitle);
+  const explicitCoOffer = hasTargetInTitle && hasExplicitOfferCue && knownTitleSubjects.some((subject) => {
     const other = normalizeForMatch(subject);
     if (other === target) return false;
     const otherStart = normalizedTitle.indexOf(other);
@@ -464,6 +468,28 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
         "فروش قطعات خودرو"
       )
     ).toBe("reject");
+  });
+
+  it("does not mistake a service/repair title for an explicit product co-offer", () => {
+    // Synthetic adversarial case: the conjunction joins objects of a service,
+    // not products explicitly offered for sale. This is not a source ad/grade.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "تعویض دیسک ترمز و کاتالیزور فرسوده",
+        "خدمات تعمیر و تعویض قطعات خودرو"
+      )
+    ).toBe("reject");
+  });
+
+  it("allows a clear available-items co-offer even without the word فروش", () => {
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "دیسک ترمز و کاتالیزور موجود",
+        "هر دو قطعه موجود است"
+      )
+    ).toBe("allow");
   });
 
   it("leaves an unknown principal subject as unknown rather than hard-rejecting", () => {
