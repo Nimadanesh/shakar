@@ -21,9 +21,9 @@ function roleCue(title: string): RoleCue {
 
 function selectionCell(scenarioId: string, title: string): Cell | null {
   const text = normalizeForMatch(title);
-  const adjacent = /دفتر|حواله|کارشناسی|مشاوره|خدمات|تعمیر|لوازم|ضبط|باند|قطعه|قطعات|مکانیک|واسطه|نمایندگی/.test(text);
-  const wholeVehicle = !adjacent &&
-    /(پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|خودرو|ماشین)/.test(text);
+  const adjacent = /دفتر|حواله|کارشناسی|مشاوره|خدمات|تعمیر|لوازم|ضبط|باند|قطعه|قطعات|مکانیک|واسطه|نمایندگی|کاتالیزور|اگزوز|باتری|لاستیک|رینگ|کفی|گیربکس|چراغ|آینه|سپر|کمک|جک|موتور/.test(text);
+  const model = /(پژو|پراید|سمند|دنا|تیبا|کوییک|ساینا|تارا|شاهین|پارس|رانا|تندر|سورن|۲۰۶|206|۲۰۷|207|۴۰۵|405|ال\s?۹۰|ال\s?90|l90|زانتیا|ام\s?وی\s?ام|چری|جک\s?s|هایما|فیدلیتی|دیگنیتی|آریزو|اطلس|نیسان|تویوتا|هیوندای|کیا|بنز|بی\s?ام\s?و|مزدا|ری\s?را)/.test(text);
+  const wholeVehicle = !adjacent && model;
 
   if (scenarioId === "A-refrigerator-seller-direction") {
     const cue = roleCue(title);
@@ -31,7 +31,7 @@ function selectionCell(scenarioId: string, title: string): Cell | null {
   }
   if (scenarioId === "B-whole-vehicle-vs-voucher-service") {
     if (/حواله|دفتر/.test(text)) return "voucher";
-    if (wholeVehicle) return "whole-vehicle";
+    if (wholeVehicle && /فروش|فروشی|معاوضه|فوری|نقد|اقساط/.test(text)) return "whole-vehicle";
     return null;
   }
   if (scenarioId === "C-broad-vehicle-match-kind") {
