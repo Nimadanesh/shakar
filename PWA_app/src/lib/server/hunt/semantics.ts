@@ -1083,6 +1083,39 @@ export function assessModelSpecificity(
   // matches otherwise resolve to near via MUST-missing.
   const allEvidenced = includeTerms.every((t) => textMatches(listingText, t, category));
   if (!allEvidenced) return { mismatch: false, reason: "partial-evidence", tier: "near" };
+
+  // Issue 16 (Capture 05F / 06C): description-only mentions must not override
+  // a title whose leading subject is a different offered item. Reuse the
+  // established, evidence-earned PART_MARKERS contract instead of creating a
+  // second open-ended part lexicon. This check is title-leading only, and is
+  // disabled when the query itself hunts that part.
+  const titleTokens = normalizeForMatch(listingTitle ?? "").split(" ").filter(Boolean);
+  const titleHeadSkip = new Set([
+    ...SUBJECT_SKIP_TOKENS,
+    "خرید", "انواع", "فوری", "اقساطی", "استوک", "فابریک", "نو", "کامل", "صفر",
+  ]);
+  let titleHeadStart = 0;
+  while (titleHeadStart < titleTokens.length && titleHeadSkip.has(titleTokens[titleHeadStart])) {
+    titleHeadStart += 1;
+  }
+  const titleSubject = titleTokens.slice(titleHeadStart);
+  const titleHead = titleSubject[0];
+  const titleHeadPair = titleSubject.slice(0, 2).join(" ");
+  const partHead = PART_MARKERS.find((marker) => {
+    const normalized = normalizeForMatch(marker);
+    return normalized !== "" && !queryTokens.has(normalized) &&
+      (normalized === titleHead || normalized === titleHeadPair);
+  });
+  const sparePartsHead = titleHead === "لوازم" && titleSubject[1] === "یدکی" &&
+    !queryTokens.has("یدکی");
+  if (partHead || sparePartsHead) {
+    const offered = sparePartsHead ? "لوازم یدکی" : partHead!;
+    return {
+      mismatch: true,
+      reason: `part:title-offering:"${offered}"`,
+      tier: "reject",
+    };
+  }
   const matchedPositions = new Set<number>();
   listingTokens.forEach((tok, i) => {
     if (queryTokens.has(tok)) matchedPositions.add(i);
