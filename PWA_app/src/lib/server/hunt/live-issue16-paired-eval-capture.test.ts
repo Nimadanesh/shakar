@@ -12,13 +12,14 @@ import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline
 const targetQuery = "کاتالیزور خودرو";
 const category = "vehicles";
 const detailBudget = 24;
-const pagesPerQuery = 3;
+const pagesPerQuery = 4;
 const retrievalQueries = [
-  // Adjacent-part queries are intended to surface item-list ads where the target
-  // appears in the description but not in the title; broad service/buyer queries
-  // remain as negative-control sources.
-  "سنسور اکسیژن خودرو", "هدرز خودرو", "اگزوز خودرو", "قطعات موتور خودرو",
-  "لوازم یدکی خودرو", "لنت خودرو", "تعمیر خودرو", "خرید ضایعات خودرو",
+  // Broaden source discovery across direct-target, adjacent-parts, general-parts,
+  // and negative-control intents. Keep this capture source-only and bounded.
+  "کاتالیزور خودرو", "قطعات خودرو", "قطعات یدکی خودرو", "لوازم یدکی ماشین",
+  "لوازم موتوری خودرو", "فروش قطعات خودرو", "سنسور اکسیژن خودرو",
+  "هدرز خودرو", "اگزوز خودرو", "تعمیر کاتالیزور خودرو",
+  "خرید کاتالیزور خودرو", "خرید ضایعات خودرو",
 ];
 
 function resolve(query: string) {
@@ -108,18 +109,16 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             candidateCount += result.candidates.length;
             cursor = result.endCursor;
             cursorReturned = cursor != null;
-            // Avoid taking only the first three provider-ranked listings from every query.
-            // Spread the bounded detail sample across the returned page; this is still
-            // deterministic and source-only, and does not change the production pipeline.
+            // Sample one novel listing per page, rotating the within-page position,
+            // and at most two per query. This forces later-page coverage instead of
+            // spending each query's allowance on page one.
             const candidateIndexes = result.candidates.map((_: unknown, index: number) => index);
-            const anchors = [0.15, 0.5, 0.85].map(r =>
-              Math.round(Math.max(0, result.candidates.length - 1) * r),
+            const anchorRatio = [0.15, 0.5, 0.85][pageIndex % 3];
+            const anchor = Math.round(Math.max(0, result.candidates.length - 1) * anchorRatio);
+            candidateIndexes.sort((a, b) =>
+              Math.abs(a - anchor) - Math.abs(b - anchor) || a - b,
             );
-            candidateIndexes.sort((a, b) => {
-              const distanceA = Math.min(...anchors.map(anchor => Math.abs(a - anchor)));
-              const distanceB = Math.min(...anchors.map(anchor => Math.abs(b - anchor)));
-              return distanceA - distanceB || a - b;
-            });
+            let addedThisPage = 0;
             for (const candidateIndex of candidateIndexes) {
               const candidate = result.candidates[candidateIndex];
               if (previouslyInspectedIds.has(candidate.sourceAdId)) { overlap.add(candidate.sourceAdId); continue; }
@@ -127,9 +126,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               seen.add(candidate.sourceAdId);
               pool.push({ candidate, query, pageNumber: pageIndex + 1, stats: result.stats });
               added++;
-              if (pool.length >= detailBudget || added >= 3) break;
+              addedThisPage++;
+              if (pool.length >= detailBudget || addedThisPage >= 1) break;
             }
-            if (pool.length >= detailBudget || added >= 3 || cursor == null) break;
+            if (pool.length >= detailBudget || added >= 2 || cursor == null) break;
           }
           queryReports.push({
             query, status: added ? "candidates-selected" : "no-new-candidates",
