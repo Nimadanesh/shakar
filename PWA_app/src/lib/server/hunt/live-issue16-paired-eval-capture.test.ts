@@ -1,6 +1,7 @@
 import { it, expect } from "vitest";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 import { normalizeForMatch } from "@/lib/persianNormalize";
 import { resolveHuntDefinition } from "./definition";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
@@ -12,9 +13,8 @@ const category = "vehicles";
 const detailBudget = 24;
 const pagesPerQuery = 3;
 const retrievalQueries = [
-  "کاتالیزور خودرو", "کاتالیزور اگزوز", "کاتالیزور تعمیر",
-  "خرید کاتالیزور", "فروش کاتالیزور", "خاک کاتالیزور",
-  "کاتالیزور لنت ترمز", "کاتالیزور سنسور اکسیژن",
+  "قطعات خودرو", "لوازم خودرو", "اگزوز خودرو", "تعمیر خودرو",
+  "مکانیک خودرو", "خرید ضایعات خودرو", "فروش قطعات خودرو", "خودرو",
 ];
 
 function resolve(query: string) {
@@ -38,7 +38,7 @@ function classifySourceOnly(title: string, description: string) {
   const t = norm(title), d = norm(description), full = norm(title + " " + description);
   const targetMention = /کاتالیزور|کاتالیز/.test(full);
   const targetInTitle = /کاتالیزور|کاتالیز/.test(t);
-  const offerVerb = /فروش|موجود|دارم|ارائه|تعویض|جایگزین|نو|استوک|قیمت|ارسال|فروشی/.test(d);
+  const offerVerb = /فروش|موجود|دارم|عرضه|ارائه|تعویض|جایگزین|فروشی|به فروش|قابل تهیه/.test(d);
   const serviceOnly = /تعمیر|تعمیرکار|اجرت|جوشکار|جوشکاری|بازکردن|تست|شستشو|سرویس/.test(d)
     && !/فروش|موجود|دارم|ارائه|تعویض|جایگزین/.test(d);
   const buyerSeeking = /خریدار|خریداری می.?کنم|خرید کاتالیزور|خریدار کاتالیزور|خریدار ضایعات/.test(full)
@@ -77,7 +77,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
     ].map(name => readFile(join(process.cwd(), "src/lib/server/hunt", name), "utf8")));
     const previouslyInspectedIds = extractPreviouslyInspectedIds(sources);
     const seen = new Set<string>(), overlap = new Set<string>();
-    const pool: Array<{ candidate: any; query: string; stats: any }> = [];
+    const pool: Array<{ candidate: any; query: string; pageNumber: number; stats: any }> = [];
     const queryReports: Array<Record<string, unknown>> = [];
     const inspected: Array<Record<string, unknown>> = [];
     let detailsUsed = 0;
@@ -85,31 +85,44 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       for (const query of retrievalQueries) {
         const def = resolve(query);
         if (!def) { queryReports.push({ query, status: "unresolved" }); continue; }
-        const events: HuntEvent[] = [];
+        let added = 0;
+        let pagesCompleted = 0;
+        let adsSeen = 0;
+        let candidateCount = 0;
+        let cursor: unknown = undefined;
+        let cursorReturned = false;
         try {
-          const { candidates, stats, endCursor } = await collectCandidates(def, {
-            maxPages: pagesPerQuery, emit: event => events.push(event),
-          });
-          let added = 0;
-          for (const candidate of candidates) {
-            if (previouslyInspectedIds.has(candidate.sourceAdId)) { overlap.add(candidate.sourceAdId); continue; }
-            if (seen.has(candidate.sourceAdId)) continue;
-            seen.add(candidate.sourceAdId);
-            pool.push({ candidate, query, stats });
-            added++;
-            if (pool.length >= detailBudget || added >= 6) break;
+          for (let pageIndex = 0; pageIndex < pagesPerQuery; pageIndex++) {
+            const events: HuntEvent[] = [];
+            const result = await collectCandidates(def, {
+              maxPages: 1, startPage: pageIndex, startCursor: cursor,
+              emit: event => events.push(event),
+            });
+            pagesCompleted += events.filter(e => e.type === "lists-progress").length;
+            adsSeen += result.stats.adsSeen;
+            candidateCount += result.candidates.length;
+            cursor = result.endCursor;
+            cursorReturned = cursor != null;
+            for (const candidate of result.candidates) {
+              if (previouslyInspectedIds.has(candidate.sourceAdId)) { overlap.add(candidate.sourceAdId); continue; }
+              if (seen.has(candidate.sourceAdId)) continue;
+              seen.add(candidate.sourceAdId);
+              pool.push({ candidate, query, pageNumber: pageIndex + 1, stats: result.stats });
+              added++;
+              if (pool.length >= detailBudget || added >= 6) break;
+            }
+            if (pool.length >= detailBudget || added >= 6 || cursor == null) break;
           }
           queryReports.push({
             query, status: added ? "candidates-selected" : "no-new-candidates",
-            pagesCompleted: events.filter(e => e.type === "lists-progress").length,
-            adsSeen: stats.adsSeen, candidateCount: candidates.length,
-            candidatesSelected: added, cursorReturned: endCursor != null,
+            pagesCompleted, adsSeen, candidateCount,
+            candidatesSelected: added, cursorReturned,
           });
         } catch (error) {
           queryReports.push({
             query, status: "provider-error",
             error: error instanceof Error ? error.message : String(error),
-            pagesCompleted: events.filter(e => e.type === "lists-progress").length,
+            pagesCompleted, adsSeen, candidateCount,
           });
         }
         if (pool.length >= detailBudget) break;
@@ -128,7 +141,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         const description = hit?.descAuditText ?? rejected?.descAuditText ?? "";
         const source = classifySourceOnly(entry.candidate.title, description);
         inspected.push({
-          sourceAdId: entry.candidate.sourceAdId, retrievalQuery: entry.query, targetQuery,
+          sourceAdId: entry.candidate.sourceAdId, retrievalQuery: entry.query, retrievalPage: entry.pageNumber, targetQuery,
           title: entry.candidate.title, descriptionSnapshot: description,
           descriptionSnapshotAvailable: Boolean(description), observationTimestamp: new Date().toISOString(),
           sourceOnlyTags: source.sourceOnlyTags, targetMention: source.targetMention,
@@ -163,7 +176,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       const packetRaw = [...positives, ...selectedNegatives].slice(0, 12);
       const blindPacket = packetRaw.map((item: any, index) => ({
         blindId: "P" + String(index + 1).padStart(2, "0"),
-        sourceAdId: item.sourceAdId, retrievalQuery: item.retrievalQuery, targetQuery: item.targetQuery,
+        sourceAdId: item.sourceAdId, retrievalQuery: item.retrievalQuery, retrievalPage: item.retrievalPage, targetQuery: item.targetQuery,
         title: item.title, descriptionSnapshot: item.descriptionSnapshot,
         descriptionSnapshotAvailable: item.descriptionSnapshotAvailable,
         observationTimestamp: item.observationTimestamp,
@@ -179,7 +192,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         incidentalOrAmbiguous: packetRaw.filter(x => x.sourceOnlyTags.includes("incidental-or-ambiguous")).length,
       };
       const allControlQuotasMet = Object.values(controlCounts).every(count => count >= 2);
-      const report = {
+      const reportCore = {
         kind: "issue16-prospective-paired-evaluation-source-only-packet",
         status: blindPacket.length === 12 && positiveCount === 4 && itemListPositiveCount >= 1 && allControlQuotasMet ? "candidate-packet-ready-for-human-review" : "quota-shortfall",
         warning: "SOURCE-ONLY PACKET. No engine verdicts, scores, eligibility, or shadow outcomes are included. Source tags are heuristic candidate-selection aids, not human grades. Human grades must be locked before a separate comparison stage.",
@@ -193,6 +206,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           requestedNegativeControls: 8, selectedNegativeControls: negativeCount, negativeControlTags: controlCounts, categorySelection, allControlQuotasMet },
         blindPacket,
       };
+      const sourcePacketSha256 = createHash("sha256").update(JSON.stringify(reportCore)).digest("hex");
+      const report = { ...reportCore, sourcePacketSha256 };
       await writeFile(outputPath, JSON.stringify(report, null, 2), "utf8");
       console.log("ISSUE16_PAIRED_EVAL_SOURCE_PACKET_BEGIN");
       console.log(JSON.stringify(report, null, 2));
