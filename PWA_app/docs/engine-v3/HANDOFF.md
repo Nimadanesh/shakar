@@ -725,3 +725,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Added one synthetic test-only boundary case for the subject-identity prototype: `فروش دیسک ترمز، کاتالیزور پراید` currently returns `reject`, even though punctuation may plausibly enumerate two offered items.
 - This is intentionally recorded as a conservative false-reject risk, not relabeled as a human-graded failure and not “fixed” by broadening co-offer inference without source-backed evidence. The existing explicit connector and available-item positive controls remain unchanged.
 - No capture rerun was performed; frozen artifacts and human grades remain untouched. The change is confined to `issue16-shadow-kind.test.ts` and this diagnostic record. PR #43 remains Draft/unmerged; production behavior and `main` remain unchanged.
+
+## Issue 16 — 06A/06B boundary matrix extended (2026-10-25)
+
+- Test-only commit `6bd2e225d7040302a995723cf02a8c3884761087` added a subject-policy characterization over five already human-graded source IDs from immutable Captures 06A/06B; `b750f0a9249f8ddf7f840dca755945f763576da0` clarified that this is not a full-text replay.
+- Documentation record: `96e9a53b56a9b397351ae6dd8e0e03eae98ecffc` in `EVALUATION.md`.
+- Shadow verdicts: 06A C01 reject (human 2), C02 reject (human 1), C03 unknown (human 2), C04 unknown (human 2); 06B B01 reject (human 1). The C01 mismatch is preserved as a false-reject risk; grades are immutable.
+- Descriptions in this test contain only the already-confirmed target-presence signal, not full original source text. Treat this as a boundary characterization, not a source-exact replay or E5 paired comparison.
+- Next: verify the isolated Shadow Tests CI on the updated head. Do not launch another live capture merely to obtain more examples; do not promote the heuristic. Production, `main`, deployment, and PR #43 state remain unchanged.
