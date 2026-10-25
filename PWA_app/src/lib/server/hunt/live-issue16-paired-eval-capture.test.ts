@@ -48,7 +48,8 @@ function classifySourceOnly(title: string, description: string) {
   const buyerSeeking = /خریدار|خریداری می.?کنم|خرید کاتالیزور|خریدار کاتالیزور|خریدار ضایعات/.test(full)
     && !/فروش|موجود|دارم|ارائه/.test(d);
   const dustSubtype = /خاک کاتالیزور|پودر کاتالیزور|پودر کاتالیز|خاک کاتالیز/.test(full);
-  const itemList = /،|؛|یک عدد|یک دست|[0-9]+\s*(عدد|دست|حلقه)/.test(d);
+  // Punctuation is removed by normalizeForMatch, so inspect the raw description for list separators.
+  const itemList = /[،؛,;]|یک عدد|یک دست|[0-9]+\s*(عدد|دست|حلقه)/.test(description) || /یک عدد|یک دست|[0-9]+\s*(عدد|دست|حلقه)/.test(d);
   const explicitOffer = targetMention && offerVerb && !buyerSeeking && !serviceOnly && !dustSubtype;
   const tags: string[] = [];
   if (serviceOnly) tags.push("repair-service-only");
@@ -208,6 +209,8 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         quotaStatus: { requestedTotal: 12, selectedTotal: blindPacket.length,
           requestedPositives: 4, selectedBodyOnlyOfferCandidates: positiveCount, itemListPositiveCount,
           requestedNegativeControls: 8, selectedNegativeControls: negativeCount, negativeControlTags: controlCounts, categorySelection, allControlQuotasMet },
+        // Diagnostic-only selector audit: not part of the blind packet and never human grades.
+        selectionAudit: inspected.map((item: any) => ({ sourceAdId: item.sourceAdId, retrievalQuery: item.retrievalQuery, retrievalPage: item.retrievalPage, targetMention: item.targetMention, targetInTitle: item.targetInTitle, targetInBody: item.targetInBody, bodyOnly: item.bodyOnly, sourceOnlyTags: item.sourceOnlyTags, provisionalArm: item.provisionalArm })),
         blindPacket,
       };
       const sourcePacketSha256 = createHash("sha256").update(JSON.stringify(reportCore)).digest("hex");
