@@ -15,9 +15,10 @@ const category = "vehicles";
 const detailBudget = 24;
 const pagesPerQuery = 4;
 const retrievalQueries = [
-  // Keep half of the 24-detail budget for adjacent-part listings where the
-  // body may offer the target, and half for direct-query negative controls.
-  "لوازم یدکی خودرو", "قطعات خودرو", "فروش قطعات خودرو", "اگزوز خودرو",
+  // Prior broad generic searches yielded no body-only target offers. Use adjacent
+  // part families that commonly co-occur in inventory lists, then retain four
+  // target-focused queries for the required negative-control strata.
+  "سنسور اکسیژن خودرو", "لنت خودرو", "لوازم یدکی پراید", "قطعات موتور خودرو",
   "کاتالیزور خودرو", "خریدار کاتالیزور", "خاک کاتالیزور", "تعمیر کاتالیزور خودرو",
 ];
 
