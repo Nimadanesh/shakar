@@ -1,0 +1,43 @@
+name: Engine V3 Issue 16 Prospective Paired-Eval Capture
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-v3-issue16-paired-eval-capture
+  cancel-in-progress: false
+
+jobs:
+  capture-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: PWA_app
+    env:
+      LIVE_DIVAR_OBSERVATION: "1"
+      HUNT_MAX_DETAILS: "24"
+      MIZAN_SHADOW: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+      - run: npm ci
+      - name: Capture unseen candidates and build source-only packet
+        env:
+          SLUG_CAPTURE_BUFFER_PATH: /tmp/issue16-paired-eval-slugs.jsonl
+        run: npx vitest run src/lib/server/hunt/live-issue16-paired-eval-capture.test.ts --reporter=verbose
+      - name: Upload source-only packet (never upload engine outcomes in this stage)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue16-paired-eval-source-only-${{ github.run_id }}
+          path: PWA_app/engine-v3-issue16-paired-eval-source-packet.json
+          if-no-files-found: warn
+          retention-days: 14
