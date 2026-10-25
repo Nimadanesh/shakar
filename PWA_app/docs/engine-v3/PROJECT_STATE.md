@@ -326,3 +326,12 @@ This section supersedes older "Next action" notes above where they conflict with
 - Human grade-2 records `gaI0HKIy` and `ga4uraIe` are known from the evaluation document, but their complete frozen descriptions were not found in the checked repository tree/documents. Whether any current cue fires on them is therefore **OPEN / UNVERIFIED**. No cue changes were made; no synthetic paraphrases substituted.
 - Next action: only if the exact snapshots are recovered from their original artifact, replay them through the real guard/pipeline and record the matched cue. Otherwise leave the guard unchanged and move to a separate evidence-backed failure family. Do not claim the cue list is safe merely because no false rejection was demonstrated.
 - No tests were executed in this documentation-only audit. No source behavior, human grade, frozen artifact, production allocation, `main`, or deployment was changed.
+
+
+## Branch-first change policy — effective 2026-10-26
+
+- All future code **and documentation** changes must be committed to an experiment branch first.
+- Do not write directly to `engine_v3`. Move an approved change from the experiment branch to `engine_v3` only after explicit user approval.
+- `main`, merges, and deployments remain outside scope unless explicitly authorized.
+- The three documentation commits already made directly on `engine_v3` before this rule was clarified are intentionally preserved as historical state; do not rewrite, revert, or amend them as part of adopting this rule.
+- Current continuation branch: `experiment/e3-floormat-guard-audit-20261026`, created from `36e9043eaa84d1e145b5bf4655f909eae380052a`. This branch inherits the prior three commits but all new work after this point stays here pending approval.
