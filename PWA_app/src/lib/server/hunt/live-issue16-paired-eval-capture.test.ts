@@ -108,7 +108,20 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             candidateCount += result.candidates.length;
             cursor = result.endCursor;
             cursorReturned = cursor != null;
-            for (const candidate of result.candidates) {
+            // Avoid taking only the first three provider-ranked listings from every query.
+            // Spread the bounded detail sample across the returned page; this is still
+            // deterministic and source-only, and does not change the production pipeline.
+            const candidateIndexes = result.candidates.map((_: unknown, index: number) => index);
+            const anchors = [0.15, 0.5, 0.85].map(r =>
+              Math.round(Math.max(0, result.candidates.length - 1) * r),
+            );
+            candidateIndexes.sort((a, b) => {
+              const distanceA = Math.min(...anchors.map(anchor => Math.abs(a - anchor)));
+              const distanceB = Math.min(...anchors.map(anchor => Math.abs(b - anchor)));
+              return distanceA - distanceB || a - b;
+            });
+            for (const candidateIndex of candidateIndexes) {
+              const candidate = result.candidates[candidateIndex];
               if (previouslyInspectedIds.has(candidate.sourceAdId)) { overlap.add(candidate.sourceAdId); continue; }
               if (seen.has(candidate.sourceAdId)) continue;
               seen.add(candidate.sourceAdId);
