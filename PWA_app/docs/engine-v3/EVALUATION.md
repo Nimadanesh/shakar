@@ -201,3 +201,11 @@ For every meaningful experiment, record:
 - Shadow Tests run [40187084486](https://github.com/Nimadanesh/shakar/actions/runs/40187084486) also completed successfully; it is a repeated technical check, not additional human-quality evidence.
 - The 06A, 06B, and 06C capture workflows associated with this head were skipped by their configured conditions. No new Issue 16 human-evaluation records were created by these runs.
 - Interpretation unchanged: CI confirms the test-only counter-signal assertions pass. It does not establish production-quality improvement or authorize a production change.
+
+
+### CI confirmation — paired-protocol head rerun (2026-10-25)
+
+- On documentation/protocol head `59b2a663d0d48eeaa87d161540f9cca8d64d2045`, [Shadow Tests run 40187626395](https://github.com/Nimadanesh/shakar/actions/runs/40187626395) completed successfully.
+- [Capture 05F run 40187626379](https://github.com/Nimadanesh/shakar/actions/runs/40187626379) completed successfully and uploaded artifact `engine-v3-issue16-capture-05f`, artifact ID `12597590097`, SHA-256 `cf35497df022c74e4f93604200f28645def203b23cf73a5ce16e0b9f2cd75d10`. This remains a whole-vehicle/control capture, not a new Issue 16 source-matched sample.
+- [Shadow Tests run 40187616537](https://github.com/Nimadanesh/shakar/actions/runs/40187616537) also passed on the earlier protocol commit `574d039cf8d105ea3d7eab13b7844fa008e19cb8`; it is a successful repeat, not independent human-quality evidence.
+- These runs do not add human grades or alter the locked 06A/06B/06C evidence. Green tests verify the diagnostic test suite only; they do not establish production-quality uplift. Continue with the preregistered unseen paired sample; do not substitute repeated 05F captures. No production path, `main`, merge, or deployment change.
