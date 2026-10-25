@@ -164,9 +164,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         sourceAdId: item.sourceAdId, retrievalQuery: item.retrievalQuery, targetQuery: item.targetQuery,
         title: item.title, descriptionSnapshot: item.descriptionSnapshot,
         descriptionSnapshotAvailable: item.descriptionSnapshotAvailable,
-        observationTimestamp: item.observationTimestamp, sourceOnlyTags: item.sourceOnlyTags,
-        targetMention: item.targetMention, targetInTitle: item.targetInTitle,
-        targetInBody: item.targetInBody, bodyOnly: item.bodyOnly,
+        observationTimestamp: item.observationTimestamp,
       }));
       const positiveCount = blindPacket.filter(x => x.bodyOnly && x.sourceOnlyTags.includes("explicit-target-offer")).length;
       const negativeCount = blindPacket.length - positiveCount;
@@ -189,7 +187,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         quotaStatus: { requestedTotal: 12, selectedTotal: blindPacket.length,
           requestedPositives: 4, selectedBodyOnlyOfferCandidates: positiveCount,
           requestedNegativeControls: 8, selectedNegativeControls: negativeCount, negativeControlTags: controlCounts, categorySelection, allControlQuotasMet },
-        candidateReviewPool: inspected, blindPacket,
+        blindPacket,
       };
       await writeFile(outputPath, JSON.stringify(report, null, 2), "utf8");
       console.log("ISSUE16_PAIRED_EVAL_SOURCE_PACKET_BEGIN");
