@@ -1,6 +1,12 @@
 name: Engine V3 Issue 16 Prospective Paired-Eval Capture
 
 on:
+  push:
+    branches:
+      - experiment/issue16-specific-part-body-20261024
+    paths:
+      - ".github/workflows/engine-v3-issue16-paired-eval-capture.yml"
+      - "PWA_app/src/lib/server/hunt/live-issue16-paired-eval-capture.test.ts"
   workflow_dispatch:
 
 permissions:
@@ -12,6 +18,7 @@ concurrency:
 
 jobs:
   capture-source-only:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-issue16-live-capture]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
