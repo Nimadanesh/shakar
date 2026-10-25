@@ -14,13 +14,10 @@ const category = "vehicles";
 const detailBudget = 24;
 const pagesPerQuery = 4;
 const retrievalQueries = [
-  // Iteration 3: bias retrieval toward adjacent parts whose listing body may
-  // mention an offered catalyst without naming it in the title. Direct target
-  // searches remain only for negative-control discovery.
-  "سنسور اکسیژن خودرو", "اگزوز خودرو", "منبع اگزوز", "لوازم یدکی اگزوز",
-  "قطعات موتور خودرو", "لوازم یدکی خودرو", "لوازم یدکی پژو ۲۰۶",
-  "لوازم یدکی پراید", "قطعات استوک خودرو", "خاک کاتالیزور",
-  "خرید کاتالیزور خودرو", "تعمیر کاتالیزور خودرو",
+  // Keep half of the 24-detail budget for adjacent-part listings where the
+  // body may offer the target, and half for direct-query negative controls.
+  "سنسور اکسیژن خودرو", "اگزوز خودرو", "لوازم یدکی اگزوز", "قطعات موتور خودرو",
+  "کاتالیزور خودرو", "خریدار کاتالیزور", "خاک کاتالیزور", "تعمیر کاتالیزور خودرو",
 ];
 
 function resolve(query: string) {
@@ -41,6 +38,9 @@ function extractPreviouslyInspectedIds(contents: string[]): Set<string> {
     "gagUBlva", "gacTnDQd", "gaLn3uem", "gaT-AN9Y", "gadb_kqe", "gac3bik5",
     "gadndt9E", "gadfa9Zz", "gaSzDUqQ", "gaZ3B1q1", "gaUvJ4Dc", "gad_KiAI",
     "gacn7m9n", "Aau4yziv", "gadjfB_G", "gaBTIon3", "gakBLMOm", "gaEzwYKE",
+    // IDs seen in the prior source-only attempts, including the overlap detected
+    // in run 40196935345; failed packets still count as inspected source.
+    "gauW_tpf", "Qa8HqiWJ", "QaPvpvjd", "gaQbKcvc",
   ]);
   for (const source of contents) {
     for (const match of source.matchAll(/["']([A-Za-z0-9_-]{8})["']/g)) ids.add(match[1]);
@@ -122,10 +122,15 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             const candidateIndexes = result.candidates.map((_: unknown, index: number) => index);
             const anchorRatio = [0.15, 0.85, 0.5][pageIndex % 3];
             const anchor = Math.round(Math.max(0, result.candidates.length - 1) * anchorRatio);
+            const controlQuery = /کاتالیزور|خریدار/.test(query);
             const titlePriority = (candidate: any) => {
               const title = norm(candidate.title ?? "");
               const adjacentPart = /سنسور اکسیژن|اگزوز|هدرز|قطعات موتور|لوازم یدکی|سرسیلندر|دیسک و صفحه/.test(title);
               const namesTarget = /کاتالیزور|کاتالیز/.test(title);
+              // Positive-discovery queries prefer titles without the target;
+              // control queries prefer target-naming titles so their descriptions
+              // can distinguish offers from buying, service, dust, and incidental mentions.
+              if (controlQuery) return namesTarget ? 0 : adjacentPart ? 2 : 1;
               return namesTarget ? 2 : adjacentPart ? 0 : 1;
             };
             candidateIndexes.sort((a, b) =>
@@ -143,7 +148,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               addedThisPage++;
               if (pool.length >= detailBudget || addedThisPage >= 1) break;
             }
-            if (pool.length >= detailBudget || added >= 2 || cursor == null) break;
+            if (pool.length >= detailBudget || added >= 3 || cursor == null) break;
           }
           queryReports.push({
             query, status: added ? "candidates-selected" : "no-new-candidates",
