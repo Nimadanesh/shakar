@@ -5,6 +5,22 @@ import { queryKindForDef } from "./kindLexicon";
 describe("Issue 16 — title subject outranks description-only mentions", () => {
   it.each([
     [
+      "whole-vehicle hunt rejects a catalyst-only catalogue",
+      ["خرید", "فروش", "خودرو"],
+      "خرید و فروش خودرو",
+      "خرید فروش انواع کاتالیزور خارجی ایران فرسوده",
+      "تعویض کاتالیزور نو؛ فروش انواع طرح های کاتالیز؛ خریدار کاتالیزور فرسوده",
+      "all",
+    ],
+    [
+      "whole-vehicle hunt rejects a catalyst-repair listing",
+      ["خرید", "فروش", "خودرو"],
+      "خرید و فروش خودرو",
+      "کاتالیزور تعمیر و خرید خاک و منبع",
+      "تعمیر انواع کاتالیزور ماشین های خارجی و ایرانی و خرید خاک و منبع مستهلک",
+      "all",
+    ],
+    [
       "whole-vehicle hunt rejects a body-parts catalogue",
       ["خرید", "فروش", "خودرو"],
       "خرید و فروش خودرو",
