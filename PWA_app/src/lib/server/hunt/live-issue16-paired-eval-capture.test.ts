@@ -22,7 +22,7 @@ function resolve(query: string) {
   });
 }
 function norm(value: string) {
-  return normalizeForMatch(value ?? "").replace(/\\s+/g, " ").trim();
+  return normalizeForMatch(value ?? "").replace(/\s+/g, " ").trim();
 }
 function extractPreviouslyInspectedIds(contents: string[]): Set<string> {
   // Dynamically aggregate existing capture-source IDs instead of maintaining a stale copied list.
@@ -42,7 +42,7 @@ function classifySourceOnly(title: string, description: string) {
   const buyerSeeking = /خریدار|خریداری می.?کنم|خرید کاتالیزور|خریدار کاتالیزور|خریدار ضایعات/.test(full)
     && !/فروش|موجود|دارم|ارائه/.test(d);
   const dustSubtype = /خاک کاتالیزور|پودر کاتالیزور|پودر کاتالیز|خاک کاتالیز/.test(full);
-  const itemList = /،|؛|یک عدد|یک دست|[0-9]+\\s*(عدد|دست|حلقه)/.test(d);
+  const itemList = /،|؛|یک عدد|یک دست|[0-9]+\s*(عدد|دست|حلقه)/.test(d);
   const explicitOffer = targetMention && offerVerb && !buyerSeeking && !serviceOnly && !dustSubtype;
   const tags: string[] = [];
   if (serviceOnly) tags.push("repair-service-only");
