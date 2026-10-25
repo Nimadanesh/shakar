@@ -750,3 +750,12 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Shadow Tests [run 40186463053](https://github.com/Nimadanesh/shakar/actions/runs/40186463053) passed the isolated Issue 16 shadow/kind-lexicon suite. This confirms the test matrix executes cleanly; it is not a human-quality gain, paired evaluation, or production validation.
 - Capture 05F [run 40186463076](https://github.com/Nimadanesh/shakar/actions/runs/40186463076) passed and uploaded artifact `12596278104` (SHA-256 `d398035708e3066e64d8765e5cd828c6f3b3b0e6446c35fa2c3b67ebda02603a`). It is a separate whole-vehicle/control capture, not new Issue 16 evidence; do not use it to expand 06A/06B/06C conclusions.
 - Next step: preserve the conservative signal as test-only and keep C01's human grade 2/reject mismatch visible. Do not wire it into production without a source-matched, human-graded paired gate. PR #43 remains Draft/unmerged; `main` and deployment remain untouched.
+
+
+## Next action — Issue 16 C01 evidence gate (2026-10-25)
+
+- The useful next step is **not another live capture and not a production patch**. The frozen 06A C01 body contains the explicit item-list offer `یک عدد هدرز با کاتالیزور نو`, while the current test-local subject policy rejects the title. Keep its human grade 2 unchanged.
+- Preserve `shadowBodyOfferCounterSignal()` as a diagnostic candidate that can only downgrade this rejection to `unknown`; it must not auto-allow. Its negative-control assertions cover 06A C02, 06B B01, and all five locked 06C descriptions.
+- Treat this as one confirmed, source-backed counterexample. CI success is technical validation of the test; it is not paired human-quality evidence or proof of population uplift. Do not count any 05F artifact as a new Issue 16 sample.
+- Next evidence gate before any production proposal: define a source-matched paired comparison with unseen listings, lock human grades before opening the engine comparison, and include explicit item-list offer positives plus repair-context, buyer-seeking, subtype/dust, and service-only negatives. Keep each failure hypothesis separate and report UNKNOWN outside the numeric denominator.
+- PR #43 remains Draft/unmerged. Do not merge, deploy, alter `main`, or change production ranking/eligibility/parser/`HEAD_KIND`/`PART_MARKERS` without explicit authorization.
