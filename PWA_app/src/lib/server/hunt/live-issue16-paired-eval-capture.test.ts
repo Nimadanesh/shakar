@@ -167,18 +167,20 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         descriptionSnapshotAvailable: item.descriptionSnapshotAvailable,
         observationTimestamp: item.observationTimestamp,
       }));
-      const positiveCount = blindPacket.filter(x => x.bodyOnly && x.sourceOnlyTags.includes("explicit-target-offer")).length;
+      const positiveItems = packetRaw.filter(x => x.bodyOnly && x.sourceOnlyTags.includes("explicit-target-offer"));
+      const positiveCount = positiveItems.length;
+      const itemListPositiveCount = positiveItems.filter(x => x.sourceOnlyTags.includes("item-list")).length;
       const negativeCount = blindPacket.length - positiveCount;
       const controlCounts = {
-        repairServiceOnly: blindPacket.filter(x => x.sourceOnlyTags.includes("repair-service-only")).length,
-        buyerSeeking: blindPacket.filter(x => x.sourceOnlyTags.includes("buyer-seeking")).length,
-        dustSubtype: blindPacket.filter(x => x.sourceOnlyTags.includes("dust-subtype")).length,
-        incidentalOrAmbiguous: blindPacket.filter(x => x.sourceOnlyTags.includes("incidental-or-ambiguous")).length,
+        repairServiceOnly: packetRaw.filter(x => x.sourceOnlyTags.includes("repair-service-only")).length,
+        buyerSeeking: packetRaw.filter(x => x.sourceOnlyTags.includes("buyer-seeking")).length,
+        dustSubtype: packetRaw.filter(x => x.sourceOnlyTags.includes("dust-subtype")).length,
+        incidentalOrAmbiguous: packetRaw.filter(x => x.sourceOnlyTags.includes("incidental-or-ambiguous")).length,
       };
       const allControlQuotasMet = Object.values(controlCounts).every(count => count >= 2);
       const report = {
         kind: "issue16-prospective-paired-evaluation-source-only-packet",
-        status: blindPacket.length === 12 && positiveCount === 4 && allControlQuotasMet ? "candidate-packet-ready-for-human-review" : "quota-shortfall",
+        status: blindPacket.length === 12 && positiveCount === 4 && itemListPositiveCount >= 1 && allControlQuotasMet ? "candidate-packet-ready-for-human-review" : "quota-shortfall",
         warning: "SOURCE-ONLY PACKET. No engine verdicts, scores, eligibility, or shadow outcomes are included. Source tags are heuristic candidate-selection aids, not human grades. Human grades must be locked before a separate comparison stage.",
         createdAt: new Date().toISOString(), branch: process.env.GITHUB_REF_NAME ?? "local",
         commit: process.env.GITHUB_SHA ?? "local", runtime: process.version, targetQuery,
@@ -186,7 +188,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
           uniqueCandidateIds: seen.size, overlapWithPreviouslyInspected: [...overlap] },
         previouslyInspectedIdCount: previouslyInspectedIds.size, queryReports,
         quotaStatus: { requestedTotal: 12, selectedTotal: blindPacket.length,
-          requestedPositives: 4, selectedBodyOnlyOfferCandidates: positiveCount,
+          requestedPositives: 4, selectedBodyOnlyOfferCandidates: positiveCount, itemListPositiveCount,
           requestedNegativeControls: 8, selectedNegativeControls: negativeCount, negativeControlTags: controlCounts, categorySelection, allControlQuotasMet },
         blindPacket,
       };
@@ -196,6 +198,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       console.log("ISSUE16_PAIRED_EVAL_SOURCE_PACKET_END");
       expect(blindPacket.length, "Report quota shortfall; never pad with duplicates").toBe(12);
       expect(positiveCount, "Need four body-only explicit-offer candidates; never auto-grade").toBe(4);
+      expect(itemListPositiveCount, "Need at least one item-list positive control").toBeGreaterThanOrEqual(1);
       expect(allControlQuotasMet, "Need at least two examples in each negative-control category; report shortfall otherwise").toBe(true);
     } finally {
       if (oldBuffer === undefined) delete process.env.SLUG_CAPTURE_BUFFER_PATH; else process.env.SLUG_CAPTURE_BUFFER_PATH = oldBuffer;
