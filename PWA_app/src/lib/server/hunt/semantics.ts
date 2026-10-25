@@ -973,6 +973,20 @@ const PART_MARKERS = [
   "کفپوش",
   "لپازم",
 ];
+// Issue 16 (Capture 05F / 06C): title-only subject cues, kept separate from
+// PART_MARKERS because that older list also participates in broad legacy
+// identity checks. These evidence-backed cues must not silently alter those
+// checks outside the new title-subject contract.
+const ISSUE16_TITLE_PART_MARKERS = [
+  "بدنه",
+  "کاتالیزور",
+  "اگزوز",
+  "کاپوت",
+  "گلگیر",
+  "سپر",
+  "یدکی",
+];
+
 const PACKAGING_MARKERS = ["کارتون", "کارتن", "جعبه"];
 const EQUIPMENT_MARKERS = ["دستگاه", "تجهیزات", "یخچال"]; // R4: «یخچال پراید وانت مخصوص حمل بستنی»
 const DERIVED_MARKERS = ["کره", "خلال", "کرم"]; // R6: «کرم» = کره typo in the wild («کرم بادوم زمینی پروتئینی»)
@@ -1065,15 +1079,48 @@ export function assessModelSpecificity(
   const listingNorm = normalizeForMatch(listingText);
   if (listingNorm === "") return { mismatch: false, reason: "empty-text", tier: "near" };
 
-  // Identity reasoning starts only from full lexical evidence; partial
-  // matches already resolve to near via MUST-missing.
-  const allEvidenced = includeTerms.every((t) => textMatches(listingText, t, category));
-  if (!allEvidenced) return { mismatch: false, reason: "partial-evidence", tier: "near" };
-
   const listingTokens = listingNorm.split(" ").filter(Boolean);
   const queryTokens = new Set(
     includeTerms.flatMap((t) => normalizeForMatch(t).split(" ").filter(Boolean))
   );
+
+  // Identity reasoning starts only from full lexical evidence; partial
+  // matches otherwise resolve to near via MUST-missing.
+  const allEvidenced = includeTerms.every((t) => textMatches(listingText, t, category));
+  if (!allEvidenced) return { mismatch: false, reason: "partial-evidence", tier: "near" };
+
+  // Issue 16 (Capture 05F / 06C): description-only mentions must not override
+  // a title whose leading subject is a different offered item. Reuse the
+  // established, evidence-earned PART_MARKERS contract instead of creating a
+  // second open-ended part lexicon. This check is title-leading only, and is
+  // disabled when the query itself hunts that part.
+  const titleTokens = normalizeForMatch(listingTitle ?? "").split(" ").filter(Boolean);
+  const titleHeadSkip = new Set([
+    ...SUBJECT_SKIP_TOKENS,
+    "خرید", "انواع", "فوری", "اقساطی", "استوک", "فابریک", "نو", "کامل", "صفر",
+  ]);
+  let titleHeadStart = 0;
+  while (titleHeadStart < titleTokens.length && titleHeadSkip.has(titleTokens[titleHeadStart])) {
+    titleHeadStart += 1;
+  }
+  const titleSubject = titleTokens.slice(titleHeadStart);
+  const titleHead = titleSubject[0];
+  const titleHeadPair = titleSubject.slice(0, 2).join(" ");
+  const partHead = [...PART_MARKERS, ...ISSUE16_TITLE_PART_MARKERS].find((marker) => {
+    const normalized = normalizeForMatch(marker);
+    return normalized !== "" && !queryTokens.has(normalized) &&
+      (normalized === titleHead || normalized === titleHeadPair);
+  });
+  const sparePartsHead = titleHead === "لوازم" && titleSubject[1] === "یدکی" &&
+    !queryTokens.has("یدکی");
+  if (partHead || sparePartsHead) {
+    const offered = sparePartsHead ? "لوازم یدکی" : partHead!;
+    return {
+      mismatch: true,
+      reason: `part:title-offering:"${offered}"`,
+      tier: "reject",
+    };
+  }
   const matchedPositions = new Set<number>();
   listingTokens.forEach((tok, i) => {
     if (queryTokens.has(tok)) matchedPositions.add(i);
@@ -1131,7 +1178,13 @@ export function assessModelSpecificity(
   // Markers after the item stay on the old weak path (tier "near").
   // Needs a token-exact item anchor; fuzzy-only evidence falls back to
   // the old path (conservative).
-  const firstQueryIdx = listingTokens.findIndex((t) => queryTokens.has(t));
+  // Transaction-role words are query tokens in broad searches («خرید و
+  // فروش خودرو») but are not the offered item. Anchor subject analysis on
+  // the first non-role query token, otherwise «فروش» makes the subject phrase
+  // empty and masks title-leading parts when the car is mentioned in the body.
+  const firstQueryIdx = listingTokens.findIndex(
+    (t) => queryTokens.has(t) && !SUBJECT_SKIP_TOKENS.has(t) && t !== "خرید"
+  );
   const subjectPhrase: string[] = [];
   const phraseIdx: number[] = [];
   if (firstQueryIdx >= 0) {
