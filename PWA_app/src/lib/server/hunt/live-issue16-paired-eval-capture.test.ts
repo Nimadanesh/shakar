@@ -14,12 +14,12 @@ const category = "vehicles";
 const detailBudget = 24;
 const pagesPerQuery = 4;
 const retrievalQueries = [
-  // Broaden source discovery across direct-target, adjacent-parts, general-parts,
-  // and negative-control intents. Keep this capture source-only and bounded.
-  "کاتالیزور خودرو", "قطعات خودرو", "قطعات یدکی خودرو", "لوازم یدکی ماشین",
-  "لوازم موتوری خودرو", "فروش قطعات خودرو", "سنسور اکسیژن خودرو",
-  "هدرز خودرو", "اگزوز خودرو", "تعمیر کاتالیزور خودرو",
-  "خرید کاتالیزور خودرو", "خرید ضایعات خودرو",
+  // Prioritize adjacent-part and multi-item listing titles that can mention the
+  // target only in their body; retain direct buyer/service queries for controls.
+  "لنت خودرو", "سنسور اکسیژن خودرو", "هدرز خودرو", "اگزوز خودرو",
+  "قطعات موتور خودرو", "لوازم یدکی خودرو", "لوازم یدکی ماشین",
+  "فروش قطعات خودرو", "قطعات پژو", "قطعات پراید",
+  "خرید کاتالیزور خودرو", "تعمیر کاتالیزور خودرو",
 ];
 
 function resolve(query: string) {
@@ -113,7 +113,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             // and at most two per query. This forces later-page coverage instead of
             // spending each query's allowance on page one.
             const candidateIndexes = result.candidates.map((_: unknown, index: number) => index);
-            const anchorRatio = [0.15, 0.5, 0.85][pageIndex % 3];
+            const anchorRatio = [0.15, 0.85, 0.5][pageIndex % 3];
             const anchor = Math.round(Math.max(0, result.candidates.length - 1) * anchorRatio);
             candidateIndexes.sort((a, b) =>
               Math.abs(a - anchor) - Math.abs(b - anchor) || a - b,
