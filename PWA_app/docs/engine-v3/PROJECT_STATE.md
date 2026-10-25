@@ -335,3 +335,13 @@ This section supersedes older "Next action" notes above where they conflict with
 - `main`, merges, and deployments remain outside scope unless explicitly authorized.
 - The three documentation commits already made directly on `engine_v3` before this rule was clarified are intentionally preserved as historical state; do not rewrite, revert, or amend them as part of adopting this rule.
 - Current continuation branch: `experiment/e3-floormat-guard-audit-20261026`, created from `36e9043eaa84d1e145b5bf4655f909eae380052a`. This branch inherits the prior three commits but all new work after this point stays here pending approval.
+## Continuation decision — 2026-10-26 (experiment branch only)
+
+This section supersedes older next-action text where it conflicts with the dated closure/audit notes in HANDOFF.md.
+
+- Issue 16 prospective paired evaluation remains STOP/CLOSED. Do not dispatch, rerun, or continue capture for that block. The closure decision is present in HANDOFF.md even though the referenced standalone closure document was not found in this experiment branch's recursive tree during the current audit.
+- Floor-mat/flatbed guard: keep the current cue list unchanged. Two human grade-2 listings lack complete frozen source snapshots in the checked tree, so cue-level false-rejection risk remains OPEN / UNVERIFIED.
+- Separate evidence-backed family reviewed: BRH exchange-side attribute ownership. Existing isolated helpers and tests cover source titles P06/P07 and counterfactuals, but the helpers are phrase-level diagnostics, not entity parsing; they are not integrated with ranking/eligibility. No current evidence justifies production integration or a broad exchange penalty.
+- No code or test changes were made in this continuation review, and no tests were run. Historical CI outcomes are not current-head validation.
+- Next: keep production behavior unchanged and perform only a bounded offline design/test audit of the isolated exchange evidence helper against existing frozen P06/P07 cases. Do not create new captures or grades. Continue to require explicit user approval before moving any experiment-branch changes to engine_v3.
+- Current experiment branch: experiment/e3-floormat-guard-audit-20261026. All new code/documentation remains on this branch pending approval; main, engine_v3, merges, and deployment are untouched by this continuation.
