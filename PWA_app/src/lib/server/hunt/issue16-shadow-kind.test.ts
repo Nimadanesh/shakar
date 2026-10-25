@@ -296,6 +296,34 @@ const SHADOW_PART_SUBJECTS = [
   "کاپوت",
 ] as const;
 
+/**
+ * Test-only conservative body-offer counter-signal.
+ * It never grants a positive verdict: a clear item-list offer in the body can
+ * downgrade a title-subject rejection to unknown, leaving human review in place.
+ * This is intentionally narrow until more graded source examples exist.
+ */
+function shadowBodyOfferCounterSignal(
+  querySubject: string,
+  description: string
+): boolean {
+  const body = normalizeForMatch(description);
+  const target = normalizeForMatch(querySubject);
+  if (!body.includes(target)) return false;
+
+  // Require an item-count/list cue immediately before an item phrase containing
+  // the target, plus a new-condition cue after it. Buying/repair context alone
+  // must not count as an offer by the listing's seller.
+  const escapedTarget = target.replace(/[.*+?^${}()|[\]\\]/g, "\\function shadowSpecificSubjectVerdict(
+  querySubject: string,
+  title: string,
+  description: string
+): ShadowSubjectVerdict {");
+  const explicitListedNewItem = new RegExp(
+    `(?:یک عدد|یه عدد|عدد)\\s+[^،؛.]{0,45}${escapedTarget}\\s+(?:نو|جدید)(?:\\s|$)`
+  );
+  return explicitListedNewItem.test(body);
+}
+
 function shadowSpecificSubjectVerdict(
   querySubject: string,
   title: string,
@@ -725,6 +753,40 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
         "… کاتالیزور …"
       )
     ).toBe("reject");
+  });
+
+  it("tests a conservative body-offer counter-signal without auto-accepting C01", () => {
+    const c01Title = "لنت برلیانس،سنسور اکسیژن بنز،پمپgdi،استارت سانتافه";
+    const c01Body =
+      "یک دست لنت عقب برلیانس سری ۳ یک عدد سنسور اکسیژن بنز کلاس e اصلی یک عدد هدرز با کاتالیزور نو پالس ان اس ۲۰۰ ۲ حلقه لاستیک ۱۸۵،۶۵،۱۴ ،یک حلقه کویر یک حلقه گلدستون یک عدد پمپ gdi سونوتا هیبرید آرمیچر یا روتور استارت سانتافه ۲۰۱۵ تا ۲۰۱۸ فابریک تماس چت دیوار";
+    const c02Body =
+      "فروش و تعمیر اگزوز با بهترین کیفیت؛ خرید کاتالیزور 99 درصد تعمیر 1 درصد تعویض";
+    const b01Body =
+      "اشتباه مکانیک به جای کاتالیزور سنسور عوض کردم";
+
+    expect(shadowBodyOfferCounterSignal("کاتالیزور", c01Body)).toBe(true);
+    expect(shadowBodyOfferCounterSignal("کاتالیزور", c02Body)).toBe(false);
+    expect(shadowBodyOfferCounterSignal("کاتالیزور", b01Body)).toBe(false);
+
+    // This proposal only removes a hard rejection when explicit body-offer
+    // evidence exists. It does not turn the grade-2 source into an auto-accept.
+    const currentC01 = shadowSpecificSubjectVerdict("کاتالیزور", c01Title, c01Body);
+    const candidateC01 =
+      currentC01 === "reject" && shadowBodyOfferCounterSignal("کاتالیزور", c01Body)
+        ? "unknown"
+        : currentC01;
+    expect(currentC01).toBe("reject");
+    expect(candidateC01).toBe("unknown");
+    expect(shadowSpecificSubjectVerdict(
+      "کاتالیزور",
+      "تعمیر وفروش اگزوز خرید کاتالیزور",
+      c02Body
+    )).toBe("reject");
+    expect(shadowSpecificSubjectVerdict(
+      "کاتالیزور",
+      "سپر و سنسور اکسیژن و هدرز تیوفایو207",
+      b01Body
+    )).toBe("reject");
   });
 
   it("replays the exact frozen Capture 06A C01 description and exposes the body-offer boundary", () => {
