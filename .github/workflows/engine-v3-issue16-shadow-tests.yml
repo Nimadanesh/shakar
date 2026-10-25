@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [engine_v3]
     paths:
+      - ".github/workflows/engine-v3-issue16-shadow-tests.yml"
+      - ".github/workflows/engine-v3-issue16-paired-eval-capture.yml"
       - "PWA_app/src/lib/server/hunt/issue16-shadow-kind.test.ts"
       - "PWA_app/src/lib/server/hunt/kindLexicon.test.ts"
       - "PWA_app/src/lib/server/hunt/live-issue16-paired-eval-capture.test.ts"
