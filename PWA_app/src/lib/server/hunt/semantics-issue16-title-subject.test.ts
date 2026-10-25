@@ -113,6 +113,38 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
     expect(r.mismatch).toBe(false);
   });
 
+  it("rejects title-led parts for the actual broad buy/sell-vehicle query", () => {
+    const include = ["خرید", "فروش", "خودرو"];
+    const title = "فروش بدنه استوک فابریک پژو، پراید، تیبا، دنا، سمند";
+    const description = "خرید و فروش خودرو و قطعات بدنه؛ فروش انواع بدنه استوک";
+    const r = assessModelSpecificity(
+      include,
+      `${title} ${description}`,
+      "all",
+      queryKindForDef(include, false, "all"),
+      "خرید و فروش خودرو",
+      title
+    );
+    expect(r.mismatch).toBe(true);
+    expect(r.tier).toBe("reject");
+    expect(r.reason).toContain('part:title-offering:"بدنه"');
+  });
+
+  it("preserves a genuine whole-vehicle ad for the broad buy/sell-vehicle query", () => {
+    const include = ["خرید", "فروش", "خودرو"];
+    const title = "فروش فوری دنا پلاس توربو اتومات بدون رنگ 1400";
+    const description = "خرید و فروش خودرو؛ فروش مستقیم خودروی دنا پلاس";
+    const r = assessModelSpecificity(
+      include,
+      `${title} ${description}`,
+      "all",
+      queryKindForDef(include, false, "all"),
+      "خرید و فروش خودرو",
+      title
+    );
+    expect(r.mismatch).toBe(false);
+  });
+
   it("keeps Issue 16 cues out of the legacy text-only identity path", () => {
     const include = ["خودرو"];
     const r = assessModelSpecificity(
