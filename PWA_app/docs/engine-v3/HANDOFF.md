@@ -775,3 +775,12 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - It specifies 12 unseen, source-matched listings (4 explicit target-offer positives and 8 controls), source snapshots/provenance, blind human grading locked before engine comparison, per-example paired reporting, and a strict rule that the candidate signal may only change `reject -> unknown`, never `allow`.
 - Known 06A C01 remains discovery evidence and is excluded from the prospective sample; locked 06A/06B/06C controls remain diagnostic only; 05F artifacts do not count as new Issue 16 evidence.
 - This protocol does not authorize a production change. PR #43 remains Draft/unmerged, with `main` and deployment untouched.
+
+
+## CI confirmation — paired-protocol head rerun (2026-10-25)
+
+- On head `59b2a663d0d48eeaa87d161540f9cca8d64d2045`, [Shadow Tests run 40187626395](https://github.com/Nimadanesh/shakar/actions/runs/40187626395) passed.
+- [Capture 05F run 40187626379](https://github.com/Nimadanesh/shakar/actions/runs/40187626379) passed and uploaded artifact `12597590097` (SHA-256 `cf35497df022c74e4f93604200f28645def203b23cf73a5ce16e0b9f2cd75d10`). This is still only a whole-vehicle/control capture; it does not fill the 12 unseen-listing paired-evaluation quota.
+- [Shadow Tests run 40187616537](https://github.com/Nimadanesh/shakar/actions/runs/40187616537) passed on the earlier protocol commit `574d039cf8d105ea3d7eab13b7844fa008e19cb8`. Repeated green CI is technical confirmation, not new human evidence.
+- Next action remains to assemble and freeze the prospective 12 unseen source-matched listings, preserving source provenance and blind grading order. If the 4 positive / 8 control quotas cannot be met without duplicates, report the shortfall rather than padding the sample. No human grades were added by these runs.
+- PR #43 remains Draft/unmerged. No production change, deployment, or `main` change.
