@@ -639,3 +639,75 @@ describe("Issue 16 — Capture 06C shadow subject-policy replay (test-only)", ()
     ).toBe("reject");
   });
 });
+
+
+describe("Issue 16 — earlier locked human-grade source replay (test-only)", () => {
+  it("characterizes subject-policy outputs for immutable Capture 06A/06B records", () => {
+    // Human grades were locked before source mapping. These are diagnostic
+    // shadow outputs only; they are not production decisions and do not alter
+    // the human labels. In particular, a grade-2 case rejected by the shadow
+    // policy is a false-reject signal to investigate, not a reason to relabel.
+    const rows: Array<{
+      capture: "06A" | "06B";
+      code: string;
+      sourceId: string;
+      title: string;
+      description: string;
+      humanGrade: 1 | 2;
+      expectedShadow: ShadowSubjectVerdict;
+    }> = [
+      {
+        capture: "06A",
+        code: "C01",
+        sourceId: "gaPT4jAd",
+        title: "لنت برلیانس،سنسور اکسیژن بنز،پمپgdi،استارت سانتافه",
+        description: "کاتالیزور",
+        humanGrade: 2,
+        expectedShadow: "reject",
+      },
+      {
+        capture: "06A",
+        code: "C02",
+        sourceId: "gaVv-2zg",
+        title: "دیسک صحفه فابریکی ساینا",
+        description: "کاتالیزور",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+      {
+        capture: "06A",
+        code: "C03",
+        sourceId: "gaODFbLY",
+        title: "موتور و گیربکس هایلوکس فورچونر ۶ سیلندر",
+        description: "کاتالیزور",
+        humanGrade: 2,
+        expectedShadow: "unknown",
+      },
+      {
+        capture: "06A",
+        code: "C04",
+        sourceId: "gaTnu9bU",
+        title: "موتور کامل بادروچین ان فیو تیوفایو",
+        description: "کاتالیزور",
+        humanGrade: 2,
+        expectedShadow: "unknown",
+      },
+      {
+        capture: "06B",
+        code: "B01",
+        sourceId: "gaPD6_BG",
+        title: "سپر و سنسور اکسیژن و هدرز تیوفایو207",
+        description: "اشتباه مکانیک به جای کاتالیزور سنسور عوض کردم",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+    ];
+
+    for (const row of rows) {
+      expect(
+        shadowSpecificSubjectVerdict("کاتالیزور", row.title, row.description),
+        `${row.capture} ${row.code} ${row.sourceId} (human grade ${row.humanGrade})`
+      ).toBe(row.expectedShadow);
+    }
+  });
+});
