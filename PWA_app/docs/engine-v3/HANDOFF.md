@@ -718,3 +718,10 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Both follow-up GitHub Actions runs completed successfully: [Shadow Tests #8](https://github.com/Nimadanesh/shakar/actions/runs/40180396570) on `b326bec49504994ab1d505389ec60b9dd57e66ed` and [Shadow Tests #9](https://github.com/Nimadanesh/shakar/actions/runs/40180403570) on `cec257acd2ad55f46053fc8747480d6c9659cb51`.
 - For both runs, dependency installation and the isolated Issue 16 shadow/kind-lexicon test step passed. This repeats the earlier #7 success and supports the stability of the current test-local replay matrix; it does not establish production-engine improvement or broader human-graded quality.
 - Keep the heuristic test-only. PR #43 remains Draft/unmerged; no production behavior, deployment, or `main` modification.
+
+
+## Issue 16 — comma-separated co-offer boundary recorded (2026-10-25)
+
+- Added one synthetic test-only boundary case for the subject-identity prototype: `فروش دیسک ترمز، کاتالیزور پراید` currently returns `reject`, even though punctuation may plausibly enumerate two offered items.
+- This is intentionally recorded as a conservative false-reject risk, not relabeled as a human-graded failure and not “fixed” by broadening co-offer inference without source-backed evidence. The existing explicit connector and available-item positive controls remain unchanged.
+- No capture rerun was performed; frozen artifacts and human grades remain untouched. The change is confined to `issue16-shadow-kind.test.ts` and this diagnostic record. PR #43 remains Draft/unmerged; production behavior and `main` remain unchanged.
