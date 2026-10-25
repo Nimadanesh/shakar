@@ -6,6 +6,7 @@ import { resolveHuntDefinition } from "./definition";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
 
 // Prospective capture stays source-only; engine comparison is a separate, post-grade stage.
+// Live execution is intentionally gated by the explicit commit marker in the dedicated workflow.
 const targetQuery = "کاتالیزور خودرو";
 const category = "vehicles";
 const detailBudget = 24;
