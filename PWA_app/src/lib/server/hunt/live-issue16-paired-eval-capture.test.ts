@@ -14,11 +14,13 @@ const category = "vehicles";
 const detailBudget = 24;
 const pagesPerQuery = 4;
 const retrievalQueries = [
-  // Prioritize adjacent-part and multi-item listing titles that can mention the
-  // target only in their body; retain direct buyer/service queries for controls.
-  "لنت خودرو", "سنسور اکسیژن خودرو", "هدرز خودرو", "اگزوز خودرو",
-  "قطعات موتور خودرو", "لوازم یدکی خودرو", "لوازم یدکی ماشین",
-  "فروش قطعات خودرو", "قطعات پژو", "قطعات پراید",
+  // Bounded discovery of multi-item titles: pair the target-adjacent parts that
+  // plausibly co-occur in an inventory list, then inspect descriptions for an
+  // explicit body-only catalyst offer. Keep buyer/service controls in the tail.
+  "هدرز و اگزوز خودرو", "اگزوز و سنسور اکسیژن", "هدرز و سنسور اکسیژن",
+  "لنت و دیسک خودرو", "دیسک ترمز و اگزوز", "منبع اگزوز و هدرز",
+  "قطعات موتور و اگزوز", "لوازم یدکی و سنسور اکسیژن",
+  "قطعات پژو و اگزوز", "قطعات پراید و هدرز",
   "خرید کاتالیزور خودرو", "تعمیر کاتالیزور خودرو",
 ];
 
