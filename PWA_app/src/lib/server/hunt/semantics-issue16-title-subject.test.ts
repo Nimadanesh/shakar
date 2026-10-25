@@ -112,4 +112,17 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
     );
     expect(r.mismatch).toBe(false);
   });
+
+  it("keeps Issue 16 cues out of the legacy text-only identity path", () => {
+    const include = ["خودرو"];
+    const r = assessModelSpecificity(
+      include,
+      "بدنه خودرو",
+      "all",
+      queryKindForDef(include, false, "all"),
+      "خودرو"
+      // Deliberately omit listingTitle: Issue 16's new cues are title-only.
+    );
+    expect(r.mismatch).toBe(false);
+  });
 });
