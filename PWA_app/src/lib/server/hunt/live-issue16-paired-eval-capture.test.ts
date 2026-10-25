@@ -110,9 +110,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               seen.add(candidate.sourceAdId);
               pool.push({ candidate, query, pageNumber: pageIndex + 1, stats: result.stats });
               added++;
-              if (pool.length >= detailBudget || added >= 6) break;
+              if (pool.length >= detailBudget || added >= 3) break;
             }
-            if (pool.length >= detailBudget || added >= 6 || cursor == null) break;
+            if (pool.length >= detailBudget || added >= 3 || cursor == null) break;
           }
           queryReports.push({
             query, status: added ? "candidates-selected" : "no-new-candidates",
