@@ -16,7 +16,7 @@ const pagesPerQuery = 4;
 const retrievalQueries = [
   // Keep half of the 24-detail budget for adjacent-part listings where the
   // body may offer the target, and half for direct-query negative controls.
-  "سنسور اکسیژن خودرو", "اگزوز خودرو", "لوازم یدکی اگزوز", "قطعات موتور خودرو",
+  "لوازم یدکی خودرو", "قطعات خودرو", "فروش قطعات خودرو", "اگزوز خودرو",
   "کاتالیزور خودرو", "خریدار کاتالیزور", "خاک کاتالیزور", "تعمیر کاتالیزور خودرو",
 ];
 
@@ -41,6 +41,8 @@ function extractPreviouslyInspectedIds(contents: string[]): Set<string> {
     // IDs seen in the prior source-only attempts, including the overlap detected
     // in run 40196935345; failed packets still count as inspected source.
     "gauW_tpf", "Qa8HqiWJ", "QaPvpvjd", "gaQbKcvc",
+    // Overlaps detected by the 2026-10-25 source-only run 40197976564.
+    "gadb_kqe", "QaEWW4m6", "gaEzwYKE",
   ]);
   for (const source of contents) {
     for (const match of source.matchAll(/["']([A-Za-z0-9_-]{8})["']/g)) ids.add(match[1]);
