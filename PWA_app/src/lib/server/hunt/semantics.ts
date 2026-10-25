@@ -1065,15 +1065,56 @@ export function assessModelSpecificity(
   const listingNorm = normalizeForMatch(listingText);
   if (listingNorm === "") return { mismatch: false, reason: "empty-text", tier: "near" };
 
-  // Identity reasoning starts only from full lexical evidence; partial
-  // matches already resolve to near via MUST-missing.
-  const allEvidenced = includeTerms.every((t) => textMatches(listingText, t, category));
-  if (!allEvidenced) return { mismatch: false, reason: "partial-evidence", tier: "near" };
-
   const listingTokens = listingNorm.split(" ").filter(Boolean);
   const queryTokens = new Set(
     includeTerms.flatMap((t) => normalizeForMatch(t).split(" ").filter(Boolean))
   );
+
+  // Issue 16 (human-graded Capture 05F / 06C): a description can mention a
+  // vehicle or a component without changing what the title actually offers.
+  // Before allowing description-only lexical evidence to define identity,
+  // inspect only a small, explicit set of title-leading wrong-item heads.
+  // This is deliberately NOT a global part-word ban: the guard is skipped
+  // when the hunted term itself is that head, and it never scans body copy.
+  const titleTokens = normalizeForMatch(listingTitle ?? "").split(" ").filter(Boolean);
+  const titleHeadSkip = new Set([
+    ...SUBJECT_SKIP_TOKENS,
+    "انواع", "فوری", "اقساطی", "استوک", "فابریک", "نو", "کامل", "صفر",
+  ]);
+  let titleHeadStart = 0;
+  while (titleHeadStart < titleTokens.length && titleHeadSkip.has(titleTokens[titleHeadStart])) {
+    titleHeadStart += 1;
+  }
+  const titleSubject = titleTokens.slice(titleHeadStart);
+  const wrongItemTitleHeads: readonly (readonly string[])[] = [
+    ["لوازم", "یدکی"],
+    ["بدنه"],
+    ["کاتالیزور"],
+    ["اگزوز"],
+    ["لاستیک"],
+    ["تایر"],
+    ["کاپوت"],
+    ["گلگیر"],
+    ["سپر"],
+    ["جلوبندی"],
+    ["باتری"],
+    ["باطری"],
+  ];
+  for (const head of wrongItemTitleHeads) {
+    if (head.some((token) => queryTokens.has(token))) continue;
+    if (head.every((token, index) => titleSubject[index] === token)) {
+      return {
+        mismatch: true,
+        reason: `title-subject:wrong-item-head:"${head.join(" ")}"`,
+        tier: "reject",
+      };
+    }
+  }
+
+  // Identity reasoning starts only from full lexical evidence; partial
+  // matches otherwise resolve to near via MUST-missing.
+  const allEvidenced = includeTerms.every((t) => textMatches(listingText, t, category));
+  if (!allEvidenced) return { mismatch: false, reason: "partial-evidence", tier: "near" };
   const matchedPositions = new Set<number>();
   listingTokens.forEach((tok, i) => {
     if (queryTokens.has(tok)) matchedPositions.add(i);
