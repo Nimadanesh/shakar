@@ -156,3 +156,11 @@ For every meaningful experiment, record:
 - Added a synthetic test-only boundary case: `فروش دیسک ترمز، کاتالیزور پراید` returns `reject` because the prototype currently recognizes explicit connectors such as `و` / `همراه با`, but does not infer co-offer from a comma.
 - Interpretation: this records a plausible false-reject risk for comma-separated inventory titles. It is not a source ad, not a human grade, and not a measured error rate. Do not broaden the rule until a source-backed example and paired human judgement establish that punctuation reliably signals a true co-offer in this context.
 - No human labels, capture artifacts, or production behavior changed. Existing 06C replay remains C01 reject, C02 reject, C03 allow, C04 allow, C05 reject.
+
+## Issue 16 — locked 06A/06B subject-policy boundary characterization (2026-10-25)
+
+- Added a test-only characterization for the five previously human-graded source IDs from immutable Captures 06A and 06B. The test preserves the human grades and source IDs, but uses a reduced description containing only the already-confirmed target-presence signal; it is explicitly **not** an exact full-text replay.
+- Captured human grades remain: 06A C01=`gaPT4jAd` 2, C02=`gaVv-2zg` 1, C03=`gaODFbLY` 2, C04=`gaTnu9bU` 2; 06B B01=`gaPD6_BG` 1. No labels were changed.
+- Test-local shadow outputs: C01 reject, C02 reject, C03 unknown, C04 unknown, B01 reject. The C01 grade-2/reject mismatch is a potential false-reject signal and must remain visible; do not tune it away by changing the human grade or generalizing from this bounded sample.
+- This extends the diagnostic boundary matrix beyond Capture 06C while avoiding any new live capture. It does not establish a paired production-vs-shadow quality gain, a population error rate, or authorization for production promotion.
+- No production code, ranking, eligibility, `HEAD_KIND`, `PART_MARKERS`, frozen capture artifact, `main`, merge, or deployment changed. CI status for this commit is pending verification.
