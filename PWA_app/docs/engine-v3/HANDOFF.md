@@ -668,3 +668,15 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Next action is a new immutable, bounded live capture with a distinct artifact and fresh IDs, then a blind packet and owner grading. Existing completed captures must remain immutable. Keep source IDs/engine outputs separate from the blind packet. No production changes until grades support a paired change.
 - Validation source: [Baseline #179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171), 330 focused and 923 full tests passed; typecheck/build passed; ESLint still fails (8 errors / 42 warnings). Full workflow is not green.
 - Current source/test code head remains `8b96c3af9674231fa0cf6c2403bb0a79f9fc3475`; latest docs-only updates are on `engine_v3`. `main` remains untouched.
+
+Issue 16 — final closure supersedes earlier handoff instructions (2026-10-25)
+
+- The authoritative closure is `evaluations/ISSUE16-PAIRED-EVAL-CLOSURE-2026-10-25.md`.
+- Issue 16 prospective sampling is STOPPED and closed with an evidence gap. Do not launch, dispatch, rerun, or continue any live capture for this evaluation block.
+- The 15 retrieval/allocation designs were exhausted; no valid prospective paired packet exists. Do not lower quotas, synthesize candidates, or count duplicate IDs as new samples.
+- Preserve all human grades and frozen source artifacts unchanged. Human grades remain authoritative; engine labels never replace them.
+- The body signal remains experimental and shadow-only: `reject → unknown`; never `allow`.
+- No production parser, eligibility, ranking, `HEAD_KIND`, `PART_MARKERS`, or pipeline changes are authorized by this evaluation.
+- PR #43 remains Draft and unmerged. Do not merge, deploy, or modify `main`.
+- Earlier HANDOFF instructions recommending another live capture or further Issue 16 sampling are superseded by this closure.
+- Reopening requires a new explicit owner decision and a genuinely new Divar retrieval channel.
