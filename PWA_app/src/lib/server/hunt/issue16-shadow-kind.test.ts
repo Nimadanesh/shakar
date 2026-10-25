@@ -488,6 +488,20 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
     ).toBe("allow");
   });
 
+  it("records the conservative false-reject risk for comma-separated item inventories", () => {
+    // Synthetic boundary case, not a source ad or human grade. A title can
+    // plausibly enumerate two offered items with punctuation rather than «و».
+    // Current prototype intentionally does not infer co-offer from punctuation,
+    // so this stays rejected until source-backed evidence justifies broadening.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "فروش دیسک ترمز، کاتالیزور پراید",
+        "هر دو قطعه موجود است"
+      )
+    ).toBe("reject");
+  });
+
   it("does not mistake an unrelated conjunction elsewhere in the title for a part co-offer", () => {
     // Synthetic adversarial case: "و" connects service wording, not the two parts.
     expect(
