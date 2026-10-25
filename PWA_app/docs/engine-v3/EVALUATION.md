@@ -192,3 +192,12 @@ For every meaningful experiment, record:
 - This comparison supports a **single source-backed false-reject counterexample**, not an error-rate estimate, population-level precision claim, or paired old-vs-new human-quality result. Green CI validates the diagnostic assertions, not user-visible search quality.
 - Decision: keep the signal and its counterfactual mapping test-only. Do not change production eligibility, ranking, parser, `HEAD_KIND`, `PART_MARKERS`, or pipeline. Do not rerun 05F as a substitute for Issue 16 evidence; repeated 05F artifacts are whole-vehicle/control captures, not new 06A/06B/06C samples. A production proposal requires a separate preregistered, source-matched, human-graded paired evaluation with positive and negative controls.
 - Governance remains unchanged: PR #43 stays Draft/unmerged; `main` and deployment remain untouched.
+
+
+### CI confirmation — Issue 16 evidence gate (2026-10-25)
+
+- On PR head `00914930ebc6cff69cc21ed7cd389489603f16de`, Shadow Tests run [40187089792](https://github.com/Nimadanesh/shakar/actions/runs/40187089792) completed successfully.
+- Capture 05F run [40187089797](https://github.com/Nimadanesh/shakar/actions/runs/40187089797) completed successfully and produced artifact `engine-v3-issue16-capture-05f` (artifact ID `12596279386`, created 2026-10-25T11:02:53Z). This is a control/whole-vehicle capture, not a new 06A/06B/06C source-matched sample and not evidence that the C01 mismatch is resolved.
+- Shadow Tests run [40187084486](https://github.com/Nimadanesh/shakar/actions/runs/40187084486) also completed successfully; it is a repeated technical check, not additional human-quality evidence.
+- The 06A, 06B, and 06C capture workflows associated with this head were skipped by their configured conditions. No new Issue 16 human-evaluation records were created by these runs.
+- Interpretation unchanged: CI confirms the test-only counter-signal assertions pass. It does not establish production-quality improvement or authorize a production change.
