@@ -14,14 +14,13 @@ const category = "vehicles";
 const detailBudget = 24;
 const pagesPerQuery = 4;
 const retrievalQueries = [
-  // Bounded discovery of multi-item titles: pair the target-adjacent parts that
-  // plausibly co-occur in an inventory list, then inspect descriptions for an
-  // explicit body-only catalyst offer. Keep buyer/service controls in the tail.
-  "هدرز و اگزوز خودرو", "اگزوز و سنسور اکسیژن", "هدرز و سنسور اکسیژن",
-  "لنت و دیسک خودرو", "دیسک ترمز و اگزوز", "منبع اگزوز و هدرز",
-  "قطعات موتور و اگزوز", "لوازم یدکی و سنسور اکسیژن",
-  "قطعات پژو و اگزوز", "قطعات پراید و هدرز",
-  "خرید کاتالیزور خودرو", "تعمیر کاتالیزور خودرو",
+  // Iteration 2: broaden to model-specific and general inventory-list searches.
+  // The paired-adjacent-part queries yielded lists, but no verified body-only
+  // explicit catalyst offer. Keep direct target searches only as controls.
+  "لوازم یدکی خودرو", "لوازم یدکی پژو ۲۰۶", "لوازم یدکی پراید",
+  "لوازم یدکی سمند", "لوازم یدکی مزدا۳", "لوازم استوک خودرو",
+  "قطعات استوک خودرو", "فروش قطعات خودرو", "لوازم یدکی و سنسور اکسیژن",
+  "قطعات موتور خودرو", "خرید کاتالیزور خودرو", "تعمیر کاتالیزور خودرو",
 ];
 
 function resolve(query: string) {
@@ -34,8 +33,15 @@ function norm(value: string) {
   return normalizeForMatch(value ?? "").replace(/\s+/g, " ").trim();
 }
 function extractPreviouslyInspectedIds(contents: string[]): Set<string> {
-  // Dynamically aggregate existing capture-source IDs instead of maintaining a stale copied list.
-  const ids = new Set<string>();
+  // Aggregate existing blinded capture IDs and the prior Issue 16 discovery pass.
+  // These 24 IDs were inspected in the immediately preceding live run and must not
+  // re-enter a later packet, even when that prior run failed its quotas.
+  const ids = new Set<string>([
+    "gaVDNFSS", "gacvcev7", "gaXzhNQ6", "ga--ABsW", "gadDu6eO", "wZNOUe1T",
+    "gagUBlva", "gacTnDQd", "gaLn3uem", "gaT-AN9Y", "gadb_kqe", "gac3bik5",
+    "gadndt9E", "gadfa9Zz", "gaSzDUqQ", "gaZ3B1q1", "gaUvJ4Dc", "gad_KiAI",
+    "gacn7m9n", "Aau4yziv", "gadjfB_G", "gaBTIon3", "gakBLMOm", "gaEzwYKE",
+  ]);
   for (const source of contents) {
     for (const match of source.matchAll(/["']([A-Za-z0-9_-]{8})["']/g)) ids.add(match[1]);
   }
