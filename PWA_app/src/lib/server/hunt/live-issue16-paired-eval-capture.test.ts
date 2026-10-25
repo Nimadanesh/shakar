@@ -209,7 +209,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         quotaStatus: { requestedTotal: 12, selectedTotal: blindPacket.length,
           requestedPositives: 4, selectedBodyOnlyOfferCandidates: positiveCount, itemListPositiveCount,
           requestedNegativeControls: 8, selectedNegativeControls: negativeCount, negativeControlTags: controlCounts, categorySelection, allControlQuotasMet },
-        // Diagnostic-only selector audit: not part of the blind packet and never human grades.
+        // Diagnostic-only selector audit: heuristic arms explain selection, not relevance; never part of the blind packet or human grades.
         selectionAudit: inspected.map((item: any) => ({ sourceAdId: item.sourceAdId, retrievalQuery: item.retrievalQuery, retrievalPage: item.retrievalPage, targetMention: item.targetMention, targetInTitle: item.targetInTitle, targetInBody: item.targetInBody, bodyOnly: item.bodyOnly, sourceOnlyTags: item.sourceOnlyTags, provisionalArm: item.provisionalArm })),
         blindPacket,
       };
