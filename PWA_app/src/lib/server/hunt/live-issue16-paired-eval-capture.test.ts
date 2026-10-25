@@ -158,7 +158,6 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               || Math.abs(a - anchor) - Math.abs(b - anchor) || a - b,
             );
             let addedThisPage = 0;
-            const controlQuery = /کاتالیزور|خریدار/.test(query);
             const queryQuota = controlQuery ? 2 : 4;
             // Use the 24-detail budget deliberately: 16 discovery candidates from
             // broad inventory queries, plus 8 target-query controls (2 per stratum).
