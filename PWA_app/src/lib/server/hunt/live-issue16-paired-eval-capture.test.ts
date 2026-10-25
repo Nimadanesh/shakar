@@ -14,13 +14,13 @@ const category = "vehicles";
 const detailBudget = 24;
 const pagesPerQuery = 4;
 const retrievalQueries = [
-  // Iteration 2: broaden to model-specific and general inventory-list searches.
-  // The paired-adjacent-part queries yielded lists, but no verified body-only
-  // explicit catalyst offer. Keep direct target searches only as controls.
-  "لوازم یدکی خودرو", "لوازم یدکی پژو ۲۰۶", "لوازم یدکی پراید",
-  "لوازم یدکی سمند", "لوازم یدکی مزدا۳", "لوازم استوک خودرو",
-  "قطعات استوک خودرو", "فروش قطعات خودرو", "لوازم یدکی و سنسور اکسیژن",
-  "قطعات موتور خودرو", "خرید کاتالیزور خودرو", "تعمیر کاتالیزور خودرو",
+  // Iteration 3: bias retrieval toward adjacent parts whose listing body may
+  // mention an offered catalyst without naming it in the title. Direct target
+  // searches remain only for negative-control discovery.
+  "سنسور اکسیژن خودرو", "اگزوز خودرو", "منبع اگزوز", "لوازم یدکی اگزوز",
+  "قطعات موتور خودرو", "لوازم یدکی خودرو", "لوازم یدکی پژو ۲۰۶",
+  "لوازم یدکی پراید", "قطعات استوک خودرو", "خاک کاتالیزور",
+  "خرید کاتالیزور خودرو", "تعمیر کاتالیزور خودرو",
 ];
 
 function resolve(query: string) {
@@ -117,14 +117,20 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             candidateCount += result.candidates.length;
             cursor = result.endCursor;
             cursorReturned = cursor != null;
-            // Sample one novel listing per page, rotating the within-page position,
-            // and at most two per query. This forces later-page coverage instead of
-            // spending each query's allowance on page one.
+            // Prefer adjacent-part titles for body-only discovery, while retaining
+            // rotating page anchors as a tie-breaker so later-page coverage remains.
             const candidateIndexes = result.candidates.map((_: unknown, index: number) => index);
             const anchorRatio = [0.15, 0.85, 0.5][pageIndex % 3];
             const anchor = Math.round(Math.max(0, result.candidates.length - 1) * anchorRatio);
+            const titlePriority = (candidate: any) => {
+              const title = norm(candidate.title ?? "");
+              const adjacentPart = /سنسور اکسیژن|اگزوز|هدرز|قطعات موتور|لوازم یدکی|سرسیلندر|دیسک و صفحه/.test(title);
+              const namesTarget = /کاتالیزور|کاتالیز/.test(title);
+              return namesTarget ? 2 : adjacentPart ? 0 : 1;
+            };
             candidateIndexes.sort((a, b) =>
-              Math.abs(a - anchor) - Math.abs(b - anchor) || a - b,
+              titlePriority(result.candidates[a]) - titlePriority(result.candidates[b])
+              || Math.abs(a - anchor) - Math.abs(b - anchor) || a - b,
             );
             let addedThisPage = 0;
             for (const candidateIndex of candidateIndexes) {
