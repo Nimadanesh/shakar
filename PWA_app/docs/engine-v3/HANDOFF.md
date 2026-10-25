@@ -711,3 +711,10 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Owner reports the source-backed Capture 06C shadow replay now rejects C02 and preserves C03/C04 as allowed positive controls. Together with the previously repaired C01 dust-subtype counterexample and C05 service-only counterexample, this confirms the current test-local matrix matches the five locked human grades: C01 reject (grade 1), C02 reject (grade 1), C03 allow (grade 3), C04 allow (grade 3), C05 reject (grade 1).
 - This is a passing test-local diagnostic, not production-engine uplift, not paired old-vs-new human evaluation, and not authorization to promote the heuristic. Keep the shadow policy isolated from production; next investigate the narrowest counterfactual/co-occurrence controls and run broader validation before drawing any policy conclusion.
 - PR #43 remains Draft and unmerged. No production ranking/eligibility/parser/HEAD_KIND/PART_MARKERS change, no deployment, and no `main` modification.
+
+
+## Issue 16 — shadow replays #8 and #9 passed (2026-10-25)
+
+- Both follow-up GitHub Actions runs completed successfully: [Shadow Tests #8](https://github.com/Nimadanesh/shakar/actions/runs/40180396570) on `b326bec49504994ab1d505389ec60b9dd57e66ed` and [Shadow Tests #9](https://github.com/Nimadanesh/shakar/actions/runs/40180403570) on `cec257acd2ad55f46053fc8747480d6c9659cb51`.
+- For both runs, dependency installation and the isolated Issue 16 shadow/kind-lexicon test step passed. This repeats the earlier #7 success and supports the stability of the current test-local replay matrix; it does not establish production-engine improvement or broader human-graded quality.
+- Keep the heuristic test-only. PR #43 remains Draft/unmerged; no production behavior, deployment, or `main` modification.
