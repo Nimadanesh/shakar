@@ -135,3 +135,10 @@ For every meaningful experiment, record:
 - Four title-term candidate controls were not guaranteed positives: only C03 and C04 received human grade 3; C01 and C02 received grade 1. Body-only C05 received grade 1 although engine marked it eligible/near (score 1.0), because the body mentions a catalytic-converter test as a service and does not establish the converter itself as offered. This is one source-backed false-acceptance example in this bounded scenario.
 - Evidence is E4 over a small, targeted, non-random sample—not E5 paired old-vs-new evidence, not a population precision estimate, and not a general false-acceptance rate. Keep Capture 06B separate; do not combine the captures' denominators.
 - Interpretation: preserve this narrow failure signal and continue evidence-led investigation. Do not make a broad parser, eligibility, ranking, `HEAD_KIND`, or `PART_MARKERS` change from these five records alone. No production behavior, merge, deployment, or `main` change.
+
+
+## Issue 16 — Capture 06C shadow replay #7 (2026-10-25)
+
+- The owner reports [Issue 16 Shadow Tests run #7](https://github.com/Nimadanesh/shakar/actions/runs/40107729356) passed on test head `47e53d8d85c2d37e87cb0f26b5f01cde15158512`; the replay now rejects C02 while preserving C03 and C04.
+- Expected shadow-only verdicts against the five locked Capture 06C human grades: C01 reject (human 1; catalyst dust), C02 reject (human 1; exhaust service/sale is the principal title subject), C03 allow (human 3; direct catalyst buying offer), C04 allow (human 3; direct replacement converter offer), C05 reject (human 1; body mentions a free catalyst test service, not an offer of the target item).
+- Human grades remain unchanged and authoritative. This is a test-local counterfactual, not a change to live engine results, not an E5 paired human comparison, and not evidence of population-level precision or ranking uplift. Do not promote to production from this five-item targeted sample alone.
