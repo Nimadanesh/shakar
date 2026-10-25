@@ -313,11 +313,8 @@ function shadowBodyOfferCounterSignal(
   // Require an item-count/list cue immediately before an item phrase containing
   // the target, plus a new-condition cue after it. Buying/repair context alone
   // must not count as an offer by the listing's seller.
-  const escapedTarget = target.replace(/[.*+?^${}()|[\]\\]/g, "\\function shadowSpecificSubjectVerdict(
-  querySubject: string,
-  title: string,
-  description: string
-): ShadowSubjectVerdict {");
+  // The target comes from the fixed Persian query vocabulary in this experiment.
+  const escapedTarget = target;
   const explicitListedNewItem = new RegExp(
     `(?:یک عدد|یه عدد|عدد)\\s+[^،؛.]{0,45}${escapedTarget}\\s+(?:نو|جدید)(?:\\s|$)`
   );
