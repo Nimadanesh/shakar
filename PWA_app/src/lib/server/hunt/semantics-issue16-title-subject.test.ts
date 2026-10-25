@@ -56,7 +56,7 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
     );
     expect(r.mismatch).toBe(true);
     expect(r.tier).toBe("reject");
-    expect(r.reason).toContain("part:offering:");
+    expect(r.reason).toContain("part:title-offering:");
   });
 
   it("rejects a free catalyst-test mention on an exhaust listing for a catalyst hunt", () => {
@@ -74,7 +74,7 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
     );
     expect(r.mismatch).toBe(true);
     expect(r.tier).toBe("reject");
-    expect(r.reason).toContain('part:offering:"اگزوز"');
+    expect(r.reason).toContain('part:title-offering:"اگزوز"');
   });
 
   it("preserves direct catalyst-offer titles and queries for the part itself", () => {
