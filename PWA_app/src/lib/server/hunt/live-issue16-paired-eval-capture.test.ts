@@ -14,8 +14,11 @@ const category = "vehicles";
 const detailBudget = 24;
 const pagesPerQuery = 3;
 const retrievalQueries = [
-  "قطعات خودرو", "لوازم خودرو", "اگزوز خودرو", "تعمیر خودرو",
-  "مکانیک خودرو", "خرید ضایعات خودرو", "فروش قطعات خودرو", "خودرو",
+  // Adjacent-part queries are intended to surface item-list ads where the target
+  // appears in the description but not in the title; broad service/buyer queries
+  // remain as negative-control sources.
+  "سنسور اکسیژن خودرو", "هدرز خودرو", "اگزوز خودرو", "قطعات موتور خودرو",
+  "لوازم یدکی خودرو", "لنت خودرو", "تعمیر خودرو", "خرید ضایعات خودرو",
 ];
 
 function resolve(query: string) {
