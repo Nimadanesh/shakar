@@ -142,3 +142,10 @@ For every meaningful experiment, record:
 - The owner reports [Issue 16 Shadow Tests run #7](https://github.com/Nimadanesh/shakar/actions/runs/40107729356) passed on test head `47e53d8d85c2d37e87cb0f26b5f01cde15158512`; the replay now rejects C02 while preserving C03 and C04.
 - Expected shadow-only verdicts against the five locked Capture 06C human grades: C01 reject (human 1; catalyst dust), C02 reject (human 1; exhaust service/sale is the principal title subject), C03 allow (human 3; direct catalyst buying offer), C04 allow (human 3; direct replacement converter offer), C05 reject (human 1; body mentions a free catalyst test service, not an offer of the target item).
 - Human grades remain unchanged and authoritative. This is a test-local counterfactual, not a change to live engine results, not an E5 paired human comparison, and not evidence of population-level precision or ranking uplift. Do not promote to production from this five-item targeted sample alone.
+
+
+## Issue 16 — repeated shadow replay confirmation (2026-10-25)
+
+- The owner confirmed Shadow Tests runs #8 and #9 succeeded; GitHub Actions records show [run #8](https://github.com/Nimadanesh/shakar/actions/runs/40180396570) passed on `b326bec49504994ab1d505389ec60b9dd57e66ed` and [run #9](https://github.com/Nimadanesh/shakar/actions/runs/40180403570) passed on `cec257acd2ad55f46053fc8747480d6c9659cb51`.
+- Both passed dependency installation and the isolated Issue 16 shadow/kind-lexicon test step. This is repeated technical validation of the test-local policy matrix, not additional human-grade evidence, not a paired old-vs-new evaluation, and not proof of live engine uplift.
+- Human grades and original capture artifacts remain immutable; no production promotion is authorized by these green runs.
