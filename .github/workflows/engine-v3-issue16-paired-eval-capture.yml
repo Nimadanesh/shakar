@@ -48,3 +48,5 @@ jobs:
           path: PWA_app/engine-v3-issue16-paired-eval-source-packet.json
           if-no-files-found: warn
           retention-days: 14
+
+# Trigger mechanism: an explicit marker commit on this experiment branch, not a main-branch workflow button.
