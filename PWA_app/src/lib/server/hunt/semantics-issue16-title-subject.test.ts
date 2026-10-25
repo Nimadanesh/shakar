@@ -6,34 +6,34 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
   it.each([
     [
       "whole-vehicle hunt rejects a catalyst-only catalogue",
-      ["خرید", "فروش", "خودرو"],
-      "خرید و فروش خودرو",
+      ["خودرو"],
+      "خودرو",
       "خرید فروش انواع کاتالیزور خارجی ایران فرسوده",
       "تعویض کاتالیزور نو؛ فروش انواع طرح های کاتالیز؛ خریدار کاتالیزور فرسوده خودرو",
       "all",
     ],
     [
       "whole-vehicle hunt rejects a body-parts catalogue",
-      ["خرید", "فروش", "خودرو"],
-      "خرید و فروش خودرو",
+      ["خودرو"],
+      "خودرو",
       "بدنه کاپوت گلگیر سپر چراغ قیمت عمده",
       "پخش قطعات بدنه محصولات سایپا و ایران خودرو؛ فروش قطعات بدنه",
       "all",
     ],
     [
       "whole-vehicle hunt rejects a used body-parts listing",
-      ["خرید", "فروش", "خودرو"],
-      "خرید و فروش خودرو",
+      ["خودرو"],
+      "خودرو",
       "فروش بدنه استوک فابریک پژو، پراید، تیبا، دنا، سمند",
       "فروش انواع قطعات و بدنه استوک فابریک خودرو",
       "all",
     ],
     [
       "whole-vehicle hunt rejects a spare-parts catalogue",
-      ["خرید", "فروش", "خودرو"],
-      "خرید و فروش خودرو",
+      ["خودرو"],
+      "خودرو",
       "فروش لوازم یدکی لیفان بدنه، موتوری و جلوبندی",
-      "وارد کننده لوازم یدکی لیفان؛ قطعات بدنه و خودروهای لیفان",
+      "وارد کننده لوازم یدکی لیفان؛ قطعات بدنه و خودرو",
       "all",
     ],
   ])("%s", (_label, include, queryText, title, description, category) => {
@@ -70,7 +70,7 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
   });
 
   it("preserves direct catalyst-offer titles and queries for the part itself", () => {
-    const include = ["کاتالیزور", "خودرو"];
+    const include = ["کاتالیزور"];
     for (const title of [
       "فروش وخرید انواع کاتالیزور و خاک ۲۰۶ پژو ال۹۰ نیسان",
       "جایگزین کاتالیزور پژو پارس و ۴۰۵ و اگزوز",
@@ -80,7 +80,7 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
         `${title} ${title}`,
         "all",
         queryKindForDef(include, false, "all"),
-        "کاتالیزور خودرو",
+        "کاتالیزور",
         title
       );
       expect(r.mismatch).toBe(false);
@@ -100,14 +100,14 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
   });
 
   it("preserves a whole-vehicle listing whose title offers a vehicle", () => {
-    const include = ["خرید", "فروش", "خودرو"];
+    const include = ["خودرو"];
     const title = "کارشناسی وقیمت گذاری خودرو تصادفی و خریدار تصادفی";
     const r = assessModelSpecificity(
       include,
       `${title} پارس مدل 99 معاوضه با خودرو تصادفی`,
       "all",
       queryKindForDef(include, false, "all"),
-      "خرید و فروش خودرو",
+      "خودرو",
       title
     );
     expect(r.mismatch).toBe(false);
