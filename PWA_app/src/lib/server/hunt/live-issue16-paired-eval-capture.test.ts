@@ -15,10 +15,10 @@ const category = "vehicles";
 const detailBudget = 24;
 const pagesPerQuery = 4;
 const retrievalQueries = [
-  // Prior broad generic searches yielded no body-only target offers. Use adjacent
-  // part families that commonly co-occur in inventory lists, then retain four
-  // target-focused queries for the required negative-control strata.
-  "سنسور اکسیژن خودرو", "لنت خودرو", "لوازم یدکی پراید", "قطعات موتور خودرو",
+  // Prior adjacent-part searches mostly returned listings dedicated to the queried
+  // component. Prefer broad inventory/distribution listings where the target may
+  // appear only in the body, then retain target-focused queries for control strata.
+  "لوازم یدکی خودرو", "پخش لوازم یدکی", "لوازم یدکی استوک", "قطعات یدکی خودرو",
   "کاتالیزور خودرو", "خریدار کاتالیزور", "خاک کاتالیزور", "تعمیر کاتالیزور خودرو",
 ];
 
@@ -45,6 +45,13 @@ function extractPreviouslyInspectedIds(contents: string[]): Set<string> {
     "gauW_tpf", "Qa8HqiWJ", "QaPvpvjd", "gaQbKcvc",
     // Overlaps detected by the 2026-10-25 source-only run 40197976564.
     "gadb_kqe", "QaEWW4m6", "gaEzwYKE",
+    // Every detail inspected in failed prospective capture 40199223689 remains
+    // excluded even though its packet was diagnostic-only and never human-scored.
+    "gaebgMwj", "gadvfIdl", "gaEtOy4n", "gaZ0EAa_", "gaTbJu1u", "gaAfArzm",
+    "gaMMQcp0", "gaCPXR2C", "QayWraE_", "gaKOaS-4", "gaYnaKNf", "gaeXQNyH",
+    "gaOm6fhv", "gadnMM9q", "gadvvLBv", "gadndbCf", "gaTfTdmi", "QaemN0fw",
+    "gadWG_ZV", "gad_vxP0", "gaD2WoLS", "gadfdx8X", "ga2eeYvL", "gadj-WQU",
+    "Qagn6rbA", "gac7EJiQ", "ga3cZRyZ", "QaTOTmSH",
   ]);
   for (const source of contents) {
     for (const match of source.matchAll(/["']([A-Za-z0-9_-]{8})["']/g)) ids.add(match[1]);
@@ -132,13 +139,14 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             const controlQuery = /کاتالیزور|خریدار/.test(query);
             const titlePriority = (candidate: any) => {
               const title = norm(candidate.title ?? "");
-              const adjacentPart = /سنسور اکسیژن|اگزوز|هدرز|قطعات موتور|لوازم یدکی|قطعات یدکی|لوازم موتور|قطعات موتوری|سرسیلندر|دیسک و صفحه|لنت|استارت|پمپ بنزین|کوئل|شمع|منیفولد|رادیاتور|توربو|گیربکس|دینام|واترپمپ|کلاچ|سپر|چراغ|کمک فنر|پلوس|سیبک/.test(title);
+              const inventoryTitle = /لوازم یدکی|قطعات یدکی|پخش .*قطعات|پخش .*لوازم|فروش .*قطعات|فروش .*لوازم|لوازم موتوری|قطعات موتوری/.test(title);
+              const adjacentPart = /سنسور اکسیژن|اگزوز|هدرز|قطعات موتور|سرسیلندر|دیسک و صفحه|لنت|استارت|پمپ بنزین|کوئل|شمع|منیفولد|رادیاتور|توربو|گیربکس|دینام|واترپمپ|کلاچ|سپر|چراغ|کمک فنر|پلوس|سیبک/.test(title);
               const namesTarget = /کاتالیزور|کاتالیز/.test(title);
-              // Positive-discovery queries prefer titles without the target;
-              // control queries prefer target-naming titles so their descriptions
-              // can distinguish offers from buying, service, dust, and incidental mentions.
-              if (controlQuery) return namesTarget ? 0 : adjacentPart ? 2 : 1;
-              return namesTarget ? 2 : adjacentPart ? 0 : 1;
+              // Prefer broad multi-item inventory over listings dedicated to a
+              // single adjacent part; these are likelier to mention the target only
+              // in their description. Control queries still prioritize target titles.
+              if (controlQuery) return namesTarget ? 0 : inventoryTitle ? 1 : adjacentPart ? 2 : 3;
+              return namesTarget ? 3 : inventoryTitle ? 0 : adjacentPart ? 1 : 2;
             };
             candidateIndexes.sort((a, b) =>
               titlePriority(result.candidates[a]) - titlePriority(result.candidates[b])
