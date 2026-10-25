@@ -643,10 +643,13 @@ describe("Issue 16 — Capture 06C shadow subject-policy replay (test-only)", ()
 
 describe("Issue 16 — earlier locked human-grade source replay (test-only)", () => {
   it("characterizes subject-policy outputs for immutable Capture 06A/06B records", () => {
-    // Human grades were locked before source mapping. These are diagnostic
-    // shadow outputs only; they are not production decisions and do not alter
-    // the human labels. In particular, a grade-2 case rejected by the shadow
-    // policy is a false-reject signal to investigate, not a reason to relabel.
+    // Human grades were locked before source mapping. Titles and source IDs
+    // below are mapped from the immutable capture reports. The description
+    // field is deliberately reduced to the already-confirmed target-presence
+    // signal, so this is a policy-boundary characterization, NOT an exact
+    // full-text replay. Outputs are diagnostic only, never production labels.
+    // A grade-2 case rejected by shadow policy is a false-reject signal, not
+    // a reason to relabel the human judgement.
     const rows: Array<{
       capture: "06A" | "06B";
       code: string;
@@ -661,7 +664,7 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
         code: "C01",
         sourceId: "gaPT4jAd",
         title: "لنت برلیانس،سنسور اکسیژن بنز،پمپgdi،استارت سانتافه",
-        description: "کاتالیزور",
+        description: "… کاتالیزور …",
         humanGrade: 2,
         expectedShadow: "reject",
       },
@@ -670,7 +673,7 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
         code: "C02",
         sourceId: "gaVv-2zg",
         title: "دیسک صحفه فابریکی ساینا",
-        description: "کاتالیزور",
+        description: "… کاتالیزور …",
         humanGrade: 1,
         expectedShadow: "reject",
       },
@@ -679,7 +682,7 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
         code: "C03",
         sourceId: "gaODFbLY",
         title: "موتور و گیربکس هایلوکس فورچونر ۶ سیلندر",
-        description: "کاتالیزور",
+        description: "… کاتالیزور …",
         humanGrade: 2,
         expectedShadow: "unknown",
       },
@@ -688,7 +691,7 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
         code: "C04",
         sourceId: "gaTnu9bU",
         title: "موتور کامل بادروچین ان فیو تیوفایو",
-        description: "کاتالیزور",
+        description: "… کاتالیزور …",
         humanGrade: 2,
         expectedShadow: "unknown",
       },
@@ -697,7 +700,7 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
         code: "B01",
         sourceId: "gaPD6_BG",
         title: "سپر و سنسور اکسیژن و هدرز تیوفایو207",
-        description: "اشتباه مکانیک به جای کاتالیزور سنسور عوض کردم",
+        description: "… اشتباه مکانیک به جای کاتالیزور سنسور عوض کردم …",
         humanGrade: 1,
         expectedShadow: "reject",
       },
