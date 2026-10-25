@@ -972,8 +972,12 @@ const PART_MARKERS = [
   "جلوبندی",
   "کفپوش",
   "لپازم",
-  // Issue 16 (Capture 05F / 06C): human-graded title subjects that had
-  // leaked into whole-vehicle/catalyst hunts through description mentions.
+];
+// Issue 16 (Capture 05F / 06C): title-only subject cues, kept separate from
+// PART_MARKERS because that older list also participates in broad legacy
+// identity checks. These evidence-backed cues must not silently alter those
+// checks outside the new title-subject contract.
+const ISSUE16_TITLE_PART_MARKERS = [
   "بدنه",
   "کاتالیزور",
   "اگزوز",
@@ -982,6 +986,7 @@ const PART_MARKERS = [
   "سپر",
   "یدکی",
 ];
+
 const PACKAGING_MARKERS = ["کارتون", "کارتن", "جعبه"];
 const EQUIPMENT_MARKERS = ["دستگاه", "تجهیزات", "یخچال"]; // R4: «یخچال پراید وانت مخصوص حمل بستنی»
 const DERIVED_MARKERS = ["کره", "خلال", "کرم"]; // R6: «کرم» = کره typo in the wild («کرم بادوم زمینی پروتئینی»)
@@ -1101,7 +1106,7 @@ export function assessModelSpecificity(
   const titleSubject = titleTokens.slice(titleHeadStart);
   const titleHead = titleSubject[0];
   const titleHeadPair = titleSubject.slice(0, 2).join(" ");
-  const partHead = PART_MARKERS.find((marker) => {
+  const partHead = [...PART_MARKERS, ...ISSUE16_TITLE_PART_MARKERS].find((marker) => {
     const normalized = normalizeForMatch(marker);
     return normalized !== "" && !queryTokens.has(normalized) &&
       (normalized === titleHead || normalized === titleHeadPair);
