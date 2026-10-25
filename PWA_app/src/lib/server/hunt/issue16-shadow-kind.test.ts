@@ -726,4 +726,22 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
       )
     ).toBe("reject");
   });
+
+  it("replays the exact frozen Capture 06A C01 description and exposes the body-offer boundary", () => {
+    // Exact title and descriptionSnapshot from immutable artifact
+    // 12560808508 (workflow run 40096410639), source ID gaPT4jAd.
+    // The body explicitly lists «یک عدد هدرز با کاتالیزور نو» as an item,
+    // rather than merely mentioning catalyst as repair context. The locked
+    // human grade remains 2. Current title-only co-offer policy still rejects
+    // it; this is a source-backed counterexample to investigate, not a reason
+    // to change production logic or reinterpret the human grade.
+    const title = "لنت برلیانس،سنسور اکسیژن بنز،پمپgdi،استارت سانتافه";
+    const description =
+      "یک دست لنت عقب برلیانس سری ۳ یک عدد سنسور اکسیژن بنز کلاس e اصلی یک عدد هدرز با کاتالیزور نو پالس ان اس ۲۰۰ ۲ حلقه لاستیک ۱۸۵،۶۵،۱۴ ،یک حلقه کویر یک حلقه گلدستون یک عدد پمپ gdi سونوتا هیبرید آرمیچر یا روتور استارت سانتافه ۲۰۱۵ تا ۲۰۱۸ فابریک تماس چت دیوار";
+
+    expect(description).toContain("هدرز با کاتالیزور نو");
+    expect(
+      shadowSpecificSubjectVerdict("کاتالیزور", title, description)
+    ).toBe("reject");
+  });
 });
