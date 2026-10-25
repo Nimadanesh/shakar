@@ -5,6 +5,7 @@ import { normalizeForMatch } from "@/lib/persianNormalize";
 import { resolveHuntDefinition } from "./definition";
 import { collectCandidates, confirmCandidates, type HuntEvent } from "./pipeline";
 
+// Prospective capture stays source-only; engine comparison is a separate, post-grade stage.
 const targetQuery = "کاتالیزور خودرو";
 const category = "vehicles";
 const detailBudget = 24;
