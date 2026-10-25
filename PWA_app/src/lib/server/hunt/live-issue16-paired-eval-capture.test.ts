@@ -75,7 +75,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
     ].map(name => readFile(join(process.cwd(), "src/lib/server/hunt", name), "utf8")));
     const previouslyInspectedIds = extractPreviouslyInspectedIds(sources);
     const seen = new Set<string>(), overlap = new Set<string>();
-    const pool: Array<{ candidate: any; query: string }> = [];
+    const pool: Array<{ candidate: any; query: string; stats: any }> = [];
     const queryReports: Array<Record<string, unknown>> = [];
     const inspected: Array<Record<string, unknown>> = [];
     let detailsUsed = 0;
@@ -93,7 +93,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             if (previouslyInspectedIds.has(candidate.sourceAdId)) { overlap.add(candidate.sourceAdId); continue; }
             if (seen.has(candidate.sourceAdId)) continue;
             seen.add(candidate.sourceAdId);
-            pool.push({ candidate, query });
+            pool.push({ candidate, query, stats });
             added++;
             if (pool.length >= detailBudget || added >= 6) break;
           }
@@ -116,9 +116,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       if (!targetDef) throw new Error("Target hunt definition did not resolve");
       for (const entry of pool.slice(0, detailBudget)) {
         // Use the pipeline only to retrieve a verified source snapshot. Discard all engine outcomes.
-        const stats: any = { detailsChecked: 0, rejectedSample: [] };
+        const stats: any = entry.stats;
+        const detailsBefore = stats.detailsChecked;
         const scored = await confirmCandidates([entry.candidate], targetDef, stats, () => {});
-        detailsUsed++;
+        detailsUsed += stats.detailsChecked - detailsBefore;
         if (detailsUsed > detailBudget) throw new Error("Detail budget exceeded");
         const hit = scored.find((x: any) => x.sourceAdId === entry.candidate.sourceAdId);
         const rejected = stats.rejectedSample.find((x: any) => x.sourceAdId === entry.candidate.sourceAdId);
@@ -136,7 +137,28 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       // These are candidate-selection heuristics only; human grades are never generated here.
       const positives = inspected.filter(x => x.provisionalArm === "candidate-positive" && x.bodyOnly).slice(0, 4);
       const negativeCandidates = inspected.filter(x => x.provisionalArm !== "candidate-positive");
-      const packetRaw = [...positives, ...negativeCandidates.slice(0, 12 - positives.length)].slice(0, 12);
+      const categoryTags = [
+        "repair-service-only", "buyer-seeking", "dust-subtype", "incidental-or-ambiguous",
+      ];
+      const chosenNegativeIds = new Set<string>();
+      const categorySelection: Record<string, number> = {};
+      // Satisfy each control quota where possible; overlapping tags may satisfy more than one category.
+      for (const tag of categoryTags) {
+        let count = 0;
+        for (const candidate of negativeCandidates) {
+          if (count >= 2) break;
+          if (chosenNegativeIds.has(candidate.sourceAdId) || !candidate.sourceOnlyTags.includes(tag)) continue;
+          chosenNegativeIds.add(candidate.sourceAdId);
+          count++;
+        }
+        categorySelection[tag] = count;
+      }
+      for (const candidate of negativeCandidates) {
+        if (chosenNegativeIds.size >= 8) break;
+        chosenNegativeIds.add(candidate.sourceAdId);
+      }
+      const selectedNegatives = negativeCandidates.filter(x => chosenNegativeIds.has(x.sourceAdId)).slice(0, 8);
+      const packetRaw = [...positives, ...selectedNegatives].slice(0, 12);
       const blindPacket = packetRaw.map((item: any, index) => ({
         blindId: "P" + String(index + 1).padStart(2, "0"),
         sourceAdId: item.sourceAdId, retrievalQuery: item.retrievalQuery, targetQuery: item.targetQuery,
@@ -154,9 +176,10 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         dustSubtype: blindPacket.filter(x => x.sourceOnlyTags.includes("dust-subtype")).length,
         incidentalOrAmbiguous: blindPacket.filter(x => x.sourceOnlyTags.includes("incidental-or-ambiguous")).length,
       };
+      const allControlQuotasMet = Object.values(controlCounts).every(count => count >= 2);
       const report = {
         kind: "issue16-prospective-paired-evaluation-source-only-packet",
-        status: blindPacket.length === 12 && positiveCount === 4 ? "candidate-packet-ready-for-human-review" : "quota-shortfall",
+        status: blindPacket.length === 12 && positiveCount === 4 && allControlQuotasMet ? "candidate-packet-ready-for-human-review" : "quota-shortfall",
         warning: "SOURCE-ONLY PACKET. No engine verdicts, scores, eligibility, or shadow outcomes are included. Source tags are heuristic candidate-selection aids, not human grades. Human grades must be locked before a separate comparison stage.",
         createdAt: new Date().toISOString(), branch: process.env.GITHUB_REF_NAME ?? "local",
         commit: process.env.GITHUB_SHA ?? "local", runtime: process.version, targetQuery,
@@ -165,7 +188,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
         previouslyInspectedIdCount: previouslyInspectedIds.size, queryReports,
         quotaStatus: { requestedTotal: 12, selectedTotal: blindPacket.length,
           requestedPositives: 4, selectedBodyOnlyOfferCandidates: positiveCount,
-          requestedNegativeControls: 8, selectedNegativeControls: negativeCount, negativeControlTags: controlCounts },
+          requestedNegativeControls: 8, selectedNegativeControls: negativeCount, negativeControlTags: controlCounts, categorySelection, allControlQuotasMet },
         candidateReviewPool: inspected, blindPacket,
       };
       await writeFile(outputPath, JSON.stringify(report, null, 2), "utf8");
@@ -174,6 +197,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
       console.log("ISSUE16_PAIRED_EVAL_SOURCE_PACKET_END");
       expect(blindPacket.length, "Report quota shortfall; never pad with duplicates").toBe(12);
       expect(positiveCount, "Need four body-only explicit-offer candidates; never auto-grade").toBe(4);
+      expect(allControlQuotasMet, "Need at least two examples in each negative-control category; report shortfall otherwise").toBe(true);
     } finally {
       if (oldBuffer === undefined) delete process.env.SLUG_CAPTURE_BUFFER_PATH; else process.env.SLUG_CAPTURE_BUFFER_PATH = oldBuffer;
       if (oldCap === undefined) delete process.env.HUNT_MAX_DETAILS; else process.env.HUNT_MAX_DETAILS = oldCap;
