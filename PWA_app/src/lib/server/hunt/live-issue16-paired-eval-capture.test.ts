@@ -57,8 +57,11 @@ function classifySourceOnly(title: string, description: string) {
   const offerVerb = /فروش|موجود|دارم|عرضه|ارائه|تعویض|جایگزین|فروشی|به فروش|قابل تهیه/.test(d);
   const serviceOnly = /تعمیر|تعمیرکار|اجرت|جوشکار|جوشکاری|بازکردن|تست|شستشو|سرویس/.test(d)
     && !/فروش|موجود|دارم|ارائه|تعویض|جایگزین/.test(d);
+  // A sale of some other item in the same description must not erase a buyer-seeking
+  // role for the target. Only a nearby target-specific offer phrase counters this tag.
+  const targetSpecificOffer = /(فروش|موجود|دارم|عرضه|ارائه|تعویض|جایگزین|فروشی|قابل تهیه).{0,36}(کاتالیزور|کاتالیز)|(کاتالیزور|کاتالیز).{0,36}(فروش|موجود|دارم|عرضه|ارائه|تعویض|جایگزین|فروشی|قابل تهیه)/.test(d);
   const buyerSeeking = /خریدار|خریداری می.?کنم|خرید کاتالیزور|خریدار کاتالیزور|خریدار ضایعات/.test(full)
-    && !/فروش|موجود|دارم|ارائه/.test(d);
+    && !targetSpecificOffer;
   const dustSubtype = /خاک کاتالیزور|پودر کاتالیزور|پودر کاتالیز|خاک کاتالیز/.test(full);
   // Punctuation is removed by normalizeForMatch, so inspect the raw description for list separators.
   const itemList = /[،؛,;]|یک عدد|یک دست|[0-9]+\s*(عدد|دست|حلقه)/.test(description) || /یک عدد|یک دست|[0-9]+\s*(عدد|دست|حلقه)/.test(d);
@@ -128,7 +131,7 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
             const controlQuery = /کاتالیزور|خریدار/.test(query);
             const titlePriority = (candidate: any) => {
               const title = norm(candidate.title ?? "");
-              const adjacentPart = /سنسور اکسیژن|اگزوز|هدرز|قطعات موتور|لوازم یدکی|سرسیلندر|دیسک و صفحه/.test(title);
+              const adjacentPart = /سنسور اکسیژن|اگزوز|هدرز|قطعات موتور|لوازم یدکی|قطعات یدکی|لوازم موتور|قطعات موتوری|سرسیلندر|دیسک و صفحه|لنت|استارت|پمپ بنزین|کوئل|شمع|منیفولد|رادیاتور|توربو|گیربکس|دینام|واترپمپ|کلاچ|سپر|چراغ|کمک فنر|پلوس|سیبک/.test(title);
               const namesTarget = /کاتالیزور|کاتالیز/.test(title);
               // Positive-discovery queries prefer titles without the target;
               // control queries prefer target-naming titles so their descriptions
