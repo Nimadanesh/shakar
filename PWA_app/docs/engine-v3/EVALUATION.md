@@ -149,3 +149,10 @@ For every meaningful experiment, record:
 - The owner confirmed Shadow Tests runs #8 and #9 succeeded; GitHub Actions records show [run #8](https://github.com/Nimadanesh/shakar/actions/runs/40180396570) passed on `b326bec49504994ab1d505389ec60b9dd57e66ed` and [run #9](https://github.com/Nimadanesh/shakar/actions/runs/40180403570) passed on `cec257acd2ad55f46053fc8747480d6c9659cb51`.
 - Both passed dependency installation and the isolated Issue 16 shadow/kind-lexicon test step. This is repeated technical validation of the test-local policy matrix, not additional human-grade evidence, not a paired old-vs-new evaluation, and not proof of live engine uplift.
 - Human grades and original capture artifacts remain immutable; no production promotion is authorized by these green runs.
+
+
+## Issue 16 — punctuation co-offer counter-risk (2026-10-25)
+
+- Added a synthetic test-only boundary case: `فروش دیسک ترمز، کاتالیزور پراید` returns `reject` because the prototype currently recognizes explicit connectors such as `و` / `همراه با`, but does not infer co-offer from a comma.
+- Interpretation: this records a plausible false-reject risk for comma-separated inventory titles. It is not a source ad, not a human grade, and not a measured error rate. Do not broaden the rule until a source-backed example and paired human judgement establish that punctuation reliably signals a true co-offer in this context.
+- No human labels, capture artifacts, or production behavior changed. Existing 06C replay remains C01 reject, C02 reject, C03 allow, C04 allow, C05 reject.
