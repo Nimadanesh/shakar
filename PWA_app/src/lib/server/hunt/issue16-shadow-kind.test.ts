@@ -714,3 +714,17 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
     }
   });
 });
+
+
+  it("keeps the Capture 06A C01 grade-2/shadow-reject disagreement explicit", () => {
+    // Human grade 2 is locked in ISSUE16-CAPTURE-06A-HUMAN-GRADES.md.
+    // This assertion documents a potential false-reject counter-signal;
+    // it is not a production verdict and must not rewrite the human grade.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "لنت برلیانس،سنسور اکسیژن بنز،پمپgdi،استارت سانتافه",
+        "… کاتالیزور …"
+      )
+    ).toBe("reject");
+  });
