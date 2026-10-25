@@ -767,3 +767,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - [Capture 05F run 40187089797](https://github.com/Nimadanesh/shakar/actions/runs/40187089797) passed and uploaded artifact `12596279386`. It remains a whole-vehicle/control capture, not new Issue 16 evidence.
 - Capture 06A/06B/06C workflows were skipped; there are no new human grades to record. Therefore the next useful step is to prepare the preregistered paired evaluation protocol—not repeat 05F or infer a fix from green CI.
 - PR #43 remains Draft/unmerged; no production code, deployment, or `main` changes are authorized.
+
+
+## Prospective evaluation protocol prepared — 2026-10-25
+
+- Added [`evaluations/ISSUE16-PAIRED-EVAL-PROTOCOL.md`](./evaluations/ISSUE16-PAIRED-EVAL-PROTOCOL.md) as a documentation-only, proposed decision gate.
+- It specifies 12 unseen, source-matched listings (4 explicit target-offer positives and 8 controls), source snapshots/provenance, blind human grading locked before engine comparison, per-example paired reporting, and a strict rule that the candidate signal may only change `reject -> unknown`, never `allow`.
+- Known 06A C01 remains discovery evidence and is excluded from the prospective sample; locked 06A/06B/06C controls remain diagnostic only; 05F artifacts do not count as new Issue 16 evidence.
+- This protocol does not authorize a production change. PR #43 remains Draft/unmerged, with `main` and deployment untouched.
