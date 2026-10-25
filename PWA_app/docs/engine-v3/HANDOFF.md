@@ -668,3 +668,119 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Next action is a new immutable, bounded live capture with a distinct artifact and fresh IDs, then a blind packet and owner grading. Existing completed captures must remain immutable. Keep source IDs/engine outputs separate from the blind packet. No production changes until grades support a paired change.
 - Validation source: [Baseline #179](https://github.com/Nimadanesh/shakar/actions/runs/40092326171), 330 focused and 923 full tests passed; typecheck/build passed; ESLint still fails (8 errors / 42 warnings). Full workflow is not green.
 - Current source/test code head remains `8b96c3af9674231fa0cf6c2403bb0a79f9fc3475`; latest docs-only updates are on `engine_v3`. `main` remains untouched.
+
+
+## Issue 16 — Capture 06C grades locked; source join complete (2026-10-24)
+
+- Capture 06C run [#1](https://github.com/Nimadanesh/shakar/actions/runs/40100799513), artifact ID `12563205197`, artifact SHA-256 `c321b97cfefce573c6956b15e52c451e34915d1749e8c2a8541a681dcd82d198`. Blind packet preserved unchanged.
+- Owner-locked independent grades: C01=1, C02=1, C03=3, C04=3, C05=1. Denominator 5, no UNKNOWN, distribution 1:3 and 3:2, mean 1.80/3. No human note supplied. See [human grades](evaluations/ISSUE16-CAPTURE-06C-HUMAN-GRADES.md).
+- Post-grade source mapping and engine reconciliation are in [ISSUE16-CAPTURE-06C-SOURCE-MAP.md](evaluations/ISSUE16-CAPTURE-06C-SOURCE-MAP.md). Join integrity passed 5/5. Four title-term candidates yielded only two grade-3 controls (C03/C04). Body-only C05 was grade 1 while engine labeled it eligible/near, score 1.0: a narrow, source-backed false-acceptance signal for a service mention.
+- Evidence remains E4 on a small targeted sample, not E5 or a population estimate. Capture 06B stays separate. Next: inspect whether this specific failure can be isolated to service-intent vs item-offer semantics in an existing test-only diagnostic; if not, preserve the limitation and seek another independently sampled source. Do not alter production behavior from this sample alone.
+- No production logic, ranking, eligibility, `HEAD_KIND`, `main`, merge, or deployment change. PR #43 remains Draft and unmerged.
+
+
+## Issue 16 — Capture 06C source-backed pipeline replay (2026-10-24)
+
+- Test-only commit [350b8121](https://github.com/Nimadanesh/shakar/commit/350b81214970a0426d7d694db68461fbe67e44e5) adds a full-pipeline replay fixture using the exact five frozen Capture 06C title/description pairs. Human grades remain separately recorded in `evaluations/ISSUE16-CAPTURE-06C-HUMAN-GRADES.md`; the test does not derive grades from engine labels.
+- The test intentionally characterizes the current baseline, not a fix: all five candidates survive as `near`. The important mismatch remains C05 (human grade 1; title is an exhaust service/product listing; body mentions a free catalyst test but does not establish a catalyst offer). C03/C04 are the grade-3 direct-offer controls and must be preserved by any future scoped change.
+- This makes the exact source-backed behavior reproducible through the mocked full pipeline; it does not make the live observation itself repeatable and does not estimate population precision. Test/CI status for this newest commit is pending at this handoff update; do not transfer Baseline #179 counts to it.
+- Technical interpretation: current product hunt `کاتالیزور خودرو` does not distinguish a product offer from a service/test mention in this case. This is consistent with a missing product-role distinction, but does not yet prove a generally applicable cue or safe rule. Next: inspect existing service/product role cues and design the smallest test-local counterfactual around C05 while keeping C03/C04 and Capture 06B B01 as controls. Do not edit production logic until a paired human-graded gate supports a narrowly bounded rule.
+- No production source, ranking, eligibility, `HEAD_KIND`, or `PART_MARKERS` changes; no merge, deployment, or `main` modification. PR #43 remains Draft/unmerged.
+
+
+## Issue 16 — Capture 06C shadow-policy replay and remaining counterexample (2026-10-24)
+
+- Test-only commit [7efca41a](https://github.com/Nimadanesh/shakar/commit/7efca41aae5d7388c4a4b450b22fa65d4806136e) replays all five locked Capture 06C source title/description pairs through the existing local `shadowSpecificSubjectVerdict` prototype; no production call path is changed.
+- Diagnostic outcomes: C01 allow (human 1), C02 reject (human 1), C03 allow (human 3), C04 allow (human 3), C05 reject (human 1). This preserves both grade-3 controls and catches C05's service-only body mention, but **fails on C01**: the title subject `خاک کاتالیزور` is treated as a product offer even though the human grade is 1. The prototype is therefore not fit for production integration; subject identity + service cue is not sufficient without a distinct offer-role check.
+- This is a source-backed counterfactual evaluation of a test-local heuristic, not a live engine intervention and not a quality-uplift claim. It narrows the next question to distinguishing catalyst material / buyer-intent / service mentions from an actual offer while preserving C03/C04; no new generic lexical rule is justified by these five examples.
+- CI for the newest test-only commit is pending; do not transfer prior test counts to it. Next: validate the new characterization, then inspect whether an existing transaction-role signal can be reused test-locally to explain C01 without changing production. If no robust distinction emerges from these source records, preserve the limitation and seek another independent graded capture rather than expanding the heuristic.
+- No production source, ranking, eligibility, `HEAD_KIND`, or `PART_MARKERS` changes; no merge, deployment, or `main` modification. PR #43 remains Draft/unmerged.
+
+
+## Issue 16 — test-local catalyst-dust subtype counterfactual (2026-10-24)
+
+- Follow-up test-only commit [a0ecc99d](https://github.com/Nimadanesh/shakar/commit/a0ecc99d8f0491d1be202e83c9612963e8b65c14) adds one narrow shadow-only distinction: when the first and only title occurrence of the hunted `کاتالیزور` is embedded in `خاک کاتالیزور`, the candidate policy treats the subject as catalyst dust rather than a catalytic converter. Capture 06C C01 is the human-grade-1 evidence for this specific counterexample; C03's direct `کاتالیزور` title mention remains a grade-3 control.
+- This changes only the test-local `shadowSpecificSubjectVerdict` helper and its Capture 06C replay expectations. Production `kindLexicon`, parser, pipeline, ranking and eligibility are untouched. The rule is an experiment hypothesis from one graded subtype example, not a general synonym or approved production rule.
+- The earlier shadow replay's C01 false allow is now addressed in the diagnostic prototype; C02/C05 remain rejected and C03/C04 remain allowed. These expected shadow outcomes are still subject to CI validation and should not be interpreted as engine quality uplift.
+- Next: validate the latest focused/full test suites, typecheck and build; then audit a counterexample where a genuine converter offer and catalyst-dust mention coexist in the same title/description. Do not broaden or promote the subtype guard unless paired human grades show it preserves real converter offers. No merge, deployment, or `main` change; PR #43 remains Draft/unmerged.
+
+
+## Issue 16 — shadow replay #7 passed (2026-10-25)
+
+- On head `47e53d8d85c2d37e87cb0f26b5f01cde15158512`, GitHub Actions [Issue 16 Shadow Tests run #7](https://github.com/Nimadanesh/shakar/actions/runs/40107729356) completed successfully.
+- Owner reports the source-backed Capture 06C shadow replay now rejects C02 and preserves C03/C04 as allowed positive controls. Together with the previously repaired C01 dust-subtype counterexample and C05 service-only counterexample, this confirms the current test-local matrix matches the five locked human grades: C01 reject (grade 1), C02 reject (grade 1), C03 allow (grade 3), C04 allow (grade 3), C05 reject (grade 1).
+- This is a passing test-local diagnostic, not production-engine uplift, not paired old-vs-new human evaluation, and not authorization to promote the heuristic. Keep the shadow policy isolated from production; next investigate the narrowest counterfactual/co-occurrence controls and run broader validation before drawing any policy conclusion.
+- PR #43 remains Draft and unmerged. No production ranking/eligibility/parser/HEAD_KIND/PART_MARKERS change, no deployment, and no `main` modification.
+
+
+## Issue 16 — shadow replays #8 and #9 passed (2026-10-25)
+
+- Both follow-up GitHub Actions runs completed successfully: [Shadow Tests #8](https://github.com/Nimadanesh/shakar/actions/runs/40180396570) on `b326bec49504994ab1d505389ec60b9dd57e66ed` and [Shadow Tests #9](https://github.com/Nimadanesh/shakar/actions/runs/40180403570) on `cec257acd2ad55f46053fc8747480d6c9659cb51`.
+- For both runs, dependency installation and the isolated Issue 16 shadow/kind-lexicon test step passed. This repeats the earlier #7 success and supports the stability of the current test-local replay matrix; it does not establish production-engine improvement or broader human-graded quality.
+- Keep the heuristic test-only. PR #43 remains Draft/unmerged; no production behavior, deployment, or `main` modification.
+
+
+## Issue 16 — comma-separated co-offer boundary recorded (2026-10-25)
+
+- Added one synthetic test-only boundary case for the subject-identity prototype: `فروش دیسک ترمز، کاتالیزور پراید` currently returns `reject`, even though punctuation may plausibly enumerate two offered items.
+- This is intentionally recorded as a conservative false-reject risk, not relabeled as a human-graded failure and not “fixed” by broadening co-offer inference without source-backed evidence. The existing explicit connector and available-item positive controls remain unchanged.
+- No capture rerun was performed; frozen artifacts and human grades remain untouched. The change is confined to `issue16-shadow-kind.test.ts` and this diagnostic record. PR #43 remains Draft/unmerged; production behavior and `main` remain unchanged.
+
+## Issue 16 — 06A/06B boundary matrix extended (2026-10-25)
+
+- Test-only commit `6bd2e225d7040302a995723cf02a8c3884761087` added a subject-policy characterization over five already human-graded source IDs from immutable Captures 06A/06B; `b750f0a9249f8ddf7f840dca755945f763576da0` clarified that this is not a full-text replay.
+- Documentation record: `96e9a53b56a9b397351ae6dd8e0e03eae98ecffc` in `EVALUATION.md`.
+- Shadow verdicts: 06A C01 reject (human 2), C02 reject (human 1), C03 unknown (human 2), C04 unknown (human 2); 06B B01 reject (human 1). The C01 mismatch is preserved as a false-reject risk; grades are immutable.
+- Descriptions in this test contain only the already-confirmed target-presence signal, not full original source text. Treat this as a boundary characterization, not a source-exact replay or E5 paired comparison.
+- Shadow Tests [run #15](https://github.com/Nimadanesh/shakar/actions/runs/40183969910) passed on earlier code commit `6bd2e225d7040302a995723cf02a8c3884761087`; the run for `b750f0a` was cancelled amid overlapping runs. The final test-only commit `8ea1260ee4786b06f59b1a0a8bac870de2a15ab3` pins the grade-2/C01 disagreement inside the suite and is now verified by [Shadow Tests](https://github.com/Nimadanesh/shakar/actions/runs/40184104544): dependency install and the isolated Issue 16 shadow/kind-lexicon test step both passed. The subsequent docs-head run [40184124881](https://github.com/Nimadanesh/shakar/actions/runs/40184124881) also passed the same shadow-test job. In the supplied run batch, several entries had no jobs (cancelled/empty) or were skipped; successful Capture 05F runs are a separate workflow and are not new Issue 16 06A/06B/06C evidence. CI is now current for the final test assertion. Keep the boundary matrix test-only; no production uplift or promotion is established. Do not launch another live capture merely to obtain more examples. Production, `main`, deployment, and PR #43 state remain unchanged.
+
+
+## Issue 16 — exact C01 body-offer counter-signal CI verified (2026-10-25)
+
+- Latest test-only source commit: [`35532a3acd34b7fff8646931da13a51685a3004e`](https://github.com/Nimadanesh/shakar/commit/35532a3acd34b7fff8646931da13a51685a3004e). The corrected [Shadow Tests run 40185527485](https://github.com/Nimadanesh/shakar/actions/runs/40185527485) passed dependency installation and the isolated Issue 16 shadow/kind-lexicon tests.
+- The prior test attempt failed because the test-local body-offer matcher had malformed regex escaping; the corrected matcher uses the fixed known target term directly. No production file or live verdict path changed.
+- Exact frozen 06A C01 body was recovered from artifact `12560808508`; the phrase `یک عدد هدرز با کاتالیزور نو` is an explicit inventory offer. Human grade stays 2. Shadow policy currently rejects C01, so the test-only helper flags a possible conservative `reject -> unknown` downgrade. It never auto-allows the ad; C02 and B01 remain negative controls and must continue to reject.
+- [Capture 05F run 40185527528](https://github.com/Nimadanesh/shakar/actions/runs/40185527528) passed and uploaded artifact `12595288676` (SHA-256 `c13146b9bd430640d07b79f3d9a14f163e3db36c37b5ffe61bfa3a8a8037e9d9`). This is a separate vehicle/control capture, not new Issue 16 evidence. Runs [40185515369](https://github.com/Nimadanesh/shakar/actions/runs/40185515369) and [40185515384](https://github.com/Nimadanesh/shakar/actions/runs/40185515384) failed on the pre-correction test version; the 05F capture stage in the latter was skipped. [40185515316](https://github.com/Nimadanesh/shakar/actions/runs/40185515316) was skipped.
+- Next: audit the complete locked source-backed matrix against the candidate downgrade and ensure no unrelated body mentions trigger it. Treat this as test-local E1 diagnostic work only; do not alter human labels, production eligibility/ranking/parser/`HEAD_KIND`/`PART_MARKERS`, or promote the helper without paired human evidence. PR #43 remains Draft/unmerged; `main` and deployment remain untouched.
+
+
+## Issue 16 — 06C body-offer counter-signal audit passed (2026-10-25)
+
+- Test-only head `a81fa38ecdf4c982cf11f5dee86023075673bb41` adds regression assertions that the narrow body-offer signal stays off across all five locked 06C source descriptions, covering dust subtype, repair/purchase-role context, buyer-seeking inventory, replacement-part positive control, and service-only/free-testing context.
+- Shadow Tests [run 40186463053](https://github.com/Nimadanesh/shakar/actions/runs/40186463053) passed the isolated Issue 16 shadow/kind-lexicon suite. This confirms the test matrix executes cleanly; it is not a human-quality gain, paired evaluation, or production validation.
+- Capture 05F [run 40186463076](https://github.com/Nimadanesh/shakar/actions/runs/40186463076) passed and uploaded artifact `12596278104` (SHA-256 `d398035708e3066e64d8765e5cd828c6f3b3b0e6446c35fa2c3b67ebda02603a`). It is a separate whole-vehicle/control capture, not new Issue 16 evidence; do not use it to expand 06A/06B/06C conclusions.
+- Next step: preserve the conservative signal as test-only and keep C01's human grade 2/reject mismatch visible. Do not wire it into production without a source-matched, human-graded paired gate. PR #43 remains Draft/unmerged; `main` and deployment remain untouched.
+
+
+## Next action — Issue 16 C01 evidence gate (2026-10-25)
+
+- The useful next step is **not another live capture and not a production patch**. The frozen 06A C01 body contains the explicit item-list offer `یک عدد هدرز با کاتالیزور نو`, while the current test-local subject policy rejects the title. Keep its human grade 2 unchanged.
+- Preserve `shadowBodyOfferCounterSignal()` as a diagnostic candidate that can only downgrade this rejection to `unknown`; it must not auto-allow. Its negative-control assertions cover 06A C02, 06B B01, and all five locked 06C descriptions.
+- Treat this as one confirmed, source-backed counterexample. CI success is technical validation of the test; it is not paired human-quality evidence or proof of population uplift. Do not count any 05F artifact as a new Issue 16 sample.
+- Next evidence gate before any production proposal: define a source-matched paired comparison with unseen listings, lock human grades before opening the engine comparison, and include explicit item-list offer positives plus repair-context, buyer-seeking, subtype/dust, and service-only negatives. Keep each failure hypothesis separate and report UNKNOWN outside the numeric denominator.
+- PR #43 remains Draft/unmerged. Do not merge, deploy, alter `main`, or change production ranking/eligibility/parser/`HEAD_KIND`/`PART_MARKERS` without explicit authorization.
+
+
+## Latest CI result — 2026-10-25
+
+- Shadow Tests passed on the current head: [run 40187089792](https://github.com/Nimadanesh/shakar/actions/runs/40187089792). The repeated Shadow Tests check [40187084486](https://github.com/Nimadanesh/shakar/actions/runs/40187084486) also passed.
+- [Capture 05F run 40187089797](https://github.com/Nimadanesh/shakar/actions/runs/40187089797) passed and uploaded artifact `12596279386`. It remains a whole-vehicle/control capture, not new Issue 16 evidence.
+- Capture 06A/06B/06C workflows were skipped; there are no new human grades to record. Therefore the next useful step is to prepare the preregistered paired evaluation protocol—not repeat 05F or infer a fix from green CI.
+- PR #43 remains Draft/unmerged; no production code, deployment, or `main` changes are authorized.
+
+
+## Prospective evaluation protocol prepared — 2026-10-25
+
+- Added [`evaluations/ISSUE16-PAIRED-EVAL-PROTOCOL.md`](./evaluations/ISSUE16-PAIRED-EVAL-PROTOCOL.md) as a documentation-only, proposed decision gate.
+- It specifies 12 unseen, source-matched listings (4 explicit target-offer positives and 8 controls), source snapshots/provenance, blind human grading locked before engine comparison, per-example paired reporting, and a strict rule that the candidate signal may only change `reject -> unknown`, never `allow`.
+- Known 06A C01 remains discovery evidence and is excluded from the prospective sample; locked 06A/06B/06C controls remain diagnostic only; 05F artifacts do not count as new Issue 16 evidence.
+- This protocol does not authorize a production change. PR #43 remains Draft/unmerged, with `main` and deployment untouched.
+
+
+## CI confirmation — paired-protocol head rerun (2026-10-25)
+
+- On head `59b2a663d0d48eeaa87d161540f9cca8d64d2045`, [Shadow Tests run 40187626395](https://github.com/Nimadanesh/shakar/actions/runs/40187626395) passed.
+- [Capture 05F run 40187626379](https://github.com/Nimadanesh/shakar/actions/runs/40187626379) passed and uploaded artifact `12597590097` (SHA-256 `cf35497df022c74e4f93604200f28645def203b23cf73a5ce16e0b9f2cd75d10`). This is still only a whole-vehicle/control capture; it does not fill the 12 unseen-listing paired-evaluation quota.
+- [Shadow Tests run 40187616537](https://github.com/Nimadanesh/shakar/actions/runs/40187616537) passed on the earlier protocol commit `574d039cf8d105ea3d7eab13b7844fa008e19cb8`. Repeated green CI is technical confirmation, not new human evidence.
+- Next action remains to assemble and freeze the prospective 12 unseen source-matched listings, preserving source provenance and blind grading order. If the 4 positive / 8 control quotas cannot be met without duplicates, report the shortfall rather than padding the sample. No human grades were added by these runs.
+- PR #43 remains Draft/unmerged. No production change, deployment, or `main` change.

@@ -282,6 +282,7 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
 type ShadowSubjectVerdict = "reject" | "allow" | "unknown";
 
 const SHADOW_PART_SUBJECTS = [
+  "اگزوز",
   "کاتالیزور",
   "دیسک ترمز",
   "دیسک",
@@ -295,6 +296,31 @@ const SHADOW_PART_SUBJECTS = [
   "کاپوت",
 ] as const;
 
+/**
+ * Test-only conservative body-offer counter-signal.
+ * It never grants a positive verdict: a clear item-list offer in the body can
+ * downgrade a title-subject rejection to unknown, leaving human review in place.
+ * This is intentionally narrow until more graded source examples exist.
+ */
+function shadowBodyOfferCounterSignal(
+  querySubject: string,
+  description: string
+): boolean {
+  const body = normalizeForMatch(description);
+  const target = normalizeForMatch(querySubject);
+  if (!body.includes(target)) return false;
+
+  // Require an item-count/list cue immediately before an item phrase containing
+  // the target, plus a new-condition cue after it. Buying/repair context alone
+  // must not count as an offer by the listing's seller.
+  // The target comes from the fixed Persian query vocabulary in this experiment.
+  const escapedTarget = target;
+  const explicitListedNewItem = new RegExp(
+    `(?:یک عدد|یه عدد|عدد)\\s+[^،؛.]{0,45}${escapedTarget}\\s+(?:نو|جدید)(?:\\s|$)`
+  );
+  return explicitListedNewItem.test(body);
+}
+
 function shadowSpecificSubjectVerdict(
   querySubject: string,
   title: string,
@@ -303,6 +329,23 @@ function shadowSpecificSubjectVerdict(
   const normalizedTitle = normalizeForMatch(title);
   const normalizedDescription = normalizeForMatch(description);
   const target = normalizeForMatch(querySubject);
+
+  // Capture 06C C01 is human grade 1 for «کاتالیزور خودرو»: its principal
+  // product is catalyst dust («خاک کاتالیزور»), not a catalytic converter.
+  // Keep this subtype distinction local to the experiment until more paired
+  // evidence exists; a later direct occurrence of «کاتالیزور» can still count.
+  if (target === normalizeForMatch("کاتالیزور")) {
+    const dustStart = normalizedTitle.indexOf(normalizeForMatch("خاک کاتالیزور"));
+    const firstTargetStart = normalizedTitle.indexOf(target);
+    if (
+      dustStart >= 0 &&
+      firstTargetStart === dustStart + "خاک ".length &&
+      normalizedTitle.slice(dustStart, firstTargetStart).trim() === normalizeForMatch("خاک")
+    ) {
+      return "reject";
+    }
+  }
+
   const knownTitleSubjects = SHADOW_PART_SUBJECTS.filter((subject) =>
     normalizedTitle.includes(normalizeForMatch(subject))
   );
@@ -440,6 +483,25 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
     ).toBe("reject");
   });
 
+  it("rejects C02 when exhaust service/sale leads and catalyst is a separate purchase role", () => {
+    const title = "تعمیر وفروش اگزوز خرید کاتالیزور";
+    const description =
+      "فروش و تعمیر اگزوز با بهترین کیفیت؛ خرید کاتالیزور؛ اگزوز ن خرید دارم ن معاوضه فقط فروش";
+    expect(shadowSpecificSubjectVerdict("کاتالیزور", title, description)).toBe("reject");
+  });
+
+  it("preserves a direct converter offer when catalyst dust is mentioned secondarily", () => {
+    // Synthetic co-occurrence counterexample: a genuine converter offer appears
+    // first; the later dust phrase must not trigger the subtype rejection.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "فروش کاتالیزور خودرو و خاک کاتالیزور",
+        "کاتالیزور خودرو موجود است؛ خاک کاتالیزور نیز خریداری می‌شود"
+      )
+    ).toBe("allow");
+  });
+
   it("allows a specific-part title only when title-level text explicitly co-offers both parts", () => {
     // Synthetic positive control for the rule's intended boundary, not a graded ad.
     expect(
@@ -449,6 +511,20 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
         "هر دو قطعه موجود است"
       )
     ).toBe("allow");
+  });
+
+  it("records the conservative false-reject risk for comma-separated item inventories", () => {
+    // Synthetic boundary case, not a source ad or human grade. A title can
+    // plausibly enumerate two offered items with punctuation rather than «و».
+    // Current prototype intentionally does not infer co-offer from punctuation,
+    // so this stays rejected until source-backed evidence justifies broadening.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "فروش دیسک ترمز، کاتالیزور پراید",
+        "هر دو قطعه موجود است"
+      )
+    ).toBe("reject");
   });
 
   it("does not mistake an unrelated conjunction elsewhere in the title for a part co-offer", () => {
@@ -517,3 +593,253 @@ describe("Issue 16 — subject identity / explicit co-offer prototype (test-only
     ).toBe("unknown");
   });
 });
+
+
+describe("Issue 16 — Capture 06C shadow subject-policy replay (test-only)", () => {
+  it("compares the candidate subject policy against all five locked human grades", () => {
+    // Exact source text is pinned in the immutable Capture 06C blind packet
+    // and mapped only after grade lock in ISSUE16-CAPTURE-06C-SOURCE-MAP.md.
+    // These are diagnostic policy outputs, not production verdicts.
+    const rows: Array<{
+      code: string;
+      title: string;
+      description: string;
+      humanGrade: 1 | 3;
+      expectedShadow: "allow" | "reject" | "unknown";
+    }> = [
+      {
+        code: "C01",
+        title: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی",
+        description: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی با بالاترین قیمت درایران توسط مهندس محمدی در محل شما",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+      {
+        code: "C02",
+        title: "تعمیر وفروش اگزوز خرید کاتالیزور",
+        description: "با سلام خدمت دوستان عزیز فروش و تعمیر اگزوز با بهترین کیفیت و کمترین زمان ممکن فروش انواع اگزوزهای بلوچی و معمولی و دست ساز و فابریک برای ماشین‌های پراید پژو نیسان پیکان و غیر با یکبار تجربه مشتری همیشگی ما باشید 100 % لطفا از ساعت 8 شب ب بعد دیگ تماس نگیرید معاوضه اگزوز نداریم پس سوال الکی نپرسید ممنون جوشکاری شاسی ماشین هم پذیرفته میشود خرید کاتالیزور 99 %تعمیر 1 %تعویض آدرس نگین شهر روبروی چهارراه مدرسه اتوبان آزادشهر به گنبد برجاده اصلی اگزوزسازی بهروز بامدی ساعت کاری8 تا7 حتی روز های تعطیل اگزوز ن خرید دارم ن معاوضه فقط فروش",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+      {
+        code: "C03",
+        title: "فروش وخریدانواع کاتالیزور و خاک۲۰۶ پژو ال۹۰ نیسان",
+        description: "خرید در محل انواع کاتالیزور های ایرانی نو کاتالیزور استوک و زیر صفری ب شرط انواع منبع جایگزین بدون تعطیلی در سراسر تهران",
+        humanGrade: 3,
+        expectedShadow: "allow",
+      },
+      {
+        code: "C04",
+        title: "جایگزین کاتالیزور xu7 پژو پارس و ۴۰۵و اگزوز بلوچی",
+        description: "یدونه جایگزین کاتالیزور یورو چهار کلا یک هفته رو ماشین بود کاملا نو ب مبلغ ۱,۶۵۰۰ اگزوز منبع بلوجی شرکتی ورق ضخیم مارک لیزر با صدای ریزوعالی نوعه نو ب مبلغ ۲,۳۰۰",
+        humanGrade: 3,
+        expectedShadow: "allow",
+      },
+      {
+        code: "C05",
+        title: "اگزوز (بیات)تیبا.کوییک پژو سمند مارک مشهد",
+        description: "با سلام خدمات رایگان ما تست وبازدید ..دیاگ..تست کاتالیزور..جوشکاری و وصل اگزوز..بازدید چشمی از سراسر اگزوز ..تست شمع وایر کویل سنسور اکسیژن کمپرس متور خام سوزی تمام این خدمات رایگان میباشد لیست قیمت ها نصب اگزوز کاملا رایگان است اگزوز عقب پراید۱۹۰۰ رضا مشهد اگزوز تیبا مشهد ۲۹۰۰ اگزوز پژو 2900 رضا مشهد اگزوز تیبا2.کوییک ۳۳۰۰ رضا مشهد اگزوز بلوچی پراید۲۱۰۰ اگزوز سورن توربویی۳۵۰۰ اگزوز سمند ساینا سورن و......موجود میباشد با مدیریت استاد بیات (همدانی) چهار راه سیلو به سمت رشیدی روبه رویه استخر خلیج فارس",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+    ];
+
+    for (const row of rows) {
+      expect(
+        shadowSpecificSubjectVerdict("کاتالیزور", row.title, row.description),
+        row.code
+      ).toBe(row.expectedShadow);
+    }
+
+    // C01 is a source-backed subtype distinction («خاک کاتالیزور» vs the
+    // hunted converter). The new guard is still test-local and based on one
+    // graded item, so it must not be promoted into production yet.
+    expect(rows.find((row) => row.code === "C01")?.humanGrade).toBe(1);
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        rows[0].title,
+        rows[0].description
+      )
+    ).toBe("reject");
+  });
+});
+
+
+describe("Issue 16 — earlier locked human-grade source replay (test-only)", () => {
+  it("characterizes subject-policy outputs for immutable Capture 06A/06B records", () => {
+    // Human grades were locked before source mapping. Titles and source IDs
+    // below are mapped from the immutable capture reports. The description
+    // field is deliberately reduced to the already-confirmed target-presence
+    // signal, so this is a policy-boundary characterization, NOT an exact
+    // full-text replay. Outputs are diagnostic only, never production labels.
+    // A grade-2 case rejected by shadow policy is a false-reject signal, not
+    // a reason to relabel the human judgement.
+    const rows: Array<{
+      capture: "06A" | "06B";
+      code: string;
+      sourceId: string;
+      title: string;
+      description: string;
+      humanGrade: 1 | 2;
+      expectedShadow: ShadowSubjectVerdict;
+    }> = [
+      {
+        capture: "06A",
+        code: "C01",
+        sourceId: "gaPT4jAd",
+        title: "لنت برلیانس،سنسور اکسیژن بنز،پمپgdi،استارت سانتافه",
+        description: "… کاتالیزور …",
+        humanGrade: 2,
+        expectedShadow: "reject",
+      },
+      {
+        capture: "06A",
+        code: "C02",
+        sourceId: "gaVv-2zg",
+        title: "دیسک صحفه فابریکی ساینا",
+        description: "… کاتالیزور …",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+      {
+        capture: "06A",
+        code: "C03",
+        sourceId: "gaODFbLY",
+        title: "موتور و گیربکس هایلوکس فورچونر ۶ سیلندر",
+        description: "… کاتالیزور …",
+        humanGrade: 2,
+        expectedShadow: "unknown",
+      },
+      {
+        capture: "06A",
+        code: "C04",
+        sourceId: "gaTnu9bU",
+        title: "موتور کامل بادروچین ان فیو تیوفایو",
+        description: "… کاتالیزور …",
+        humanGrade: 2,
+        expectedShadow: "unknown",
+      },
+      {
+        capture: "06B",
+        code: "B01",
+        sourceId: "gaPD6_BG",
+        title: "سپر و سنسور اکسیژن و هدرز تیوفایو207",
+        description: "… اشتباه مکانیک به جای کاتالیزور سنسور عوض کردم …",
+        humanGrade: 1,
+        expectedShadow: "reject",
+      },
+    ];
+
+    for (const row of rows) {
+      expect(
+        shadowSpecificSubjectVerdict("کاتالیزور", row.title, row.description),
+        `${row.capture} ${row.code} ${row.sourceId} (human grade ${row.humanGrade})`
+      ).toBe(row.expectedShadow);
+    }
+  });
+
+  it("keeps the Capture 06A C01 grade-2/shadow-reject disagreement explicit", () => {
+    // Human grade 2 is locked in ISSUE16-CAPTURE-06A-HUMAN-GRADES.md.
+    // This assertion documents a potential false-reject counter-signal;
+    // it is not a production verdict and must not rewrite the human grade.
+    expect(
+      shadowSpecificSubjectVerdict(
+        "کاتالیزور",
+        "لنت برلیانس،سنسور اکسیژن بنز،پمپgdi،استارت سانتافه",
+        "… کاتالیزور …"
+      )
+    ).toBe("reject");
+  });
+
+  it("tests a conservative body-offer counter-signal without auto-accepting C01", () => {
+    const c01Title = "لنت برلیانس،سنسور اکسیژن بنز،پمپgdi،استارت سانتافه";
+    const c01Body =
+      "یک دست لنت عقب برلیانس سری ۳ یک عدد سنسور اکسیژن بنز کلاس e اصلی یک عدد هدرز با کاتالیزور نو پالس ان اس ۲۰۰ ۲ حلقه لاستیک ۱۸۵،۶۵،۱۴ ،یک حلقه کویر یک حلقه گلدستون یک عدد پمپ gdi سونوتا هیبرید آرمیچر یا روتور استارت سانتافه ۲۰۱۵ تا ۲۰۱۸ فابریک تماس چت دیوار";
+    const c02Body =
+      "فروش و تعمیر اگزوز با بهترین کیفیت؛ خرید کاتالیزور 99 درصد تعمیر 1 درصد تعویض";
+    const b01Body =
+      "اشتباه مکانیک به جای کاتالیزور سنسور عوض کردم";
+
+    expect(shadowBodyOfferCounterSignal("کاتالیزور", c01Body)).toBe(true);
+    expect(shadowBodyOfferCounterSignal("کاتالیزور", c02Body)).toBe(false);
+    expect(shadowBodyOfferCounterSignal("کاتالیزور", b01Body)).toBe(false);
+
+    // This proposal only removes a hard rejection when explicit body-offer
+    // evidence exists. It does not turn the grade-2 source into an auto-accept.
+    const currentC01 = shadowSpecificSubjectVerdict("کاتالیزور", c01Title, c01Body);
+    const candidateC01 =
+      currentC01 === "reject" && shadowBodyOfferCounterSignal("کاتالیزور", c01Body)
+        ? "unknown"
+        : currentC01;
+    expect(currentC01).toBe("reject");
+    expect(candidateC01).toBe("unknown");
+    expect(shadowSpecificSubjectVerdict(
+      "کاتالیزور",
+      "تعمیر وفروش اگزوز خرید کاتالیزور",
+      c02Body
+    )).toBe("reject");
+    expect(shadowSpecificSubjectVerdict(
+      "کاتالیزور",
+      "سپر و سنسور اکسیژن و هدرز تیوفایو207",
+      b01Body
+    )).toBe("reject");
+  });
+
+  it("replays the exact frozen Capture 06A C01 description and exposes the body-offer boundary", () => {
+    // Exact title and descriptionSnapshot from immutable artifact
+    // 12560808508 (workflow run 40096410639), source ID gaPT4jAd.
+    // The body explicitly lists «یک عدد هدرز با کاتالیزور نو» as an item,
+    // rather than merely mentioning catalyst as repair context. The locked
+    // human grade remains 2. Current title-only co-offer policy still rejects
+    // it; this is a source-backed counterexample to investigate, not a reason
+    // to change production logic or reinterpret the human grade.
+    const title = "لنت برلیانس،سنسور اکسیژن بنز،پمپgdi،استارت سانتافه";
+    const description =
+      "یک دست لنت عقب برلیانس سری ۳ یک عدد سنسور اکسیژن بنز کلاس e اصلی یک عدد هدرز با کاتالیزور نو پالس ان اس ۲۰۰ ۲ حلقه لاستیک ۱۸۵،۶۵،۱۴ ،یک حلقه کویر یک حلقه گلدستون یک عدد پمپ gdi سونوتا هیبرید آرمیچر یا روتور استارت سانتافه ۲۰۱۵ تا ۲۰۱۸ فابریک تماس چت دیوار";
+
+    expect(description).toContain("هدرز با کاتالیزور نو");
+    expect(
+      shadowSpecificSubjectVerdict("کاتالیزور", title, description)
+    ).toBe("reject");
+  });
+
+  it("keeps the body-offer counter-signal narrow across all five locked 06C controls", () => {
+    // Exact source descriptions from the immutable 06C source map. These
+    // cover subtype dust, repair/purchase context, buyer-seeking inventory,
+    // a directly offered replacement part, and exhaust service with free
+    // catalyst testing. None matches the deliberately narrow
+    // count + target + immediate-new-condition pattern from 06A C01.
+    const controls = [
+      {
+        code: "06C C01 dust subtype",
+        body: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی با بالاترین قیمت درایران توسط مهندس محمدی در محل شما",
+      },
+      {
+        code: "06C C02 repair and purchase role",
+        body: "با سلام خدمت دوستان عزیز فروش و تعمیر اگزوز با بهترین کیفیت و کمترین زمان ممکن فروش انواع اگزوزهای بلوچی و معمولی و دست ساز و فابریک برای ماشین‌های پراید پژو نیسان پیکان و غیر با یکبار تجربه مشتری همیشگی ما باشید 100 % لطفا از ساعت 8 شب ب بعد دیگ تماس نگیرید معاوضه اگزوز نداریم پس سوال الکی نپرسید ممنون جوشکاری شاسی ماشین هم پذیرفته میشود خرید کاتالیزور 99 %تعمیر 1 %تعویض آدرس نگین شهر روبروی چهارراه مدرسه اتوبان آزادشهر به گنبد برجاده اصلی اگزوزسازی بهروز بامدی ساعت کاری8 تا7 حتی روز های تعطیل اگزوز ن خرید دارم ن معاوضه فقط فروش",
+      },
+      {
+        code: "06C C03 buyer-seeking catalyst inventory",
+        body: "خرید در محل انواع کاتالیزور های ایرانی نو کاتالیزور استوک و زیر صفری ب شرط انواع منبع جایگزین بدون تعطیلی در سراسر تهران",
+      },
+      {
+        code: "06C C04 directly offered replacement part",
+        body: "یدونه جایگزین کاتالیزور یورو چهار کلا یک هفته رو ماشین بود کاملا نو ب مبلغ ۱,۶۵۰۰ اگزوز منبع بلوجی شرکتی ورق ضخیم مارک لیزر با صدای ریزوعالی نوعه نو ب مبلغ ۲,۳۰۰",
+      },
+      {
+        code: "06C C05 exhaust service and free catalyst testing",
+        body: "با سلام خدمات رایگان ما تست وبازدید ..دیاگ..تست کاتالیزور..جوشکاری و وصل اگزوز..بازدید چشمی از سراسر اگزوز ..تست شمع وایر کویل سنسور اکسیژن کمپرس متور خام سوزی تمام این خدمات رایگان میباشد لیست قیمت ها نصب اگزوز کاملا رایگان است اگزوز عقب پراید۱۹۰۰ رضا مشهد اگزوز تیبا مشهد ۲۹۰۰ اگزوز پژو 2900 رضا مشهد اگزوز تیبا2.کوییک ۳۳۰۰ اگزوز بلوچی پراید۲۱۰۰ اگزوز سورن توربویی۳۵۰۰ اگزوز سمند ساینا سورن و......موجود میباشد با مدیریت استاد بیات (همدانی) چهار راه سیلو به سمت رشیدی روبه رویه استخر خلیج فارس",
+      },
+    ] as const;
+
+    for (const control of controls) {
+      expect(
+        shadowBodyOfferCounterSignal("کاتالیزور", control.body),
+        control.code
+      ).toBe(false);
+    }
+  });
+
+});
+// Paired-eval source-only capture is included in the dedicated Issue 16 CI command.
