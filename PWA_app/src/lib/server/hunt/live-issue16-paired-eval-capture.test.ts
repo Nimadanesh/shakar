@@ -52,6 +52,11 @@ function extractPreviouslyInspectedIds(contents: string[]): Set<string> {
     "gaOm6fhv", "gadnMM9q", "gadvvLBv", "gadndbCf", "gaTfTdmi", "QaemN0fw",
     "gadWG_ZV", "gad_vxP0", "gaD2WoLS", "gadfdx8X", "ga2eeYvL", "gadj-WQU",
     "Qagn6rbA", "gac7EJiQ", "ga3cZRyZ", "QaTOTmSH",
+    // All 24 detail reads from failed capture 40200507881 are now also excluded.
+    "gaebwbeI", "gadzfWoX", "gadXvzhq", "gaEH95Ip", "gacjtSeb", "gacnank6",
+    "QacDqQpZ", "gagGO7n3", "gacHdKF8", "gaerw7Dh", "gaefwK3P", "AajeytfB",
+    "gaerQEo1", "gZ2dVc8h", "gabK-0Iu", "gaGbxO1D", "ga455xRv", "ga7ul0Qw",
+    "gac3UUld", "Qar36VEf", "gaZP-TfD", "QaAAjdNI", "gaWbQ3bS", "gaUxbv_p",
   ]);
   for (const source of contents) {
     for (const match of source.matchAll(/["']([A-Za-z0-9_-]{8})["']/g)) ids.add(match[1]);
@@ -153,6 +158,12 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               || Math.abs(a - anchor) - Math.abs(b - anchor) || a - b,
             );
             let addedThisPage = 0;
+            const controlQuery = /کاتالیزور|خریدار/.test(query);
+            const queryQuota = controlQuery ? 2 : 4;
+            // Use the 24-detail budget deliberately: 16 discovery candidates from
+            // broad inventory queries, plus 8 target-query controls (2 per stratum).
+            // Two picks from a page are allowed so discovery can exceed three/query
+            // without silently increasing detail reads.
             for (const candidateIndex of candidateIndexes) {
               const candidate = result.candidates[candidateIndex];
               if (previouslyInspectedIds.has(candidate.sourceAdId)) { overlap.add(candidate.sourceAdId); continue; }
@@ -161,9 +172,9 @@ it.skipIf(process.env.LIVE_DIVAR_OBSERVATION !== "1")(
               pool.push({ candidate, query, pageNumber: pageIndex + 1, stats: result.stats });
               added++;
               addedThisPage++;
-              if (pool.length >= detailBudget || addedThisPage >= 1) break;
+              if (pool.length >= detailBudget || addedThisPage >= 2) break;
             }
-            if (pool.length >= detailBudget || added >= 3 || cursor == null) break;
+            if (pool.length >= detailBudget || added >= queryQuota || cursor == null) break;
           }
           queryReports.push({
             query, status: added ? "candidates-selected" : "no-new-candidates",
