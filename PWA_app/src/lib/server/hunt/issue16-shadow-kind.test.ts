@@ -803,4 +803,42 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
       shadowSpecificSubjectVerdict("کاتالیزور", title, description)
     ).toBe("reject");
   });
+
+  it("keeps the body-offer counter-signal narrow across all five locked 06C controls", () => {
+    // Exact source descriptions from the immutable 06C source map. These
+    // cover subtype dust, repair/purchase context, buyer-seeking inventory,
+    // a directly offered replacement part, and exhaust service with free
+    // catalyst testing. None matches the deliberately narrow
+    // count + target + immediate-new-condition pattern from 06A C01.
+    const controls = [
+      {
+        code: "06C C01 dust subtype",
+        body: "خرید وفروش خاک کاتالیزور خودرو ودیزل وپتروشیمی با بالاترین قیمت درایران توسط مهندس محمدی در محل شما",
+      },
+      {
+        code: "06C C02 repair and purchase role",
+        body: "با سلام خدمت دوستان عزیز فروش و تعمیر اگزوز با بهترین کیفیت و کمترین زمان ممکن فروش انواع اگزوزهای بلوچی و معمولی و دست ساز و فابریک برای ماشین‌های پراید پژو نیسان پیکان و غیر با یکبار تجربه مشتری همیشگی ما باشید 100 % لطفا از ساعت 8 شب ب بعد دیگ تماس نگیرید معاوضه اگزوز نداریم پس سوال الکی نپرسید ممنون جوشکاری شاسی ماشین هم پذیرفته میشود خرید کاتالیزور 99 %تعمیر 1 %تعویض آدرس نگین شهر روبروی چهارراه مدرسه اتوبان آزادشهر به گنبد برجاده اصلی اگزوزسازی بهروز بامدی ساعت کاری8 تا7 حتی روز های تعطیل اگزوز ن خرید دارم ن معاوضه فقط فروش",
+      },
+      {
+        code: "06C C03 buyer-seeking catalyst inventory",
+        body: "خرید در محل انواع کاتالیزور های ایرانی نو کاتالیزور استوک و زیر صفری ب شرط انواع منبع جایگزین بدون تعطیلی در سراسر تهران",
+      },
+      {
+        code: "06C C04 directly offered replacement part",
+        body: "یدونه جایگزین کاتالیزور یورو چهار کلا یک هفته رو ماشین بود کاملا نو ب مبلغ ۱,۶۵۰۰ اگزوز منبع بلوجی شرکتی ورق ضخیم مارک لیزر با صدای ریزوعالی نوعه نو ب مبلغ ۲,۳۰۰",
+      },
+      {
+        code: "06C C05 exhaust service and free catalyst testing",
+        body: "با سلام خدمات رایگان ما تست وبازدید ..دیاگ..تست کاتالیزور..جوشکاری و وصل اگزوز..بازدید چشمی از سراسر اگزوز ..تست شمع وایر کویل سنسور اکسیژن کمپرس متور خام سوزی تمام این خدمات رایگان میباشد لیست قیمت ها نصب اگزوز کاملا رایگان است اگزوز عقب پراید۱۹۰۰ رضا مشهد اگزوز تیبا مشهد ۲۹۰۰ اگزوز پژو 2900 رضا مشهد اگزوز تیبا2.کوییک ۳۳۰۰ اگزوز بلوچی پراید۲۱۰۰ اگزوز سورن توربویی۳۵۰۰ اگزوز سمند ساینا سورن و......موجود میباشد با مدیریت استاد بیات (همدانی) چهار راه سیلو به سمت رشیدی روبه رویه استخر خلیج فارس",
+      },
+    ] as const;
+
+    for (const control of controls) {
+      expect(
+        shadowBodyOfferCounterSignal("کاتالیزور", control.body),
+        control.code
+      ).toBe(false);
+    }
+  });
+
 });
