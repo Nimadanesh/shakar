@@ -842,3 +842,4 @@ describe("Issue 16 — earlier locked human-grade source replay (test-only)", ()
   });
 
 });
+// Paired-eval source-only capture is included in the dedicated Issue 16 CI command.
