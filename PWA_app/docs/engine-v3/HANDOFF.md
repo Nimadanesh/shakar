@@ -703,3 +703,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - This changes only the test-local `shadowSpecificSubjectVerdict` helper and its Capture 06C replay expectations. Production `kindLexicon`, parser, pipeline, ranking and eligibility are untouched. The rule is an experiment hypothesis from one graded subtype example, not a general synonym or approved production rule.
 - The earlier shadow replay's C01 false allow is now addressed in the diagnostic prototype; C02/C05 remain rejected and C03/C04 remain allowed. These expected shadow outcomes are still subject to CI validation and should not be interpreted as engine quality uplift.
 - Next: validate the latest focused/full test suites, typecheck and build; then audit a counterexample where a genuine converter offer and catalyst-dust mention coexist in the same title/description. Do not broaden or promote the subtype guard unless paired human grades show it preserves real converter offers. No merge, deployment, or `main` change; PR #43 remains Draft/unmerged.
+
+
+## Issue 16 — shadow replay #7 passed (2026-10-25)
+
+- On head `47e53d8d85c2d37e87cb0f26b5f01cde15158512`, GitHub Actions [Issue 16 Shadow Tests run #7](https://github.com/Nimadanesh/shakar/actions/runs/40107729356) completed successfully.
+- Owner reports the source-backed Capture 06C shadow replay now rejects C02 and preserves C03/C04 as allowed positive controls. Together with the previously repaired C01 dust-subtype counterexample and C05 service-only counterexample, this confirms the current test-local matrix matches the five locked human grades: C01 reject (grade 1), C02 reject (grade 1), C03 allow (grade 3), C04 allow (grade 3), C05 reject (grade 1).
+- This is a passing test-local diagnostic, not production-engine uplift, not paired old-vs-new human evaluation, and not authorization to promote the heuristic. Keep the shadow policy isolated from production; next investigate the narrowest counterfactual/co-occurrence controls and run broader validation before drawing any policy conclusion.
+- PR #43 remains Draft and unmerged. No production ranking/eligibility/parser/HEAD_KIND/PART_MARKERS change, no deployment, and no `main` modification.
