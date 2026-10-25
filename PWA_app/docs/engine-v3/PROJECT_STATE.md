@@ -314,3 +314,15 @@ The E3 allocation question is closed for now: keep the existing allocation; the 
 - X01 is a slash/truncated shop-buyer-like ad with no exchange offer; X02 and X04 are seller offers under `خریدار یخچال`; X03 is a direct retailer under `یخچال معاوضه`. These outcomes support treating the captured results as poor for their exact query contexts, but do not justify expanding a title cue, global buyer rule, hard rejection, or ranking change.
 - The bounded capture did not find a clean barter listing. Reuse the existing human-graded sale/exchange control for that matrix cell; do not repeat the same query path without a new retrieval hypothesis.
 - Next: inspect the existing source-matched role-control fixture/matrix and choose a next task only if it can falsify a specific hypothesis with both positive and negative controls. PR #28 remains draft/unmerged; `main`, deployment, and production behavior remain unchanged.
+
+
+## Superseding verification — 2026-10-26
+
+This section supersedes older "Next action" notes above where they conflict with later dated evidence.
+
+- Audited the complete recursive repository trees: `main` at `10f3c40d70748ff27d6928eaed0875e10dab1c56` has 529 entries and no `.github/workflows/` or Engine V3 evaluation docs; `engine_v3` at `01daf0f695de261da75f1db2c26be57ab80a2bf3` has 651 entries, 15 workflow files, and 74 evaluation documents. The Issue 16 experiment head inspected separately is `8385fa00d629c04e712b818226cdda902ec05124` (671 entries). These are branch-specific trees; do not conflate their artifacts or handoff state.
+- Issue 16 prospective paired-evaluation is **STOP/CLOSED** by `evaluations/ISSUE16-PAIRED-EVAL-CLOSURE-2026-10-25.md`. No further sampling design or live capture is authorized in that block. PR #43 remains Draft/unmerged; `main` and deployment remain untouched. The missing Capture 03 original-message detail and the R05 rationale gap remain unverified; do not reconstruct them from the grade alone.
+- Completed a source/code/test audit of `floorMatFlatbedConflict` and recorded it in `evaluations/E3-FLOORMAT-GUARD-OFFLINE-AUDIT-2026-10-26.md` (commit `9b16c3393893a2b04445929f92777503de1156b0`). The current pipeline regression proves one trailer rejection and explicit `کفی تریلی` preservation, but does not exercise the full cue list against exact source snapshots.
+- Human grade-2 records `gaI0HKIy` and `ga4uraIe` are known from the evaluation document, but their complete frozen descriptions were not found in the checked repository tree/documents. Whether any current cue fires on them is therefore **OPEN / UNVERIFIED**. No cue changes were made; no synthetic paraphrases substituted.
+- Next action: only if the exact snapshots are recovered from their original artifact, replay them through the real guard/pipeline and record the matched cue. Otherwise leave the guard unchanged and move to a separate evidence-backed failure family. Do not claim the cue list is safe merely because no false rejection was demonstrated.
+- No tests were executed in this documentation-only audit. No source behavior, human grade, frozen artifact, production allocation, `main`, or deployment was changed.
