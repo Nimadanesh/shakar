@@ -1079,7 +1079,7 @@ export function assessModelSpecificity(
   const titleTokens = normalizeForMatch(listingTitle ?? "").split(" ").filter(Boolean);
   const titleHeadSkip = new Set([
     ...SUBJECT_SKIP_TOKENS,
-    "انواع", "فوری", "اقساطی", "استوک", "فابریک", "نو", "کامل", "صفر",
+    "خرید", "انواع", "فوری", "اقساطی", "استوک", "فابریک", "نو", "کامل", "صفر",
   ]);
   let titleHeadStart = 0;
   while (titleHeadStart < titleTokens.length && titleHeadSkip.has(titleTokens[titleHeadStart])) {
