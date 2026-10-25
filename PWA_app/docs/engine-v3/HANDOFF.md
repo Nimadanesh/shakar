@@ -759,3 +759,11 @@ The temporary `.github/workflows/engine-v3-issue16-kind-characterization.yml` wa
 - Treat this as one confirmed, source-backed counterexample. CI success is technical validation of the test; it is not paired human-quality evidence or proof of population uplift. Do not count any 05F artifact as a new Issue 16 sample.
 - Next evidence gate before any production proposal: define a source-matched paired comparison with unseen listings, lock human grades before opening the engine comparison, and include explicit item-list offer positives plus repair-context, buyer-seeking, subtype/dust, and service-only negatives. Keep each failure hypothesis separate and report UNKNOWN outside the numeric denominator.
 - PR #43 remains Draft/unmerged. Do not merge, deploy, alter `main`, or change production ranking/eligibility/parser/`HEAD_KIND`/`PART_MARKERS` without explicit authorization.
+
+
+## Latest CI result — 2026-10-25
+
+- Shadow Tests passed on the current head: [run 40187089792](https://github.com/Nimadanesh/shakar/actions/runs/40187089792). The repeated Shadow Tests check [40187084486](https://github.com/Nimadanesh/shakar/actions/runs/40187084486) also passed.
+- [Capture 05F run 40187089797](https://github.com/Nimadanesh/shakar/actions/runs/40187089797) passed and uploaded artifact `12596279386`. It remains a whole-vehicle/control capture, not new Issue 16 evidence.
+- Capture 06A/06B/06C workflows were skipped; there are no new human grades to record. Therefore the next useful step is to prepare the preregistered paired evaluation protocol—not repeat 05F or infer a fix from green CI.
+- PR #43 remains Draft/unmerged; no production code, deployment, or `main` changes are authorized.
