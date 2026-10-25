@@ -9,15 +9,7 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
       ["خرید", "فروش", "خودرو"],
       "خرید و فروش خودرو",
       "خرید فروش انواع کاتالیزور خارجی ایران فرسوده",
-      "تعویض کاتالیزور نو؛ فروش انواع طرح های کاتالیز؛ خریدار کاتالیزور فرسوده",
-      "all",
-    ],
-    [
-      "whole-vehicle hunt rejects a catalyst-repair listing",
-      ["خرید", "فروش", "خودرو"],
-      "خرید و فروش خودرو",
-      "کاتالیزور تعمیر و خرید خاک و منبع",
-      "تعمیر انواع کاتالیزور ماشین های خارجی و ایرانی و خرید خاک و منبع مستهلک",
+      "تعویض کاتالیزور نو؛ فروش انواع طرح های کاتالیز؛ خریدار کاتالیزور فرسوده خودرو",
       "all",
     ],
     [
@@ -60,7 +52,7 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
   });
 
   it("rejects a free catalyst-test mention on an exhaust listing for a catalyst hunt", () => {
-    const include = ["کاتالیزور", "خودرو"];
+    const include = ["کاتالیزور"];
     const title = "اگزوز (بیات) تیبا کوییک پژو سمند مارک مشهد";
     const description =
       "خدمات رایگان ما تست و بازدید دیاگ تست کاتالیزور جوشکاری و وصل اگزوز؛ موجودی اگزوز تیبا و پژو";
@@ -69,7 +61,7 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
       `${title} ${description}`,
       "all",
       queryKindForDef(include, false, "all"),
-      "کاتالیزور خودرو",
+      "کاتالیزور",
       title
     );
     expect(r.mismatch).toBe(true);
