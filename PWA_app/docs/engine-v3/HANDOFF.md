@@ -749,3 +749,11 @@ This section supersedes older "Next action" notes above where they conflict with
 - This is not a replacement for the missing frozen descriptions and does not establish full-listing guard safety. Keep floor-mat guard risk OPEN / UNVERIFIED; do not change cue list or fabricate snapshots.
 - Workflow [40303749947](https://github.com/Nimadanesh/shakar/actions/runs/40303749947) passed all configured steps, including portable hunt/search tests, typecheck, and targeted ESLint.
 - No new captures/grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. `main` remains untouched.
+
+
+## Frozen floor-mat artifact excerpt replay — 2026-10-26
+
+- Recovered and inspected artifact `engine-v3-detail-allocation-multi-4` from [workflow 39740034802](https://github.com/Nimadanesh/shakar/actions/runs/39740034802). It contains exact recorded `title` and `descriptionExcerpt` fields for `gaI0HKIy`, `ga4uraIe`, and `gaYfZnPP`; these are excerpts, not complete original Divar descriptions.
+- Test commit `4b6f74b4884c405ee7b550dc3f21670c9f661799` replaces the earlier empty-description title-only probe with exact frozen artifact excerpts. The two grade-2 witnesses and one INSUFFICIENT witness do not trigger the floor-mat flatbed guard on the text available in the artifact.
+- Workflow [40305241230](https://github.com/Nimadanesh/shakar/actions/runs/40305241230) was queued at the time of the update; verify its conclusion before reporting validation as passed.
+- Full-listing false-rejection risk remains OPEN / UNVERIFIED because original descriptions are truncated to excerpts. Do not modify cues, invent omitted text, create new captures/grades, restart Issue 16, merge, deploy, or transfer to `engine_v3` without explicit approval. `main` remains untouched.
