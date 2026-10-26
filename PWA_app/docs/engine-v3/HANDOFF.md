@@ -733,3 +733,11 @@ This section supersedes older "Next action" notes above where they conflict with
 - Earlier whole-project ESLint [40301340872](https://github.com/Nimadanesh/shakar/actions/runs/40301340872) remains a repository-wide failure from 8 unrelated `react-hooks/set-state-in-effect` errors / 42 warnings; targeted lint success does not make full-project lint green.
 - The validated source/test change remains on experiment commit `63e15a9975fda88a2df7c75962460153d2edb729`; subsequent workflow/docs changes do not alter source behavior. This patch is still an isolated phrase-level diagnostic, not a production ranking/eligibility change.
 - Next safe step: keep the experiment isolated and assess whether any further offline test adds falsifiable value; do not start captures, create human grades, reopen Issue 16, or transfer to `engine_v3` without explicit approval. `main` and deployment remain untouched. Floor-mat guard risk remains OPEN / UNVERIFIED.
+
+
+## Candidate-order countercheck — 2026-10-26
+
+- Expanded the phrase-specificity regression tests so both short-first and long-first candidate orders are exercised for overlapping target-item and attribute phrases.
+- Workflow [40302613310](https://github.com/Nimadanesh/shakar/actions/runs/40302613310) passed on test commit `f1b315c027b24eee0dc52daa860bfb6577086754`: focused tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint all PASS.
+- Scope remains diagnostic-only; this is not evidence of improved live retrieval or ranking. Whole-project ESLint still has the previously documented unrelated errors/warnings.
+- Keep on experiment branch. No new capture or grades, no Issue 16 restart, no transfer to `engine_v3` without explicit approval, no merge or deployment. `main` remains untouched; floor-mat guard remains OPEN / UNVERIFIED.
