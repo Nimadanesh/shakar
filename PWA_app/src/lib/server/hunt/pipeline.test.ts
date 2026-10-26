@@ -2232,6 +2232,40 @@ describe("E3 — pipeline-level floor-mat vs trailer intent guard", () => {
         "کفی مبلی مخصوص نیسان دوگانه دستی"
       )
     ).toBeNull();
+
+    // Frozen source-artifact positive controls: genuine automotive mats must
+    // not be caught by the flatbed cue list.
+    expect(
+      floorMatFlatbedConflict(
+        "کفی ماشین",
+        "کفی سه بعدی و 5بعدی و یک تیکه ماشین",
+        "باسلام و درود به همشهری های گرامی انواع کفی یک تیکه ۳بعدی و ۵بعدی کفی یک تیکه سراسری با نصب یکی از بهترین خدمات برای عایق شدن خودرو در برابر صدا و گرما و سرما کفی های سه بعدی در رنگ بندی برای ست"
+      )
+    ).toBeNull();
+    expect(
+      floorMatFlatbedConflict(
+        "کفی ماشین",
+        "کفی سه بعدی نمدی فابریکی اطلس",
+        "کفی سه بعدی نمدی فابریک اطلس نو استفاده نشده"
+      )
+    ).toBeNull();
+
+    // Frozen source-artifact hard negatives: the current guard should name
+    // an explicit cue for these flatbed/vehicle-equipment listings.
+    expect(
+      floorMatFlatbedConflict(
+        "کفی ماشین",
+        "کفی تریلر",
+        "سلام تریلی چرخ 24"
+      )
+    ).toBe("wrong-kind:floor-mat-vs-flatbed:تریلی");
+    expect(
+      floorMatFlatbedConflict(
+        "کفی ماشین",
+        "فروش جرثقیل ۱۰ تن کفی اطلس سالم",
+        "جرثقیل ۱۰ تن کفی دستگاه اطلس مدل ۵۵ سالم و تمام مصرفی ها به موقع تعویض شده بیمه یک سال دارد مدارک تکمیل و اماده انتقال کاملا سالم به شرط تست آماده به کار آماده برای مصرف کننده موقعیت و بازدید اصفهان"
+      )
+    ).toBe("wrong-kind:floor-mat-vs-flatbed:جرثقیل");
   });
 
   async function completed(def: HuntDefinition) {
