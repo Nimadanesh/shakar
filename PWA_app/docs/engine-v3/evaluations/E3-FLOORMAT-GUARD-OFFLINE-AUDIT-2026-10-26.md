@@ -128,3 +128,20 @@ The other 27 records with a `کفی` match have no matching cue in the frozen ex
 - The broad cue inventory reveals more exercised terms than the seven-record regression set, but it does not establish semantic precision for the other cue families. Several records are trailer/flatbed advertisements by title and naturally collide with multiple cues.
 - **Next step:** reconcile the final logged counts with the report, then decide whether any cue merits counterevidence collection. Do not change cues merely because they fired on trailer-like records; keep correctness assertions limited to the existing human-grounded controls. Keep assertions for correctness limited to the already human-grounded controls; treat other outputs as observations, not newly approved expected outcomes. No cue changes, production behavior changes, human grades, new capture, live retrieval, merge, deployment, or branch transfer are authorized.
 
+
+
+### Recursive branch-tree inventory check — 2026-10-26
+
+A complete recursive Git Trees API response (`truncated: false`) was compared at the observed branch heads:
+
+| Ref | Commit | Tree entries (files + directories) | Blobs/files | Tree objects/directories |
+|---|---|---:|---:|---:|
+| `experiment/e3-floormat-guard-audit-20261026` | `c1097963420c6de265c0db21e2a5d58915c5edf2` | 657 | 526 | 131 |
+| `engine_v3` | `36e9043eaa84d1e145b5bf4655f909eae380052a` | 652 | 522 | 130 |
+| `main` | `10f3c40d70748ff27d6928eaed0875e10dab1c56` | 529 | 403 | 126 |
+
+At the compared trees, experiment vs `engine_v3` has five experiment-only paths (the experiment validation workflow, this E3 exchange audit document, the frozen fixture directory and fixture, and `floorMatFlatbedArchivedReplay.test.ts`), zero engine-only paths, and six shared paths with different blob SHAs. This is consistent with the experiment's changes remaining isolated; it does not by itself prove repository-wide branch ancestry beyond these tree snapshots. The experiment vs `main` tree has 17 shared file paths with differing blob SHAs and no main-only paths; `main` remains at its observed commit and was not modified by this audit.
+
+The expected Engine V3 control documents (`PROJECT_STATE.md`, `DECISIONS.md`, `ROADMAP.md`, `EVALUATION.md`, `BASELINE_AUDIT.md`, `FAILURE_REGISTER.md`, `HANDOFF.md`) and this report, fixture, and replay test all exist in the experiment tree. The standalone `evaluations/ISSUE16-PAIRED-EVAL-CLOSURE-2026-10-25.md` path is absent from this branch's complete recursive tree. `HANDOFF.md` embeds the closure decision and explicitly says Issue 16 remains STOP/CLOSED; preserve that decision and do not reconstruct the missing file or reopen the block.
+
+This inventory is complete for the three observed tree snapshots (`truncated: false`), not a claim that all remote refs or all repository history have been audited. No source code, cue list, grade, capture, live retrieval, merge, deployment, or branch transfer was performed. Floor-mat full-listing false-rejection risk remains **OPEN / UNVERIFIED**.
