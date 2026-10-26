@@ -1,7 +1,7 @@
 # E3 Floor-Mat/Flatbed Guard — Offline Audit
 
 Date: 2026-10-26
-Audited branch/head: `engine_v3` / `01daf0f695de261da75f1db2c26be57ab80a2bf3`
+Implementation snapshot originally audited: `engine_v3` / `01daf0f695de261da75f1db2c26be57ab80a2bf3`. Follow-up test-only evidence is maintained on `experiment/e3-floormat-guard-audit-20261026`.
 Scope: source and regression-test audit only; no runtime behavior changed.
 
 ## Verified implementation
@@ -10,7 +10,7 @@ Scope: source and regression-test audit only; no runtime behavior changed.
 - The guard activates only when the query contains both `کفی` and `ماشین`, and excludes explicit `تریلی`/`تریلر` queries.
 - It requires `کفی` in the listing text and returns a conflict only when one of the closed cue phrases matches.
 - `PWA_app/src/lib/server/hunt/pipeline.ts` invokes the guard at line 719 of the audited source, before the ordinary MUST-completeness decision, so a partial lexical match can be excluded.
-- The current pipeline regression block has two controls: one trailer listing rejected for `کفی ماشین`, and the same kind of listing retained for explicit `کفی تریلی`. These establish the query-boundary behavior, not false-rejection safety across the full cue list.
+- The original pipeline regression block had two synthetic controls: a trailer listing rejected for `کفی ماشین`, and a trailer listing retained for explicit `کفی تریلی`. Later source-artifact excerpt tests expanded the evidence set; neither the synthetic tests nor excerpt tests establish full-listing false-rejection safety across the full cue list.
 
 ## Source-matched human evidence and limits
 
@@ -66,3 +66,20 @@ These remain excerpt-level tests, not full-description replays. They test the ex
 
 
 Final verification: verbatim-excerpt test commit `fecf0910318e37e8da59bdcbdd097e9882af26e3` passed [workflow 40306804900](https://github.com/Nimadanesh/shakar/actions/runs/40306804900). The guard was not changed; this closes only the test-input fidelity/CI step, not the broader false-rejection risk.
+
+
+## Cue-by-cue evidence coverage — 2026-10-26
+
+This is a coverage inventory of the current closed cue list, not a recommendation to expand it. It distinguishes direct source-artifact evidence from cues that have not been exercised by the new frozen-record replay.
+
+| Current cue | Evidence in the frozen excerpt replay | Current conclusion |
+|---|---|---|
+| `تریلی` | Hard negative `gaYDXysD`, title `کفی تریلر`, excerpt `سلام تریلی چرخ 24` | Expected rejection cue asserted. |
+| `تریلر` | Appears in title `کفی تریلر`; guard returns first matching cue `تریلی` from the ordered cue list | Trailer family is covered, but the `تریلر` return value is not independently asserted. |
+| `جرثقیل` | Hard negative `gaYf5rLj` | Expected rejection cue asserted. |
+| `سه محور`, `دو محور`, `رول کش`, `کالابرس`, `ایران کاوه`, `مارال`, `ماموت`, `فوکس شاهنگ`, `آهنکش`, `باربند`, `کانتینربر`, `کانتینر`, `تیغه`, `بالونی`, `حمل بار`, `ماشین باری`, `باربندخاص` | No independently asserted cue-level source-artifact test in this replay | Not validated by this replay; keep unchanged. |
+| `مانیتور`, `هدلایت`, `صوت تصویر`, `سیستم صوتی` | Audio-adjacent grade-2 witness `gaI0HKIy` has title `ضبط  پخش سیستم  باند  کف پوش ماشین`, but its excerpt does not independently prove each cue's behavior | This one listing is not sufficient to validate the full audio cue family; no inference beyond its actual no-conflict assertion. |
+
+The grade-2 service/mat witness `ga4uraIe` also returns no conflict on its frozen excerpt. Positive controls `gagsCTyG` and `gaXjCsU5` remain no-conflict checks. The INSUFFICIENT witness `gaYfZnPP` is explicitly a no-conflict check, not a positive relevance label.
+
+**Next bounded evidence action:** if continuing this audit, retrieve/inspect only already-existing frozen artifact records and map each current cue to a source record where it appears, then replay the existing function without changing cues. Do not create new capture, new human grades, or live requests as a substitute for missing evidence. If no source record supports a cue, record that gap rather than inventing a test fixture.
