@@ -204,3 +204,35 @@ describe("Synthetic counterfactuals — exchange paint polarity (not live Divar 
     });
   });
 });
+
+describe("Phrase specificity — overlapping explicit candidates", () => {
+  it("selects the longest matching target-item phrase regardless of caller order", () => {
+    expect(
+      assessExchangeTargetEvidence(
+        "تریلی معاوضه با کفی سه محور",
+        ["کفی", "کفی سه محور"],
+        ["سه محور"]
+      )
+    ).toMatchObject({
+      status: "supported",
+      targetSide: "requested",
+      itemEvidence: "کفی سه محور",
+      attributeEvidence: "سه محور",
+    });
+  });
+
+  it("selects the longest matching attribute phrase regardless of caller order", () => {
+    expect(
+      assessExchangeTargetEvidence(
+        "موتور معاوضه با پژو ۲۰۶ بدون رنگ",
+        ["پژو ۲۰۶"],
+        ["رنگ", "بدون رنگ"]
+      )
+    ).toMatchObject({
+      status: "supported",
+      targetSide: "requested",
+      itemEvidence: "پژو ۲۰۶",
+      attributeEvidence: "بدون رنگ",
+    });
+  });
+});
