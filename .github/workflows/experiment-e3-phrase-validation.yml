@@ -1,0 +1,60 @@
+name: Experiment E3 Phrase Validation
+
+on:
+  push:
+    branches:
+      - experiment/e3-floormat-guard-audit-20261026
+    paths:
+      - ".github/workflows/experiment-e3-phrase-validation.yml"
+      - "PWA_app/package.json"
+      - "PWA_app/package-lock.json"
+      - "PWA_app/src/lib/server/hunt/**"
+      - "PWA_app/tsconfig.json"
+      - "PWA_app/vitest.config.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: experiment-e3-phrase-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Node 24 focused and portable validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: PWA_app
+    steps:
+      - name: Checkout exact experiment commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Focused exchange evidence tests
+        run: npx vitest run src/lib/server/hunt/exchangeTargetEvidence-brh-run101.test.ts
+
+      - name: Portable hunt/search tests
+        run: >-
+          npx vitest run src/lib/server/hunt
+          --exclude src/lib/server/hunt/contractDeleteAudit.test.ts
+          --exclude src/lib/server/hunt/contractGate.test.ts
+          --exclude src/lib/server/hunt/expAFeatures.test.ts
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: ESLint
+        run: npm run lint
