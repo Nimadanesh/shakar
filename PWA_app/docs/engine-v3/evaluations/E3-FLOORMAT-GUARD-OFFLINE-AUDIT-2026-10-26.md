@@ -49,5 +49,5 @@ Recovered artifact: `engine-v3-detail-allocation-multi-4`, run [39740034802](htt
 
 - Test commit: `4b6f74b4884c405ee7b550dc3f21670c9f661799`.
 - The descriptions are **frozen excerpts only**, not complete original Divar descriptions; no claim is made about omitted text.
-- Workflow [40305241230](https://github.com/Nimadanesh/shakar/actions/runs/40305241230) was queued when this note was written; validation outcome must be checked before treating the test as green.
+- Workflow [40305241230](https://github.com/Nimadanesh/shakar/actions/runs/40305241230) completed successfully: locked install, focused exchange tests, portable hunt/search tests (including the excerpt replay), TypeScript typecheck, and targeted ESLint all PASS.
 - No cue-list change, production behavior change, new capture/grade, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. Full-listing false-rejection risk remains **OPEN / UNVERIFIED**.
