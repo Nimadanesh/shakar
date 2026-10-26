@@ -400,3 +400,10 @@ This is evidence/test work only: no guard cue list or runtime behavior changed. 
 ## Cue-level floor-mat audit continuation — 2026-10-26
 
 The archived `engine-v3-detail-allocation-multi-4` artifact was re-inspected. Its 60 unique `کفی ماشین` source records include examples containing several current flatbed cues beyond the two already asserted as hard-negative controls. The audit report now lists which cues have direct replay coverage and which remain unvalidated. Source presence is not proof of a correct rejection; engine `matchKind`/score are not human grades. Next step is a read-only replay of existing frozen excerpts to record actual first-matched cues, without changing the cue list or creating new grades/captures. The guard remains **OPEN / UNVERIFIED** for false-rejection safety.
+
+
+### Archived floor-mat replay inventory — 2026-10-26
+
+The offline replay inventory in [the E3 floor-mat audit report](./evaluations/E3-FLOORMAT-GUARD-OFFLINE-AUDIT-2026-10-26.md) now records first cue matches from the archived `کفی ماشین` query artifact using a local reproduction of normalization and matching semantics. Record accounting found 79 nested occurrences and 59 distinct source IDs in that query, not the 60 previously reported; this discrepancy is explicitly open for reconciliation. Among 57 excerpts that match `کفی`, 30 returned a current cue and 27 returned none. These are observations, not new human grades or proof of semantic precision, and this offline replay is not yet a TypeScript execution over all records.
+
+No runtime or cue-list change. Keep the full-listing false-rejection risk **OPEN / UNVERIFIED** because the artifact has excerpts rather than full Divar descriptions. No capture, live retrieval, human grading, merge, deployment, or transfer to `engine_v3`; `main` and `engine_v3` remain unchanged.
