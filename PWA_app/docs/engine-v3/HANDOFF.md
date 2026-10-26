@@ -757,3 +757,10 @@ This section supersedes older "Next action" notes above where they conflict with
 - Test commit `4b6f74b4884c405ee7b550dc3f21670c9f661799` replaces the earlier empty-description title-only probe with exact frozen artifact excerpts. The two grade-2 witnesses and one INSUFFICIENT witness do not trigger the floor-mat flatbed guard on the text available in the artifact.
 - Workflow [40305241230](https://github.com/Nimadanesh/shakar/actions/runs/40305241230) completed successfully: locked install, focused exchange tests, portable hunt/search tests (including this excerpt replay), TypeScript typecheck, and targeted ESLint all PASS.
 - Full-listing false-rejection risk remains OPEN / UNVERIFIED because original descriptions are truncated to excerpts. Do not modify cues, invent omitted text, create new captures/grades, restart Issue 16, merge, deploy, or transfer to `engine_v3` without explicit approval. `main` remains untouched.
+
+
+## Experiment handoff — floor-mat guard audit (2026-10-26)
+
+Work is isolated on `experiment/e3-floormat-guard-audit-20261026`; do not move it to `engine_v3` without explicit approval. The expanded frozen-artifact excerpt controls cover two grade-2 mats-related listings, one INSUFFICIENT ambiguous listing, two positive automotive-mat controls, and two hard negatives (trailer and crane/flatbed). The first expanded test commit `5195194a566d0ed7738cc519476125d945e752ea` passed [workflow 40305511188](https://github.com/Nimadanesh/shakar/actions/runs/40305511188). Test excerpt literals were then corrected to preserve punctuation/markers and spacing from the recovered artifact; that follow-up commit requires its own CI confirmation.
+
+No cue-list change, production change, merge, deployment, new human grades, or Issue 16 restart. The original artifact contains title plus description excerpts only, not full Divar descriptions; full-listing false-rejection risk remains **OPEN / UNVERIFIED**. Keep `UNKNOWN` distinct from rejection.
