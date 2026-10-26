@@ -32,3 +32,12 @@ The full frozen title/description snapshots for `gaI0HKIy` and `ga4uraIe` were n
 - Preserve the existing positive controls and the explicit `کفی تریلی` counter-intent.
 - The next evidence action, if the exact snapshots become available from the original artifact, is a test-only replay through the real `floorMatFlatbedConflict`/pipeline path, recording the matched cue (or no match) for each source record. Until then, the cue-list false-rejection risk remains **OPEN / UNVERIFIED**.
 - No production change, merge, deployment, or `main` change was made or authorized by this audit.
+
+
+## Title-only guard probe — 2026-10-26
+
+Added a test using the exact recorded titles for the two grade-2 witnesses (`gaI0HKIy`, `ga4uraIe`) and the INSUFFICIENT witness (`gaYfZnPP), each with an intentionally empty description. All three title-only inputs return no flatbed conflict. This isolates title contribution only; it is **not** a source-matched full-text replay and says nothing about cues that might appear in the missing descriptions.
+
+- Test commit: `e992f4a1ac7c830c0a481e6c63cc4d0c0b63296b`.
+- Workflow [40303749947](https://github.com/Nimadanesh/shakar/actions/runs/40303749947) completed successfully: locked install, focused exchange tests, portable hunt/search tests (including the new title-only probe), TypeScript typecheck, and targeted ESLint all PASS.
+- The full frozen descriptions remain unavailable. Do not infer guard safety from this partial probe; risk remains OPEN / UNVERIFIED. Do not modify the cue list or synthesize missing descriptions.
