@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+import { normalizeForMatch, textMatches } from "@/lib/persianNormalize";
 import { floorMatFlatbedConflict } from "./semantics";
 
 interface FrozenRecord {
@@ -59,6 +60,12 @@ describe("archived کفی ماشین excerpt replay (characterization only)", ()
       "FLOORMAT_ARCHIVED_REPLAY=" +
         JSON.stringify({
           records: outcomes.length,
+          matchedKafiCount: records.filter((record) =>
+            textMatches(
+              normalizeForMatch(`${record.title} ${record.descriptionExcerpt}`),
+              "کفی"
+            )
+          ).length,
           returnedCueCount: outcomes.filter((outcome) => outcome.reason !== null).length,
           firstCueCounts,
           outcomes,
