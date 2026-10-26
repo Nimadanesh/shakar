@@ -2206,6 +2206,31 @@ describe("R7-redteam — adversarial review fixes (2026-10-18)", () => {
 
 
 describe("E3 — pipeline-level floor-mat vs trailer intent guard", () => {
+  it("does not let the known grade-2 titles alone trigger the flatbed guard", async () => {
+    const { floorMatFlatbedConflict } = await import("./semantics");
+
+    // These are exact recorded titles, but the full frozen descriptions are
+    // unavailable. Empty descriptions deliberately test title contribution
+    // only; this is not a substitute for source-matched full-text replay.
+    expect(
+      floorMatFlatbedConflict(
+        "کفی ماشین",
+        "ضبط پخش سیستم باند کف پوش ماشین",
+        ""
+      )
+    ).toBeNull();
+    expect(
+      floorMatFlatbedConflict(
+        "کفی ماشین",
+        "تودوزی.تعمیر صندلی.کفپوش سه بعدی.کفی یه تیکه",
+        ""
+      )
+    ).toBeNull();
+    expect(
+      floorMatFlatbedConflict("کفی ماشین", "کفی مبلی نیسانی", "")
+    ).toBeNull();
+  });
+
   async function completed(def: HuntDefinition) {
     const events: HuntEvent[] = [];
     await runPipeline(def, (e) => events.push(e));
