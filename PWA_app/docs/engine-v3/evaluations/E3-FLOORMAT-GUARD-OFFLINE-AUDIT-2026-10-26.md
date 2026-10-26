@@ -51,3 +51,15 @@ Recovered artifact: `engine-v3-detail-allocation-multi-4`, run [39740034802](htt
 - The descriptions are **frozen excerpts only**, not complete original Divar descriptions; no claim is made about omitted text.
 - Workflow [40305241230](https://github.com/Nimadanesh/shakar/actions/runs/40305241230) completed successfully: locked install, focused exchange tests, portable hunt/search tests (including the excerpt replay), TypeScript typecheck, and targeted ESLint all PASS.
 - No cue-list change, production behavior change, new capture/grade, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. Full-listing false-rejection risk remains **OPEN / UNVERIFIED**.
+
+
+## Expanded frozen-excerpt control replay — 2026-10-26
+
+The pipeline test now covers seven frozen artifact records using their recorded `title` and `descriptionExcerpt` fields, preserving the source excerpt text (including punctuation/markers) rather than normalizing it:
+
+- Grade 2: `gaI0HKIy`, `ga4uraIe` — no flatbed conflict.
+- INSUFFICIENT: `gaYfZnPP` — no conflict; ambiguity remains unknown, not a rejection.
+- Positive automotive-mat controls: `gagsCTyG`, `gaXjCsU5` — no conflict.
+- Hard negatives: `gaYDXysD` (`تریلی`) and `gaYf5rLj` (`جرثقیل`) — the expected explicit cue is returned.
+
+These remain excerpt-level tests, not full-description replays. They test the existing guard only; no cue list or production behavior was changed. Workflow [40305511188](https://github.com/Nimadanesh/shakar/actions/runs/40305511188) passed locked dependency installation, focused tests, portable hunt/search tests, TypeScript, and targeted ESLint on commit `5195194a566d0ed7738cc519476125d945e752ea`. The subsequent verbatim-excerpt correction is being validated separately. Full-listing false-rejection risk remains **OPEN / UNVERIFIED**.
