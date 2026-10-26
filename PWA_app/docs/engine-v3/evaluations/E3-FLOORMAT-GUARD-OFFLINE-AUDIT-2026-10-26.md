@@ -91,7 +91,7 @@ The 59 frozen records with title plus excerpt from the archived JSON artifact in
 
 ### Record accounting
 
-- The first query has 79 occurrences across the nested disagreement/top-20 groups and 59 distinct IDs there. The separate `sampledTail` contains 20 IDs, 19 of which overlap those 59; it adds one more unique ID, so the artifact's query total is **60 unique source IDs**. The tail records contain only title/rank, not a description excerpt. The current text replay therefore covers 59 records with title plus excerpt, not all 60 source IDs.
+- The first query has 79 occurrences across the nested disagreement/top-20 groups and 59 distinct IDs there. The separate `sampledTail` contains 20 IDs, 19 of which overlap those 59; it adds one more unique ID, so the artifact's query total is **60 unique source IDs**. The one tail-only ID is `gaAJZPKP`, title `با کپی کارت ملی ماشینتو ۱۰ماهه روکش کفی کن`; it has only title/rank, not a description excerpt. The current text replay therefore covers 59 records with title plus excerpt, not all 60 source IDs.
 - The real TypeScript `normalizeForMatch`/`textMatches` helpers confirm 57 of the 59 excerpt-bearing records match `کفی`; 2 do not and therefore cannot trigger this guard.
 - The real `floorMatFlatbedConflict` function returns a conflict for 30 records and `null` for 29 records overall. Among the 57 that match `کفی`, 27 return no cue. These are **observed current-rule outcomes**, not labels of relevance or proof that every rejection is correct.
 - The replay uses only the frozen `title` and `descriptionExcerpt` values. It cannot detect cues in omitted full-description text.
