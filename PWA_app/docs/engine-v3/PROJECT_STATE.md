@@ -365,3 +365,11 @@ This section supersedes older next-action text where it conflicts with the dated
 - Follow-up workflow [40301702642](https://github.com/Nimadanesh/shakar/actions/runs/40301702642) passed all configured steps: locked install, focused exchange tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint.
 - The earlier whole-project lint run still fails on 8 unrelated `react-hooks/set-state-in-effect` errors and 42 warnings. Do not label repository-wide lint as clean.
 - Phrase-specificity remains an isolated helper diagnostic with no ranking/eligibility integration. No captures, new human grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3` are authorized. Floor-mat guard false-rejection risk remains OPEN / UNVERIFIED.
+
+
+## Candidate-order countercheck — 2026-10-26
+
+- The phrase-specificity regression tests now exercise both short-first and long-first candidate orders for overlapping target-item and attribute phrases.
+- Workflow [40302613310](https://github.com/Nimadanesh/shakar/actions/runs/40302613310) passed on test commit `f1b315c027b24eee0dc52daa860bfb6577086754`: dependency install, focused tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint.
+- This is a deterministic phrase-selection check only; it does not establish better live retrieval or ranking. Whole-project ESLint remains separately red on 8 unrelated hook-rule errors / 42 warnings.
+- All changes remain on the experiment branch. No capture, new human grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3` without explicit approval. `main` remains untouched; floor-mat guard remains OPEN / UNVERIFIED.
