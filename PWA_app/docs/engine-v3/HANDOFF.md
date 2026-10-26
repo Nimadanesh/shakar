@@ -725,3 +725,11 @@ This section supersedes older "Next action" notes above where they conflict with
 - Workflow [40301340872](https://github.com/Nimadanesh/shakar/actions/runs/40301340872) failed only at whole-project ESLint: 8 `react-hooks/set-state-in-effect` errors in unrelated UI components/hooks and 42 warnings. The two changed exchange-helper files were not implicated by the logged errors.
 - Experiment workflow is being changed to lint the two changed files specifically. Await that run before calling targeted lint verified. Do not call the previous workflow fully green.
 - Keep the patch isolated; no production integration, new captures/grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3` without explicit approval. Floor-mat cue risk remains OPEN / UNVERIFIED.
+
+
+## Final experiment validation — exchange phrase specificity (2026-10-26)
+
+- Follow-up workflow [40301702642](https://github.com/Nimadanesh/shakar/actions/runs/40301702642) completed successfully on `4ff8bc81783477ce6c17c049fb00239db8284d74`: locked dependency install, focused exchange tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint all PASS.
+- Earlier whole-project ESLint [40301340872](https://github.com/Nimadanesh/shakar/actions/runs/40301340872) remains a repository-wide failure from 8 unrelated `react-hooks/set-state-in-effect` errors / 42 warnings; targeted lint success does not make full-project lint green.
+- The validated source/test change remains on experiment commit `63e15a9975fda88a2df7c75962460153d2edb729`; subsequent workflow/docs changes do not alter source behavior. This patch is still an isolated phrase-level diagnostic, not a production ranking/eligibility change.
+- Next safe step: keep the experiment isolated and assess whether any further offline test adds falsifiable value; do not start captures, create human grades, reopen Issue 16, or transfer to `engine_v3` without explicit approval. `main` and deployment remain untouched. Floor-mat guard risk remains OPEN / UNVERIFIED.
