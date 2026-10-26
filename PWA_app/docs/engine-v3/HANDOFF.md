@@ -717,3 +717,11 @@ This section supersedes older "Next action" notes above where they conflict with
 - Audit details and validation boundary: evaluations/E3-EXCHANGE-PHRASE-SPECIFICITY-AUDIT-2026-10-26.md. This does not parse entities, resolve synonyms, infer semantic ownership, or change ranking/eligibility.
 - The baseline workflow only auto-triggers pushes to engine_v3, so no CI result is claimed for this experiment head. Do not push the change to engine_v3 just to trigger CI; use an approved experiment-only validation path first.
 - Next action: validate the focused test and portable hunt suite against the exact experiment head. Until that is possible, treat the change as UNVERIFIED. No new capture or human grades; Issue 16 remains closed; floor-mat guard audit remains open/unverified.
+
+
+## Experiment validation update — exchange phrase specificity (2026-10-26)
+
+- Experiment branch `experiment/e3-floormat-guard-audit-20261026`, commit `63e15a9975fda88a2df7c75962460153d2edb729): focused exchange evidence tests PASS, portable hunt/search tests PASS, TypeScript typecheck PASS.
+- Workflow [40301340872](https://github.com/Nimadanesh/shakar/actions/runs/40301340872) failed only at whole-project ESLint: 8 `react-hooks/set-state-in-effect` errors in unrelated UI components/hooks and 42 warnings. The two changed exchange-helper files were not implicated by the logged errors.
+- Experiment workflow is being changed to lint the two changed files specifically. Await that run before calling targeted lint verified. Do not call the previous workflow fully green.
+- Keep the patch isolated; no production integration, new captures/grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3` without explicit approval. Floor-mat cue risk remains OPEN / UNVERIFIED.
