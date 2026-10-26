@@ -22,7 +22,7 @@ The existing E3 evaluation records the following human judgments for the explici
 - `gaYDXysD`, title `کفی تریلر`: grade 0.
 - `gaYf5rLj`, title `فروش جرثقیل ۱۰ تن کفی اطلس سالم`: grade 0.
 
-The full frozen title/description snapshots for `gaI0HKIy` and `ga4uraIe` were not found in the repository tree or the inspected evaluation documents during this audit. Their recorded grades and titles are available, but their full source text cannot be reconstructed safely from the partial records. Consequently, they cannot yet be replayed as exact source-matched fixtures.
+The original GitHub Actions artifact `engine-v3-detail-allocation-multi-4` (workflow run [39740034802](https://github.com/Nimadanesh/shakar/actions/runs/39740034802)) was recovered and inspected. It contains exact `title` and `descriptionExcerpt` fields for these records, but not complete original Divar descriptions. Those frozen excerpts can be replayed as excerpts; they must not be described as full-text snapshots.
 
 ## Decision
 
@@ -41,3 +41,13 @@ Added a test using the exact recorded titles for the two grade-2 witnesses (`gaI
 - Test commit: `e992f4a1ac7c830c0a481e6c63cc4d0c0b63296b`.
 - Workflow [40303749947](https://github.com/Nimadanesh/shakar/actions/runs/40303749947) completed successfully: locked install, focused exchange tests, portable hunt/search tests (including the new title-only probe), TypeScript typecheck, and targeted ESLint all PASS.
 - The full frozen descriptions remain unavailable. Do not infer guard safety from this partial probe; risk remains OPEN / UNVERIFIED. Do not modify the cue list or synthesize missing descriptions.
+
+
+## Frozen artifact excerpt replay — 2026-10-26
+
+Recovered artifact: `engine-v3-detail-allocation-multi-4`, run [39740034802](https://github.com/Nimadanesh/shakar/actions/runs/39740034802). Added a regression test using the artifact's exact recorded title and `descriptionExcerpt` fields for grade-2 witnesses `gaI0HKIy` and `ga4uraIe`, plus the INSUFFICIENT witness `gaYfZnPP`. None triggers `floorMatFlatbedConflict` for query `کفی ماشین`.
+
+- Test commit: `4b6f74b4884c405ee7b550dc3f21670c9f661799`.
+- The descriptions are **frozen excerpts only**, not complete original Divar descriptions; no claim is made about omitted text.
+- Workflow [40305241230](https://github.com/Nimadanesh/shakar/actions/runs/40305241230) was queued when this note was written; validation outcome must be checked before treating the test as green.
+- No cue-list change, production behavior change, new capture/grade, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. Full-listing false-rejection risk remains **OPEN / UNVERIFIED**.
