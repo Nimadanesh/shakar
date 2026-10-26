@@ -59,9 +59,7 @@ describe("archived کفی ماشین excerpt replay (characterization only)", ()
       "FLOORMAT_ARCHIVED_REPLAY=" +
         JSON.stringify({
           records: outcomes.length,
-          matchedKafi: records.filter((record) =>
-            floorMatFlatbedConflict("کفی ماشین", record.title, record.descriptionExcerpt) !== null
-          ).length,
+          returnedCueCount: outcomes.filter((outcome) => outcome.reason !== null).length,
           firstCueCounts,
           outcomes,
         })
