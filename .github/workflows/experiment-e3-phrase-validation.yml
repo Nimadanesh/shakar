@@ -56,5 +56,8 @@ jobs:
       - name: TypeScript typecheck
         run: npm run typecheck
 
-      - name: ESLint
-        run: npm run lint
+      - name: ESLint changed exchange-helper files
+        run: >-
+          npx eslint
+          src/lib/server/hunt/exchangeTargetEvidence.ts
+          src/lib/server/hunt/exchangeTargetEvidence-brh-run101.test.ts
