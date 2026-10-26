@@ -91,8 +91,8 @@ A read-only offline replay was performed against the already-recovered JSON arti
 
 ### Record accounting
 
-- Traversing the first query's nested artifact groups yielded 79 record occurrences and **59 distinct `sourceAdId` values**. This is a reconciliation discrepancy against the previously described “60 unique records”; do not silently treat it as 60. The other artifact query is outside this `کفی ماشین` replay.
-- 57 of the 59 distinct records contain `کفی` according to the reproduced matching logic; 2 do not and therefore cannot trigger this guard.
+- The first query has 79 occurrences across the nested disagreement/top-20 groups and 59 distinct IDs there. The separate `sampledTail` contains 20 IDs, 19 of which overlap those 59; it adds one more unique ID, so the artifact's query total is **60 unique source IDs**. The tail records contain only title/rank, not a description excerpt. The current text replay therefore covers 59 records with title plus excerpt, not all 60 source IDs.
+- Of the 59 records with title plus excerpt, 57 contain a `کفی` match under the reproduced matching logic; 2 do not and therefore cannot trigger this guard.
 - Of those 57, 30 return a conflict and 27 return no cue. These are **observed current-rule outcomes**, not labels of relevance or proof that every rejection is correct.
 - The replay uses only the frozen `title` and `descriptionExcerpt` values. It cannot detect cues in omitted full-description text.
 
@@ -125,5 +125,5 @@ The other 27 records with a `کفی` match have no matching cue in the frozen ex
 - The known hard negatives still show the expected first cue in this replay: `gaYDXysD` → `تریلی`; `gaYf5rLj` → `جرثقیل`.
 - The grade-2 and INSUFFICIENT witnesses remain excerpt-level no-conflict controls as previously tested by TypeScript tests; do not convert the artifact's engine labels into human judgments.
 - The broad cue inventory reveals more exercised terms than the seven-record regression set, but it does not establish semantic precision for the other cue families. Several records are trailer/flatbed advertisements by title and naturally collide with multiple cues.
-- **Next step:** run a bounded characterization test over the 59 distinct frozen records through the actual exported `floorMatFlatbedConflict` function, recording the returned reason or null. Keep assertions for correctness limited to the already human-grounded controls; treat other outputs as observations, not newly approved expected outcomes. No cue changes, production behavior changes, human grades, new capture, live retrieval, merge, deployment, or branch transfer are authorized.
+- **Next step:** run a bounded characterization test over the 59 frozen records with excerpts through the actual exported `floorMatFlatbedConflict` function, recording the returned reason or null. Keep assertions for correctness limited to the already human-grounded controls; treat other outputs as observations, not newly approved expected outcomes. No cue changes, production behavior changes, human grades, new capture, live retrieval, merge, deployment, or branch transfer are authorized.
 
