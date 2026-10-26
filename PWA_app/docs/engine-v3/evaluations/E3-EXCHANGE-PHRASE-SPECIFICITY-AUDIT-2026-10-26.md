@@ -29,8 +29,13 @@ Workflow: [run 40301340872](https://github.com/Nimadanesh/shakar/actions/runs/40
 - Portable hunt/search tests: PASS.
 - TypeScript typecheck: PASS.
 - Whole-project `npm run lint`: FAIL with 8 errors and 42 warnings. All eight errors are `react-hooks/set-state-in-effect` in unrelated UI components/hooks (`KaminDetailSheet.tsx`, `BottomTabBar.tsx`, `MarketSheet.tsx`, `HomeCityUpdateNudge.tsx`, `HuntProgress.tsx`, `SearchSheet.tsx`, `HomeCityRow.tsx`, `useProfile.ts`). These do not touch the two changed exchange-helper files. The workflow is being narrowed to lint those changed files, while preserving the whole-project lint failure as a known repository-wide validation limitation; this is not represented as a clean full-project lint.
-- Targeted lint after workflow adjustment: pending a new run.
+- Targeted ESLint on `exchangeTargetEvidence.ts` and `exchangeTargetEvidence-brh-run101.test.ts`: PASS in follow-up workflow [run 40301702642](https://github.com/Nimadanesh/shakar/actions/runs/40301702642), on commit `4ff8bc81783477ce6c17c049fb00239db8284d74`.
 
 ## Scope guard
 
 No changes to `engine_v3` or `main`; no PR, merge, deployment, new Divar capture, or new human grades. Do not move the patch to `engine_v3` without explicit user approval. Floor-mat cue risk remains OPEN / UNVERIFIED.
+
+
+## Final validation status — 2026-10-26
+
+The follow-up experiment workflow completed successfully: locked install, focused exchange tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint all PASS. The earlier whole-project ESLint failure remains a separate repository-wide debt (8 unrelated hook-rule errors / 42 warnings); this patch does not claim the whole-project lint gate is clean. Validation ran on source/test commit `63e15a9975fda88a2df7c75962460153d2edb729`; the later workflow-only adjustment is commit `4ff8bc81783477ce6c17c049fb00239db8284d74`. Current branch has documentation-only follow-ups after that run. No production integration or transfer to `engine_v3` is approved.
