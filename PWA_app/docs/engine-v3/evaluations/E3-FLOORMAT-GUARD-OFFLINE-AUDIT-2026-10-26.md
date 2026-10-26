@@ -83,3 +83,47 @@ This is a coverage inventory of the current closed cue list, not a recommendatio
 The grade-2 service/mat witness `ga4uraIe` also returns no conflict on its frozen excerpt. Positive controls `gagsCTyG` and `gaXjCsU5` remain no-conflict checks. The INSUFFICIENT witness `gaYfZnPP` is explicitly a no-conflict check, not a positive relevance label.
 
 **Next bounded evidence action:** if continuing this audit, retrieve/inspect only already-existing frozen artifact records and map each current cue to a source record where it appears, then replay the existing function without changing cues. Do not create new capture, new human grades, or live requests as a substitute for missing evidence. If no source record supports a cue, record that gap rather than inventing a test fixture.
+
+
+## Archived-record cue replay inventory — 2026-10-26
+
+A read-only offline replay was performed against the already-recovered JSON artifact from run [39740034802](https://github.com/Nimadanesh/shakar/actions/runs/39740034802), using the current ordered cue list and a local reproduction of `normalizeForMatch`, token stemming, and `textMatches` behavior. This is a **triage inventory, not a substitute for running the TypeScript function**; the next validation step is to execute the same frozen records through the real function in the repository test environment.
+
+### Record accounting
+
+- Traversing the first query's nested artifact groups yielded 79 record occurrences and **59 distinct `sourceAdId` values**. This is a reconciliation discrepancy against the previously described “60 unique records”; do not silently treat it as 60. The other artifact query is outside this `کفی ماشین` replay.
+- 57 of the 59 distinct records contain `کفی` according to the reproduced matching logic; 2 do not and therefore cannot trigger this guard.
+- Of those 57, 30 return a conflict and 27 return no cue. These are **observed current-rule outcomes**, not labels of relevance or proof that every rejection is correct.
+- The replay uses only the frozen `title` and `descriptionExcerpt` values. It cannot detect cues in omitted full-description text.
+
+### First cue returned by the current ordered list
+
+Counts below are first-match counts, not total cue occurrences. Earlier cues can shadow later cues in the same record.
+
+| First returned cue | Count | Source examples |
+|---|---:|---|
+| `تریلی` | 8 | `gaYDXysD`, `gaYrmNKn`, `gaYDVHLC`, `gaYzEo7U` |
+| `تریلر` | 1 | `gaYrX8Nb` |
+| `سه محور` | 5 | `gaXHuaUP`, `gaXvb8JG`, `gaXrHQw8`, `gaXH2jOT` |
+| `دو محور` | 1 | `gaVnJ_p0` |
+| `رول کش` | 2 | `gaYfYfl4`, `gaVrxMEP` |
+| `کالابرس` | 1 | `gaUv8moP` |
+| `ایران کاوه` | 1 | `gaY3kLJH` |
+| `مارال` | 3 | `gaYT16dC`, `gaw6Mv67`, `gaUrqiuA` |
+| `ماموت` | 2 | `gaYr1vVd`, `gaXHKR8g` |
+| `فوکس شاهنگ` | 1 | `gaYbITzV` |
+| `جرثقیل` | 1 | `gaYf5rLj` |
+| `باربند` | 1 | `gaA3NPYd` |
+| `کانتینر` | 1 | `gaVntodQ` |
+| `حمل بار` | 1 | `gaYX109c` |
+| `ماشین باری` | 1 | `gaVQu1V9` |
+
+The other 27 records with a `کفی` match have no matching cue in the frozen excerpt. The local reproduction produced no first-match hits for `آهنکش`, `کانتینربر`, `تیغه`, `بالونی`, `باربندخاص`, `مانیتور`, `هدلایت`, `صوت تصویر`, or `سیستم صوتی`; this does **not** mean those strings are absent from all records, only that none became the first returned cue in this replay. For example, `تیغه` can be present but shadowed by an earlier cue.
+
+### Interpretation and next action
+
+- The known hard negatives still show the expected first cue in this replay: `gaYDXysD` → `تریلی`; `gaYf5rLj` → `جرثقیل`.
+- The grade-2 and INSUFFICIENT witnesses remain excerpt-level no-conflict controls as previously tested by TypeScript tests; do not convert the artifact's engine labels into human judgments.
+- The broad cue inventory reveals more exercised terms than the seven-record regression set, but it does not establish semantic precision for the other cue families. Several records are trailer/flatbed advertisements by title and naturally collide with multiple cues.
+- **Next step:** run a bounded characterization test over the 59 distinct frozen records through the actual exported `floorMatFlatbedConflict` function, recording the returned reason or null. Keep assertions for correctness limited to the already human-grounded controls; treat other outputs as observations, not newly approved expected outcomes. No cue changes, production behavior changes, human grades, new capture, live retrieval, merge, deployment, or branch transfer are authorized.
+
