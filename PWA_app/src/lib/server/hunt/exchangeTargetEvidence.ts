@@ -65,7 +65,7 @@ export function assessExchangeTargetEvidence(
       phrases
 
         .filter((phrase) => paddedSide.includes(` ${phrase} `))
-        .sort((a, b) => b.length - a.length)[0] ?? null
+        .sort((a, b) => b.length - a.length || (a < b ? -1 : a > b ? 1 : 0))[0] ?? null
     );
   };
 
