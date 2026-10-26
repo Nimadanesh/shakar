@@ -145,3 +145,15 @@ At the compared trees, experiment vs `engine_v3` has five experiment-only paths 
 The expected Engine V3 control documents (`PROJECT_STATE.md`, `DECISIONS.md`, `ROADMAP.md`, `EVALUATION.md`, `BASELINE_AUDIT.md`, `FAILURE_REGISTER.md`, `HANDOFF.md`) and this report, fixture, and replay test all exist in the experiment tree. The standalone `evaluations/ISSUE16-PAIRED-EVAL-CLOSURE-2026-10-25.md` path is absent from this branch's complete recursive tree. `HANDOFF.md` embeds the closure decision and explicitly says Issue 16 remains STOP/CLOSED; preserve that decision and do not reconstruct the missing file or reopen the block.
 
 This inventory is complete for the three observed tree snapshots (`truncated: false`), not a claim that all remote refs or all repository history have been audited. No source code, cue list, grade, capture, live retrieval, merge, deployment, or branch transfer was performed. Floor-mat full-listing false-rejection risk remains **OPEN / UNVERIFIED**.
+
+
+### Source-grounded counterevidence check — `باربند` (2026-10-26)
+
+The original immutable `engine-v3-detail-allocation-multi-4` workflow artifact (run [39740034802](https://github.com/Nimadanesh/shakar/actions/runs/39740034802), artifact `engine-v3-detail-allocation-multi-4`) was downloaded and inspected directly, including the full nested record groups rather than only the replay fixture. Its `کفی ماشین` query contains 60 unique source IDs. The only two source records whose exact title + archived excerpt contain the literal `باربند` are:
+
+| Source ID | Exact title | Archived description excerpt | Evidence status |
+|---|---|---|---|
+| `gaA3NPYd` | `آریسان ۲ با کفی و باربند` | `دوگانه سوز ۴۰۳ ۳۸ تا کار بدون نقطه با کفی و باربند روکش صندلی بیمه ۶ ماه` | Human grade **0** for this floor-mat intent; explicitly documented as a vehicle listing with a flatbed/bar, not a cabin mat. Not a positive counterexample. |
+| `gaVQu1V9` | `کفی ماشین باری باربندخاص` | `از از جنس ضعیف تا جنس یک بازار فقط ازما بخواهید بی رقیب تضمینی و بروز با یکبار خرید جنس اصلی مشتری دایمی ما خواهید شد اعتماد شما بزرگترین سرمایه ماست` | Ungraded lead; title points to `ماشین باری`/cargo-vehicle bed context. No human positive grade or complete detail snapshot was found in the checked frozen evidence. Must not be treated as a positive. |
+
+This exhaustive literal-cue check within that artifact did **not** find a source-grounded positive floor-mat counterexample for `باربند`. The second record is a useful review lead but is not evidence that the guard rejects a genuine cabin-mat listing. The cue must remain unchanged; do not infer its correctness globally from the absence of a counterexample in this small, retrieval-biased artifact. This closes only the bounded counterevidence search over this artifact, not the broader safety question. Full-listing false-rejection risk remains **OPEN / UNVERIFIED**. No synthetic example, new grade, capture, live request, runtime change, merge, deployment, or branch transfer was made.
