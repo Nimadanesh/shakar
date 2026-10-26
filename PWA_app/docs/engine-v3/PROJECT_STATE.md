@@ -388,3 +388,10 @@ This section supersedes older next-action text where it conflicts with the dated
 - Added an excerpt-based guard regression at `4b6f74b4884c405ee7b550dc3f21670c9f661799`. Workflow [40305241230](https://github.com/Nimadanesh/shakar/actions/runs/40305241230) completed successfully: focused tests, portable hunt/search tests, typecheck, and targeted ESLint all PASS.
 - On available frozen excerpts, none of the two grade-2 witnesses or the INSUFFICIENT witness triggers the floor-mat flatbed guard. This narrows the evidence gap but does not prove full-listing safety. Risk remains OPEN / UNVERIFIED.
 - No guard cue change, capture/grade creation, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. `main` remains untouched.
+
+
+## Current experiment note — floor-mat guard (2026-10-26)
+
+The experiment branch `experiment/e3-floormat-guard-audit-20261026` now has source-artifact excerpt controls for two grade-2 witnesses, one INSUFFICIENT/ambiguous witness, two positive floor-mat controls, and two wrong-kind negatives. The first expanded test commit `5195194a566d0ed7738cc519476125d945e752ea` passed [workflow 40305511188](https://github.com/Nimadanesh/shakar/actions/runs/40305511188). A follow-up edit makes the test literals preserve the artifact excerpts verbatim; its CI result is pending.
+
+This is evidence/test work only: no guard cue list or runtime behavior changed. Artifact data are excerpts, not complete original descriptions. False-rejection safety remains **OPEN / UNVERIFIED**. `main` and `engine_v3` are unchanged; no merge/deploy or Issue 16 restart.
