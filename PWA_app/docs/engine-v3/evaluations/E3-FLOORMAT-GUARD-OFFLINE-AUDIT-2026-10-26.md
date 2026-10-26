@@ -87,13 +87,13 @@ The grade-2 service/mat witness `ga4uraIe` also returns no conflict on its froze
 
 ## Archived-record cue replay inventory — 2026-10-26
 
-The 59 frozen records with title plus excerpt from the archived JSON artifact in run [39740034802](https://github.com/Nimadanesh/shakar/actions/runs/39740034802) have now been replayed through the real exported TypeScript `floorMatFlatbedConflict` function in `floorMatFlatbedArchivedReplay.test.ts`. The characterization test passed on commit `91fe5e964bb2cc2ec5b50160bbf62a8847e2ac5e` in [workflow 40309565898](https://github.com/Nimadanesh/shakar/actions/runs/40309565898); the run completed the focused tests, portable hunt/search tests, TypeScript typecheck, and configured targeted ESLint. A follow-up correction to the diagnostic field name passed the same validation in [workflow 40309625470](https://github.com/Nimadanesh/shakar/actions/runs/40309625470). A final refinement adds an explicit `textMatches` count for excerpt-bearing records and is being validated in workflow [40309715648](https://github.com/Nimadanesh/shakar/actions/runs/40309715648).
+The 59 frozen records with title plus excerpt from the archived JSON artifact in run [39740034802](https://github.com/Nimadanesh/shakar/actions/runs/39740034802) have now been replayed through the real exported TypeScript `floorMatFlatbedConflict` function in `floorMatFlatbedArchivedReplay.test.ts`. The characterization test passed on commit `91fe5e964bb2cc2ec5b50160bbf62a8847e2ac5e` in [workflow 40309565898](https://github.com/Nimadanesh/shakar/actions/runs/40309565898); the run completed the focused tests, portable hunt/search tests, TypeScript typecheck, and configured targeted ESLint. A follow-up correction to the diagnostic field name passed the same validation in [workflow 40309625470](https://github.com/Nimadanesh/shakar/actions/runs/40309625470). The final refinement adding an explicit `textMatches` count also passed in [workflow 40309715648](https://github.com/Nimadanesh/shakar/actions/runs/40309715648) on commit `6a0913e6b9c82d3bca5e14e6ac3b99c0b7f55972.
 
 ### Record accounting
 
 - The first query has 79 occurrences across the nested disagreement/top-20 groups and 59 distinct IDs there. The separate `sampledTail` contains 20 IDs, 19 of which overlap those 59; it adds one more unique ID, so the artifact's query total is **60 unique source IDs**. The tail records contain only title/rank, not a description excerpt. The current text replay therefore covers 59 records with title plus excerpt, not all 60 source IDs.
-- Of the 59 records with title plus excerpt, 57 contain a `کفی` match under the reproduced matching logic; 2 do not and therefore cannot trigger this guard.
-- Of those 57, 30 return a conflict and 27 return no cue. These are **observed current-rule outcomes**, not labels of relevance or proof that every rejection is correct.
+- The real TypeScript `normalizeForMatch`/`textMatches` helpers confirm 57 of the 59 excerpt-bearing records match `کفی`; 2 do not and therefore cannot trigger this guard.
+- The real `floorMatFlatbedConflict` function returns a conflict for 30 records and `null` for 29 records overall. Among the 57 that match `کفی`, 27 return no cue. These are **observed current-rule outcomes**, not labels of relevance or proof that every rejection is correct.
 - The replay uses only the frozen `title` and `descriptionExcerpt` values. It cannot detect cues in omitted full-description text.
 
 ### First cue returned by the current ordered list
@@ -118,7 +118,7 @@ Counts below are first-match counts, not total cue occurrences. Earlier cues can
 | `حمل بار` | 1 | `gaYX109c` |
 | `ماشین باری` | 1 | `gaVQu1V9` |
 
-The other 27 records with a `کفی` match have no matching cue in the frozen excerpt. The local reproduction produced no first-match hits for `آهنکش`, `کانتینربر`, `تیغه`, `بالونی`, `باربندخاص`, `مانیتور`, `هدلایت`, `صوت تصویر`, or `سیستم صوتی`; this does **not** mean those strings are absent from all records, only that none became the first returned cue in this replay. For example, `تیغه` can be present but shadowed by an earlier cue.
+The other 27 records with a `کفی` match have no matching cue in the frozen excerpt. The real TypeScript replay produced no first-match hits for `آهنکش`, `کانتینربر`, `تیغه`, `بالونی`, `باربندخاص`, `مانیتور`, `هدلایت`, `صوت تصویر`, or `سیستم صوتی`; this does **not** mean those strings are absent from all records, only that none became the first returned cue in this replay. For example, `تیغه` can be present but shadowed by an earlier cue.
 
 ### Interpretation and next action
 
