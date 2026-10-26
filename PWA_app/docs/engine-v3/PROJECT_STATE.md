@@ -380,3 +380,11 @@ This section supersedes older next-action text where it conflicts with the dated
 - Exact recorded titles for `gaI0HKIy` and `ga4uraIe` (grade 2), plus `gaYfZnPP` (INSUFFICIENT), were tested with an intentionally empty description. None triggers the guard from title alone. This only isolates title contribution; the original frozen descriptions remain unavailable.
 - Workflow [40303749947](https://github.com/Nimadanesh/shakar/actions/runs/40303749947) passed locked install, focused tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint.
 - The full-listing false-rejection risk remains OPEN / UNVERIFIED. No cue-list changes, synthetic replacement snapshots, new capture/grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. `main` remains untouched.
+
+
+## Frozen floor-mat artifact excerpt replay — 2026-10-26
+
+- Recovered the original `engine-v3-detail-allocation-multi-4` artifact from workflow [39740034802](https://github.com/Nimadanesh/shakar/actions/runs/39740034802). It stores exact `title` + `descriptionExcerpt` for `gaI0HKIy`, `ga4uraIe`, and `gaYfZnPP`; these are not complete listing descriptions.
+- Added an excerpt-based guard regression at `4b6f74b4884c405ee7b550dc3f21670c9f661799`. Workflow [40305241230](https://github.com/Nimadanesh/shakar/actions/runs/40305241230) was queued at documentation time; verify before claiming green.
+- On available frozen excerpts, none of the two grade-2 witnesses or the INSUFFICIENT witness triggers the floor-mat flatbed guard. This narrows the evidence gap but does not prove full-listing safety. Risk remains OPEN / UNVERIFIED.
+- No guard cue change, capture/grade creation, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. `main` remains untouched.
