@@ -373,3 +373,10 @@ This section supersedes older next-action text where it conflicts with the dated
 - Workflow [40302613310](https://github.com/Nimadanesh/shakar/actions/runs/40302613310) passed on test commit `f1b315c027b24eee0dc52daa860bfb6577086754`: dependency install, focused tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint.
 - This is a deterministic phrase-selection check only; it does not establish better live retrieval or ranking. Whole-project ESLint remains separately red on 8 unrelated hook-rule errors / 42 warnings.
 - All changes remain on the experiment branch. No capture, new human grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3` without explicit approval. `main` remains untouched; floor-mat guard remains OPEN / UNVERIFIED.
+
+
+## Floor-mat guard title-only probe — 2026-10-26
+
+- Exact recorded titles for `gaI0HKIy` and `ga4uraIe` (grade 2), plus `gaYfZnPP` (INSUFFICIENT), were tested with an intentionally empty description. None triggers the guard from title alone. This only isolates title contribution; the original frozen descriptions remain unavailable.
+- Workflow [40303749947](https://github.com/Nimadanesh/shakar/actions/runs/40303749947) passed locked install, focused tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint.
+- The full-listing false-rejection risk remains OPEN / UNVERIFIED. No cue-list changes, synthetic replacement snapshots, new capture/grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. `main` remains untouched.
