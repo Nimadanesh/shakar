@@ -57,7 +57,16 @@ export function assessExchangeTargetEvidence(
   const findPhrase = (side: string | null, phrases: readonly string[]) => {
     if (side === null) return null;
     const paddedSide = ` ${side} `;
-    return phrases.find((phrase) => paddedSide.includes(` ${phrase} `)) ?? null;
+    // Prefer the most specific exact phrase when caller-supplied candidates
+    // overlap (for example, "کفی" and "کفی سه محور"). This avoids making
+    // evidence selection depend on candidate-array order without adding
+    // stemming, synonym inference, or fuzzy matching.
+    return (
+      phrases
+
+        .filter((phrase) => paddedSide.includes(` ${phrase} `))
+        .sort((a, b) => b.length - a.length)[0] ?? null
+    );
   };
 
   const offeredItem = findPhrase(offered, itemPhrases);
