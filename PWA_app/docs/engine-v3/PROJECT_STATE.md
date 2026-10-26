@@ -419,3 +419,8 @@ The archived floor-mat replay counts reconcile (60 unique source IDs; 59 title+e
 ### `باربند` counterevidence search — bounded result (2026-10-26)
 
 The original `engine-v3-detail-allocation-multi-4` artifact was inspected directly across all 60 unique `کفی ماشین` source records. Only two title+excerpt records contain literal `باربند`: `gaA3NPYd` (`آریسان ۲ با کفی و باربند`), human grade 0 and documented as a vehicle with flatbed/bar; and `gaVQu1V9` (`کفی ماشین باری باربندخاص`), an ungraded cargo-vehicle-bed lead with only a generic excerpt. No source-grounded positive cabin-mat counterexample was found in this artifact. The second record must not be promoted to a positive without a human grade and complete source detail. Do not change `باربند`; the search result is limited to this artifact and cannot prove full-listing safety. Risk remains **OPEN / UNVERIFIED**. No new grades/capture, synthetic data, live request, code change, merge, deployment, or transfer.
+
+
+### Remaining floor-mat cue-family review — 2026-10-26
+
+The existing frozen artifact was re-reviewed for remaining guard cue families. Cargo/flatbed cue hits are in title/excerpt contexts describing trailers, heavy vehicles, cargo beds, or trailer services; the audio cue family has no first-match replay hit, and the existing grade-2 mixed audio/mat witness does not trigger on its frozen excerpt. No source-grounded positive cabin-mat counterexample was established. This is not proof of full-listing safety: excerpts are incomplete, many cargo records are ungraded, and the artifact is retrieval-biased. Keep the guard unchanged and risk **OPEN / UNVERIFIED**. No new capture/grades/live request, code changes, merge, deployment, or transfer; main and engine_v3 remain untouched.
