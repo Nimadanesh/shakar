@@ -741,3 +741,11 @@ This section supersedes older "Next action" notes above where they conflict with
 - Workflow [40302613310](https://github.com/Nimadanesh/shakar/actions/runs/40302613310) passed on test commit `f1b315c027b24eee0dc52daa860bfb6577086754`: focused tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint all PASS.
 - Scope remains diagnostic-only; this is not evidence of improved live retrieval or ranking. Whole-project ESLint still has the previously documented unrelated errors/warnings.
 - Keep on experiment branch. No new capture or grades, no Issue 16 restart, no transfer to `engine_v3` without explicit approval, no merge or deployment. `main` remains untouched; floor-mat guard remains OPEN / UNVERIFIED.
+
+
+## Floor-mat guard title-only probe — 2026-10-26
+
+- Added a bounded test in `pipeline.test.ts` using the exact recorded titles for grade-2 witnesses `gaI0HKIy`, `ga4uraIe`, and the INSUFFICIENT witness `gaYfZnPP`, with empty descriptions to isolate title contribution only. All three do not trigger the guard from title alone.
+- This is not a replacement for the missing frozen descriptions and does not establish full-listing guard safety. Keep floor-mat guard risk OPEN / UNVERIFIED; do not change cue list or fabricate snapshots.
+- Workflow [40303749947](https://github.com/Nimadanesh/shakar/actions/runs/40303749947) passed all configured steps, including portable hunt/search tests, typecheck, and targeted ESLint.
+- No new captures/grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. `main` remains untouched.
