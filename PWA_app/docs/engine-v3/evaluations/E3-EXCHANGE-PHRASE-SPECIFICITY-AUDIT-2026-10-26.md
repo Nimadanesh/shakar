@@ -1,7 +1,7 @@
 # E3 — Exchange evidence phrase specificity audit
 
-Date: 2026-10-26
-Status: **narrow implementation change committed on experiment branch; tests added; execution not yet verified**
+Date: 2026-10-26  
+Status: **focused and portable tests PASS; typecheck PASS; targeted lint pending on latest workflow run**
 
 ## Observed limitation
 
@@ -10,22 +10,27 @@ Status: **narrow implementation change committed on experiment branch; tests add
 ## Bounded change
 
 - `findPhrase` now collects exact whole-phrase matches and selects the longest match.
-- Equal-length matches are selected deterministically by code-point ordering, avoiding array-order dependence. This tie-break is only a deterministic reporting choice; it is not semantic disambiguation.
+- Equal-length matches are selected deterministically by code-point ordering. This is a deterministic reporting choice, not semantic disambiguation.
 - No stemming, synonym expansion, fuzzy matching, entity parsing, rank adjustment, eligibility change, or production pipeline integration was added.
-- Two regression tests were added: overlapping target-item phrases and overlapping required-attribute phrases. Both assert that the longer phrase is selected even when the shorter candidate appears first.
+- Two regression tests cover overlapping target-item phrases and overlapping required-attribute phrases, asserting that the longer phrase wins regardless of candidate-array order.
 
 ## Evidence and boundaries
 
-- Existing frozen BRH controls remain P06 (grade 3, `تریلی بیات معاوضه با کفی سه محور`) and P07 (grade 2, `کفی اطلس ۱۲۶۰ معاوضه با تانکر سه محور تمیز`). This change does not alter their human grades.
-- The new tests use the same already-present helper/test harness and synthetic or frozen title-level examples; they do not constitute new live capture or human evaluation.
+- Existing frozen BRH controls remain P06 (grade 3, `تریلی بیات معاوضه با کفی سه محور`) and P07 (grade 2, `کفی اطلس ۱۲۶۰ معاوضه با تانکر سه محور تمیز`). Human grades were not changed.
+- Tests use existing helper/test infrastructure and synthetic or frozen title-level examples. They are not new live capture or human evaluation.
 - The helper remains phrase-level diagnostics. A longest phrase match does not prove that the phrase list is complete or that an attribute semantically belongs to a particular real-world entity.
 
-## Validation status
+## Validation on experiment commit `63e15a9975fda88a2df7c75962460153d2edb729`
 
-- Source and test edits are committed to `experiment/e3-floormat-guard-audit-20261026` only.
-- Tests have **not** been executed in this session. The repository baseline workflow's push trigger is restricted to `engine_v3`; no experiment-branch workflow run is claimed. Historical CI results do not validate this new commit.
-- Next safe validation is to run the focused `exchangeTargetEvidence-brh-run101.test.ts` test and then the portable hunt suite on this exact head, using an approved experiment-branch validation path. Do not move the change to `engine_v3` without explicit user approval.
+Workflow: [run 40301340872](https://github.com/Nimadanesh/shakar/actions/runs/40301340872).
+
+- Locked dependency install: PASS.
+- Focused `exchangeTargetEvidence-brh-run101.test.ts`: PASS.
+- Portable hunt/search tests: PASS.
+- TypeScript typecheck: PASS.
+- Whole-project `npm run lint`: FAIL with 8 errors and 42 warnings. All eight errors are `react-hooks/set-state-in-effect` in unrelated UI components/hooks (`KaminDetailSheet.tsx`, `BottomTabBar.tsx`, `MarketSheet.tsx`, `HomeCityUpdateNudge.tsx`, `HuntProgress.tsx`, `SearchSheet.tsx`, `HomeCityRow.tsx`, `useProfile.ts`). These do not touch the two changed exchange-helper files. The workflow is being narrowed to lint those changed files, while preserving the whole-project lint failure as a known repository-wide validation limitation; this is not represented as a clean full-project lint.
+- Targeted lint after workflow adjustment: pending a new run.
 
 ## Scope guard
 
-No changes to `engine_v3` or `main`; no PR, merge, deployment, new Divar capture, or new human grades.
+No changes to `engine_v3` or `main`; no PR, merge, deployment, new Divar capture, or new human grades. Do not move the patch to `engine_v3` without explicit user approval. Floor-mat cue risk remains OPEN / UNVERIFIED.
