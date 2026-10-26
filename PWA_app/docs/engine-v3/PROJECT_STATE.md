@@ -351,3 +351,10 @@ This section supersedes older next-action text where it conflicts with the dated
 - Added regression tests for overlapping item and attribute phrase candidates. The tests have not been executed in this session; mark the patch UNVERIFIED until focused and portable hunt tests run on the exact head.
 - Details: `evaluations/E3-EXCHANGE-PHRASE-SPECIFICITY-AUDIT-2026-10-26.md`. Baseline workflow auto-trigger is restricted to `engine_v3`; no CI result is claimed for the experiment branch.
 - Keep ranking and eligibility unchanged. No new live capture, no new grades, no Issue 16 restart. Floor-mat cue risk remains OPEN / UNVERIFIED. Explicit user approval is required before any transfer to `engine_v3`.
+
+
+## Experiment validation update — exchange phrase specificity (2026-10-26)
+
+- On `experiment/e3-floormat-guard-audit-20261026`, workflow [40301340872](https://github.com/Nimadanesh/shakar/actions/runs/40301340872) passed dependency install, focused exchange tests, portable hunt/search tests, and TypeScript typecheck.
+- Whole-project ESLint failed on 8 unrelated UI/hook `react-hooks/set-state-in-effect` errors and 42 warnings. A follow-up run will use targeted ESLint on `exchangeTargetEvidence.ts` and its regression test; until then, targeted lint remains pending.
+- The phrase-specificity patch remains a bounded helper diagnostic only. No ranking/eligibility integration, new capture/grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3` is authorized. Floor-mat guard false-rejection risk remains OPEN / UNVERIFIED.
