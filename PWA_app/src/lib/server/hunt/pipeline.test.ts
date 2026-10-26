@@ -2206,28 +2206,31 @@ describe("R7-redteam — adversarial review fixes (2026-10-18)", () => {
 
 
 describe("E3 — pipeline-level floor-mat vs trailer intent guard", () => {
-  it("does not let the known grade-2 titles alone trigger the flatbed guard", async () => {
+  it("does not let source-matched grade-2 excerpts trigger the flatbed guard", async () => {
     const { floorMatFlatbedConflict } = await import("./semantics");
 
-    // These are exact recorded titles, but the full frozen descriptions are
-    // unavailable. Empty descriptions deliberately test title contribution
-    // only; this is not a substitute for source-matched full-text replay.
+    // Exact title + descriptionExcerpt fields from the frozen E3 artifact.
+    // These are excerpts, not complete original Divar descriptions.
     expect(
       floorMatFlatbedConflict(
         "کفی ماشین",
-        "ضبط پخش سیستم باند کف پوش ماشین",
-        ""
+        "ضبط  پخش سیستم  باند  کف پوش ماشین",
+        "رادیو هرم یک دلخوشی کوچک در این هیاهوی گرانی و آشفته بازار خرید راحت با نصب حرفه ای و آموزش و تست رایگان تحویل مشتری عزیز داده میشود بلند گو ی ماشین بیضی و گرد از ۲۵۰۰ت دگلس فلش خور با"
       )
     ).toBeNull();
     expect(
       floorMatFlatbedConflict(
         "کفی ماشین",
         "تودوزی.تعمیر صندلی.کفپوش سه بعدی.کفی یه تیکه",
-        ""
+        "با سلام مجموعه ای از بهترین ها این جاست تقویت و برطرف کردن گودی صندلی به صورت فابریک تمامی خودروهای ایرانی هم سایپا هم ایران خودرو نمد کاپوت تمام ماشین های ایرانی با نصب رایگان ۶۰۰ تعمیر صندلی تمام"
       )
     ).toBeNull();
     expect(
-      floorMatFlatbedConflict("کفی ماشین", "کفی مبلی نیسانی", "")
+      floorMatFlatbedConflict(
+        "کفی ماشین",
+        "کفی مبلی نیسانی",
+        "کفی مبلی مخصوص نیسان دوگانه دستی"
+      )
     ).toBeNull();
   });
 
