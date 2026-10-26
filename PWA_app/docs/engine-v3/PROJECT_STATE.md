@@ -358,3 +358,10 @@ This section supersedes older next-action text where it conflicts with the dated
 - On `experiment/e3-floormat-guard-audit-20261026`, workflow [40301340872](https://github.com/Nimadanesh/shakar/actions/runs/40301340872) passed dependency install, focused exchange tests, portable hunt/search tests, and TypeScript typecheck.
 - Whole-project ESLint failed on 8 unrelated UI/hook `react-hooks/set-state-in-effect` errors and 42 warnings. A follow-up run will use targeted ESLint on `exchangeTargetEvidence.ts` and its regression test; until then, targeted lint remains pending.
 - The phrase-specificity patch remains a bounded helper diagnostic only. No ranking/eligibility integration, new capture/grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3` is authorized. Floor-mat guard false-rejection risk remains OPEN / UNVERIFIED.
+
+
+## Final experiment validation — exchange phrase specificity (2026-10-26)
+
+- Follow-up workflow [40301702642](https://github.com/Nimadanesh/shakar/actions/runs/40301702642) passed all configured steps: locked install, focused exchange tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint.
+- The earlier whole-project lint run still fails on 8 unrelated `react-hooks/set-state-in-effect` errors and 42 warnings. Do not label repository-wide lint as clean.
+- Phrase-specificity remains an isolated helper diagnostic with no ranking/eligibility integration. No captures, new human grades, Issue 16 restart, merge, deployment, or transfer to `engine_v3` are authorized. Floor-mat guard false-rejection risk remains OPEN / UNVERIFIED.
