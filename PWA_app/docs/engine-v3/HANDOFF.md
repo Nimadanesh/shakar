@@ -710,3 +710,10 @@ This section supersedes older "Next action" notes above where they conflict with
 - Next safe action: keep the helper isolated. Any further work should be a narrow test/design audit of explicit phrase-list failure modes using the already frozen P06/P07 controls, not another live capture, new grades, a global exchange penalty, or production integration. Preserve UNKNOWN as distinct from supported/contradicted.
 - The floor-mat cue audit remains OPEN / UNVERIFIED for the two grade-2 listings with missing complete frozen descriptions. Do not alter its cue list unless the exact original snapshots are recovered.
 - All changes in this continuation are documentation-only on experiment/e3-floormat-guard-audit-20261026; no changes to engine_v3, main, merges, or deployment.
+## Exchange phrase-specificity follow-up (2026-10-26)
+
+- Found and patched a narrow diagnostic weakness in exchangeTargetEvidence.ts: matching previously selected the first matching caller-supplied phrase, making reported evidence depend on candidate-array order. It now chooses the longest exact whole-phrase match, with a deterministic code-point tie-break for equal lengths.
+- Added two regression tests for overlapping item phrases and overlapping attribute phrases in exchangeTargetEvidence-brh-run101.test.ts. These tests are committed but have NOT been executed in this session.
+- Audit details and validation boundary: evaluations/E3-EXCHANGE-PHRASE-SPECIFICITY-AUDIT-2026-10-26.md. This does not parse entities, resolve synonyms, infer semantic ownership, or change ranking/eligibility.
+- The baseline workflow only auto-triggers pushes to engine_v3, so no CI result is claimed for this experiment head. Do not push the change to engine_v3 just to trigger CI; use an approved experiment-only validation path first.
+- Next action: validate the focused test and portable hunt suite against the exact experiment head. Until that is possible, treat the change as UNVERIFIED. No new capture or human grades; Issue 16 remains closed; floor-mat guard audit remains open/unverified.
