@@ -345,3 +345,9 @@ This section supersedes older next-action text where it conflicts with the dated
 - No code or test changes were made in this continuation review, and no tests were run. Historical CI outcomes are not current-head validation.
 - Next: keep production behavior unchanged and perform only a bounded offline design/test audit of the isolated exchange evidence helper against existing frozen P06/P07 cases. Do not create new captures or grades. Continue to require explicit user approval before moving any experiment-branch changes to engine_v3.
 - Current experiment branch: experiment/e3-floormat-guard-audit-20261026. All new code/documentation remains on this branch pending approval; main, engine_v3, merges, and deployment are untouched by this continuation.
+## Exchange phrase-specificity patch — validation pending (2026-10-26)
+
+- On the experiment branch only, `assessExchangeTargetEvidence` now selects the longest exact phrase among matches and uses a deterministic code-point tie-break for equal lengths. This removes candidate-array-order dependence from the reported phrase; it does not resolve synonyms or establish semantic entity/attribute ownership.
+- Added regression tests for overlapping item and attribute phrase candidates. The tests have not been executed in this session; mark the patch UNVERIFIED until focused and portable hunt tests run on the exact head.
+- Details: `evaluations/E3-EXCHANGE-PHRASE-SPECIFICITY-AUDIT-2026-10-26.md`. Baseline workflow auto-trigger is restricted to `engine_v3`; no CI result is claimed for the experiment branch.
+- Keep ranking and eligibility unchanged. No new live capture, no new grades, no Issue 16 restart. Floor-mat cue risk remains OPEN / UNVERIFIED. Explicit user approval is required before any transfer to `engine_v3`.
