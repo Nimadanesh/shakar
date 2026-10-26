@@ -1,7 +1,7 @@
 # E3 — Exchange evidence phrase specificity audit
 
 Date: 2026-10-26  
-Status: **focused and portable tests PASS; typecheck PASS; targeted lint pending on latest workflow run**
+Status: **both candidate orders covered; focused and portable tests PASS; typecheck PASS; targeted lint PASS**
 
 ## Observed limitation
 
@@ -39,3 +39,14 @@ No changes to `engine_v3` or `main`; no PR, merge, deployment, new Divar capture
 ## Final validation status — 2026-10-26
 
 The follow-up experiment workflow completed successfully: locked install, focused exchange tests, portable hunt/search tests, TypeScript typecheck, and targeted ESLint all PASS. The earlier whole-project ESLint failure remains a separate repository-wide debt (8 unrelated hook-rule errors / 42 warnings); this patch does not claim the whole-project lint gate is clean. Validation ran on source/test commit `63e15a9975fda88a2df7c75962460153d2edb729`; the later workflow-only adjustment is commit `4ff8bc81783477ce6c17c049fb00239db8284d74`. Current branch has documentation-only follow-ups after that run. No production integration or transfer to `engine_v3` is approved.
+
+
+## Candidate-order countercheck — 2026-10-26
+
+The original regression tests exercised only the short-phrase-first order, despite claiming order independence. Expanded both tests to run both permutations for overlapping target-item phrases (`کفی` / `کفی سه محور`) and required-attribute phrases (`رنگ` / `بدون رنگ`).
+
+- Commit: `f1b315c027b24eee0dc52daa860bfb6577086754`.
+- Workflow [40302613310](https://github.com/Nimadanesh/shakar/actions/runs/40302613310): PASS — locked install, focused tests, portable hunt/search tests, TypeScript typecheck, targeted ESLint.
+- This verifies only deterministic phrase selection under the two candidate orders. It does not validate phrase-list completeness, semantic ownership, retrieval quality, or user-visible ranking.
+- Whole-project ESLint remains separately failing with 8 unrelated `react-hooks/set-state-in-effect` errors and 42 warnings (see earlier validation record).
+- No production integration, new capture, new human grade, Issue 16 restart, merge, deployment, or transfer to `engine_v3`. The floor-mat guard remains OPEN / UNVERIFIED.
