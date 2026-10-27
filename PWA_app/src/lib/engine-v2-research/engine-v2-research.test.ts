@@ -54,16 +54,20 @@ describe("deterministic Persian canonicalization C1-C9", () => {
     expect(canonicalizeForMatch("PlayStation سونی").tokens).toEqual(["playstation", "سونی"]);
   });
 
-  it("keeps C9 disabled for matching after frozen-corpus collisions", () => {
-    const corpus = new Set(["ماشین", "کتاب", "خوب"]);
-    for (const word of ["ماشینها", "ماشینهای", "کتابتر", "خوبترین"]) {
+  it("activates C9a plural folding while keeping C9b comparative/superlative audit-only", () => {
+    const corpus = new Set(["ماشین", "کتاب", "خوب", "بزرگ", "ارزان"]);
+    for (const word of ["ماشینها", "ماشینهای"]) {
+      expect(stripClosedMorpheme(word, corpus)).toBe("ماشین");
+      expect(canonicalizeForMatch(word, { corpusTokens: corpus }).canonical).toBe("ماشین");
+    }
+    for (const word of ["کتابتر", "خوبترین", "بزرگترین", "ارزانتر"]) {
       expect(stripClosedMorpheme(word, corpus)).toBe(word);
       expect(canonicalizeForMatch(word, { corpusTokens: corpus }).canonical).toBe(word);
     }
     expect(stripClosedMorpheme("ماشینها", new Set())).toBe("ماشینها");
   });
 
-  it("keeps protected forms and all suffix forms unchanged while C9 is disabled", () => {
+  it("keeps protected forms, never strips standalone ی, and requires an observed base for C9a", () => {
     const corpus = new Set(["تن", "به", "به", "بیش", "کم", "علی", "کتاب"]);
     for (const word of ["تنها", "بهتر", "بهترین", "بیشتر", "کمتر"]) {
       expect(stripClosedMorpheme(word, corpus)).toBe(word);
@@ -78,7 +82,10 @@ describe("deterministic Persian canonicalization C1-C9", () => {
     ]);
     expect(findC9FoldCollisions(["آباد", "اباد"])).toEqual([]);
     expect(findC9FoldCollisions(["کتاب", "کتابها"])).toEqual([
-      { canonical: "کتاب", originals: ["کتاب", "کتابها"], preC9Forms: ["کتاب", "کتابها"] },
+      { canonical: "کتاب", originals: ["کتاب", "کتابها"], preC9Forms: ["کتاب", "کتابها"], suffixClass: "C9a" },
+    ]);
+    expect(findC9FoldCollisions(["بزرگ", "بزرگترین"])).toEqual([
+      { canonical: "بزرگ", originals: ["بزرگ", "بزرگترین"], preC9Forms: ["بزرگ", "بزرگترین"], suffixClass: "C9b" },
     ]);
     // If the remainder is not independently observed, C9 must not fold.
     expect(findC9FoldCollisions(["کتابها"])).toEqual([]);
