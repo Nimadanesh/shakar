@@ -1,3 +1,5 @@
+> **یادداشتِ تاریخی — ۲۰۲۶-۱۰-۲۷:** این سند، تصویری از یک مقطع میانی است. تصمیمِ تفکیک C9a/C9b، کامیتِ داده، گره‌های ۱ تا ۵ و گزارشِ گیت جای این وضعیت را گرفته‌اند. مرجع فعلی: `GATE-C9-AUDIT-REPORT.md`، داده‌های منجمد و رأی گیت. این سند را به‌عنوان وضعیت فعلی نخوانید.
+
 # Engine V2 Research — Stage 2 coverage status
 
 Status: BLOCKED for the full 70-hunt coverage gate; no hunt contracts were fabricated.
