@@ -29,7 +29,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "دوچرخه بچه‌گانه و نه برقی"
+            "دوچرخه بچه‌گانه",
+            "برقی"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -39,12 +40,22 @@
         {
           "kind": "location",
           "values": [
-            "ترجیحاً تهران زیر ۱۵ میلیون"
+            "تهران"
           ],
           "polarity": "must",
           "hardness": "soft",
           "status": "confirmed",
-          "sourcePhrase": "ترجیحاً تهران زیر ۱۵ میلیون."
+          "sourcePhrase": "ترجیحاً تهران"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "زیر ۱۵ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "زیر ۱۵ میلیون"
         }
       ],
       "transactions": {
@@ -55,14 +66,14 @@
       "location": {
         "value": "تهران",
         "status": "confirmed",
-        "sourcePhrase": "تهران"
+        "sourcePhrase": "ترجیحاً تهران"
       },
       "price": {
         "min": null,
         "max": null,
-        "currency": "تومان",
-        "status": "confirmed",
-        "sourcePhrase": "زیر ۱۵ میلیون"
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -122,8 +133,8 @@
         "min": null,
         "max": null,
         "currency": null,
-        "status": "confirmed",
-        "sourcePhrase": "حداقل ۲ اسب بخار"
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -151,7 +162,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "فت و نه پرو"
+            "فت",
+            "پرو"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -191,7 +203,7 @@
       "schemaVersion": "2.0",
       "huntId": "H04",
       "entity": {
-        "kind": "service",
+        "kind": "commodity",
         "values": [
           "گیتار آکوستیک یا کلاسیک سالم با کیف"
         ],
@@ -202,7 +214,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "گیتار برقی و نه اسباب‌بازی"
+            "گیتار برقی",
+            "اسباب‌بازی"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -231,11 +244,9 @@
         }
       ],
       "transactions": {
-        "values": [
-          "service"
-        ],
-        "status": "confirmed",
-        "sourcePhrase": "کلاس"
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
       },
       "location": {
         "value": null,
@@ -245,9 +256,9 @@
       "price": {
         "min": null,
         "max": null,
-        "currency": "تومان",
-        "status": "confirmed",
-        "sourcePhrase": "زیر ۵ میلیون"
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -297,15 +308,15 @@
         "min": null,
         "max": null,
         "currency": null,
-        "status": "confirmed",
-        "sourcePhrase": "۲۰ تا ۴۰ کیلو"
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
       "schemaVersion": "2.0",
       "huntId": "H06",
       "entity": {
-        "kind": "commodity",
+        "kind": "service",
         "values": [
           "لوله‌بازکنی فوری در محل"
         ],
@@ -335,9 +346,11 @@
         }
       ],
       "transactions": {
-        "values": [],
-        "status": "unknown",
-        "sourcePhrase": null
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "لوله‌بازکنی"
       },
       "location": {
         "value": "تهران یا اطراف",
@@ -356,7 +369,7 @@
       "schemaVersion": "2.0",
       "huntId": "H07",
       "entity": {
-        "kind": "commodity",
+        "kind": "service",
         "values": [
           "قالی‌شویی در محل یا کارخانه"
         ],
@@ -396,9 +409,11 @@
         }
       ],
       "transactions": {
-        "values": [],
-        "status": "unknown",
-        "sourcePhrase": null
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "قالی‌شویی"
       },
       "location": {
         "value": "تهران",
@@ -459,9 +474,9 @@
       "price": {
         "min": null,
         "max": null,
-        "currency": "تومان",
-        "status": "confirmed",
-        "sourcePhrase": "زیر ۲۵ میلیون"
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -489,7 +504,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "معمولی و نه پروژکتور"
+            "معمولی",
+            "پروژکتور"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -540,7 +556,8 @@
         {
           "kind": "condition",
           "values": [
-            "نو یا در حد نو"
+            "نو",
+            "در حد نو"
           ],
           "polarity": "must",
           "hardness": "soft",
@@ -601,7 +618,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "دوربین کامپکت و نه گوشی"
+            "دوربین کامپکت",
+            "گوشی"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -632,9 +650,9 @@
       "price": {
         "min": null,
         "max": null,
-        "currency": "تومان",
-        "status": "confirmed",
-        "sourcePhrase": "زیر ۱۵ میلیون"
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -662,7 +680,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "دورگه و نه بیمار"
+            "دورگه",
+            "بیمار"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -776,16 +795,6 @@
         {
           "kind": "descriptor",
           "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
-        {
-          "kind": "descriptor",
-          "values": [
             "اجاق سفری"
           ],
           "polarity": "mustNot",
@@ -888,9 +897,9 @@
       "price": {
         "min": null,
         "max": null,
-        "currency": "تومان",
-        "status": "confirmed",
-        "sourcePhrase": "زیر ۱۰ میلیون"
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -1054,8 +1063,8 @@
         "min": null,
         "max": null,
         "currency": null,
-        "status": "confirmed",
-        "sourcePhrase": "بالای ۲۰۰۰ وات"
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -1176,7 +1185,7 @@
       "schemaVersion": "2.0",
       "huntId": "H21",
       "entity": {
-        "kind": "service",
+        "kind": "commodity",
         "values": [
           "فرش ماشینی ۱۲ متری طرح مدرن یا کلاسیک"
         ],
@@ -1197,7 +1206,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "دستباف و نه موکت"
+            "دستباف",
+            "موکت"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -1207,32 +1217,40 @@
         {
           "kind": "location",
           "values": [
-            "ترجیحاً تهران زیر ۱۰ میلیون"
+            "تهران"
           ],
           "polarity": "must",
           "hardness": "soft",
           "status": "confirmed",
-          "sourcePhrase": "ترجیحاً تهران زیر ۱۰ میلیون."
+          "sourcePhrase": "ترجیحاً تهران"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "زیر ۱۰ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "زیر ۱۰ میلیون"
         }
       ],
       "transactions": {
-        "values": [
-          "service"
-        ],
-        "status": "confirmed",
-        "sourcePhrase": "کلاس"
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
       },
       "location": {
         "value": "تهران",
         "status": "confirmed",
-        "sourcePhrase": "تهران"
+        "sourcePhrase": "ترجیحاً تهران"
       },
       "price": {
         "min": null,
         "max": null,
-        "currency": "تومان",
-        "status": "confirmed",
-        "sourcePhrase": "زیر ۱۰ میلیون"
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -1352,7 +1370,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "میز تحریر و نه فلزی ساده"
+            "میز تحریر",
+            "فلزی ساده"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -1413,16 +1432,6 @@
         {
           "kind": "descriptor",
           "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
-        {
-          "kind": "descriptor",
-          "values": [
             "صندلی ماشین بچه"
           ],
           "polarity": "mustNot",
@@ -1464,9 +1473,9 @@
       "price": {
         "min": null,
         "max": null,
-        "currency": "تومان",
-        "status": "confirmed",
-        "sourcePhrase": "زیر ۸ میلیون"
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -1588,7 +1597,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "کرکره و نه تور ساده"
+            "کرکره",
+            "تور ساده"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -1774,9 +1784,9 @@
       "price": {
         "min": null,
         "max": null,
-        "currency": "تومان",
-        "status": "confirmed",
-        "sourcePhrase": "زیر ۴ میلیون"
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -1794,7 +1804,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "لباس ورزشی و نه مانتو اداری"
+            "لباس ورزشی",
+            "مانتو اداری"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -1907,7 +1918,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "کبوتر و نه طوطی بزرگ"
+            "کبوتر",
+            "طوطی بزرگ"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -1974,9 +1986,9 @@
         "sourcePhrase": "اجاره"
       },
       "location": {
-        "value": "شمال تهران",
+        "value": "شمال تهران یا اطراف",
         "status": "confirmed",
-        "sourcePhrase": "شمال تهران"
+        "sourcePhrase": "شمال تهران یا اطراف"
       },
       "price": {
         "min": null,
@@ -1998,16 +2010,6 @@
         "sourcePhrase": "اتو بخار ایستاده یا دستی فیلیپس یا بوش،"
       },
       "slots": [
-        {
-          "kind": "descriptor",
-          "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
         {
           "kind": "descriptor",
           "values": [
@@ -2059,16 +2061,6 @@
         "sourcePhrase": "میز تلویزیون یا استند TV چوبی مدرن،"
       },
       "slots": [
-        {
-          "kind": "descriptor",
-          "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
         {
           "kind": "descriptor",
           "values": [
@@ -2288,16 +2280,6 @@
         {
           "kind": "descriptor",
           "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
-        {
-          "kind": "descriptor",
-          "values": [
             "آسیاب کوچک قهوه"
           ],
           "polarity": "mustNot",
@@ -2349,7 +2331,8 @@
         {
           "kind": "condition",
           "values": [
-            "نو یا در حد نو"
+            "نو",
+            "در حد نو"
           ],
           "polarity": "must",
           "hardness": "soft",
@@ -2359,7 +2342,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "کوله‌پشتی و نه کیف مدرسه"
+            "کوله‌پشتی",
+            "کیف مدرسه"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -2397,16 +2381,6 @@
         "sourcePhrase": "صندلی اداری چرخ‌دار ارگونومیک با پشتی بلند،"
       },
       "slots": [
-        {
-          "kind": "descriptor",
-          "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
         {
           "kind": "descriptor",
           "values": [
@@ -2563,7 +2537,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "هوشمند و نه فیک بی‌کیفیت"
+            "هوشمند",
+            "فیک بی‌کیفیت"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -2667,16 +2642,6 @@
         {
           "kind": "descriptor",
           "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
-        {
-          "kind": "descriptor",
-          "values": [
             "لوستر سقفی بزرگ"
           ],
           "polarity": "mustNot",
@@ -2776,16 +2741,6 @@
         "sourcePhrase": "آبمیوه‌گیری صنعتی یا خانگی قوی،"
       },
       "slots": [
-        {
-          "kind": "descriptor",
-          "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
         {
           "kind": "descriptor",
           "values": [
@@ -2901,16 +2856,6 @@
         {
           "kind": "descriptor",
           "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
-        {
-          "kind": "descriptor",
-          "values": [
             "اتو مو"
           ],
           "polarity": "mustNot",
@@ -2962,7 +2907,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "گربه محلّی و نه بیمار"
+            "گربه محلّی",
+            "بیمار"
           ],
           "polarity": "mustNot",
           "hardness": "hard",
@@ -3075,8 +3021,8 @@
         "min": null,
         "max": null,
         "currency": null,
-        "status": "confirmed",
-        "sourcePhrase": "۴ تا ۶ لیتر"
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -3094,7 +3040,8 @@
         {
           "kind": "condition",
           "values": [
-            "نو یا در حد نو"
+            "نو",
+            "در حد نو"
           ],
           "polarity": "must",
           "hardness": "soft",
@@ -3291,8 +3238,8 @@
         "min": null,
         "max": null,
         "currency": null,
-        "status": "confirmed",
-        "sourcePhrase": "بالای ۶ سال"
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -3508,8 +3455,8 @@
         "min": null,
         "max": null,
         "currency": null,
-        "status": "confirmed",
-        "sourcePhrase": "۲ تا ۶ سال"
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -3524,16 +3471,6 @@
         "sourcePhrase": "دستگاه بخور سرد یا گرم خانگی،"
       },
       "slots": [
-        {
-          "kind": "descriptor",
-          "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
         {
           "kind": "descriptor",
           "values": [
@@ -3578,9 +3515,9 @@
       "price": {
         "min": null,
         "max": null,
-        "currency": "تومان",
-        "status": "confirmed",
-        "sourcePhrase": "زیر ۲ میلیون"
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
       }
     },
     {
@@ -3656,16 +3593,6 @@
         "sourcePhrase": "میز اتو پایه‌دار تاشو فلزی یا چوبی،"
       },
       "slots": [
-        {
-          "kind": "descriptor",
-          "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
         {
           "kind": "descriptor",
           "values": [
@@ -3773,16 +3700,6 @@
         {
           "kind": "descriptor",
           "values": [
-            "جعبه سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "جعبه سالم،"
-        },
-        {
-          "kind": "descriptor",
-          "values": [
             "اسباب‌بازی کنترلی"
           ],
           "polarity": "mustNot",
@@ -3831,16 +3748,6 @@
         "sourcePhrase": "کتری برقی استیل ۱٫۷ لیتری به بالا با تنظیم دما،"
       },
       "slots": [
-        {
-          "kind": "descriptor",
-          "values": [
-            "سالم"
-          ],
-          "polarity": "must",
-          "hardness": "hard",
-          "status": "confirmed",
-          "sourcePhrase": "سالم،"
-        },
         {
           "kind": "descriptor",
           "values": [
