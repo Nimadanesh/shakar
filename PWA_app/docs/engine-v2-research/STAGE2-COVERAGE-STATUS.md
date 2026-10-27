@@ -15,7 +15,8 @@ References include `PWA_app/src/lib/server/hunt/contractGate.test.ts` and `PWA_a
 - The 70 hunt IDs, original query strings, and independently frozen hard-slot source phrases cannot be asserted.
 - The per-hunt coverage checklist cannot honestly be populated.
 - C9 cannot receive a real-corpus collision audit. Synthetic unit tests exercise the audit function, but are not a substitute for the real corpus.
-- Therefore the full coverage and zero-collision gates are **NOT RUN / NOT PASSED**.
+- The focused GitHub Actions workflow is defined at `.github/workflows/engine-v2-research-stage2.yml`, but the available run lookup returned no run record for the latest commit; there is no verified execution ID or green result to report.
+- Therefore the focused tests, typecheck, lint, full coverage, and zero-collision gates are **NOT VERIFIED / NOT PASSED** in this report.
 
 ## Implemented support
 
