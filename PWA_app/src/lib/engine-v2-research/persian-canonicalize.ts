@@ -56,9 +56,8 @@ function letterCount(value: string): number {
  * remainder itself exists as a token in that supplied corpus.
  */
 /**
- * C9 is disabled for matching after the frozen corpus collision gate found
- * distinct observed forms collapsing together. Keep C1-C8 only until architect
- * review. The candidate implementation below is used exclusively for audit.
+ * C9a (ها/های) is active for matching with length, corpus, and protection guards;
+ * C9b (تر/ترین) remains audit-only and never folds matching forms.
  */
 export function stripClosedMorpheme(token: string, corpusTokens: ReadonlySet<string>): string {
   if (PROTECTED_SUFFIX_WORDS.has(token)) return token;
