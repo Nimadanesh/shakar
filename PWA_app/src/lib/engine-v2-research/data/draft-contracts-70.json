@@ -1,8 +1,8 @@
 {
   "version": "2.0",
   "sourceCommit": "a9d48951843873426d58ccfee10f1ae1db582068",
-  "status": "contractor-draft-awaiting-architect-review",
-  "note": "Mechanical phrase decomposition only. Source phrases are copied verbatim from each frozen query. Entity/slot boundaries, polarity, hardness, transaction, location, and price interpretations require architect review; do not treat as approved contracts.",
+  "status": "draft-contracts-updated-awaiting-layer-3-architect-review",
+  "note": "Mechanical phrase decomposition only. Source phrases are copied verbatim from each frozen query. Entity/slot boundaries, polarity, hardness, transaction, location, and price interpretations require architect review; do not treat as approved contracts. Status/condition coverage additions and H12/H53 breed-attribute mappings are source-grounded edits only; all 70 contracts remain unapproved pending Layer 3 architect review.",
   "contracts": [
     {
       "schemaVersion": "2.0",
@@ -218,6 +218,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً زیر ۵ میلیون."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -668,6 +678,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "تهران."
+        },
+        {
+          "kind": "breedAttribute",
+          "values": [
+            "اصیل"
+          ],
+          "polarity": "must",
+          "hardness": null,
+          "status": "unknown",
+          "sourcePhrase": "اصیل"
         }
       ],
       "transactions": {
@@ -782,6 +802,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً تهران."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -884,6 +914,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه اسکیت بچه‌گانه خیلی کوچک."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -1049,6 +1089,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه جزوه دست‌نویس."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -1318,6 +1368,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً تهران."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -1379,6 +1439,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً زیر ۸ میلیون."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -1730,6 +1800,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه لباس ورزشی و نه مانتو اداری."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "نو"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "نو"
         }
       ],
       "transactions": {
@@ -1936,6 +2016,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه اتو سفری کوچک."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -1997,6 +2087,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً تهران."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -2142,6 +2242,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً با بازی."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "کارکرده"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "کارکرده"
         }
       ],
       "transactions": {
@@ -2193,6 +2303,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه آسیاب کوچک قهوه."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -2295,6 +2415,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه صندلی معمولی خانگی."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -2438,6 +2568,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه هوشمند و نه فیک بی‌کیفیت."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -2542,6 +2682,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه لوستر سقفی بزرگ."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -2644,6 +2794,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه دستگاه اسموتی ساده."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -2695,6 +2855,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً تهران."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "نو"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "نو"
         }
       ],
       "transactions": {
@@ -2746,6 +2916,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه اتو مو."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -2797,6 +2977,26 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "تهران."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "واکسینه"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "واکسینه"
+        },
+        {
+          "kind": "breedAttribute",
+          "values": [
+            "اصیل"
+          ],
+          "polarity": "must",
+          "hardness": null,
+          "status": "unknown",
+          "sourcePhrase": "اصیل"
         }
       ],
       "transactions": {
@@ -2848,6 +3048,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً زیر ۳ میلیون."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -3003,6 +3213,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً تهران."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -3199,6 +3419,26 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه اسکنر تنها."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "کارکرده"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "کارکرده"
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -3240,6 +3480,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه لباس نوزاد خیلی کوچک."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "نو"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "نو"
         }
       ],
       "transactions": {
@@ -3301,6 +3551,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً زیر ۲ میلیون."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -3352,6 +3612,16 @@
           "hardness": "soft",
           "status": "confirmed",
           "sourcePhrase": "ترجیحاً تهران."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -3403,6 +3673,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه میز معمولی."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -3507,6 +3787,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه اسباب‌بازی کنترلی."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
@@ -3558,6 +3848,16 @@
           "hardness": "hard",
           "status": "confirmed",
           "sourcePhrase": "نه سماور."
+        },
+        {
+          "kind": "condition",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم"
         }
       ],
       "transactions": {
