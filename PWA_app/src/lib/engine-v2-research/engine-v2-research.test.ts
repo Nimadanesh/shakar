@@ -54,16 +54,16 @@ describe("deterministic Persian canonicalization C1-C9", () => {
     expect(canonicalizeForMatch("PlayStation سونی").tokens).toEqual(["playstation", "سونی"]);
   });
 
-  it("C9 strips ها/های/تر/ترین only when remainder is independently in corpus", () => {
+  it("keeps C9 disabled for matching after frozen-corpus collisions", () => {
     const corpus = new Set(["ماشین", "کتاب", "خوب"]);
-    expect(stripClosedMorpheme("ماشینها", corpus)).toBe("ماشین");
-    expect(stripClosedMorpheme("ماشینهای", corpus)).toBe("ماشین");
-    expect(stripClosedMorpheme("کتابتر", corpus)).toBe("کتاب");
-    expect(stripClosedMorpheme("خوبترین", corpus)).toBe("خوب");
+    for (const word of ["ماشینها", "ماشینهای", "کتابتر", "خوبترین"]) {
+      expect(stripClosedMorpheme(word, corpus)).toBe(word);
+      expect(canonicalizeForMatch(word, { corpusTokens: corpus }).canonical).toBe(word);
+    }
     expect(stripClosedMorpheme("ماشینها", new Set())).toBe("ماشینها");
   });
 
-  it("C9 protects listed words, requires at least three letters, and never strips ی", () => {
+  it("keeps protected forms and all suffix forms unchanged while C9 is disabled", () => {
     const corpus = new Set(["تن", "به", "به", "بیش", "کم", "علی", "کتاب"]);
     for (const word of ["تنها", "بهتر", "بهترین", "بیشتر", "کمتر"]) {
       expect(stripClosedMorpheme(word, corpus)).toBe(word);
