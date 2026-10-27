@@ -50,7 +50,7 @@
         {
           "kind": "preference",
           "values": [
-            "زیر ۱۵ میلیون"
+            "ترجیحاً زیر ۱۵ میلیون"
           ],
           "polarity": "must",
           "hardness": "soft",
@@ -380,7 +380,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "برای فرش دستباف یا ماشینی"
+            "برای فرش دستباف",
+            "برای فرش ماشینی"
           ],
           "polarity": "must",
           "hardness": "hard",
@@ -1082,7 +1083,8 @@
         {
           "kind": "descriptor",
           "values": [
-            "مجموعه کامل یا تک‌جلد سالم"
+            "مجموعه کامل",
+            "تک‌جلد سالم"
           ],
           "polarity": "must",
           "hardness": "hard",
@@ -1227,7 +1229,7 @@
         {
           "kind": "preference",
           "values": [
-            "زیر ۱۰ میلیون"
+            "ترجیحاً زیر ۱۰ میلیون"
           ],
           "polarity": "must",
           "hardness": "soft",
