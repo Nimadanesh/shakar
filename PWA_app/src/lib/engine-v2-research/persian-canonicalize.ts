@@ -84,9 +84,24 @@ export function findCanonicalCollisions(words: readonly string[]): Array<{
   canonical: string;
   originals: string[];
 }> {
+  // The audit corpus is the observed surface-token set. A C9 remainder is
+  // eligible only when that exact base token independently occurs in it.
+  const observedTokens = new Set<string>();
+  const baseByWord = new Map<string, string>();
+  for (const original of words) {
+    const base = baseCanonicalize(original);
+    baseByWord.set(original, base);
+    for (const token of base.split(" ").filter(Boolean)) observedTokens.add(token);
+  }
+
   const byCanonical = new Map<string, Set<string>>();
   for (const original of words) {
-    const canonical = baseCanonicalize(original);
+    const base = baseByWord.get(original) ?? "";
+    const canonical = base
+      .split(" ")
+      .filter(Boolean)
+      .map((token) => stripClosedMorpheme(token, observedTokens))
+      .join(" ");
     if (!canonical) continue;
     const originals = byCanonical.get(canonical) ?? new Set<string>();
     originals.add(original);
