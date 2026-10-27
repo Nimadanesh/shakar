@@ -115,7 +115,7 @@ export function findCanonicalCollisions(words: readonly string[]): Array<{
 export const CANONICALIZATION_RULES = [
   "C1 Alef variants -> ا",
   "C2 Arabic ي/ى -> ی, ك -> ک, ة -> ه",
-  "C3 ZWNJ/ZWJ -> space for matching; original preserved",
+  "C3 ZWNJ -> space for matching; original preserved",
   "C4 remove Arabic diacritics and tatweel",
   "C5 Persian/Arabic digits -> ASCII",
   "C6 punctuation -> token boundary; collapse repeated whitespace",
