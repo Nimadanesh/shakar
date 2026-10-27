@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { auditHuntCoverage } from "./hunt-coverage-audit";
+import { auditCoverageLayers } from "./coverage-layers-audit";
 import {
   canonicalizeForMatch,
   findCanonicalCollisions,
@@ -147,6 +148,46 @@ const validContract: IntentContract = {
   location: { value: "تهران", status: "confirmed", sourcePhrase: "تهران" },
   price: { min: 100, max: 200, currency: "تومان", status: "confirmed", sourcePhrase: "۱۰۰ تا ۲۰۰ تومان" },
 };
+
+describe("frozen status coverage audit", () => {
+  const auditContract = (
+    huntId: string,
+    entityPhrase: string,
+    slots: IntentContract["slots"],
+  ): IntentContract => ({
+    schemaVersion: "2.0",
+    huntId,
+    entity: { kind: "commodity", values: [entityPhrase], status: "confirmed", sourcePhrase: entityPhrase },
+    slots,
+    transactions: { values: [], status: "unknown", sourcePhrase: null },
+    location: { value: null, status: "unknown", sourcePhrase: null },
+    price: { min: null, max: null, currency: null, status: "unknown", sourcePhrase: null },
+  });
+
+  it("matches multiword status phrases canonically and preserves negative status polarity", () => {
+    const hunts = [
+      { huntId: "H-NEW", query: "کفش نو یا در حد نو" },
+      { huntId: "H-USED", query: "موتور دست‌دوم" },
+      { huntId: "H-REPAIR", query: "موتور نیازمند تعمیر" },
+      { huntId: "H-NEGATIVE", query: "طلای شکسته، نه زیورآلات نو" },
+    ];
+    const contracts: IntentContract[] = [
+      auditContract("H-NEW", "کفش", [
+        { kind: "condition", values: ["نو", "در حد نو"], polarity: "must", hardness: "soft", status: "confirmed", sourcePhrase: "نو یا در حد نو" },
+      ]),
+      auditContract("H-USED", "موتور", [
+        { kind: "condition", values: ["دست دوم"], polarity: "must", hardness: "soft", status: "confirmed", sourcePhrase: "دست‌دوم" },
+      ]),
+      auditContract("H-REPAIR", "موتور", [
+        { kind: "condition", values: ["نیازمند تعمیر"], polarity: "must", hardness: "soft", status: "confirmed", sourcePhrase: "نیازمند تعمیر" },
+      ]),
+      auditContract("H-NEGATIVE", "طلای شکسته", [
+        { kind: "descriptor", values: ["زیورآلات نو"], polarity: "mustNot", hardness: "hard", status: "confirmed", sourcePhrase: "نه زیورآلات نو" },
+      ]),
+    ];
+    expect(auditCoverageLayers(hunts, contracts)).toEqual([]);
+  });
+});
 
 describe("intent contract schema and readable audit", () => {
   it("accepts a complete contract without silently defaulting slot hardness", () => {
