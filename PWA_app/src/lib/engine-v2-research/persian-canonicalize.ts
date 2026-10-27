@@ -124,3 +124,44 @@ export const CANONICALIZATION_RULES = [
   "C8 no stemming, synonym merging, or guessed brand aliases",
   "C9 strip only ها/های/تر/ترین with minimum-length, corpus, and protection guards; never strip standalone ی",
 ] as const;
+
+/**
+ * C9-specific gate: report only merges newly introduced by suffix stripping.
+ * Orthographic folding already performed by C1-C8 is not attributed to C9.
+ */
+export function findC9FoldCollisions(words: readonly string[]): Array<{
+  canonical: string;
+  originals: string[];
+  preC9Forms: string[];
+}> {
+  const observedTokens = new Set<string>();
+  const bases = new Map<string, string>();
+  for (const original of words) {
+    const base = baseCanonicalize(original);
+    bases.set(original, base);
+    for (const token of base.split(" ").filter(Boolean)) observedTokens.add(token);
+  }
+
+  const groups = new Map<string, Array<{ original: string; preC9: string }>>();
+  for (const original of words) {
+    const preC9 = bases.get(original) ?? "";
+    const canonical = preC9
+      .split(" ")
+      .filter(Boolean)
+      .map((token) => stripClosedMorpheme(token, observedTokens))
+      .join(" ");
+    if (!canonical) continue;
+    const group = groups.get(canonical) ?? [];
+    group.push({ original, preC9 });
+    groups.set(canonical, group);
+  }
+
+  return [...groups.entries()]
+    .filter(([, group]) => new Set(group.map((item) => item.preC9)).size > 1)
+    .map(([canonical, group]) => ({
+      canonical,
+      originals: [...new Set(group.map((item) => item.original))].sort(),
+      preC9Forms: [...new Set(group.map((item) => item.preC9))].sort(),
+    }))
+    .sort((a, b) => a.canonical.localeCompare(b.canonical, "fa"));
+}
