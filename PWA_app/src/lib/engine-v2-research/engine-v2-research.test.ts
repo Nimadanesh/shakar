@@ -144,6 +144,17 @@ describe("intent contract schema and readable audit", () => {
     expect(validateIntentContract(validContract)).toEqual([]);
   });
 
+  it("does not treat an absent hardness marker as confirmed", () => {
+    const invalid = {
+      ...validContract,
+      slots: [{ ...validContract.slots[0], hardness: null, status: "confirmed" }],
+    } as unknown as IntentContract;
+    expect(validateIntentContract(invalid)).toContainEqual({
+      path: "slots[0].status",
+      message: "missing hardness marker requires unknown status",
+    });
+  });
+
   it("rejects empty entity/slot values, missing source evidence, and reversed price bounds", () => {
     const bad = {
       ...validContract,
