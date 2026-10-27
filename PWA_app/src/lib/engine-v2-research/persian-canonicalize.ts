@@ -25,13 +25,12 @@ function baseCanonicalize(input: string): string {
   return input
     // C1: Alef variants -> plain Alef.
     .replace(/[آأإٱ]/g, "ا")
-    // C2: Arabic Yeh/Kaf and Teh Marbuta.
+    // C2: Arabic Yeh/Kaf and Teh Marbuta only.
     .replace(/ي/g, "ی")
-    .replace(/ى/g, "ی")
     .replace(/ك/g, "ک")
     .replace(/ة/g, "ه")
     // C3: ZWNJ is a separator for matching; original is retained by caller.
-    .replace(/[\u200c\u200d]/g, " ")
+    .replace(/\u200c/g, " ")
     // C4: diacritics and tatweel.
     .replace(DIACRITICS, "")
     .replace(/ـ/g, "")
