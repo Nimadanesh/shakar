@@ -1804,12 +1804,13 @@
         {
           "kind": "condition",
           "values": [
-            "نو"
+            "نو",
+            "در حد نو"
           ],
           "polarity": "must",
           "hardness": "soft",
           "status": "confirmed",
-          "sourcePhrase": "نو"
+          "sourcePhrase": "نو یا در حد نو"
         }
       ],
       "transactions": {
@@ -3484,12 +3485,13 @@
         {
           "kind": "condition",
           "values": [
-            "نو"
+            "نو",
+            "در حد نو"
           ],
           "polarity": "must",
           "hardness": "soft",
           "status": "confirmed",
-          "sourcePhrase": "نو"
+          "sourcePhrase": "نو یا در حد نو"
         }
       ],
       "transactions": {
