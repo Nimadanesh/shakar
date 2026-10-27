@@ -72,6 +72,9 @@ export function validateIntentContract(value: IntentContract): ContractValidatio
     if (slot.status === "unknown" && slot.hardness !== null) {
       issues.push({ path: `${base}.hardness`, message: "unknown slot status cannot silently assert hardness" });
     }
+    if (slot.hardness === null && slot.status !== "unknown") {
+      issues.push({ path: `${base}.status`, message: "missing hardness marker requires unknown status" });
+    }
   });
   if (value.price.min !== null && value.price.max !== null && value.price.min > value.price.max) {
     issues.push({ path: "price", message: "price.min must not exceed price.max" });
