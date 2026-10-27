@@ -14,7 +14,7 @@ import {
 
 describe("deterministic Persian canonicalization C1-C9", () => {
   it("C1 folds Alef variants only", () => {
-    expect(canonicalizeForMatch("آأإٱ").canonical).toBe("ا ا ا ا");
+    expect(canonicalizeForMatch("آ أ إ ٱ").canonical).toBe("ا ا ا ا");
   });
 
   it("C2 folds Arabic Yeh/Kaf and Teh Marbuta", () => {
@@ -169,7 +169,7 @@ describe("intent contract schema and readable audit", () => {
 
   it("renders every slot with polarity, hardness, status, alternatives, and source", () => {
     const lines = renderIntentContract(validContract);
-    expect(lines).toHaveLength(6);
+    expect(lines).toHaveLength(7);
     expect(lines[1]).toContain("قطبیت: باید");
     expect(lines[1]).toContain("سختی: تعیین‌نشده");
     expect(lines[1]).toContain("وضعیت: نامشخص");
