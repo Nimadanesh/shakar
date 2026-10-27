@@ -6,6 +6,7 @@ import {
 } from "./persian-canonicalize";
 import {
   renderIntentContract,
+  slotMayReject,
   validateIntentContract,
   type IntentContract,
 } from "./intent-contract";
@@ -111,6 +112,16 @@ describe("intent contract schema and readable audit", () => {
     expect(paths).toContain("slots[0].values");
     expect(paths).toContain("slots[0].sourcePhrase");
     expect(paths).toContain("price");
+  });
+
+  it("never lets unknown, soft, or condition slots reject; hard confirmed constraints may", () => {
+    expect(slotMayReject(validContract.slots[0])).toBe(false); // unknown
+    expect(slotMayReject(validContract.slots[2])).toBe(false); // soft preference
+    expect(slotMayReject(validContract.slots[1])).toBe(true); // hard, confirmed, non-condition
+    expect(slotMayReject({
+      kind: "condition", values: ["نو"], polarity: "must", hardness: "hard",
+      status: "confirmed", sourcePhrase: "نو",
+    })).toBe(false);
   });
 
   it("renders every slot with polarity, hardness, status, alternatives, and source", () => {
