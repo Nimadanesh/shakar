@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shekaar.invalid/schemas/intent-contract-v2.json",
+  "title": "Shekaar Engine V2 Research Intent Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "huntId", "entity", "slots", "transactions", "location", "price"],
+  "properties": {
+    "schemaVersion": { "const": "2.0" },
+    "huntId": { "type": "string", "minLength": 1 },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "values", "status", "sourcePhrase"],
+      "properties": {
+        "kind": { "enum": ["commodity", "service"] },
+        "values": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "status": { "$ref": "#/$defs/status" },
+        "sourcePhrase": { "type": "string", "minLength": 1 }
+      }
+    },
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "values", "polarity", "hardness", "status", "sourcePhrase"],
+        "properties": {
+          "kind": { "type": "string", "minLength": 1 },
+          "values": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "polarity": { "enum": ["must", "mustNot"] },
+          "hardness": { "enum": ["hard", "soft", null] },
+          "status": { "$ref": "#/$defs/status" },
+          "sourcePhrase": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "transactions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["values", "status", "sourcePhrase"],
+      "properties": {
+        "values": { "type": "array", "uniqueItems": true, "items": { "enum": ["buy", "sell", "rent", "service", "employment"] } },
+        "status": { "$ref": "#/$defs/status" },
+        "sourcePhrase": { "type": ["string", "null"] }
+      }
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "status", "sourcePhrase"],
+      "properties": {
+        "value": { "type": ["string", "null"] },
+        "status": { "$ref": "#/$defs/status" },
+        "sourcePhrase": { "type": ["string", "null"] }
+      }
+    },
+    "price": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max", "currency", "status", "sourcePhrase"],
+      "properties": {
+        "min": { "type": ["number", "null"], "minimum": 0 },
+        "max": { "type": ["number", "null"], "minimum": 0 },
+        "currency": { "type": ["string", "null"] },
+        "status": { "$ref": "#/$defs/status" },
+        "sourcePhrase": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "$defs": {
+    "status": { "enum": ["confirmed", "unknown"] }
+  }
+}
