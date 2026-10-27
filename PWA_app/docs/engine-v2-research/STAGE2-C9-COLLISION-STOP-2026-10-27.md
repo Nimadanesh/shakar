@@ -34,4 +34,4 @@ These are candidate-canonical collisions in the frozen definitions + titles, not
 - The frozen source explicitly does not include full ad bodies; this audit is limited to the 70 definitions and 1,399 titles.
 - No 70-contract generation, Layer 1/Layer 2 gate, restricted TypeScript check, or architect read-through is claimed complete; work stopped at the explicit C9 stop condition.
 - No changes to `main` or `engine_v3`; no PR or merge.
-- CI run for input commit `a9d4895` was not discoverable through the Actions API query available in this session; no run ID or green status is claimed.
+- CI for frozen-data commit `a9d48951843873426d58ccfee10f1ae1db582068` passed: run [40541869785](https://github.com/Nimadanesh/shakar/actions/runs/40541869785), all steps green (focused tests, full-app TypeScript check, stage-2 ESLint). After the C9 rollback/test adjustment, run [40542317387](https://github.com/Nimadanesh/shakar/actions/runs/40542317387) also passed all existing workflow steps. These runs do not prove Layer 1/Layer 2 gates or a restricted TypeScript check, which have not been implemented.
