@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://shekaar.invalid/schemas/intent-contract-v2.json",
+  "$id": "urn:shekaar:engine-v2-research:intent-contract:2.0",
   "title": "Shekaar Engine V2 Research Intent Contract",
   "type": "object",
   "additionalProperties": false,
@@ -37,6 +37,10 @@
           {
             "if": { "properties": { "status": { "const": "unknown" } }, "required": ["status"] },
             "then": { "properties": { "hardness": { "const": null } } }
+          },
+          {
+            "if": { "properties": { "hardness": { "const": null } }, "required": ["hardness"] },
+            "then": { "properties": { "status": { "const": "unknown" } } }
           }
         ]
       }
