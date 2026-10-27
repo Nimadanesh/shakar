@@ -94,6 +94,46 @@ describe("deterministic Persian canonicalization C1-C9", () => {
 });
 
 
+
+import frozenHunts from "./data/frozen-70-hunts.json";
+import frozenPoolTitles from "./data/frozen-pool-titles.json";
+import approvedContracts from "./data/draft-contracts-70.json";
+
+describe("approved entity phrase C9a non-collision gate", () => {
+  it("keeps all 70 entity values pairwise distinct under C1-C8 plus active C9a", () => {
+    const corpusTokens = new Set<string>();
+    for (const hunt of frozenHunts.hunts) {
+      for (const token of canonicalizeForMatch(hunt.query).tokens) corpusTokens.add(token);
+    }
+    for (const ad of frozenPoolTitles.ads) {
+      for (const token of canonicalizeForMatch(ad.title).tokens) corpusTokens.add(token);
+    }
+
+    const entities = approvedContracts.contracts.flatMap((contract) =>
+      contract.entity.values.map((value) => ({
+        huntId: contract.huntId,
+        value,
+        canonical: canonicalizeForMatch(value, { corpusTokens }).canonical,
+      })),
+    );
+    expect(entities).toHaveLength(70);
+
+    const collisions: Array<{ canonical: string; left: typeof entities[number]; right: typeof entities[number] }> = [];
+    for (let left = 0; left < entities.length; left += 1) {
+      for (let right = left + 1; right < entities.length; right += 1) {
+        if (entities[left].canonical === entities[right].canonical) {
+          collisions.push({
+            canonical: entities[left].canonical,
+            left: entities[left],
+            right: entities[right],
+          });
+        }
+      }
+    }
+    expect(collisions).toEqual([]);
+  });
+});
+
 describe("frozen hunt coverage audit", () => {
   it("detects missing contracts and any lost hard-slot source phrase", () => {
     const frozen = [
