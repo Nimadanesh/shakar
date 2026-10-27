@@ -94,3 +94,13 @@ export function renderIntentContract(contract: IntentContract): string[] {
   lines.push(`قیمت | حداقل: ${contract.price.min ?? "نامشخص"} | حداکثر: ${contract.price.max ?? "نامشخص"} | ارز: ${contract.price.currency ?? "نامشخص"} | وضعیت: ${contract.price.status} | منبع: «${contract.price.sourcePhrase ?? "ثبت نشده"}»`);
   return lines;
 }
+
+/**
+ * Contract-level guard: unknown or soft slots are never rejection gates.
+ * Condition (new/used) is descriptive metadata, not a reject/accept judge.
+ */
+export function slotMayReject(slot: IntentSlot): boolean {
+  if (slot.status !== "confirmed" || slot.hardness !== "hard") return false;
+  if (slot.kind.trim().toLowerCase() === "condition") return false;
+  return true;
+}
