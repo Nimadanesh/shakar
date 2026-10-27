@@ -38,7 +38,7 @@ export const FROZEN_COVERAGE_STOPWORDS = new Set([
 // explicit for reviewability.
 export const STATUS_INFORMATION_TOKENS = new Set([
   "سالم", "نو", "کارکرده", "دست‌دوم", "دست دوم", "در حد نو",
-  "خراب", "معیوب", "نیازمند تعمیر", "واکسینه", "اصیل",
+  "خراب", "معیوب", "نیازمند تعمیر", "واکسینه",
 ]);
 
 export interface FrozenHuntDefinition {
