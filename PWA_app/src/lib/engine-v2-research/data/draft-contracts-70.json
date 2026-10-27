@@ -1,0 +1,3686 @@
+{
+  "version": "2.0",
+  "sourceCommit": "a9d48951843873426d58ccfee10f1ae1db582068",
+  "status": "contractor-draft-awaiting-architect-review",
+  "note": "Mechanical phrase decomposition only. Source phrases are copied verbatim from each frozen query. Entity/slot boundaries, polarity, hardness, transaction, location, and price interpretations require architect review; do not treat as approved contracts.",
+  "contracts": [
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H01",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "دوچرخه کوهستان ۲۶ اینچ"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "دوچرخه کوهستان ۲۶ اینچ،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "دنده شیمانو"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "دنده شیمانو،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "دوچرخه بچه‌گانه و نه برقی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه دوچرخه بچه‌گانه و نه برقی،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران زیر ۱۵ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران زیر ۱۵ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": "تومان",
+        "status": "confirmed",
+        "sourcePhrase": "زیر ۱۵ میلیون"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H02",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "تردمیل خانگی تاشو با شیب قابل تنظیم"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "تردمیل خانگی تاشو با شیب قابل تنظیم،"
+      },
+      "slots": [
+        {
+          "kind": "specification",
+          "values": [
+            "موتور حداقل ۲ اسب بخار"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "موتور حداقل ۲ اسب بخار،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "دوچرخه ثابت"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه دوچرخه ثابت،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۲۰ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۲۰ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "confirmed",
+        "sourcePhrase": "حداقل ۲ اسب بخار"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H03",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "پلی‌استیشن ۴ اسلیم ۵۰۰ گیگ یا ۱ ترابایت"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "پلی‌استیشن ۴ اسلیم ۵۰۰ گیگ یا ۱ ترابایت،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "با دو دسته"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "با دو دسته،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "فت و نه پرو"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه فت و نه پرو،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً با بازی"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً با بازی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H04",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "گیتار آکوستیک یا کلاسیک سالم با کیف"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "گیتار آکوستیک یا کلاسیک سالم با کیف،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "گیتار برقی و نه اسباب‌بازی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه گیتار برقی و نه اسباب‌بازی،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۵ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۵ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کلاس"
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": "تومان",
+        "status": "confirmed",
+        "sourcePhrase": "زیر ۵ میلیون"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H05",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "دمبل متغیر یا ست دمبل خانگی ۲۰ تا ۴۰ کیلو"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "دمبل متغیر یا ست دمبل خانگی ۲۰ تا ۴۰ کیلو،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "هالتر باشگاهی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه هالتر باشگاهی،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "confirmed",
+        "sourcePhrase": "۲۰ تا ۴۰ کیلو"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H06",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "لوله‌بازکنی فوری در محل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "لوله‌بازکنی فوری در محل،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "شرکت‌های بزرگ"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه شرکت‌های بزرگ،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران یا اطراف"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران یا اطراف."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران یا اطراف",
+        "status": "confirmed",
+        "sourcePhrase": "تهران یا اطراف"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H07",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "قالی‌شویی در محل یا کارخانه"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "قالی‌شویی در محل یا کارخانه،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "برای فرش دستباف یا ماشینی"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "برای فرش دستباف یا ماشینی،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "خشکشویی لباس"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه خشکشویی لباس،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H08",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "لپ‌تاپ ایسوس یا لنوو با رم ۸ گیگ به بالا و پردازنده نسل ۱۰ یا بالاتر"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "لپ‌تاپ ایسوس یا لنوو با رم ۸ گیگ به بالا و پردازنده نسل ۱۰ یا بالاتر،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "گیمینگ سنگین"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه گیمینگ سنگین،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۲۵ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۲۵ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": "تومان",
+        "status": "confirmed",
+        "sourcePhrase": "زیر ۲۵ میلیون"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H09",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "تلویزیون هوشمند ۵۵ اینچ سامسونگ یا ال‌جی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "تلویزیون هوشمند ۵۵ اینچ سامسونگ یا ال‌جی،"
+      },
+      "slots": [
+        {
+          "kind": "specification",
+          "values": [
+            "4K"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "4K،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "معمولی و نه پروژکتور"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه معمولی و نه پروژکتور،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H10",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "کفش ورزشی نایک یا آدیداس مردانه سایز ۴۲-۴۴"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کفش ورزشی نایک یا آدیداس مردانه سایز ۴۲-۴۴،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "نو یا در حد نو"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "نو یا در حد نو،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "کپی بی‌کیفیت"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه کپی بی‌کیفیت."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H11",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "دوربین عکاسی کانن یا نیکون DSLR با لنز کیت"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "دوربین عکاسی کانن یا نیکون DSLR با لنز کیت،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "سالم بدون مشکل شاتر"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم بدون مشکل شاتر،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "دوربین کامپکت و نه گوشی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه دوربین کامپکت و نه گوشی،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۱۵ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۱۵ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": "تومان",
+        "status": "confirmed",
+        "sourcePhrase": "زیر ۱۵ میلیون"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H12",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "سگ نژاد شیتزو یا پامرانین اصیل با شناسنامه"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "سگ نژاد شیتزو یا پامرانین اصیل با شناسنامه،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "واکسینه کامل"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "واکسینه کامل،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "دورگه و نه بیمار"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه دورگه و نه بیمار،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H13",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "باربری و اسباب‌کشی درون‌شهری با کارگر"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "باربری و اسباب‌کشی درون‌شهری با کارگر،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "فقط وانت خالی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه فقط وانت خالی،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران یا کرج"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران یا کرج."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "باربری"
+      },
+      "location": {
+        "value": "تهران یا کرج",
+        "status": "confirmed",
+        "sourcePhrase": "تهران یا کرج"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H14",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "اجاق گاز رومیزی یا فردار ۴ شعله استیل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "اجاق گاز رومیزی یا فردار ۴ شعله استیل،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "اجاق سفری"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه اجاق سفری،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H15",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "تبلت سامسونگ گلکسی تب A8 یا مشابه"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "تبلت سامسونگ گلکسی تب A8 یا مشابه،"
+      },
+      "slots": [
+        {
+          "kind": "specification",
+          "values": [
+            "حافظه ۶۴ گیگ به بالا"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "حافظه ۶۴ گیگ به بالا،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "آیپد"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه آیپد،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۱۰ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۱۰ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": "تومان",
+        "status": "confirmed",
+        "sourcePhrase": "زیر ۱۰ میلیون"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H16",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "اسکیت کفشی یا اسکیت‌برد سالم سایز ۳۸ به بالا"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "اسکیت کفشی یا اسکیت‌برد سالم سایز ۳۸ به بالا،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "اسکیت بچه‌گانه خیلی کوچک"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه اسکیت بچه‌گانه خیلی کوچک."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H17",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "کاشت ناخن و خدمات ناخن در منزل یا سالن کوچک"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کاشت ناخن و خدمات ناخن در منزل یا سالن کوچک،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "آرایشگاه کامل"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه آرایشگاه کامل،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کاشت"
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H18",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "جاروبرقی کیسه‌ای یا مخزن‌دار بوش یا سامسونگ"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "جاروبرقی کیسه‌ای یا مخزن‌دار بوش یا سامسونگ،"
+      },
+      "slots": [
+        {
+          "kind": "specification",
+          "values": [
+            "قدرت بالای ۲۰۰۰ وات"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "قدرت بالای ۲۰۰۰ وات،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "روباتی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه روباتی،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۵ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۵ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "confirmed",
+        "sourcePhrase": "بالای ۲۰۰۰ وات"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H19",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "کتاب کمک‌درسی کنکور رشته تجربی یا ریاضی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کتاب کمک‌درسی کنکور رشته تجربی یا ریاضی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "مجموعه کامل یا تک‌جلد سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "مجموعه کامل یا تک‌جلد سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "جزوه دست‌نویس"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه جزوه دست‌نویس."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H20",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "طلای شکسته یا آب‌شده برای فروش به طلافروشی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "طلای شکسته یا آب‌شده برای فروش به طلافروشی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "زیورآلات نو"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه زیورآلات نو،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "sell"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "فروش"
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H21",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "فرش ماشینی ۱۲ متری طرح مدرن یا کلاسیک"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "فرش ماشینی ۱۲ متری طرح مدرن یا کلاسیک،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "تراکم بالا"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تراکم بالا،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "دستباف و نه موکت"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه دستباف و نه موکت،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران زیر ۱۰ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران زیر ۱۰ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کلاس"
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": "تومان",
+        "status": "confirmed",
+        "sourcePhrase": "زیر ۱۰ میلیون"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H22",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "هدفون بی‌سیم سونی یا جی‌بی‌ال با نویزکنسلینگ"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "هدفون بی‌سیم سونی یا جی‌بی‌ال با نویزکنسلینگ،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "سالم با باکس"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم با باکس،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "هندزفری سیم‌دار ارزان"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه هندزفری سیم‌دار ارزان."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H23",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "آکواریوم کامل ۱۰۰ لیتر به بالا با فیلتر و پمپ هوا"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "آکواریوم کامل ۱۰۰ لیتر به بالا با فیلتر و پمپ هوا،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "تنگ ماهی کوچک"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه تنگ ماهی کوچک،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً با ماهی"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً با ماهی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H24",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "میز ناهارخوری ۶ نفره چوبی یا MDF سالم"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "میز ناهارخوری ۶ نفره چوبی یا MDF سالم،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "میز تحریر و نه فلزی ساده"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه میز تحریر و نه فلزی ساده،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H25",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "کالسکه بچه دوقلو یا تک‌نشین تاشو مارک خوب"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کالسکه بچه دوقلو یا تک‌نشین تاشو مارک خوب،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "صندلی ماشین بچه"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه صندلی ماشین بچه،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۸ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۸ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": "تومان",
+        "status": "confirmed",
+        "sourcePhrase": "زیر ۸ میلیون"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H26",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "نقاشی ساختمان و رنگ‌آمیزی منزل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "نقاشی ساختمان و رنگ‌آمیزی منزل،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "نقاشی هنری روی بوم"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه نقاشی هنری روی بوم،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "نقاشی ساختمان"
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H27",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "اسپیکر بلوتوثی قابل حمل جی‌بی‌ال یا مشابه با باس قوی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "اسپیکر بلوتوثی قابل حمل جی‌بی‌ال یا مشابه با باس قوی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "اسپیکر کامپیوتری رومیزی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه اسپیکر کامپیوتری رومیزی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H28",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "پرده آماده یا سفارشی برای پنجره پذیرایی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "پرده آماده یا سفارشی برای پنجره پذیرایی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "پارچه‌ای ضخیم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "پارچه‌ای ضخیم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "کرکره و نه تور ساده"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه کرکره و نه تور ساده."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H29",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "استخدام نیروی خدماتی یا نظافتچی نیمه‌وقت"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "استخدام نیروی خدماتی یا نظافتچی نیمه‌وقت،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "کارمند اداری"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه کارمند اداری،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران یا اطراف"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران یا اطراف."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "employment"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "استخدام"
+      },
+      "location": {
+        "value": "تهران یا اطراف",
+        "status": "confirmed",
+        "sourcePhrase": "تهران یا اطراف"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H30",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "کوله‌پشتی کوهنوردی ۵۰ لیتر به بالا برند معتبر"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کوله‌پشتی کوهنوردی ۵۰ لیتر به بالا برند معتبر،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "ضدآب"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "ضدآب،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "کیف مدرسه معمولی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه کیف مدرسه معمولی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H31",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "مایکروویو سامسونگ یا ال‌جی با گریل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "مایکروویو سامسونگ یا ال‌جی با گریل،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "سالم کارکرده"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم کارکرده،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "آون توستر ساده"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه آون توستر ساده،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۴ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۴ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": "تومان",
+        "status": "confirmed",
+        "sourcePhrase": "زیر ۴ میلیون"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H32",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "لباس مجلسی زنانه سایز ۳۸ تا ۴۲ نو یا در حد نو"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "لباس مجلسی زنانه سایز ۳۸ تا ۴۲ نو یا در حد نو،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "لباس ورزشی و نه مانتو اداری"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه لباس ورزشی و نه مانتو اداری."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H33",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "پیچ‌گوشتی شارژی بوش یا ماکیتا با باتری اضافه"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "پیچ‌گوشتی شارژی بوش یا ماکیتا با باتری اضافه،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "دستی ساده"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه دستی ساده،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H34",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "قناری یا مرغ عشق جفت با قفس کامل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "قناری یا مرغ عشق جفت با قفس کامل،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "سالم و آوازخوان"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم و آوازخوان،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "کبوتر و نه طوطی بزرگ"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه کبوتر و نه طوطی بزرگ."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H35",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "اجاره سوئیت یا آپارتمان مبله کوتاه‌مدت روزانه"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "اجاره سوئیت یا آپارتمان مبله کوتاه‌مدت روزانه،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "اجاره بلندمدت"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه اجاره بلندمدت،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً شمال تهران یا اطراف"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً شمال تهران یا اطراف."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "rent"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "اجاره"
+      },
+      "location": {
+        "value": "شمال تهران",
+        "status": "confirmed",
+        "sourcePhrase": "شمال تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H36",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "اتو بخار ایستاده یا دستی فیلیپس یا بوش"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "اتو بخار ایستاده یا دستی فیلیپس یا بوش،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "اتو سفری کوچک"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه اتو سفری کوچک."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H37",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "میز تلویزیون یا استند TV چوبی مدرن"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "میز تلویزیون یا استند TV چوبی مدرن،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "میز جلو مبلی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه میز جلو مبلی،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H38",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "خدمات آرایشگاه مردانه در محل یا سالن کوچک"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "خدمات آرایشگاه مردانه در محل یا سالن کوچک،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "کوتاهی مو و اصلاح"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "کوتاهی مو و اصلاح،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "آرایش زنانه"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه آرایش زنانه."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "خدمات"
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H39",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "گلدان بزرگ سرامیکی یا سفالی برای گیاه آپارتمانی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "گلدان بزرگ سرامیکی یا سفالی برای گیاه آپارتمانی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "گلدان پلاستیکی کوچک"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه گلدان پلاستیکی کوچک."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H40",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "ایکس‌باکس وان یا سری اس کارکرده با دسته"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "ایکس‌باکس وان یا سری اس کارکرده با دسته،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "پلی‌استیشن"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه پلی‌استیشن،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً با بازی"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً با بازی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H41",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "مخلوط‌کن یا بلندر صنعتی یا خانگی قوی بوش یا فیلیپس"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "مخلوط‌کن یا بلندر صنعتی یا خانگی قوی بوش یا فیلیپس،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "آسیاب کوچک قهوه"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه آسیاب کوچک قهوه."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H42",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "کیف زنانه چرم طبیعی یا مصنوعی برند معتبر"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کیف زنانه چرم طبیعی یا مصنوعی برند معتبر،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "نو یا در حد نو"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "نو یا در حد نو،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "کوله‌پشتی و نه کیف مدرسه"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه کوله‌پشتی و نه کیف مدرسه."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H43",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "صندلی اداری چرخ‌دار ارگونومیک با پشتی بلند"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "صندلی اداری چرخ‌دار ارگونومیک با پشتی بلند،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "صندلی معمولی خانگی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه صندلی معمولی خانگی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H44",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "دستگاه تصفیه هوا خانگی با فیلتر هپا"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "دستگاه تصفیه هوا خانگی با فیلتر هپا،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "سالم کارکرده"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم کارکرده،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "رطوبت‌ساز ساده"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه رطوبت‌ساز ساده."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H45",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "اسباب‌بازی کودک لگو یا مشابه ساختنی اصل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "اسباب‌بازی کودک لگو یا مشابه ساختنی اصل،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "جعبه کامل"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "جعبه کامل،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "اسباب‌بازی پلاستیکی بی‌نام"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه اسباب‌بازی پلاستیکی بی‌نام."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H46",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "ساعت مچی مردانه یا زنانه سیکو یا مشابه کوارتز سالم"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "ساعت مچی مردانه یا زنانه سیکو یا مشابه کوارتز سالم،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "هوشمند و نه فیک بی‌کیفیت"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه هوشمند و نه فیک بی‌کیفیت."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H47",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "خدمات کاشت مژه یا ابرو در منزل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "خدمات کاشت مژه یا ابرو در منزل،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "آرایش کامل عروس"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه آرایش کامل عروس،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "خدمات"
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H48",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "چراغ خواب یا آباژور ایستاده مدرن"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "چراغ خواب یا آباژور ایستاده مدرن،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "لوستر سقفی بزرگ"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه لوستر سقفی بزرگ."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H49",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "چادر مسافرتی ۴ نفره به بالا ضدآب"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "چادر مسافرتی ۴ نفره به بالا ضدآب،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "سالم با میخ و طناب"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم با میخ و طناب،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "چادر بچه‌گانه کوچک"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه چادر بچه‌گانه کوچک."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H50",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "آبمیوه‌گیری صنعتی یا خانگی قوی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "آبمیوه‌گیری صنعتی یا خانگی قوی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "دستگاه اسموتی ساده"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه دستگاه اسموتی ساده."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H51",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "پتو یا روتختی دو نفره مخمل یا پنبه‌ای نو"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "پتو یا روتختی دو نفره مخمل یا پنبه‌ای نو،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "پتوی مسافرتی نازک"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه پتوی مسافرتی نازک،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H52",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "سشوار حرفه‌ای یا خانگی فیلیپس یا رمینگتون با موتور قوی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "سشوار حرفه‌ای یا خانگی فیلیپس یا رمینگتون با موتور قوی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "اتو مو"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه اتو مو."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H53",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "گربه پرشین یا اسکاتیش اصیل واکسینه"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "گربه پرشین یا اسکاتیش اصیل واکسینه،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "گربه محلّی و نه بیمار"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه گربه محلّی و نه بیمار،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H54",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "سماور برقی یا گازی استیل ۴ تا ۶ لیتری سالم"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "سماور برقی یا گازی استیل ۴ تا ۶ لیتری سالم،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "قوری ساده"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه قوری ساده،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۳ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۳ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "confirmed",
+        "sourcePhrase": "۴ تا ۶ لیتر"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H55",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "کفش رسمی مردانه چرم طبیعی سایز ۴۰ تا ۴۴"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کفش رسمی مردانه چرم طبیعی سایز ۴۰ تا ۴۴،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "نو یا در حد نو"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "نو یا در حد نو،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "کفش ورزشی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه کفش ورزشی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H56",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "خدمات برق‌کشی و تعمیرات جزئی برق منزل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "خدمات برق‌کشی و تعمیرات جزئی برق منزل،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "نصب کولر"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه نصب کولر،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "خدمات"
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H57",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "تشک طبی یا فنری دو نفره سالم"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "تشک طبی یا فنری دو نفره سالم،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "تشک سفری بادی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه تشک سفری بادی،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H58",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "اسباب‌بازی کنترلی ماشین یا هلی‌کوپتر برای کودک بالای ۶ سال"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "اسباب‌بازی کنترلی ماشین یا هلی‌کوپتر برای کودک بالای ۶ سال،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "سالم با ریموت"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم با ریموت،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "لگو"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه لگو."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "confirmed",
+        "sourcePhrase": "بالای ۶ سال"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H59",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "قابلمه و تابه گرانیتی یا چدن ست کامل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "قابلمه و تابه گرانیتی یا چدن ست کامل،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "سالم بدون خط عمیق"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم بدون خط عمیق،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "ظروف پلاستیکی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه ظروف پلاستیکی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H60",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "کلاس خصوصی زبان انگلیسی یا ریاضی در منزل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کلاس خصوصی زبان انگلیسی یا ریاضی در منزل،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "آموزش آنلاین گروهی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه آموزش آنلاین گروهی،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کلاس"
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H61",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "پرینتر لیزری یا جوهرافشان اچ‌پی یا کانن کارکرده سالم با کارتریج"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "پرینتر لیزری یا جوهرافشان اچ‌پی یا کانن کارکرده سالم با کارتریج،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "اسکنر تنها"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه اسکنر تنها."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H62",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "لباس بچه‌گانه پسرانه یا دخترانه سایز ۲ تا ۶ سال نو یا در حد نو"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "لباس بچه‌گانه پسرانه یا دخترانه سایز ۲ تا ۶ سال نو یا در حد نو،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "لباس نوزاد خیلی کوچک"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه لباس نوزاد خیلی کوچک."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "confirmed",
+        "sourcePhrase": "۲ تا ۶ سال"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H63",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "دستگاه بخور سرد یا گرم خانگی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "دستگاه بخور سرد یا گرم خانگی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "تصفیه‌هوا"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه تصفیه‌هوا،"
+        },
+        {
+          "kind": "preference",
+          "values": [
+            "ترجیحاً زیر ۲ میلیون"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً زیر ۲ میلیون."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": "تومان",
+        "status": "confirmed",
+        "sourcePhrase": "زیر ۲ میلیون"
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H64",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "چرخ خیاطی خانگی ژانومه یا مشابه سالم"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "چرخ خیاطی خانگی ژانومه یا مشابه سالم،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "صنعتی سنگین"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه صنعتی سنگین،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "ترجیحاً تهران"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "ترجیحاً تهران."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H65",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "میز اتو پایه‌دار تاشو فلزی یا چوبی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "میز اتو پایه‌دار تاشو فلزی یا چوبی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "میز معمولی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه میز معمولی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H66",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "خدمات نظافت منزل عمیق یا اسباب‌کشی بعد از اسباب‌کشی"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "خدمات نظافت منزل عمیق یا اسباب‌کشی بعد از اسباب‌کشی،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "فقط نظافتچی ساده"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه فقط نظافتچی ساده،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "خدمات"
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H67",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "اسباب‌بازی عروسک یا فیگور شخصیت کارتونی اصل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "اسباب‌بازی عروسک یا فیگور شخصیت کارتونی اصل،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "جعبه سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "جعبه سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "اسباب‌بازی کنترلی"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه اسباب‌بازی کنترلی."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H68",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "کتری برقی استیل ۱٫۷ لیتری به بالا با تنظیم دما"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کتری برقی استیل ۱٫۷ لیتری به بالا با تنظیم دما،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "سالم"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "سالم،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "سماور"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه سماور."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H69",
+      "entity": {
+        "kind": "commodity",
+        "values": [
+          "گل و گیاه آپارتمانی بزرگ مثل سانسوریا یا فیکوس با گلدان"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "گل و گیاه آپارتمانی بزرگ مثل سانسوریا یا فیکوس با گلدان،"
+      },
+      "slots": [
+        {
+          "kind": "condition",
+          "values": [
+            "سالم و شاداب"
+          ],
+          "polarity": "must",
+          "hardness": "soft",
+          "status": "confirmed",
+          "sourcePhrase": "سالم و شاداب،"
+        },
+        {
+          "kind": "descriptor",
+          "values": [
+            "کاکتوس کوچک"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه کاکتوس کوچک."
+        }
+      ],
+      "transactions": {
+        "values": [],
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "location": {
+        "value": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    },
+    {
+      "schemaVersion": "2.0",
+      "huntId": "H70",
+      "entity": {
+        "kind": "service",
+        "values": [
+          "کلاس خصوصی موسیقی گیتار یا ویولن در منزل"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کلاس خصوصی موسیقی گیتار یا ویولن در منزل،"
+      },
+      "slots": [
+        {
+          "kind": "descriptor",
+          "values": [
+            "آموزش آنلاین"
+          ],
+          "polarity": "mustNot",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "نه آموزش آنلاین،"
+        },
+        {
+          "kind": "location",
+          "values": [
+            "تهران"
+          ],
+          "polarity": "must",
+          "hardness": "hard",
+          "status": "confirmed",
+          "sourcePhrase": "تهران."
+        }
+      ],
+      "transactions": {
+        "values": [
+          "service"
+        ],
+        "status": "confirmed",
+        "sourcePhrase": "کلاس"
+      },
+      "location": {
+        "value": "تهران",
+        "status": "confirmed",
+        "sourcePhrase": "تهران"
+      },
+      "price": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "status": "unknown",
+        "sourcePhrase": null
+      }
+    }
+  ]
+}
