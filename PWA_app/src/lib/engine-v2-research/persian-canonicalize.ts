@@ -11,7 +11,7 @@ export interface CanonicalizedText {
 }
 
 const DIACRITICS = /[\u064B-\u065F\u0670\u06D6-\u06ED]/g;
-const PUNCTUATION = /[.,،؛:!؟?()«»"“”'‘’\[\]{}<>|/\\\-–—_+=*~@#$%^&`؛،。؛：！？，]/g;
+const PUNCTUATION = /[.,،؛:!؟?()«»"“”'‘’\[\]{}<>|\/\\\-–—_+=*~@#$%^&\x60؛،。؛：！？，]/g;
 const DIGIT_MAP: Record<string, string> = {
   "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
   "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
