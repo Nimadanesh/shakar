@@ -1,0 +1,36 @@
+name: Engine V2 Research — Stage 2
+
+on:
+  push:
+    branches:
+      - engine_v2_research
+    paths:
+      - "PWA_app/src/lib/engine-v2-research/**"
+      - ".github/workflows/engine-v2-research-stage2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stage2:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: PWA_app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: engine_v2_research
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+      - run: npm ci
+      - name: Focused stage-2 unit tests
+        run: npx vitest run src/lib/engine-v2-research/engine-v2-research.test.ts
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: ESLint on stage-2 files
+        run: npx eslint src/lib/engine-v2-research
