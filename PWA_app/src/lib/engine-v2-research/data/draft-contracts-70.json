@@ -3793,12 +3793,12 @@
         {
           "kind": "condition",
           "values": [
-            "سالم"
+            "جعبه سالم"
           ],
           "polarity": "must",
           "hardness": "soft",
           "status": "confirmed",
-          "sourcePhrase": "سالم"
+          "sourcePhrase": "جعبه سالم"
         }
       ],
       "transactions": {
