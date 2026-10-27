@@ -73,8 +73,7 @@ function sourcePhrases(contract: IntentContract): Array<{ path: string; phrase: 
 }
 
 function c1ToC8Tokens(text: string): string[] {
-  // canonicalizeForMatch runs C1-C8 plus an inert C9 when no corpus tokens
-  // are supplied. Thus this audit never activates suffix folding.
+  // Compare only C1-C8: C9a exists in the canonicalizer but is inert here because no corpus token set is supplied.
   return canonicalizeForMatch(text).tokens.filter(Boolean);
 }
 
