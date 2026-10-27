@@ -27,9 +27,15 @@ export const FROZEN_COVERAGE_STOPWORDS = new Set([
   "بصورت",
 ]);
 
-// Status/condition words are descriptive metadata. They must be represented in
-// an informational condition slot with a verbatim source phrase, not as a
-// rejection criterion. Keep this list explicit for reviewability.
+// Status/condition phrases are descriptive metadata. Coverage is satisfied by
+// either a sourced informational condition slot (must) or a sourced mustNot
+// slot whose exact negative phrase contains the status phrase. This preserves
+// polarity instead of incorrectly requiring positive status for a rejected item.
+// Limitation: in the frozen 70 definitions H20/نو is the only entirely negative
+// occurrence, and no hunt has a mixed positive/negative occurrence of one status
+// token. A future mixed occurrence requires occurrence-level accounting; this
+// checker intentionally does not implement that future case. Keep this list
+// explicit for reviewability.
 export const STATUS_INFORMATION_TOKENS = new Set([
   "سالم", "نو", "کارکرده", "دست‌دوم", "دست دوم", "در حد نو",
   "خراب", "معیوب", "نیازمند تعمیر", "واکسینه", "اصیل",
@@ -113,23 +119,35 @@ export function auditCoverageLayers(
       }
     }
 
-    // Status tokens that occur in the hunt must be carried by a condition slot
-    // with a source phrase. They may never be represented as rejection slots.
-    const conditionSlots = contract.slots.filter((slot) => slot.kind === "condition");
+    // Match whole canonical status phrases, not individual whitespace tokens.
+    // H20/نو is satisfied by the existing sourced mustNot slot, preserving the
+    // query's negative polarity; other positive status occurrences require a
+    // sourced informational condition slot.
+    const canonicalPhrase = (value: string) => canonicalizeForMatch(value).canonical;
+    const definitionCanonical = canonicalPhrase(hunt.query);
+    const sourceIncludesStatus = (source: string, status: string) => {
+      const sourceCanonical = canonicalPhrase(source);
+      const statusCanonical = canonicalPhrase(status);
+      return statusCanonical.length > 0 &&
+        ` ${sourceCanonical} `.includes(` ${statusCanonical} `);
+    };
     for (const statusToken of STATUS_INFORMATION_TOKENS) {
-      if (!c1ToC8Tokens(hunt.query).includes(statusToken)) continue;
-      const represented = conditionSlots.some((slot) =>
+      if (!(` ${definitionCanonical} `).includes(` ${canonicalPhrase(statusToken)} `)) continue;
+      const represented = contract.slots.some((slot) =>
         slot.sourcePhrase.length > 0 &&
-        c1ToC8Tokens(slot.sourcePhrase).includes(statusToken) &&
-        slot.polarity === "must" &&
-        slot.kind === "condition" &&
-        !slotMayRejectSafe(slot),
+        sourceIncludesStatus(slot.sourcePhrase, statusToken) &&
+        (
+          (slot.kind === "condition" && slot.polarity === "must" && !slotMayRejectSafe(slot)) ||
+          (slot.polarity === "mustNot" && slot.values.some((value) =>
+            canonicalPhrase(slot.sourcePhrase).includes(canonicalPhrase(value)),
+          ))
+        ),
       );
       if (!represented) {
         issues.push({
           huntId: hunt.huntId, layer: "status", path: "slots",
           token: statusToken,
-          message: "status token must be represented in a sourced informational condition slot",
+          message: "status phrase must be represented with correct polarity in a sourced condition or mustNot slot",
         });
       }
     }
