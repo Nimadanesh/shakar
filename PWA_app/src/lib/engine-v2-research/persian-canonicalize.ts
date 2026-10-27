@@ -19,7 +19,9 @@ const DIGIT_MAP: Record<string, string> = {
   "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
 };
 const PROTECTED_SUFFIX_WORDS = new Set(["تنها", "بهتر", "بهترین", "بیشتر", "کمتر"]);
-const SUFFIXES = ["ترین", "های", "ها", "تر"] as const;
+const C9A_SUFFIXES = ["های", "ها"] as const;
+const C9B_SUFFIXES = ["ترین", "تر"] as const;
+const SUFFIXES = [...C9B_SUFFIXES, ...C9A_SUFFIXES] as const;
 
 function baseCanonicalize(input: string): string {
   return input
@@ -58,10 +60,19 @@ function letterCount(value: string): number {
  * distinct observed forms collapsing together. Keep C1-C8 only until architect
  * review. The candidate implementation below is used exclusively for audit.
  */
-export function stripClosedMorpheme(token: string, _corpusTokens: ReadonlySet<string>): string {
+export function stripClosedMorpheme(token: string, corpusTokens: ReadonlySet<string>): string {
+  if (PROTECTED_SUFFIX_WORDS.has(token)) return token;
+  for (const suffix of C9A_SUFFIXES) {
+    if (!token.endsWith(suffix)) continue;
+    const remainder = token.slice(0, -suffix.length);
+    if (letterCount(remainder) < 3) continue;
+    if (!corpusTokens.has(remainder)) continue;
+    return remainder;
+  }
   return token;
 }
 
+/** C9b comparative/superlative candidates are audit-only and never match-fold. */
 function candidateC9Strip(token: string, corpusTokens: ReadonlySet<string>): string {
   if (PROTECTED_SUFFIX_WORDS.has(token)) return token;
   for (const suffix of SUFFIXES) {
@@ -129,7 +140,7 @@ export const CANONICALIZATION_RULES = [
   "C6 punctuation -> token boundary; collapse repeated whitespace",
   "C7 lowercase Latin",
   "C8 no stemming, synonym merging, or guessed brand aliases",
-  "C9 strip only ها/های/تر/ترین with minimum-length, corpus, and protection guards; never strip standalone ی",
+  "C9a strip ها/های with minimum-length, corpus, and protection guards; C9b تر/ترین audit-only; never strip standalone ی",
 ] as const;
 
 /**
@@ -140,6 +151,7 @@ export function findC9FoldCollisions(words: readonly string[]): Array<{
   canonical: string;
   originals: string[];
   preC9Forms: string[];
+  suffixClass: "C9a" | "C9b" | "mixed";
 }> {
   const observedTokens = new Set<string>();
   const bases = new Map<string, string>();
@@ -165,10 +177,22 @@ export function findC9FoldCollisions(words: readonly string[]): Array<{
 
   return [...groups.entries()]
     .filter(([, group]) => new Set(group.map((item) => item.preC9)).size > 1)
-    .map(([canonical, group]) => ({
-      canonical,
-      originals: [...new Set(group.map((item) => item.original))].sort(),
-      preC9Forms: [...new Set(group.map((item) => item.preC9))].sort(),
-    }))
+    .map(([canonical, group]) => {
+      const preC9Forms = [...new Set(group.map((item) => item.preC9))].sort();
+      const suffixesUsed = new Set<string>();
+      for (const form of preC9Forms) {
+        for (const token of form.split(" ")) {
+          for (const suffix of SUFFIXES) if (token.endsWith(suffix)) suffixesUsed.add(suffix);
+        }
+      }
+      const hasA = [...suffixesUsed].some((suffix) => (C9A_SUFFIXES as readonly string[]).includes(suffix));
+      const hasB = [...suffixesUsed].some((suffix) => (C9B_SUFFIXES as readonly string[]).includes(suffix));
+      return {
+        canonical,
+        originals: [...new Set(group.map((item) => item.original))].sort(),
+        preC9Forms,
+        suffixClass: hasA && hasB ? "mixed" as const : hasA ? "C9a" as const : "C9b" as const,
+      };
+    })
     .sort((a, b) => a.canonical.localeCompare(b.canonical, "fa"));
 }
