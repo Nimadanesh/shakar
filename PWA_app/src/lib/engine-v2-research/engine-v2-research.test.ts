@@ -100,7 +100,7 @@ describe("frozen hunt coverage audit", () => {
     expect(auditHuntCoverage(frozen, contracts, 2)).toEqual([
       { huntId: "H2", kind: "missing-contract", detail: "no contract for frozen hunt" },
     ]);
-    const changed = [
+    const changed: IntentContract[] = [
       ...contracts,
       {
         ...validContract,
