@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { auditHuntCoverage } from "./hunt-coverage-audit";
 import {
   canonicalizeForMatch,
   findCanonicalCollisions,
@@ -77,6 +78,48 @@ describe("deterministic Persian canonicalization C1-C9", () => {
     ]);
     // If the remainder is not independently observed, C9 must not fold.
     expect(findCanonicalCollisions(["کتابها"])).toEqual([]);
+  });
+});
+
+
+describe("frozen hunt coverage audit", () => {
+  it("detects missing contracts and any lost hard-slot source phrase", () => {
+    const frozen = [
+      { huntId: "H1", query: "ماشین سفید", hardSlotSourcePhrases: ["سفید"] },
+      { huntId: "H2", query: "یخچال بدون خط", hardSlotSourcePhrases: ["بدون خط"] },
+    ];
+    const contracts: IntentContract[] = [
+      {
+        ...validContract,
+        huntId: "H1",
+        slots: [{ kind: "color", values: ["سفید"], polarity: "must", hardness: "hard", status: "confirmed", sourcePhrase: "سفید" }],
+      },
+    ];
+    expect(auditHuntCoverage(frozen, contracts, 2)).toEqual([
+      { huntId: "H2", kind: "missing-contract", detail: "no contract for frozen hunt" },
+    ]);
+    const changed = [
+      ...contracts,
+      {
+        ...validContract,
+        huntId: "H2",
+        slots: [{ kind: "absence", values: ["خط"], polarity: "mustNot", hardness: "hard", status: "confirmed", sourcePhrase: "خط" }],
+      },
+    ];
+    expect(auditHuntCoverage(frozen, changed, 2)).toContainEqual({
+      huntId: "H2",
+      kind: "missing-hard-slot",
+      detail: "hard slot source phrase lost or changed: «بدون خط»",
+    });
+  });
+
+  it("does not pass when the frozen source inventory is not exactly 70 hunts", () => {
+    const issues = auditHuntCoverage([], [], 70);
+    expect(issues).toContainEqual({
+      huntId: "*",
+      kind: "missing-source",
+      detail: "expected 70 frozen hunts, received 0",
+    });
   });
 });
 
