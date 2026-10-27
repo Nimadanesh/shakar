@@ -53,14 +53,22 @@ function letterCount(value: string): number {
  * surface tokens (not generated aliases). No suffix is stripped unless the
  * remainder itself exists as a token in that supplied corpus.
  */
-export function stripClosedMorpheme(token: string, corpusTokens: ReadonlySet<string>): string {
+/**
+ * C9 is disabled for matching after the frozen corpus collision gate found
+ * distinct observed forms collapsing together. Keep C1-C8 only until architect
+ * review. The candidate implementation below is used exclusively for audit.
+ */
+export function stripClosedMorpheme(token: string, _corpusTokens: ReadonlySet<string>): string {
+  return token;
+}
+
+function candidateC9Strip(token: string, corpusTokens: ReadonlySet<string>): string {
   if (PROTECTED_SUFFIX_WORDS.has(token)) return token;
   for (const suffix of SUFFIXES) {
     if (!token.endsWith(suffix)) continue;
     const remainder = token.slice(0, -suffix.length);
     if (letterCount(remainder) < 3) continue;
     if (!corpusTokens.has(remainder)) continue;
-    // The standalone final ی suffix is intentionally absent from SUFFIXES.
     return remainder;
   }
   return token;
@@ -114,7 +122,7 @@ export function findCanonicalCollisions(words: readonly string[]): Array<{
 
 export const CANONICALIZATION_RULES = [
   "C1 Alef variants -> ا",
-  "C2 Arabic ي/ى -> ی, ك -> ک, ة -> ه",
+  "C2 Arabic ي -> ی, ك -> ک, ة -> ه; ى remains unchanged",
   "C3 ZWNJ -> space for matching; original preserved",
   "C4 remove Arabic diacritics and tatweel",
   "C5 Persian/Arabic digits -> ASCII",
@@ -147,7 +155,7 @@ export function findC9FoldCollisions(words: readonly string[]): Array<{
     const canonical = preC9
       .split(" ")
       .filter(Boolean)
-      .map((token) => stripClosedMorpheme(token, observedTokens))
+      .map((token) => candidateC9Strip(token, observedTokens))
       .join(" ");
     if (!canonical) continue;
     const group = groups.get(canonical) ?? [];
