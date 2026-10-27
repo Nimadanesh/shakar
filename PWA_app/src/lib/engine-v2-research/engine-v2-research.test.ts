@@ -67,10 +67,15 @@ describe("deterministic Persian canonicalization C1-C9", () => {
     expect(stripClosedMorpheme("دوها", new Set(["دو"]))).toBe("دوها");
   });
 
-  it("collision audit reports distinct original words sharing a canonical form", () => {
+  it("collision audit reports distinct original words sharing a canonical form, including C9 folds", () => {
     expect(findCanonicalCollisions(["آباد", "اباد", "کتاب"])).toEqual([
       { canonical: "اباد", originals: ["آباد", "اباد"] },
     ]);
+    expect(findCanonicalCollisions(["کتاب", "کتابها"])).toEqual([
+      { canonical: "کتاب", originals: ["کتاب", "کتابها"] },
+    ]);
+    // If the remainder is not independently observed, C9 must not fold.
+    expect(findCanonicalCollisions(["کتابها"])).toEqual([]);
   });
 });
 
