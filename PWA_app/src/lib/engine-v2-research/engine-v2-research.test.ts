@@ -3,6 +3,7 @@ import { auditHuntCoverage } from "./hunt-coverage-audit";
 import {
   canonicalizeForMatch,
   findCanonicalCollisions,
+  findC9FoldCollisions,
   stripClosedMorpheme,
 } from "./persian-canonicalize";
 import {
@@ -69,15 +70,16 @@ describe("deterministic Persian canonicalization C1-C9", () => {
     expect(stripClosedMorpheme("دوها", new Set(["دو"]))).toBe("دوها");
   });
 
-  it("collision audit reports distinct original words sharing a canonical form, including C9 folds", () => {
+  it("audits C9 folds separately from C1-C8 character folding", () => {
     expect(findCanonicalCollisions(["آباد", "اباد", "کتاب"])).toEqual([
       { canonical: "اباد", originals: ["آباد", "اباد"] },
     ]);
-    expect(findCanonicalCollisions(["کتاب", "کتابها"])).toEqual([
-      { canonical: "کتاب", originals: ["کتاب", "کتابها"] },
+    expect(findC9FoldCollisions(["آباد", "اباد"])).toEqual([]);
+    expect(findC9FoldCollisions(["کتاب", "کتابها"])).toEqual([
+      { canonical: "کتاب", originals: ["کتاب", "کتابها"], preC9Forms: ["کتاب", "کتابها"] },
     ]);
     // If the remainder is not independently observed, C9 must not fold.
-    expect(findCanonicalCollisions(["کتابها"])).toEqual([]);
+    expect(findC9FoldCollisions(["کتابها"])).toEqual([]);
   });
 });
 
