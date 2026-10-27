@@ -19,7 +19,9 @@ describe("deterministic Persian canonicalization C1-C9", () => {
   });
 
   it("C2 folds Arabic Yeh/Kaf and Teh Marbuta", () => {
-    expect(canonicalizeForMatch("ي ى ك ة").canonical).toBe("ی ی ک ه");
+    expect(canonicalizeForMatch("ي ك ة").canonical).toBe("ی ک ه");
+    // Arabic Alef Maksura is not listed in C2; do not add an unrequested fold.
+    expect(canonicalizeForMatch("ى").canonical).toBe("ى");
   });
 
   it("C3 treats ZWNJ as a matching separator and preserves original input", () => {
