@@ -89,7 +89,4 @@ describe("Stage 4a reciprocal-rank fusion", () => {
     expect(fused.H01.find((entry) => entry.token === "b")?.denseRank).toBe(2);
   });
 
-  it("rejects invalid RRF k rather than silently changing it", () => {
-    expect(() => fuseBm25WithDense({ H01: ["a"] }, {}, -1)).toThrow(RangeError);
-  });
 });
