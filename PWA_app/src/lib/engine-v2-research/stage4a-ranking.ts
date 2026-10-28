@@ -21,19 +21,8 @@ export interface Bm25RankedToken {
   readonly token: string;
   readonly score: number;
 }
-export interface DenseScoreEntry {
-  readonly token: string;
-  readonly score: number;
-}
-export interface FusedRankedToken {
-  readonly token: string;
-  readonly score: number;
-  readonly bm25Rank: number | null;
-  readonly denseRank: number | null;
-}
 export const BM25_K1 = 1.2;
 export const BM25_B = 0.75;
-export const RRF_K = 60;
 
 /**
  * Canonicalizes queries and titles with the Stage 2 canonicalizer.
@@ -123,47 +112,3 @@ export function rankFrozenTitlesByHunt(
   return output;
 }
 
-function firstRanks(tokens: readonly string[]): Map<string, number> {
-  const ranks = new Map<string, number>();
-  tokens.forEach((token, index) => {
-    if (!ranks.has(token)) ranks.set(token, index + 1);
-  });
-  return ranks;
-}
-function denseOrder(entries: readonly DenseScoreEntry[]): string[] {
-  return entries
-    .map((entry, index) => ({ ...entry, index }))
-    .sort((a, b) => b.score - a.score || a.index - b.index)
-    .map((entry) => entry.token);
-}
-
-/**
- * RRF is ranking-only: returns the union of BM25 and dense tokens, no cutoff.
- * Dense entries must come from an encoder that uses "query: " for queries and
- * "passage: " for titles when the selected model requires E5 prefixes.
- */
-export function fuseBm25WithDense(
-  bm25Rankings: Readonly<Record<string, readonly string[]>>,
-  denseRankings: Readonly<Record<string, readonly DenseScoreEntry[]>>,
-): Record<string, FusedRankedToken[]> {
-  const huntIds = [...new Set([...Object.keys(bm25Rankings), ...Object.keys(denseRankings)])].sort();
-  const output: Record<string, FusedRankedToken[]> = {};
-  for (const huntId of huntIds) {
-    const bm25 = firstRanks(bm25Rankings[huntId] ?? []);
-    const dense = firstRanks(denseOrder(denseRankings[huntId] ?? []));
-    const tokens = new Set([...bm25.keys(), ...dense.keys()]);
-    output[huntId] = [...tokens].map((token) => {
-      const bm25Rank = bm25.get(token) ?? null;
-      const denseRank = dense.get(token) ?? null;
-      const score = (bm25Rank === null ? 0 : 1 / (RRF_K + bm25Rank)) +
-        (denseRank === null ? 0 : 1 / (RRF_K + denseRank));
-      return { token, score, bm25Rank, denseRank };
-    }).sort((a, b) =>
-      b.score - a.score ||
-      (a.bm25Rank ?? Number.POSITIVE_INFINITY) - (b.bm25Rank ?? Number.POSITIVE_INFINITY) ||
-      (a.denseRank ?? Number.POSITIVE_INFINITY) - (b.denseRank ?? Number.POSITIVE_INFINITY) ||
-      a.token.localeCompare(b.token)
-    );
-  }
-  return output;
-}

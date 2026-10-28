@@ -1,3 +1,5 @@
+> **منسوخ‌شده — 2026-10-28.** نقش RRF/dense با روش لاغرِ 2026-10-28 منسوخ شد؛ BM25 می‌ماند. مرجع جاری برای رتبه‌بندی: `stage4a-ranking.ts` (BM25) و اجرای خط فرمان: `scripts/stage4a-bm25-rankings.mjs`. ارزیابی dense و ادغام RRF در این مسیر فعال نیستند.
+
 # Stage 4a — BM25, RRF, and dense-score interface
 
 Status: implementation only; real dense model evaluation belongs to Stage 4b on the architect's VM.
