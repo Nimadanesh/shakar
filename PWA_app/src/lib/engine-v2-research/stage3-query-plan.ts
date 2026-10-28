@@ -89,7 +89,7 @@ function resolveCityIds(
       }
       for (const slug of slugs) {
         const id = cityIdsBySlug[slug];
-        if (typeof id !== "string" || !/^\\d+$/.test(id)) {
+        if (typeof id !== "string" || !/^\d+$/.test(id)) {
           unmappedCitySlugs.add(slug);
           continue;
         }

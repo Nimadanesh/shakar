@@ -163,7 +163,7 @@ describe("Stage 3 deterministic query derivation", () => {
       }],
       location: { value: null, status: "unknown", sourcePhrase: null },
     };
-    const result = deriveStage3QueryPlan([synthetic], []);
+    const result = deriveStage3QueryPlan([synthetic], frozenCityMap.cities);
     expect(result.summary).toEqual({
       baseQueries: 1,
       narrowQueries: 0,
