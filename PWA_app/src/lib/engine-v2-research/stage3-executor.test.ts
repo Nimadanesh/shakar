@@ -161,6 +161,7 @@ describe("Stage 3 polite Divar executor", () => {
     expect(calls).toBe(2);
     expect(delays).toContain(7);
     expect(result.events.filter((event) => event.type === "retry")).toHaveLength(1);
+    expect(result.events.some((event) => event.type === "delay" && event.reason === "transient-retry" && event.delayMs === 7)).toBe(true);
     expect(result.pools[0].complete).toBe(true);
   });
 
