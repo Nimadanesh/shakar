@@ -17,7 +17,7 @@ export interface Stage3QueryPlanEntry {
   /** null means no city filter is safe to apply. */
   readonly city_ids: readonly string[] | null;
   readonly status: Stage3QueryStatus;
-  readonly reason: "ready" | "adds-no-new-words";
+  readonly reason: "ready" | "adds-no-new-words" | "no-hard-spec-slots";
 }
 
 export interface Stage3QueryPlan {
@@ -58,25 +58,31 @@ function resolveCityIds(
   contract: IntentContract,
   cities: readonly DivarCityEntry[],
 ): readonly string[] | null {
-  if (contract.location.status !== "confirmed" || !contract.location.value?.trim()) return null;
+  const locationSlot = contract.slots.find((slot) => slot.kind.trim().toLowerCase() === "location");
+  if (!locationSlot || locationSlot.hardness !== "hard" || locationSlot.status !== "confirmed") {
+    return null;
+  }
 
-  const parts = splitAlternatives(contract.location.value);
-  if (parts.length === 0) return null;
-  const byCanonicalName = new Map<string, string>();
+  const byCanonicalName = new Map<string, Set<string>>();
   for (const city of cities) {
     for (const name of city.names) {
-      byCanonicalName.set(canonicalizeForMatch(name).canonical, city.id);
+      const key = canonicalizeForMatch(name).canonical;
+      const ids = byCanonicalName.get(key) ?? new Set<string>();
+      ids.add(city.id);
+      byCanonicalName.set(key, ids);
     }
   }
 
-  const ids: string[] = [];
-  for (const part of parts) {
-    const id = byCanonicalName.get(canonicalizeForMatch(part).canonical);
-    // Every OR component must map exactly; never guess what "nearby" means.
-    if (!id) return null;
-    if (!ids.includes(id)) ids.push(id);
+  const ids = new Set<string>();
+  for (const value of locationSlot.values) {
+    for (const part of splitAlternatives(value)) {
+      const mappedIds = byCanonicalName.get(canonicalizeForMatch(part).canonical);
+      // One unmappable OR component invalidates the entire city filter.
+      if (!mappedIds || mappedIds.size === 0) return null;
+      for (const id of mappedIds) ids.add(id);
+    }
   }
-  return ids.length === parts.length ? ids : null;
+  return ids.size > 0 ? [...ids] : null;
 }
 
 function combinations(valuesBySlot: readonly (readonly string[])[]): string[][] {
@@ -100,7 +106,8 @@ export function deriveStage3QueryPlan(
     const city_ids = resolveCityIds(contract, cities);
     const entityAlternatives = contract.entity.values.flatMap(splitAlternatives);
     const hardSlots = hardUnconditionalSlots(contract);
-    const hardCombinations = combinations(hardSlots.map((slot) => slot.values));
+    // Split OR alternatives inside each specification slot before the Cartesian product.
+    const hardCombinations = combinations(hardSlots.map((slot) => slot.values.flatMap(splitAlternatives)));
 
     for (let entityIndex = 0; entityIndex < entityAlternatives.length; entityIndex += 1) {
       const entity = entityAlternatives[entityIndex];
@@ -116,9 +123,23 @@ export function deriveStage3QueryPlan(
         reason: "ready",
       });
 
+      if (hardSlots.length === 0) {
+        entries.push({
+          order: entries.length + 1,
+          huntId: contract.huntId,
+          kind: "narrow",
+          entityAlternativeIndex: entityIndex,
+          hardSlotValues: [],
+          query: entity,
+          city_ids,
+          status: "skipped-duplicate",
+          reason: "no-hard-spec-slots",
+        });
+        continue;
+      }
+
       for (const hardSlotValues of hardCombinations) {
-        if (hardSlotValues.length === 0) continue;
-        const query = [entity, ...hardSlotValues].join(" ").replace(/\s+/g, " ").trim();
+        const query = [entity, ...hardSlotValues].join(" ").replace(/\\s+/g, " ").trim();
         const duplicate = !addsNewWords(entity, query);
         entries.push({
           order: entries.length + 1,
