@@ -1,4 +1,4 @@
-import { canonicalizeForMatch } from "./persian-canonicalize";
+import { canonicalizeForMatch } from "./persian-canonicalize.ts";
 
 export interface FrozenHuntQuery {
   readonly huntId: string;
