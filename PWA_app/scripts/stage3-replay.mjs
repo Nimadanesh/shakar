@@ -335,6 +335,7 @@ export async function runStage3Replay(options = {}) {
   const outputDir = resolve(options.outputDir ?? join(ROOT, "..", "stage3-replay-output"));
   const fetchImpl = options.fetchImpl ?? fetch;
   const plan = options.plan ?? deriveStage3QueryPlan(approvedContracts.contracts, frozenCityMap.cities);
+  const unmappedCitySlugs = plan.unmappedCitySlugs ?? [];
   const onEvent = options.onEvent;
   const incrementalStatePath = join(outputDir, "incremental-state.json");
   let previousState = { version: 1, hunts: {} };
@@ -425,8 +426,8 @@ export async function runStage3Replay(options = {}) {
     outputDir,
     paths,
     huntCount: allHuntIds.length,
-    unmappedCitySlugs: plan.unmappedCitySlugs,
-    ...(plan.unmappedCitySlugs.length > 0 ? { cityMapWarning: `No frozen Divar numeric IDs for city slugs: ${plan.unmappedCitySlugs.join(", ")}` } : {}),
+    unmappedCitySlugs,
+    ...(unmappedCitySlugs.length > 0 ? { cityMapWarning: `No frozen Divar numeric IDs for city slugs: ${unmappedCitySlugs.join(", ")}` } : {}),
     incompleteHunts: artifacts.sizeDistribution.filter((item) => !item.complete).map((item) => item.huntId),
     searchRequests: artifacts.retrievalReport.search.requestCount,
     detailRequests: artifacts.retrievalReport.detail.requestCount,
