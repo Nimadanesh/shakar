@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import approvedContracts from "./data/draft-contracts-70.json";
-import { DIVAR_CITIES } from "../divarCities";
+import frozenCityMap from "./divar-cities.json";
 import type { IntentContract } from "./intent-contract";
 import { deriveStage3QueryPlan } from "./stage3-query-plan";
 
 const contracts = approvedContracts.contracts as IntentContract[];
 
 describe("Stage 3 deterministic query derivation", () => {
-  const plan = deriveStage3QueryPlan(contracts, DIVAR_CITIES);
+  const plan = deriveStage3QueryPlan(contracts, frozenCityMap.cities);
 
   it("splits entity phrases on every exact ' یا ' and preserves deterministic base-query order", () => {
     const h03 = plan.entries.filter((entry) => entry.huntId === "H03" && entry.kind === "base");
@@ -72,19 +72,18 @@ describe("Stage 3 deterministic query derivation", () => {
       expect(first(huntId)?.city_ids, huntId).toBeNull();
     }
     for (const huntId of ["H07", "H12", "H17", "H26", "H47", "H53", "H56", "H60", "H66", "H70"]) {
-      expect(first(huntId)?.city_ids, huntId).toEqual(["tehran"]);
+      expect(first(huntId)?.city_ids, huntId).toEqual(["1"]);
     }
-    expect(first("H13")?.city_ids).toEqual(["tehran", "karaj"]);
-    for (const huntId of ["H06", "H29"]) {
-      expect(first(huntId)?.city_ids, huntId).toBeNull();
-    }
+    expect(first("H13")?.city_ids).toEqual(["1", "2"]);
+    expect(first("H06")?.city_ids).toEqual(["1"]);
+    expect(first("H29")?.city_ids).toBeNull();
 
     const noLocationSlot: IntentContract = {
       ...contracts[0],
       huntId: "SYNTHETIC-NO-LOCATION-SLOT",
       slots: contracts[0].slots.filter((slot) => slot.kind !== "location"),
     };
-    expect(deriveStage3QueryPlan([noLocationSlot], DIVAR_CITIES).entries[0].city_ids).toBeNull();
+    expect(deriveStage3QueryPlan([noLocationSlot], frozenCityMap.cities).entries[0].city_ids).toBeNull();
   });
 
   it("unions all IDs for a canonical city name and deduplicates repeated IDs", () => {
@@ -100,11 +99,26 @@ describe("Stage 3 deterministic query derivation", () => {
         sourcePhrase: "تهران یا تهران",
       }],
     };
-    const result = deriveStage3QueryPlan([synthetic], [
-      { id: "tehran-a", names: ["تهران"] },
-      { id: "tehran-b", names: ["تهران"] },
-    ]);
-    expect(result.entries[0].city_ids).toEqual(["tehran-a", "tehran-b"]);
+    const result = deriveStage3QueryPlan([synthetic], { tehran: "1" });
+    expect(result.entries[0].city_ids).toEqual(["1"]);
+  });
+
+  it("fails closed and reports a known slug missing from the frozen numeric map", () => {
+    const synthetic: IntentContract = {
+      ...contracts[0],
+      huntId: "SYNTHETIC-UNMAPPED-CITY",
+      slots: [{
+        kind: "location",
+        values: ["تهران"],
+        polarity: "must",
+        hardness: "hard",
+        status: "confirmed",
+        sourcePhrase: "تهران",
+      }],
+    };
+    const result = deriveStage3QueryPlan([synthetic], {});
+    expect(result.entries[0].city_ids).toBeNull();
+    expect(result.unmappedCitySlugs).toEqual(["tehran"]);
   });
 
   it("splits OR alternatives inside each specification-slot value before combinations", () => {
@@ -128,7 +142,7 @@ describe("Stage 3 deterministic query derivation", () => {
         sourcePhrase: "مدل الف",
       }],
     };
-    const result = deriveStage3QueryPlan([synthetic], []);
+    const result = deriveStage3QueryPlan([synthetic], frozenCityMap.cities);
     expect(result.entries.filter((entry) => entry.kind === "narrow").map((entry) => entry.query)).toEqual([
       "دستگاه سالم مدل الف",
       "دستگاه نو مدل الف",

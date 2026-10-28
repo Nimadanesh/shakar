@@ -1,5 +1,4 @@
-import approvedContracts from "./data/draft-contracts-70.json" with { type: "json" };
-import { DIVAR_CITIES, type DivarCityEntry } from "../divarCities.ts";
+import { DIVAR_CITIES } from "../divarCities.ts";
 import { canonicalizeForMatch } from "./persian-canonicalize.ts";
 import type { IntentContract, IntentSlot } from "./intent-contract";
 
@@ -22,6 +21,8 @@ export interface Stage3QueryPlanEntry {
 
 export interface Stage3QueryPlan {
   readonly entries: readonly Stage3QueryPlanEntry[];
+  /** Known city slugs missing from the frozen Divar slug-to-numeric-ID map. */
+  readonly unmappedCitySlugs: readonly string[];
   readonly summary: {
     readonly baseQueries: number;
     readonly narrowQueries: number;
@@ -56,33 +57,51 @@ function hardUnconditionalSlots(contract: IntentContract): IntentSlot[] {
 
 function resolveCityIds(
   contract: IntentContract,
-  cities: readonly DivarCityEntry[],
-): readonly string[] | null {
+  cityIdsBySlug: Readonly<Record<string, string>>,
+): { readonly city_ids: readonly string[] | null; readonly unmappedCitySlugs: readonly string[] } {
   const locationSlot = contract.slots.find((slot) => slot.kind.trim().toLowerCase() === "location");
   if (!locationSlot || locationSlot.hardness !== "hard" || locationSlot.status !== "confirmed") {
-    return null;
+    return { city_ids: null, unmappedCitySlugs: [] };
   }
 
   const byCanonicalName = new Map<string, Set<string>>();
-  for (const city of cities) {
+  for (const city of DIVAR_CITIES) {
     for (const name of city.names) {
       const key = canonicalizeForMatch(name).canonical;
-      const ids = byCanonicalName.get(key) ?? new Set<string>();
-      ids.add(city.id);
-      byCanonicalName.set(key, ids);
+      const slugs = byCanonicalName.get(key) ?? new Set<string>();
+      slugs.add(city.id);
+      byCanonicalName.set(key, slugs);
     }
   }
 
   const ids = new Set<string>();
+  const unmappedCitySlugs = new Set<string>();
   for (const value of locationSlot.values) {
-    for (const part of splitAlternatives(value)) {
-      const mappedIds = byCanonicalName.get(canonicalizeForMatch(part).canonical);
-      // One unmappable OR component invalidates the entire city filter.
-      if (!mappedIds || mappedIds.size === 0) return null;
-      for (const id of mappedIds) ids.add(id);
+    const parts = splitAlternatives(value);
+    for (const part of parts) {
+      // "اطراف" is a service-area qualifier, not a separate Divar city.
+      // Keep the explicitly named city as the hard retrieval boundary.
+      if (part === "اطراف" && parts.length > 1) continue;
+      const slugs = byCanonicalName.get(canonicalizeForMatch(part).canonical);
+      // An unrecognized name cannot safely be translated to a Divar city.
+      if (!slugs || slugs.size === 0) {
+        return { city_ids: null, unmappedCitySlugs: [...unmappedCitySlugs].sort() };
+      }
+      for (const slug of slugs) {
+        const id = cityIdsBySlug[slug];
+        if (typeof id !== "string" || !/^\\d+$/.test(id)) {
+          unmappedCitySlugs.add(slug);
+          continue;
+        }
+        ids.add(id);
+      }
     }
   }
-  return ids.size > 0 ? [...ids] : null;
+  const unmapped = [...unmappedCitySlugs].sort();
+  return {
+    city_ids: unmapped.length > 0 || ids.size === 0 ? null : [...ids].sort((a, b) => Number(a) - Number(b)),
+    unmappedCitySlugs: unmapped,
+  };
 }
 
 function combinations(valuesBySlot: readonly (readonly string[])[]): string[][] {
@@ -97,13 +116,16 @@ function combinations(valuesBySlot: readonly (readonly string[])[]): string[][] 
  * judges listings, filters results, or mutates the approved source contracts.
  */
 export function deriveStage3QueryPlan(
-  contracts: readonly IntentContract[] = approvedContracts.contracts as IntentContract[],
-  cities: readonly DivarCityEntry[] = DIVAR_CITIES,
+  contracts: readonly IntentContract[],
+  cityIdsBySlug: Readonly<Record<string, string>>,
 ): Stage3QueryPlan {
   const entries: Stage3QueryPlanEntry[] = [];
+  const unmappedCitySlugs = new Set<string>();
 
   for (const contract of contracts) {
-    const city_ids = resolveCityIds(contract, cities);
+    const cityResolution = resolveCityIds(contract, cityIdsBySlug);
+    const city_ids = cityResolution.city_ids;
+    for (const slug of cityResolution.unmappedCitySlugs) unmappedCitySlugs.add(slug);
     const entityAlternatives = contract.entity.values.flatMap(splitAlternatives);
     const hardSlots = hardUnconditionalSlots(contract);
     // Split OR alternatives inside each specification slot before the Cartesian product.
@@ -161,6 +183,7 @@ export function deriveStage3QueryPlan(
   const skippedDuplicate = entries.filter((entry) => entry.status === "skipped-duplicate").length;
   return {
     entries,
+    unmappedCitySlugs: [...unmappedCitySlugs].sort(),
     summary: {
       baseQueries,
       narrowQueries,

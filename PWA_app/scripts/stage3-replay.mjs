@@ -11,6 +11,7 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import approvedContracts from "../src/lib/engine-v2-research/data/draft-contracts-70.json" with { type: "json" };
 import gradesData from "../src/lib/engine-v2-research/data/stage1-grades-70.json" with { type: "json" };
+import frozenCityMap from "../src/lib/engine-v2-research/divar-cities.json" with { type: "json" };
 import { deriveStage3QueryPlan } from "../src/lib/engine-v2-research/stage3-query-plan.ts";
 import { executeStage3QueryPlan } from "../src/lib/engine-v2-research/stage3-executor.ts";
 
@@ -333,7 +334,7 @@ async function writeJson(path, value) {
 export async function runStage3Replay(options = {}) {
   const outputDir = resolve(options.outputDir ?? join(ROOT, "..", "stage3-replay-output"));
   const fetchImpl = options.fetchImpl ?? fetch;
-  const plan = options.plan ?? deriveStage3QueryPlan();
+  const plan = options.plan ?? deriveStage3QueryPlan(approvedContracts.contracts, frozenCityMap.cities);
   const onEvent = options.onEvent;
   const incrementalStatePath = join(outputDir, "incremental-state.json");
   let previousState = { version: 1, hunts: {} };
@@ -424,6 +425,8 @@ export async function runStage3Replay(options = {}) {
     outputDir,
     paths,
     huntCount: allHuntIds.length,
+    unmappedCitySlugs: plan.unmappedCitySlugs,
+    ...(plan.unmappedCitySlugs.length > 0 ? { cityMapWarning: `No frozen Divar numeric IDs for city slugs: ${plan.unmappedCitySlugs.join(", ")}` } : {}),
     incompleteHunts: artifacts.sizeDistribution.filter((item) => !item.complete).map((item) => item.huntId),
     searchRequests: artifacts.retrievalReport.search.requestCount,
     detailRequests: artifacts.retrievalReport.detail.requestCount,
