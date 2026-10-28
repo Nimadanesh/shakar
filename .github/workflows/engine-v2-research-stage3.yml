@@ -1,0 +1,39 @@
+name: Engine V2 Research — Stage 3
+
+on:
+  push:
+    branches:
+      - engine_v2_research
+    paths:
+      - "PWA_app/src/lib/engine-v2-research/stage3-*.ts"
+      - "PWA_app/scripts/stage3-replay.mjs"
+      - "PWA_app/scripts/stage3-replay.test.ts"
+      - "PWA_app/docs/engine-v2-research/STAGE3-RUNBOOK.md"
+      - ".github/workflows/engine-v2-research-stage3.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stage3:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: PWA_app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: engine_v2_research
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+      - run: npm ci
+      - name: Focused stage-3 unit tests
+        run: npx vitest run src/lib/engine-v2-research/stage3-query-plan.test.ts src/lib/engine-v2-research/stage3-executor.test.ts scripts/stage3-replay.test.ts
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: ESLint on stage-3 files
+        run: npx eslint src/lib/engine-v2-research/stage3-query-plan.ts src/lib/engine-v2-research/stage3-query-plan.test.ts src/lib/engine-v2-research/stage3-executor.ts src/lib/engine-v2-research/stage3-executor.test.ts scripts/stage3-replay.mjs scripts/stage3-replay.test.ts
