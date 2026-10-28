@@ -2,8 +2,8 @@ import { DIVAR_CITIES } from "../divarCities.ts";
 import { canonicalizeForMatch } from "./persian-canonicalize.ts";
 import type { IntentContract, IntentSlot } from "./intent-contract";
 
-export type Stage3QueryKind = "base" | "narrow";
-export type Stage3QueryStatus = "queued" | "skipped-duplicate";
+export type Stage3QueryKind = "base" | "narrow" | "short";
+export type Stage3QueryStatus = "queued" | "skipped-duplicate" | "skipped-ineligible";
 
 export interface Stage3QueryPlanEntry {
   /** Stable, deterministic order across the full replay. */
@@ -16,7 +16,10 @@ export interface Stage3QueryPlanEntry {
   /** null means no city filter is safe to apply. */
   readonly city_ids: readonly string[] | null;
   readonly status: Stage3QueryStatus;
-  readonly reason: "ready" | "adds-no-new-words" | "no-hard-spec-slots";
+  readonly reason: "ready" | "adds-no-new-words" | "no-hard-spec-slots" | "short-source-unconfirmed" | "short-empty-source" | "short-no-canonical-overlap" | "short-duplicate";
+  /** Present on Pass A records to audit the source field and decision. */
+  readonly sourceField?: "transactions.sourcePhrase";
+  readonly decision?: "emitted" | "skipped-source-unconfirmed" | "skipped-empty-source" | "skipped-no-canonical-overlap" | "skipped-duplicate";
 }
 
 export interface Stage3QueryPlan {
@@ -27,7 +30,10 @@ export interface Stage3QueryPlan {
     readonly baseQueries: number;
     readonly narrowQueries: number;
     readonly skippedDuplicate: number;
+    /** Legacy base+narrow count, kept stable for existing consumers. */
     readonly emittedQueries: number;
+    readonly shortQueries?: number;
+    readonly totalEmittedQueries?: number;
   };
 }
 
@@ -145,6 +151,54 @@ export function deriveStage3QueryPlan(
         reason: "ready",
       });
 
+      const appendPassAShortQuery = (): void => {
+        if (contract.entity.kind !== "service") return;
+        const source = contract.transactions.sourcePhrase;
+        const sourceField = "transactions.sourcePhrase" as const;
+        const sourceTokens = source ? [...normalizedTokens(source)] : [];
+        const entityTokens = normalizedTokens(entity);
+        let decision: Stage3QueryPlanEntry["decision"] = "emitted";
+        let status: Stage3QueryStatus = "queued";
+        let reason: Stage3QueryPlanEntry["reason"] = "ready";
+        const query = source?.trim() ?? "";
+
+        if (contract.transactions.status !== "confirmed" || !contract.transactions.values.includes("service")) {
+          decision = "skipped-source-unconfirmed";
+          status = "skipped-ineligible";
+          reason = "short-source-unconfirmed";
+        } else if (!query || sourceTokens.length === 0) {
+          decision = "skipped-empty-source";
+          status = "skipped-ineligible";
+          reason = "short-empty-source";
+        } else if (!sourceTokens.every((token) => entityTokens.has(token))) {
+          decision = "skipped-no-canonical-overlap";
+          status = "skipped-ineligible";
+          reason = "short-no-canonical-overlap";
+        } else if (entries.some((entry) =>
+          entry.huntId === contract.huntId &&
+          entry.entityAlternativeIndex === entityIndex &&
+          canonicalizeForMatch(entry.query).canonical === canonicalizeForMatch(query).canonical
+        )) {
+          decision = "skipped-duplicate";
+          status = "skipped-ineligible";
+          reason = "short-duplicate";
+        }
+
+        entries.push({
+          order: entries.length + 1,
+          huntId: contract.huntId,
+          kind: "short",
+          entityAlternativeIndex: entityIndex,
+          hardSlotValues: [],
+          query,
+          city_ids,
+          status,
+          reason,
+          sourceField,
+          decision,
+        });
+      };
+
       if (hardSlots.length === 0) {
         entries.push({
           order: entries.length + 1,
@@ -157,6 +211,7 @@ export function deriveStage3QueryPlan(
           status: "skipped-duplicate",
           reason: "no-hard-spec-slots",
         });
+        appendPassAShortQuery();
         continue;
       }
 
@@ -175,12 +230,14 @@ export function deriveStage3QueryPlan(
           reason: duplicate ? "adds-no-new-words" : "ready",
         });
       }
+      appendPassAShortQuery();
     }
   }
 
   const baseQueries = entries.filter((entry) => entry.kind === "base").length;
   const narrowQueries = entries.filter((entry) => entry.kind === "narrow" && entry.status === "queued").length;
   const skippedDuplicate = entries.filter((entry) => entry.status === "skipped-duplicate").length;
+  const shortQueries = entries.filter((entry) => entry.kind === "short" && entry.status === "queued").length;
   return {
     entries,
     unmappedCitySlugs: [...unmappedCitySlugs].sort(),
@@ -189,6 +246,8 @@ export function deriveStage3QueryPlan(
       narrowQueries,
       skippedDuplicate,
       emittedQueries: baseQueries + narrowQueries,
+      shortQueries,
+      totalEmittedQueries: baseQueries + narrowQueries + shortQueries,
     },
   };
 }
