@@ -76,6 +76,36 @@ describe("Stage 3 deterministic query derivation", () => {
     expect(deriveStage3QueryPlan([unknownLocation!], DIVAR_CITIES).entries.every((entry) => entry.city_ids === null)).toBe(true);
   });
 
+  it("records a narrow query as skipped-duplicate when its hard phrase adds no new canonical words", () => {
+    const synthetic: IntentContract = {
+      ...contracts[0],
+      huntId: "SYNTHETIC-DUPLICATE",
+      entity: { ...contracts[0].entity, values: ["دوچرخه کوهستان"] },
+      slots: [{
+        kind: "descriptor",
+        values: ["کوهستان دوچرخه"],
+        polarity: "must",
+        hardness: "hard",
+        status: "confirmed",
+        sourcePhrase: "کوهستان دوچرخه",
+      }],
+      location: { value: null, status: "unknown", sourcePhrase: null },
+    };
+    const result = deriveStage3QueryPlan([synthetic], []);
+    expect(result.summary).toEqual({
+      baseQueries: 1,
+      narrowQueries: 0,
+      skippedDuplicate: 1,
+      emittedQueries: 1,
+    });
+    expect(result.entries[1]).toMatchObject({
+      kind: "narrow",
+      query: "دوچرخه کوهستان کوهستان دوچرخه",
+      status: "skipped-duplicate",
+      reason: "adds-no-new-words",
+    });
+  });
+
   it("logs each skipped duplicate in order without silently dropping it", () => {
     const skipped = plan.entries.filter((entry) => entry.status === "skipped-duplicate");
     expect(new Set(skipped.map((entry) => entry.order)).size).toBe(skipped.length);
