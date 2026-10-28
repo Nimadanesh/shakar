@@ -80,6 +80,7 @@ export interface Stage3ExecutorOptions {
   readonly circuitFailureThreshold?: number;
   readonly circuitOpenMs?: number;
   readonly maxPagesPerQuery?: number;
+  readonly onEvent?: (event: Stage3ExecutorEvent) => void;
 }
 
 interface ParsedPage {
@@ -206,6 +207,7 @@ export async function executeStage3QueryPlan(
 
   const log = (event: Stage3ExecutorEvent): void => {
     events.push(event);
+    options.onEvent?.(event);
   };
 
   const markIncomplete = (pool: MutablePool, reason: string): void => {
