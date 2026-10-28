@@ -295,10 +295,12 @@ describe("Stage 3 incremental multi-query semantics", () => {
 });
 
 describe("Stage 3 replay page-cap CLI", () => {
-  it("defaults to five pages and accepts both max-pages forms", () => {
+  it("defaults to five pages, accepts both max-pages forms, and supports no-grade mode", () => {
     expect(parseReplayArgs([])).toEqual({ outputDir: undefined, maxPagesPerQuery: 5 });
     expect(parseReplayArgs(["--max-pages", "10"])).toEqual({ outputDir: undefined, maxPagesPerQuery: 10 });
     expect(parseReplayArgs(["./out", "--max-pages=10"])).toEqual({ outputDir: "./out", maxPagesPerQuery: 10 });
+    expect(parseReplayArgs(["--no-grade"])).toEqual({ outputDir: undefined, maxPagesPerQuery: 5, noGrade: true });
+    expect(parseReplayArgs(["./out", "--no-grade", "--max-pages", "10"])).toEqual({ outputDir: "./out", maxPagesPerQuery: 10, noGrade: true });
   });
   it("rejects missing, zero, non-integer, and unknown page-cap options", () => {
     expect(() => parseReplayArgs(["--max-pages"])).toThrow(/positive integer/);
@@ -306,6 +308,29 @@ describe("Stage 3 replay page-cap CLI", () => {
     expect(() => parseReplayArgs(["--max-pages", "2.5"])).toThrow(/positive integer/);
     expect(() => parseReplayArgs(["--bogus"])).toThrow(/Unknown replay option/);
   });
+  it("runs retrieval without loading grades or making detail-classification requests in no-grade mode", async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), "stage3-no-grade-"));
+    const plan = {
+      entries: [{ order: 1, huntId: "H01", kind: "base", entityAlternativeIndex: 0, hardSlotValues: [], query: "کفی ماشین", city_ids: null, status: "queued", reason: "ready" }],
+      summary: { baseQueries: 1, narrowQueries: 0, skippedDuplicate: 0, emittedQueries: 1 },
+    };
+    try {
+      const summary = await runStage3Replay({
+        outputDir, plan, gradeAnalysisEnabled: false, allHuntIds: ["H01"],
+        executePlan: async () => ({
+          pools: [{ huntId: "H01", listings: [], complete: true, incompleteReasons: [] }],
+          events: [], stoppedByCircuitBreaker: false,
+        }),
+        fetchImpl: async () => { throw new Error("no-grade replay must not make detail requests"); },
+      });
+      const report = JSON.parse(await readFile(join(outputDir, "missing-good-classification.json"), "utf8"));
+      expect(summary).toMatchObject({ gradeAnalysisSkipped: true, detailRequests: 0, missingGoodTokenCount: null });
+      expect(report).toMatchObject({ mode: "no-grade-replay", gradeAnalysisSkipped: true, items: [] });
+    } finally {
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
   it.each([
     { label: "default", options: {}, expected: 5 },
     { label: "explicit ten", options: { maxPagesPerQuery: 10 }, expected: 10 },
