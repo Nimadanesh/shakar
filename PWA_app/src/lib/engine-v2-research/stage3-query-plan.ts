@@ -1,6 +1,6 @@
 import approvedContracts from "./data/draft-contracts-70.json" with { type: "json" };
-import { DIVAR_CITIES, type DivarCityEntry } from "../divarCities";
-import { canonicalizeForMatch } from "./persian-canonicalize";
+import { DIVAR_CITIES, type DivarCityEntry } from "../divarCities.ts";
+import { canonicalizeForMatch } from "./persian-canonicalize.ts";
 import type { IntentContract, IntentSlot } from "./intent-contract";
 
 export type Stage3QueryKind = "base" | "narrow";
