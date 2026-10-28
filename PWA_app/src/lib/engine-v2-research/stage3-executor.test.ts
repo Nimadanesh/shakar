@@ -115,6 +115,32 @@ describe("Stage 3 polite Divar executor", () => {
     expect(calls).toBe(2);
   });
 
+  it("treats an AbortSignal timeout as transient and retries only once", async () => {
+    let calls = 0;
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      calls += 1;
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      if (calls === 1) {
+        const timeout = new Error("request timed out");
+        timeout.name = "TimeoutError";
+        throw timeout;
+      }
+      return response([postRow("timeout-recovered")]);
+    };
+
+    const result = await executeStage3QueryPlan(plan([entry()]), {
+      fetchImpl,
+      sleep: async () => undefined,
+      minRequestIntervalMs: 0,
+      jitterMaxMs: 0,
+      requestTimeoutMs: 8_000,
+    });
+
+    expect(calls).toBe(2);
+    expect(result.events.find((event) => event.type === "retry")?.reason).toBe("timeout");
+    expect(result.pools[0].complete).toBe(true);
+  });
+
   it("retries one transient network failure, then succeeds", async () => {
     let calls = 0;
     const delays: number[] = [];
@@ -190,6 +216,19 @@ describe("Stage 3 polite Divar executor", () => {
     expect(result.events.find((event) => event.type === "page-stop")?.page).toBe(4);
     expect(result.pools[0].complete).toBe(false);
     expect(result.pools[0].incompleteReasons).toContain("page-cap");
+  });
+
+  it("stops incomplete when Divar advertises another page without a cursor", async () => {
+    const result = await executeStage3QueryPlan(plan([entry()]), {
+      fetchImpl: async () => response([postRow("cursorless")], { has_next_page: true }),
+      minRequestIntervalMs: 0,
+      jitterMaxMs: 0,
+    });
+
+    expect(result.pools[0].listings.map((listing) => listing.token)).toEqual(["cursorless"]);
+    expect(result.events.find((event) => event.type === "page-stop")?.reason).toBe("missing-cursor");
+    expect(result.pools[0].complete).toBe(false);
+    expect(result.pools[0].incompleteReasons).toContain("missing-cursor");
   });
 
   it("deduplicates tokens per hunt across queries and logs each duplicate removal", async () => {
