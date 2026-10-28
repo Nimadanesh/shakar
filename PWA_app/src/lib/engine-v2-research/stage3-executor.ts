@@ -265,6 +265,7 @@ export async function executeStage3QueryPlan(
         if (!transientRetried && !stoppedByCircuitBreaker) {
           transientRetried = true;
           log({ type: "retry", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, attempt, delayMs: retryDelayMs, reason: isAbortError(error) ? "timeout" : "transient-network-error" });
+          log({ type: "delay", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, delayMs: retryDelayMs, reason: "transient-retry" });
           await sleep(retryDelayMs);
           continue;
         }
@@ -295,6 +296,7 @@ export async function executeStage3QueryPlan(
         if (transient && !transientRetried && !stoppedByCircuitBreaker) {
           transientRetried = true;
           log({ type: "retry", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, attempt, status: response.status, delayMs: retryDelayMs, reason: "transient-http-error" });
+          log({ type: "delay", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, delayMs: retryDelayMs, reason: "transient-retry" });
           await sleep(retryDelayMs);
           continue;
         }
