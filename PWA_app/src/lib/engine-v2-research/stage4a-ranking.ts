@@ -145,9 +145,7 @@ function denseOrder(entries: readonly DenseScoreEntry[]): string[] {
 export function fuseBm25WithDense(
   bm25Rankings: Readonly<Record<string, readonly string[]>>,
   denseRankings: Readonly<Record<string, readonly DenseScoreEntry[]>>,
-  k = RRF_K,
 ): Record<string, FusedRankedToken[]> {
-  if (!Number.isFinite(k) || k < 0) throw new RangeError("RRF k must be a finite non-negative number");
   const huntIds = [...new Set([...Object.keys(bm25Rankings), ...Object.keys(denseRankings)])].sort();
   const output: Record<string, FusedRankedToken[]> = {};
   for (const huntId of huntIds) {
@@ -157,8 +155,8 @@ export function fuseBm25WithDense(
     output[huntId] = [...tokens].map((token) => {
       const bm25Rank = bm25.get(token) ?? null;
       const denseRank = dense.get(token) ?? null;
-      const score = (bm25Rank === null ? 0 : 1 / (k + bm25Rank)) +
-        (denseRank === null ? 0 : 1 / (k + denseRank));
+      const score = (bm25Rank === null ? 0 : 1 / (RRF_K + bm25Rank)) +
+        (denseRank === null ? 0 : 1 / (RRF_K + denseRank));
       return { token, score, bm25Rank, denseRank };
     }).sort((a, b) =>
       b.score - a.score ||
