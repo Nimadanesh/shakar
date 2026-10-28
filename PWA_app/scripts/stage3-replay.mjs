@@ -11,7 +11,6 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import approvedContracts from "../src/lib/engine-v2-research/data/draft-contracts-70.json" with { type: "json" };
 import gradesData from "../src/lib/engine-v2-research/data/stage1-grades-70.json" with { type: "json" };
-import frozenTitles from "../src/lib/engine-v2-research/data/frozen-pool-titles.json" with { type: "json" };
 import { deriveStage3QueryPlan } from "../src/lib/engine-v2-research/stage3-query-plan.ts";
 import { executeStage3QueryPlan } from "../src/lib/engine-v2-research/stage3-executor.ts";
 

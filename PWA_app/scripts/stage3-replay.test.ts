@@ -20,7 +20,7 @@ const liveDetail = {
     { section_name: "LIST_DATA", widgets: [{ widget_type: "UNEXPANDABLE_ROW", data: { title: "قیمت", value: "۱۰۰ تومان" } }] },
     { section_name: "BREADCRUMB", widgets: [{
       widget_type: "BREADCRUMB",
-      data: { parent_items: [{ action: { payload: { search_data: { form_data: { data: { category: { str: { value: "vehicles" } } } } } } }] },
+      data: { parent_items: [{ action: { payload: { search_data: { form_data: { data: { category: { str: { value: "vehicles" } } } } } } }} ] },
     }] },
   ],
 };
