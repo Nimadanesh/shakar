@@ -1,0 +1,68 @@
+name: Engine V2 Research — Stage 4a BM25 preservation
+
+on:
+  push:
+    branches:
+      - engine_v2_research
+    paths:
+      - "PWA_app/src/lib/engine-v2-research/stage4a-ranking.ts"
+      - "PWA_app/src/lib/engine-v2-research/stage4a-ranking.test.ts"
+      - "PWA_app/scripts/stage4a-bm25-rankings.mjs"
+      - "PWA_app/docs/engine-v2-research/STAGE4A-BM25-RRF.md"
+      - ".github/workflows/engine-v2-research-stage4a-preservation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bm25-preservation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current engine_v2_research head
+        uses: actions/checkout@v4
+        with:
+          ref: engine_v2_research
+          path: current
+      - name: Check out pre-change parent for byte-for-byte BM25 baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.before }}
+          path: baseline
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: current/PWA_app/package-lock.json
+      - name: Install baseline dependencies
+        working-directory: baseline/PWA_app
+        run: npm ci
+      - name: Install current dependencies
+        working-directory: current/PWA_app
+        run: npm ci
+      - name: Capture baseline CLI output
+        working-directory: baseline/PWA_app
+        run: node --experimental-strip-types scripts/stage4a-bm25-rankings.mjs > ../bm25-before.json
+      - name: Capture current CLI output and require empty diff
+        working-directory: current/PWA_app
+        run: |
+          node --experimental-strip-types scripts/stage4a-bm25-rankings.mjs > ../bm25-after.json
+          diff -u ../bm25-before.json ../bm25-after.json
+      - name: Preserve before/after CLI outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage4a-bm25-cli-before-after
+          path: |
+            baseline/bm25-before.json
+            current/bm25-after.json
+          if-no-files-found: error
+      - name: BM25 unit tests
+        working-directory: current/PWA_app
+        run: npx vitest run src/lib/engine-v2-research/stage4a-ranking.test.ts
+      - name: TypeScript check
+        working-directory: current/PWA_app
+        run: npx tsc --noEmit
+      - name: ESLint Stage 4a files
+        working-directory: current/PWA_app
+        run: npx eslint src/lib/engine-v2-research/stage4a-ranking.ts src/lib/engine-v2-research/stage4a-ranking.test.ts scripts/stage4a-bm25-rankings.mjs
