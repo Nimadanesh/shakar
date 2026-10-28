@@ -10,7 +10,7 @@ function entry(overrides: Partial<Stage3QueryPlanEntry> = {}): Stage3QueryPlanEn
     entityAlternativeIndex: 0,
     hardSlotValues: [],
     query: "دوچرخه کوهستان",
-    city_ids: ["tehran"],
+    city_ids: ["1"],
     status: "queued",
     reason: "ready",
     ...overrides,
@@ -20,6 +20,7 @@ function entry(overrides: Partial<Stage3QueryPlanEntry> = {}): Stage3QueryPlanEn
 function plan(entries: Stage3QueryPlanEntry[]): Stage3QueryPlan {
   return {
     entries,
+    unmappedCitySlugs: [],
     summary: {
       baseQueries: entries.filter((item) => item.kind === "base").length,
       narrowQueries: entries.filter((item) => item.kind === "narrow" && item.status === "queued").length,
@@ -77,7 +78,7 @@ describe("Stage 3 polite Divar executor", () => {
     expect(sentInit?.method).toBe("POST");
     expect(sentInit?.headers).toEqual({ Accept: "application/json", "Content-Type": "application/json", "User-Agent": "ShekarResearch/1.0" });
     const body = JSON.parse(String(sentInit?.body));
-    expect(body.city_ids).toEqual(["tehran"]);
+    expect(body.city_ids).toEqual(["1"]);
     expect(body.search_data.form_data.data.query.str.value).toBe("دوچرخه کوهستان");
     expect(result.pools[0].listings).toEqual([{
       token: "token-a",
