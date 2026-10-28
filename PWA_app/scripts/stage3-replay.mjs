@@ -81,13 +81,20 @@ export function extractDetailFields(payload) {
     } else if (section.section_name === "BREADCRUMB") {
       for (const widgetValue of section.widgets) {
         const widget = record(widgetValue);
-        const data = record(widget?.data);
-        const candidates = [data?.slug, data?.category_slug, data?.value];
-        const found = candidates.find((value) => typeof value === "string" && value.length > 0);
-        if (found) {
-          categorySlug = found;
-          break;
-        }
+        if (widget?.widget_type !== "BREADCRUMB") continue;
+        const data = record(widget.data);
+        const parentItems = data?.parent_items;
+        if (!Array.isArray(parentItems) || parentItems.length === 0) continue;
+        const last = record(parentItems[parentItems.length - 1]);
+        const action = record(last?.action);
+        const payload = record(action?.payload);
+        const searchData = record(payload?.search_data);
+        const formData = record(searchData?.form_data);
+        const form = record(formData?.data);
+        const category = record(form?.category);
+        const str = record(category?.str);
+        categorySlug = textValue(str?.value);
+        if (categorySlug) break;
       }
     }
   }
@@ -259,7 +266,7 @@ export function buildReplayArtifacts({ plan, executorResult, allHuntIds, grades,
   const sizeDistribution = allHuntIds.map((huntId) => {
     const pool = poolByHunt.get(huntId);
     const requests = requestEvents.filter((event) => event.huntId === huntId).length;
-    const pages = queryStopEvents.filter((event) => event.huntId === huntId).length;
+    const pages = requests;
     return { huntId, uniqueTokens: pool?.listings.length ?? 0, requests, pages, complete: pool?.complete ?? false, incompleteReasons: pool?.incompleteReasons ?? ["no-queued-query-produced-pool"] };
   });
   const cityDistribution = allHuntIds.map((huntId) => {
