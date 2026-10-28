@@ -1,8 +1,8 @@
 {
   "version": "2.0",
   "sourceCommit": "a9d48951843873426d58ccfee10f1ae1db582068",
-  "status": "draft-contracts-updated-awaiting-layer-3-architect-review",
-  "note": "Mechanical phrase decomposition only. Source phrases are copied verbatim from each frozen query. Entity/slot boundaries, polarity, hardness, transaction, location, and price interpretations require architect review; do not treat as approved contracts. Status/condition coverage additions and H12/H53 breed-attribute mappings are source-grounded edits only; all 70 contracts remain unapproved pending Layer 3 architect review.",
+  "status": "approved-contracts-layer-3-architect-review-2026-10-27",
+  "note": "Architect-confirmed: Layer 3 review completed 2026-10-27 (knot 3: read #1 → 7 fixes → commit 56ea00e8 → read #2 zero fails → confirmed), signature audit fixes in e6967aa2, Stage 2 signed zero-technical-debt (acceptance ea9c434e). The 70 contracts below are the confirmed input; the previous 'awaiting review' header was a stale pre-review label, corrected 2026-10-28 without touching contract content.",
   "contracts": [
     {
       "schemaVersion": "2.0",
