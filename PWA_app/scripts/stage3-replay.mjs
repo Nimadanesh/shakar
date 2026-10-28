@@ -10,7 +10,6 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import approvedContracts from "../src/lib/engine-v2-research/data/draft-contracts-70.json" with { type: "json" };
-import gradesData from "../src/lib/engine-v2-research/data/stage1-grades-70.json" with { type: "json" };
 import frozenCityMap from "../src/lib/engine-v2-research/divar-cities.json" with { type: "json" };
 import { deriveStage3QueryPlan } from "../src/lib/engine-v2-research/stage3-query-plan.ts";
 import { executeStage3QueryPlan } from "../src/lib/engine-v2-research/stage3-executor.ts";
@@ -219,7 +218,7 @@ export function findMissingGoodTokens(grades, pools) {
   return goodTokenRecords(grades).filter((item) => !poolTokensByHunt.get(item.huntId)?.has(item.token));
 }
 
-export function buildReplayArtifacts({ plan, executorResult, allHuntIds, grades, detailResults, incremental = false }) {
+export function buildReplayArtifacts({ plan, executorResult, allHuntIds, grades, detailResults, incremental = false, gradeAnalysisEnabled = true }) {
   const poolByHunt = new Map(executorResult.pools.map((pool) => [pool.huntId, pool]));
   const poolFiles = Object.fromEntries(allHuntIds.map((huntId) => {
     const pool = poolByHunt.get(huntId);
@@ -306,14 +305,25 @@ export function buildReplayArtifacts({ plan, executorResult, allHuntIds, grades,
   });
   const classified = missingGoodClassified.filter((item) => item.classification === "live" || item.classification === "expired");
   const unclassified = missingGoodClassified.filter((item) => item.classification === "unclassified");
-  const missingGoodReport = {
-    method: "per-hunt (huntId, token) join; grade 1-3 only; each missing good token read at most once per hunt, live/no-cache",
+  const missingGoodReport = gradeAnalysisEnabled ? {
+    mode: "post-grade-classification",
+    method: "per-hunt (huntId, token) join; grade 1-3 only; classified by the separate recovery step",
     missingGoodTokenCount: missingGood.length,
     liveButMissedCount: classified.filter((item) => item.classification === "live").length,
     expiredCount: classified.filter((item) => item.classification === "expired").length,
     unclassifiedCount: unclassified.length,
     replayIncompleteDueToUnclassifiedDetails: unclassified.length > 0,
     items: missingGoodClassified,
+  } : {
+    mode: "no-grade-replay",
+    gradeAnalysisSkipped: true,
+    method: "grade analysis and detail classification intentionally not run during retrieval",
+    missingGoodTokenCount: null,
+    liveButMissedCount: null,
+    expiredCount: null,
+    unclassifiedCount: null,
+    replayIncompleteDueToUnclassifiedDetails: null,
+    items: [],
   };
 
   return {
@@ -338,9 +348,12 @@ async function writeJson(path, value) {
 export function parseReplayArgs(args) {
   let outputDir;
   let maxPagesPerQuery = 5;
+  let noGrade = false;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === "--max-pages") {
+    if (arg === "--no-grade") {
+      noGrade = true;
+    } else if (arg === "--max-pages") {
       const raw = args[index + 1];
       if (raw === undefined) throw new Error("--max-pages requires a positive integer");
       index += 1;
@@ -358,13 +371,14 @@ export function parseReplayArgs(args) {
       throw new Error("Only one output directory may be provided");
     }
   }
-  return { outputDir, maxPagesPerQuery };
+  return { outputDir, maxPagesPerQuery, ...(noGrade ? { noGrade: true } : {}) };
 }
 
 export async function runStage3Replay(options = {}) {
   const maxPagesPerQuery = options.maxPagesPerQuery ?? 5;
   if (!Number.isSafeInteger(maxPagesPerQuery) || maxPagesPerQuery < 1) throw new Error("maxPagesPerQuery must be a positive integer");
   const outputDir = resolve(options.outputDir ?? join(ROOT, "..", "stage3-replay-output"));
+  const gradeAnalysisEnabled = options.gradeAnalysisEnabled !== false;
   const fetchImpl = options.fetchImpl ?? fetch;
   const plan = options.plan ?? deriveStage3QueryPlan(approvedContracts.contracts, frozenCityMap.cities);
   const unmappedCitySlugs = plan.unmappedCitySlugs ?? [];
@@ -390,19 +404,26 @@ export async function runStage3Replay(options = {}) {
 
   // Preserve the same hunt-scoped token identity as the frozen human grades.
   const pools = executorResult.pools;
-  const grades = options.grades ?? gradesData.records;
-  const missingGood = findMissingGoodTokens(grades, pools);
-  const detailState = { lastRequestAt: null, events: [] };
+  let grades = [];
   const detailResults = [];
-  for (const item of missingGood) {
-    const result = await readDetailLive(item.token, detailState, {
-      fetchImpl,
-      now: options.now,
-      sleep: options.sleep,
-      random: options.random,
-    });
-    detailResults.push({ huntId: item.huntId, grade: item.grade, ...result, events: detailState.events.splice(0) });
-    // Carry forward the pacing timestamp, but do not carry old events.
+  if (gradeAnalysisEnabled) {
+    if (options.grades !== undefined) {
+      grades = options.grades;
+    } else {
+      const gradeModule = await import("../src/lib/engine-v2-research/data/stage1-grades-70.json", { with: { type: "json" } });
+      grades = gradeModule.default.records;
+    }
+    const missingGood = findMissingGoodTokens(grades, pools);
+    const detailState = { lastRequestAt: null, events: [] };
+    for (const item of missingGood) {
+      const result = await readDetailLive(item.token, detailState, {
+        fetchImpl,
+        now: options.now,
+        sleep: options.sleep,
+        random: options.random,
+      });
+      detailResults.push({ huntId: item.huntId, grade: item.grade, ...result, events: detailState.events.splice(0) });
+    }
   }
 
   const allHuntIds = options.allHuntIds ?? approvedContracts.contracts.map((contract) => contract.huntId);
@@ -412,6 +433,7 @@ export async function runStage3Replay(options = {}) {
     allHuntIds,
     grades,
     detailResults,
+    gradeAnalysisEnabled,
     incremental: Object.values(previousState.hunts).some((state) =>
       state && Array.isArray(state.knownTokens) && state.knownTokens.length > 0
     ),
@@ -465,6 +487,7 @@ export async function runStage3Replay(options = {}) {
     searchRequests: artifacts.retrievalReport.search.requestCount,
     detailRequests: artifacts.retrievalReport.detail.requestCount,
     dropCount: artifacts.dropLog.count,
+    gradeAnalysisSkipped: !gradeAnalysisEnabled,
     missingGoodTokenCount: artifacts.missingGoodReport.missingGoodTokenCount,
     liveButMissedCount: artifacts.missingGoodReport.liveButMissedCount,
     expiredCount: artifacts.missingGoodReport.expiredCount,
@@ -488,7 +511,7 @@ if (isMain) {
   try {
     const args = parseReplayArgs(process.argv.slice(2));
     const outputDir = args.outputDir ? (isAbsolute(args.outputDir) ? args.outputDir : resolve(process.cwd(), args.outputDir)) : undefined;
-    const summary = await runStage3Replay({ outputDir, maxPagesPerQuery: args.maxPagesPerQuery });
+    const summary = await runStage3Replay({ outputDir, maxPagesPerQuery: args.maxPagesPerQuery, gradeAnalysisEnabled: !args.noGrade });
     process.stdout.write(JSON.stringify(summary, null, 2) + "\n");
   } catch (error) {
     process.stderr.write("Stage 3 replay failed: " + (error instanceof Error ? error.stack ?? error.message : String(error)) + "\n");
