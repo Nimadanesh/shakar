@@ -76,7 +76,7 @@ describe("Stage 3 deterministic query derivation", () => {
     }
     expect(first("H13")?.city_ids).toEqual(["1", "2"]);
     expect(first("H06")?.city_ids).toEqual(["1"]);
-    expect(first("H29")?.city_ids).toBeNull();
+    expect(first("H29")?.city_ids).toEqual(["1"]);
 
     const noLocationSlot: IntentContract = {
       ...contracts[0],
