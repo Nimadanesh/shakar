@@ -113,7 +113,7 @@ describe("Stage 3 deterministic query derivation", () => {
       huntId: "SYNTHETIC-SPEC-OR",
       entity: { ...contracts[0].entity, values: ["دستگاه"] },
       slots: [{
-        kind: "condition",
+        kind: "condition-state",
         values: ["سالم یا نو"],
         polarity: "must",
         hardness: "hard",
@@ -130,8 +130,8 @@ describe("Stage 3 deterministic query derivation", () => {
     };
     const result = deriveStage3QueryPlan([synthetic], []);
     expect(result.entries.filter((entry) => entry.kind === "narrow").map((entry) => entry.query)).toEqual([
-      "دستگاه مدل الف",
-      "دستگاه مدل الف",
+      "دستگاه سالم مدل الف",
+      "دستگاه نو مدل الف",
     ]);
   });
   it("records a narrow query as skipped-duplicate when its hard phrase adds no new canonical words", () => {
