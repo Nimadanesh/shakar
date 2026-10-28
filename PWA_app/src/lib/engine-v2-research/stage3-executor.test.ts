@@ -75,8 +75,7 @@ describe("Stage 3 polite Divar executor", () => {
 
     expect(sentUrl).toBe("https://example.test/search");
     expect(sentInit?.method).toBe("POST");
-    expect(sentInit?.headers).toEqual({ Accept: "application/json", "Content-Type": "application/json" });
-    expect(JSON.stringify(sentInit?.headers)).not.toContain("User-Agent");
+    expect(sentInit?.headers).toEqual({ Accept: "application/json", "Content-Type": "application/json", "User-Agent": "ShekarResearch/1.0" });
     const body = JSON.parse(String(sentInit?.body));
     expect(body.city_ids).toEqual(["tehran"]);
     expect(body.search_data.form_data.data.query.str.value).toBe("دوچرخه کوهستان");
@@ -87,6 +86,35 @@ describe("Stage 3 polite Divar executor", () => {
       city: "تهران",
     }]);
     expect(result.pools[0].complete).toBe(true);
+  });
+
+  it("logs POST_ROW entries without a usable token as skipped without making the hunt incomplete", async () => {
+    const missingTokenRow = {
+      widget_type: "POST_ROW",
+      data: {
+        title: "ردیف بدون توکن",
+        action: { payload: { web_info: { title: "ردیف بدون توکن" } } },
+      },
+    };
+    const blankTokenRow = {
+      widget_type: "POST_ROW",
+      data: { action: { payload: { token: "   " } } },
+    };
+    const nonPostRow = { widget_type: "TEXT_ROW", data: {} };
+
+    const result = await executeStage3QueryPlan(plan([entry()]), {
+      fetchImpl: async () => response([missingTokenRow, blankTokenRow, nonPostRow, postRow("valid-token")]),
+      minRequestIntervalMs: 0,
+      jitterMaxMs: 0,
+    });
+
+    expect(result.events.filter((event) => event.type === "listing-skipped")).toEqual([
+      { type: "listing-skipped", huntId: "H01", queryOrder: 1, page: 0, reason: "missing-token" },
+      { type: "listing-skipped", huntId: "H01", queryOrder: 1, page: 0, reason: "missing-token" },
+    ]);
+    expect(result.pools[0].listings.map((listing) => listing.token)).toEqual(["valid-token"]);
+    expect(result.pools[0].complete).toBe(true);
+    expect(result.pools[0].incompleteReasons).toEqual([]);
   });
 
   it("paces requests at least one second apart plus jitter and logs the delay", async () => {
