@@ -27,7 +27,7 @@ jobs:
       - name: Check out pre-change parent for byte-for-byte BM25 baseline
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.before }}
+          ref: dd41bb674401a70daa5676a43217b4afdc24b817
           path: baseline
       - uses: actions/setup-node@v4
         with:
@@ -47,7 +47,7 @@ jobs:
         working-directory: current/PWA_app
         run: |
           node --experimental-strip-types scripts/stage4a-bm25-rankings.mjs > ../bm25-after.json
-          diff -u ../bm25-before.json ../bm25-after.json
+          diff -u ../../baseline/bm25-before.json ../bm25-after.json
       - name: Preserve before/after CLI outputs
         if: always()
         uses: actions/upload-artifact@v4
