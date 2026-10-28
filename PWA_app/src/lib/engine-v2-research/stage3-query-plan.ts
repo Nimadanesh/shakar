@@ -139,7 +139,7 @@ export function deriveStage3QueryPlan(
       }
 
       for (const hardSlotValues of hardCombinations) {
-        const query = [entity, ...hardSlotValues].join(" ").replace(/\\s+/g, " ").trim();
+        const query = [entity, ...hardSlotValues].join(" ").replace(/\s+/g, " ").trim();
         const duplicate = !addsNewWords(entity, query);
         entries.push({
           order: entries.length + 1,
