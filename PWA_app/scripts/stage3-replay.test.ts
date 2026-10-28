@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   buildReplayArtifacts,
   extractDetailFields,
   findMissingGoodTokens,
   readDetailLive,
+  runStage3Replay,
 } from "./stage3-replay.mjs";
 
 function detailResponse(status: number, body: unknown): Response {
@@ -148,5 +152,66 @@ describe("Stage 3 replay detail reader", () => {
       unclassifiedCount: 1,
       replayIncompleteDueToUnclassifiedDetails: true,
     });
+  });
+});
+
+
+describe("Stage 3 incremental replay", () => {
+  it("persists per-hunt tokens and stops the second mocked replay at known overlap", async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), "stage3-incremental-"));
+    const plan = {
+      entries: [{
+        order: 1,
+        huntId: "H01",
+        kind: "base",
+        entityAlternativeIndex: 0,
+        hardSlotValues: [],
+        query: "کفی ماشین",
+        city_ids: null,
+        status: "queued",
+        reason: "ready",
+      }],
+      summary: { baseQueries: 1, narrowQueries: 0, skippedDuplicate: 0, emittedQueries: 1 },
+    };
+    const listing = (token: string) => ({
+      widget_type: "POST_ROW",
+      data: { title: token, action: { payload: { token, web_info: { title: token, city_persian: "تهران" } } } },
+    });
+    const mockedFetch = (rows: string[]) => async () => new Response(JSON.stringify({
+      list_widgets: rows.map(listing),
+      pagination: { has_next_page: false },
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+
+    try {
+      await runStage3Replay({
+        outputDir,
+        plan,
+        grades: [],
+        allHuntIds: ["H01"],
+        fetchImpl: mockedFetch(["old-A", "old-B"]),
+        now: () => 10_000,
+        sleep: async () => {},
+        random: () => 0,
+      });
+      const second = await runStage3Replay({
+        outputDir,
+        plan,
+        grades: [],
+        allHuntIds: ["H01"],
+        fetchImpl: mockedFetch(["new-C", "old-A"]),
+        now: () => 20_000,
+        sleep: async () => {},
+        random: () => 0,
+      });
+      const state = JSON.parse(await readFile(join(outputDir, "incremental-state.json"), "utf8"));
+      const pools = JSON.parse(await readFile(join(outputDir, "hunt-pools.json"), "utf8"));
+
+      expect(second.searchRequests).toBe(1);
+      expect(pools.H01.tokens).toEqual(["new-C"]);
+      expect(state.hunts.H01.knownTokens).toEqual(["old-A", "old-B", "new-C"]);
+      expect(state.hunts.H01.lastOverlapToken).toBe("old-A");
+    } finally {
+      await rm(outputDir, { recursive: true, force: true });
+    }
   });
 });

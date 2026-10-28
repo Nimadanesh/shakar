@@ -28,7 +28,8 @@ export type Stage3StopReason =
   | "circuit-open"
   | "network-error"
   | "http-error"
-  | "invalid-json";
+  | "invalid-json"
+  | "known-overlap";
 
 export interface Stage3ExecutorEvent {
   readonly type:
@@ -41,7 +42,8 @@ export interface Stage3ExecutorEvent {
     | "page-stop"
     | "listing-retained"
     | "listing-deduplicated"
-    | "listing-skipped";
+    | "listing-skipped"
+    | "overlap-stop";
   readonly huntId: string;
   readonly queryOrder: number;
   readonly page?: number;
@@ -81,6 +83,8 @@ export interface Stage3ExecutorOptions {
   readonly circuitOpenMs?: number;
   readonly maxPagesPerQuery?: number;
   readonly onEvent?: (event: Stage3ExecutorEvent) => void;
+  /** Tokens retained by each hunt in the previous replay. */
+  readonly knownTokensByHunt?: Readonly<Record<string, readonly string[]>>;
 }
 
 interface ParsedPage {
@@ -341,8 +345,11 @@ export async function executeStage3QueryPlan(
 
   const entries = plan.entries.filter((entry) => entry.status === "queued");
   const processedOrders = new Set<number>();
+  const overlapStoppedHunts = new Set<string>();
+  const knownTokensByHunt = options.knownTokensByHunt ?? {};
   for (const entry of entries) {
     const pool = poolFor(entry.huntId);
+    if (overlapStoppedHunts.has(entry.huntId)) continue;
     if (stoppedByCircuitBreaker) {
       markIncomplete(pool, "circuit-open");
       continue;
@@ -352,6 +359,8 @@ export async function executeStage3QueryPlan(
     let queryStopReason: Stage3StopReason = "no-next-page";
     let queryIncomplete = false;
     let lastPageNumber = 0;
+    let overlapStopped = false;
+    const knownTokens = new Set(knownTokensByHunt[entry.huntId] ?? []);
 
     for (let pageNumber = 0; pageNumber < pageCap; pageNumber += 1) {
       lastPageNumber = pageNumber;
@@ -367,6 +376,12 @@ export async function executeStage3QueryPlan(
         log({ type: "listing-skipped", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, reason: "missing-token" });
       }
       for (const listing of page.listings) {
+        if (knownTokens.has(listing.token)) {
+          overlapStopped = true;
+          overlapStoppedHunts.add(entry.huntId);
+          log({ type: "overlap-stop", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, token: listing.token, reason: "known-token-overlap" });
+          break;
+        }
         if (pool.seenTokens.has(listing.token)) {
           log({ type: "listing-deduplicated", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, token: listing.token, reason: "duplicate-token-within-hunt" });
           continue;
@@ -376,6 +391,10 @@ export async function executeStage3QueryPlan(
         log({ type: "listing-retained", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, token: listing.token });
       }
 
+      if (overlapStopped) {
+        queryStopReason = "known-overlap";
+        break;
+      }
       if (page.listings.length === 0) {
         queryStopReason = "empty-page";
         break;

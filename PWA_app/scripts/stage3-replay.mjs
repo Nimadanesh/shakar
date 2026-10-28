@@ -6,7 +6,7 @@
  * All search and detail reads are live, sequential, paced, and uncached.
  * This script deliberately imports no code from src/lib/server.
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import approvedContracts from "../src/lib/engine-v2-research/data/draft-contracts-70.json" with { type: "json" };
@@ -334,15 +334,29 @@ export async function runStage3Replay(options = {}) {
   const fetchImpl = options.fetchImpl ?? fetch;
   const plan = options.plan ?? deriveStage3QueryPlan();
   const onEvent = options.onEvent;
+  const incrementalStatePath = join(outputDir, "incremental-state.json");
+  let previousState = { version: 1, hunts: {} };
+  try {
+    const parsed = JSON.parse(await readFile(incrementalStatePath, "utf8"));
+    if (parsed && parsed.version === 1 && parsed.hunts && typeof parsed.hunts === "object") previousState = parsed;
+  } catch (error) {
+    if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error;
+  }
+  const knownTokensByHunt = Object.fromEntries(Object.entries(previousState.hunts).map(([huntId, state]) => [
+    huntId,
+    state && Array.isArray(state.knownTokens) ? state.knownTokens.filter((token) => typeof token === "string") : [],
+  ]));
   const executorResult = await (options.executePlan ?? executeStage3QueryPlan)(plan, {
     fetchImpl,
     maxPagesPerQuery: 5,
     onEvent,
+    knownTokensByHunt,
   });
 
   // Preserve the same hunt-scoped token identity as the frozen human grades.
   const pools = executorResult.pools;
-  const missingGood = findMissingGoodTokens(gradesData.records, pools);
+  const grades = options.grades ?? gradesData.records;
+  const missingGood = findMissingGoodTokens(grades, pools);
   const detailState = { lastRequestAt: null, events: [] };
   const detailResults = [];
   for (const item of missingGood) {
@@ -356,15 +370,32 @@ export async function runStage3Replay(options = {}) {
     // Carry forward the pacing timestamp, but do not carry old events.
   }
 
-  const allHuntIds = approvedContracts.contracts.map((contract) => contract.huntId);
+  const allHuntIds = options.allHuntIds ?? approvedContracts.contracts.map((contract) => contract.huntId);
   const artifacts = buildReplayArtifacts({
     plan,
     executorResult,
     allHuntIds,
-    grades: gradesData.records,
+    grades,
     detailResults,
   });
   await mkdir(outputDir, { recursive: true });
+  const nextHunts = { ...previousState.hunts };
+  for (const pool of pools) {
+    const prior = nextHunts[pool.huntId];
+    const known = new Set([
+      ...(prior && Array.isArray(prior.knownTokens) ? prior.knownTokens : []),
+      ...pool.listings.map((listing) => listing.token),
+    ]);
+    const overlap = executorResult.events.find((event) => event.type === "overlap-stop" && event.huntId === pool.huntId);
+    nextHunts[pool.huntId] = {
+      lastReadAt: new Date().toISOString(),
+      knownTokens: [...known],
+      lastOverlapToken: overlap?.token ?? null,
+      lastRunComplete: pool.complete,
+      lastRunIncompleteReasons: pool.incompleteReasons,
+    };
+  }
+  await writeJson(incrementalStatePath, { version: 1, hunts: nextHunts });
   const paths = {
     pools: join(outputDir, "hunt-pools.json"),
     retrievalReport: join(outputDir, "retrieval-report.json"),
@@ -373,6 +404,7 @@ export async function runStage3Replay(options = {}) {
     cityDistribution: join(outputDir, "city-distribution.json"),
     overlapInputs: join(outputDir, "overlap-inputs.json"),
     missingGood: join(outputDir, "missing-good-classification.json"),
+    incrementalState: incrementalStatePath,
     summary: join(outputDir, "summary.json"),
   };
   await Promise.all([
