@@ -88,6 +88,24 @@ describe("Stage 3 polite Divar executor", () => {
     expect(result.pools[0].complete).toBe(true);
   });
 
+  it("delivers every event synchronously through onEvent in the same order and retains the returned event array", async () => {
+    const delivered: import("./stage3-executor").Stage3ExecutorEvent[] = [];
+    const result = await executeStage3QueryPlan(plan([entry()]), {
+      fetchImpl: async () => response([postRow("live-token")]),
+      minRequestIntervalMs: 0,
+      jitterMaxMs: 0,
+      onEvent: (event) => { delivered.push(event); },
+    });
+
+    expect(delivered).toEqual(result.events);
+    expect(delivered).toHaveLength(result.events.length);
+    expect(delivered[0]?.type).toBe("request");
+    expect(delivered.some((event) => event.type === "listing-retained" && event.token === "live-token")).toBe(true);
+    delivered.forEach((event, index) => {
+      expect(event).toBe(result.events[index]);
+    });
+  });
+
   it("logs POST_ROW entries without a usable token as skipped without making the hunt incomplete", async () => {
     const missingTokenRow = {
       widget_type: "POST_ROW",
