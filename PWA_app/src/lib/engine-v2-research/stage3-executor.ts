@@ -325,6 +325,7 @@ export async function executeStage3QueryPlan(
   };
 
   const entries = plan.entries.filter((entry) => entry.status === "queued");
+  const processedOrders = new Set<number>();
   for (const entry of entries) {
     const pool = poolFor(entry.huntId);
     if (stoppedByCircuitBreaker) {
@@ -335,8 +336,10 @@ export async function executeStage3QueryPlan(
     let cursor: unknown = undefined;
     let queryStopReason: Stage3StopReason = "no-next-page";
     let queryIncomplete = false;
+    let lastPageNumber = 0;
 
     for (let pageNumber = 0; pageNumber < pageCap; pageNumber += 1) {
+      lastPageNumber = pageNumber;
       const outcome = await pacedRequest(entry, pageNumber, cursor);
       if (outcome.kind === "stop") {
         queryStopReason = outcome.reason;
@@ -376,11 +379,18 @@ export async function executeStage3QueryPlan(
       cursor = page.nextCursor;
     }
 
-    log({ type: "page-stop", huntId: entry.huntId, queryOrder: entry.order, page: Math.min(pageCap - 1, Math.max(0, 0)), reason: queryStopReason });
+    log({ type: "page-stop", huntId: entry.huntId, queryOrder: entry.order, page: lastPageNumber, reason: queryStopReason });
     if (queryIncomplete) markIncomplete(pool, queryStopReason);
+    processedOrders.add(entry.order);
     if (stoppedByCircuitBreaker) {
       markIncomplete(pool, "circuit-open");
       break;
+    }
+  }
+
+  if (stoppedByCircuitBreaker) {
+    for (const entry of entries) {
+      if (!processedOrders.has(entry.order)) markIncomplete(poolFor(entry.huntId), "circuit-open");
     }
   }
 
