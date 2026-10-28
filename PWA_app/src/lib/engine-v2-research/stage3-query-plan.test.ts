@@ -113,7 +113,7 @@ describe("Stage 3 deterministic query derivation", () => {
       huntId: "SYNTHETIC-SPEC-OR",
       entity: { ...contracts[0].entity, values: ["دستگاه"] },
       slots: [{
-        kind: "condition-state",
+        kind: "variant",
         values: ["سالم یا نو"],
         polarity: "must",
         hardness: "hard",
@@ -164,9 +164,24 @@ describe("Stage 3 deterministic query derivation", () => {
     });
   });
 
-  it("logs each skipped duplicate in order without silently dropping it", () => {
+  it("logs every narrow decision, including no-hard-spec-slots, in strictly increasing order", () => {
     const skipped = plan.entries.filter((entry) => entry.status === "skipped-duplicate");
     expect(new Set(skipped.map((entry) => entry.order)).size).toBe(skipped.length);
     expect(plan.entries.map((entry) => entry.order)).toEqual(plan.entries.map((entry) => entry.order).sort((a, b) => a - b));
+    expect(plan.entries.filter((entry) => entry.reason === "no-hard-spec-slots")).toHaveLength(113);
+
+    const bases = plan.entries.filter((entry) => entry.kind === "base");
+    for (const base of bases) {
+      expect(plan.entries.some((entry) =>
+        entry.kind === "narrow" &&
+        entry.huntId === base.huntId &&
+        entry.entityAlternativeIndex === base.entityAlternativeIndex &&
+        entry.order > base.order &&
+        (entry.status === "queued" || entry.status === "skipped-duplicate")
+      ), base.huntId + ":" + base.entityAlternativeIndex).toBe(true);
+    }
+    expect(skipped.every((entry) =>
+      entry.reason === "adds-no-new-words" || entry.reason === "no-hard-spec-slots"
+    )).toBe(true);
   });
 });
