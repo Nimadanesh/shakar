@@ -176,7 +176,6 @@ export function deriveStage3QueryPlan(
           reason = "short-no-canonical-overlap";
         } else if (entries.some((entry) =>
           entry.huntId === contract.huntId &&
-          entry.entityAlternativeIndex === entityIndex &&
           canonicalizeForMatch(entry.query).canonical === canonicalizeForMatch(query).canonical
         )) {
           decision = "skipped-duplicate";
