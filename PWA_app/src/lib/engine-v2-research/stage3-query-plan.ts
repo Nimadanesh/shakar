@@ -1,4 +1,4 @@
-import approvedContracts from "./data/draft-contracts-70.json";
+import approvedContracts from "./data/draft-contracts-70.json" with { type: "json" };
 import { DIVAR_CITIES, type DivarCityEntry } from "../divarCities";
 import { canonicalizeForMatch } from "./persian-canonicalize";
 import type { IntentContract, IntentSlot } from "./intent-contract";
