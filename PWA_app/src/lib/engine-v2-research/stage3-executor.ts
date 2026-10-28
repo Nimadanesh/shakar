@@ -345,11 +345,9 @@ export async function executeStage3QueryPlan(
 
   const entries = plan.entries.filter((entry) => entry.status === "queued");
   const processedOrders = new Set<number>();
-  const overlapStoppedHunts = new Set<string>();
   const knownTokensByHunt = options.knownTokensByHunt ?? {};
   for (const entry of entries) {
     const pool = poolFor(entry.huntId);
-    if (overlapStoppedHunts.has(entry.huntId)) continue;
     if (stoppedByCircuitBreaker) {
       markIncomplete(pool, "circuit-open");
       continue;
@@ -378,7 +376,6 @@ export async function executeStage3QueryPlan(
       for (const listing of page.listings) {
         if (knownTokens.has(listing.token)) {
           overlapStopped = true;
-          overlapStoppedHunts.add(entry.huntId);
           log({ type: "overlap-stop", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, token: listing.token, reason: "known-token-overlap" });
           break;
         }

@@ -218,12 +218,13 @@ export function findMissingGoodTokens(grades, pools) {
   return goodTokenRecords(grades).filter((item) => !poolTokensByHunt.get(item.huntId)?.has(item.token));
 }
 
-export function buildReplayArtifacts({ plan, executorResult, allHuntIds, grades, detailResults }) {
+export function buildReplayArtifacts({ plan, executorResult, allHuntIds, grades, detailResults, incremental = false }) {
   const poolByHunt = new Map(executorResult.pools.map((pool) => [pool.huntId, pool]));
   const poolFiles = Object.fromEntries(allHuntIds.map((huntId) => {
     const pool = poolByHunt.get(huntId);
     return [huntId, {
       huntId,
+      deltaOnly: incremental,
       complete: pool?.complete ?? false,
       incompleteReasons: pool?.incompleteReasons ?? ["no-queued-query-produced-pool"],
       tokens: (pool?.listings ?? []).map((listing) => listing.token),
@@ -377,6 +378,9 @@ export async function runStage3Replay(options = {}) {
     allHuntIds,
     grades,
     detailResults,
+    incremental: Object.values(previousState.hunts).some((state) =>
+      state && Array.isArray(state.knownTokens) && state.knownTokens.length > 0
+    ),
   });
   await mkdir(outputDir, { recursive: true });
   const nextHunts = { ...previousState.hunts };
@@ -429,6 +433,14 @@ export async function runStage3Replay(options = {}) {
     expiredCount: artifacts.missingGoodReport.expiredCount,
     unclassifiedCount: artifacts.missingGoodReport.unclassifiedCount,
     replayIncompleteDueToUnclassifiedDetails: artifacts.missingGoodReport.replayIncompleteDueToUnclassifiedDetails,
+    incremental: Object.values(previousState.hunts).some((state) =>
+      state && Array.isArray(state.knownTokens) && state.knownTokens.length > 0
+    ),
+    incrementalNote: Object.values(previousState.hunts).some((state) =>
+      state && Array.isArray(state.knownTokens) && state.knownTokens.length > 0
+    )
+      ? "Hunt pools contain only tokens newly found after the last read; the complete known-token set is stored in incremental-state.json."
+      : "Full replay; hunt pools are not marked delta-only.",
   };
   await writeJson(paths.summary, summary);
   return summary;

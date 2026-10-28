@@ -215,3 +215,80 @@ describe("Stage 3 incremental replay", () => {
     }
   });
 });
+
+
+describe("Stage 3 incremental multi-query semantics", () => {
+  it("continues later queries after overlap and marks pool output as delta-only", async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), "stage3-incremental-multi-"));
+    const entry = (order: number, query: string) => ({
+      order,
+      huntId: "H01",
+      kind: "base",
+      entityAlternativeIndex: 0,
+      hardSlotValues: [],
+      query,
+      city_ids: null,
+      status: "queued",
+      reason: "ready",
+    });
+    const plan = {
+      entries: [entry(1, "query-one"), entry(2, "query-two")],
+      summary: { baseQueries: 2, narrowQueries: 0, skippedDuplicate: 0, emittedQueries: 2 },
+    };
+    const listing = (token: string) => ({
+      widget_type: "POST_ROW",
+      data: { title: token, action: { payload: { token, web_info: { title: token, city_persian: "تهران" } } } },
+    });
+    const mockedFetch = (rows: string[]) => async () => new Response(JSON.stringify({
+      list_widgets: rows.map(listing),
+      pagination: { has_next_page: false },
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+
+    try {
+      await runStage3Replay({
+        outputDir,
+        plan: { ...plan, entries: [entry(1, "seed")] },
+        grades: [],
+        allHuntIds: ["H01"],
+        fetchImpl: mockedFetch(["old-A"]),
+        now: () => 10_000,
+        sleep: async () => {},
+        random: () => 0,
+      });
+
+      const seenQueries: string[] = [];
+      const second = await runStage3Replay({
+        outputDir,
+        plan,
+        grades: [],
+        allHuntIds: ["H01"],
+        fetchImpl: async (_url: Parameters<typeof fetch>[0], init: Parameters<typeof fetch>[1]) => {
+          const body = JSON.parse(String(init?.body));
+          const query = body.search_data.form_data.data.query.str.value;
+          seenQueries.push(query);
+          return new Response(JSON.stringify({
+            list_widgets: (query === "query-one" ? ["old-A"] : ["new-B"]).map(listing),
+            pagination: { has_next_page: false },
+          }), { status: 200, headers: { "Content-Type": "application/json" } });
+        },
+        now: () => 20_000,
+        sleep: async () => {},
+        random: () => 0,
+      });
+
+      const state = JSON.parse(await readFile(join(outputDir, "incremental-state.json"), "utf8"));
+      const pools = JSON.parse(await readFile(join(outputDir, "hunt-pools.json"), "utf8"));
+      const summary = JSON.parse(await readFile(join(outputDir, "summary.json"), "utf8"));
+
+      expect(seenQueries).toEqual(["query-one", "query-two"]);
+      expect(second.searchRequests).toBe(2);
+      expect(pools.H01.tokens).toEqual(["new-B"]);
+      expect(pools.H01.deltaOnly).toBe(true);
+      expect(state.hunts.H01.knownTokens).toEqual(["old-A", "new-B"]);
+      expect(summary.incremental).toBe(true);
+      expect(summary.incrementalNote).toContain("complete known-token set is stored in incremental-state.json");
+    } finally {
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+});
