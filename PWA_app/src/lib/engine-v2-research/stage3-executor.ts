@@ -1,6 +1,7 @@
 import type { Stage3QueryPlan, Stage3QueryPlanEntry } from "./stage3-query-plan";
 
 const DIVAR_SEARCH_URL = "https://api.divar.ir/v8/postlist/w/search";
+const USER_AGENT = "ShekarResearch/1.0";
 const REQUEST_TIMEOUT_MS = 8_000;
 const MIN_REQUEST_INTERVAL_MS = 1_000;
 const REQUEST_JITTER_MAX_MS = 250;
@@ -85,6 +86,7 @@ interface ParsedPage {
   readonly listings: readonly Stage3Listing[];
   readonly hasNextPage: boolean;
   readonly nextCursor: unknown;
+  readonly skippedMissingToken: number;
 }
 
 type RequestOutcome =
@@ -114,6 +116,7 @@ function parsePostRows(payload: unknown): ParsedPage | null {
   if (!root) return null;
   const widgets = Array.isArray(root.list_widgets) ? root.list_widgets : [];
   const listings: Stage3Listing[] = [];
+  let skippedMissingToken = 0;
 
   for (const item of widgets) {
     const widget = asRecord(item);
@@ -122,7 +125,14 @@ function parsePostRows(payload: unknown): ParsedPage | null {
     const action = asRecord(data?.action);
     const actionPayload = asRecord(action?.payload);
     const token = asString(actionPayload?.token);
-    if (!data || !token || token.trim() === "") continue;
+    if (!token || token.trim() === "") {
+      skippedMissingToken += 1;
+      continue;
+    }
+    if (!data) {
+      skippedMissingToken += 1;
+      continue;
+    }
     const webInfo = asRecord(actionPayload?.web_info);
     listings.push({
       token,
@@ -135,6 +145,7 @@ function parsePostRows(payload: unknown): ParsedPage | null {
   const pagination = asRecord(root.pagination);
   return {
     listings,
+    skippedMissingToken,
     hasNextPage: pagination?.has_next_page === true,
     nextCursor: pagination?.data,
   };
@@ -254,7 +265,7 @@ export async function executeStage3QueryPlan(
       try {
         response = await fetchImpl(endpoint, {
           method: "POST",
-          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          headers: { Accept: "application/json", "Content-Type": "application/json", "User-Agent": USER_AGENT },
           body: JSON.stringify(body),
           signal: AbortSignal.timeout(timeoutMs),
         });
@@ -350,6 +361,9 @@ export async function executeStage3QueryPlan(
       }
 
       const page = outcome.page;
+      for (let skipped = 0; skipped < page.skippedMissingToken; skipped += 1) {
+        log({ type: "listing-skipped", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, reason: "missing-token" });
+      }
       for (const listing of page.listings) {
         if (pool.seenTokens.has(listing.token)) {
           log({ type: "listing-deduplicated", huntId: entry.huntId, queryOrder: entry.order, page: pageNumber, token: listing.token, reason: "duplicate-token-within-hunt" });
