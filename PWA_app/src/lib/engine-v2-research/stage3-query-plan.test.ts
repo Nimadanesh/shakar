@@ -169,6 +169,8 @@ describe("Stage 3 deterministic query derivation", () => {
       narrowQueries: 0,
       skippedDuplicate: 1,
       emittedQueries: 1,
+      shortQueries: 0,
+      totalEmittedQueries: 1,
     });
     expect(result.entries[1]).toMatchObject({
       kind: "narrow",
