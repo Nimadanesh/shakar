@@ -68,11 +68,14 @@ describe("Stage 3 Pass A service-core short queries", () => {
     expect(plan.summary.narrowQueries).toBe(28);
     expect(plan.summary.emittedQueries).toBe(165);
     expect(plan.summary.shortQueries).toBe(shortEntries.filter((entry) => entry.status === "queued").length);
-    expect(plan.summary.totalEmittedQueries).toBe(165 + plan.summary.shortQueries!);
+    expect(plan.summary.totalEmittedQueries).toBe(165 + (plan.summary.shortQueries ?? 0));
   });
 
   it("does not emit when the service source is unconfirmed or duplicates the base query", () => {
-    const h06 = contracts.find((contract) => contract.huntId === "H06")!;
+    const foundH06 = contracts.find((contract) => contract.huntId === "H06");
+    expect(foundH06).toBeDefined();
+    if (!foundH06) throw new Error("Frozen contract H06 is missing");
+    const h06 = foundH06;
     const unconfirmed: IntentContract = {
       ...h06,
       huntId: "SYNTHETIC-UNCONFIRMED-SOURCE",
