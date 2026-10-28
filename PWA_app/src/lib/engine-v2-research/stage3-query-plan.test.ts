@@ -42,10 +42,12 @@ describe("Stage 3 deterministic query derivation", () => {
     expect(plan.summary.narrowQueries).toBe(28);
     expect(plan.summary.emittedQueries).toBe(165);
     expect(plan.summary.emittedQueries).toBe(plan.summary.baseQueries + plan.summary.narrowQueries);
-    for (const entry of plan.entries.filter((candidate) => candidate.status === "skipped-duplicate")) {
-      expect(entry.kind).toBe("narrow");
-      expect(entry.reason).toBe("adds-no-new-words");
-    }
+    const skipped = plan.entries.filter((candidate) => candidate.status === "skipped-duplicate");
+    const noHardSlots = skipped.filter((entry) => entry.reason === "no-hard-spec-slots");
+    const tokenDuplicates = skipped.filter((entry) => entry.reason === "adds-no-new-words");
+    expect(noHardSlots).toHaveLength(113);
+    expect(skipped).toHaveLength(113 + tokenDuplicates.length);
+    expect(skipped.every((entry) => entry.kind === "narrow")).toBe(true);
   });
 
   it("never creates query text from mustNot, soft, condition, location, category, or price constraints", () => {
@@ -64,18 +66,74 @@ describe("Stage 3 deterministic query derivation", () => {
     }
   });
 
-  it("uses city_ids only for confirmed locations whose every OR component maps exactly", () => {
+  it("filters cities only from hard, confirmed location slots and maps every component", () => {
     const first = (huntId: string) => plan.entries.find((entry) => entry.huntId === huntId);
+    for (const huntId of ["H01", "H05", "H09", "H14", "H20", "H21", "H24", "H33", "H35", "H37", "H51", "H57", "H64"]) {
+      expect(first(huntId)?.city_ids, huntId).toBeNull();
+    }
+    for (const huntId of ["H07", "H12", "H17", "H26", "H47", "H53", "H56", "H60", "H66", "H70"]) {
+      expect(first(huntId)?.city_ids, huntId).toEqual(["tehran"]);
+    }
     expect(first("H13")?.city_ids).toEqual(["tehran", "karaj"]);
-    for (const huntId of ["H06", "H29", "H35"]) {
-      expect(first(huntId)?.city_ids).toBeNull();
+    for (const huntId of ["H06", "H29"]) {
+      expect(first(huntId)?.city_ids, huntId).toBeNull();
     }
 
-    const unknownLocation = contracts.find((contract) => contract.location.status === "unknown");
-    expect(unknownLocation).toBeDefined();
-    expect(deriveStage3QueryPlan([unknownLocation!], DIVAR_CITIES).entries.every((entry) => entry.city_ids === null)).toBe(true);
+    const noLocationSlot: IntentContract = {
+      ...contracts[0],
+      huntId: "SYNTHETIC-NO-LOCATION-SLOT",
+      slots: contracts[0].slots.filter((slot) => slot.kind !== "location"),
+    };
+    expect(deriveStage3QueryPlan([noLocationSlot], DIVAR_CITIES).entries[0].city_ids).toBeNull();
   });
 
+  it("unions all IDs for a canonical city name and deduplicates repeated IDs", () => {
+    const synthetic: IntentContract = {
+      ...contracts[0],
+      huntId: "SYNTHETIC-CITY-UNION",
+      slots: [{
+        kind: "location",
+        values: ["تهران یا تهران"],
+        polarity: "must",
+        hardness: "hard",
+        status: "confirmed",
+        sourcePhrase: "تهران یا تهران",
+      }],
+    };
+    const result = deriveStage3QueryPlan([synthetic], [
+      { id: "tehran-a", names: ["تهران"] },
+      { id: "tehran-b", names: ["تهران"] },
+    ]);
+    expect(result.entries[0].city_ids).toEqual(["tehran-a", "tehran-b"]);
+  });
+
+  it("splits OR alternatives inside each specification-slot value before combinations", () => {
+    const synthetic: IntentContract = {
+      ...contracts[0],
+      huntId: "SYNTHETIC-SPEC-OR",
+      entity: { ...contracts[0].entity, values: ["دستگاه"] },
+      slots: [{
+        kind: "condition",
+        values: ["سالم یا نو"],
+        polarity: "must",
+        hardness: "hard",
+        status: "confirmed",
+        sourcePhrase: "سالم یا نو",
+      }, {
+        kind: "model",
+        values: ["مدل الف"],
+        polarity: "must",
+        hardness: "hard",
+        status: "confirmed",
+        sourcePhrase: "مدل الف",
+      }],
+    };
+    const result = deriveStage3QueryPlan([synthetic], []);
+    expect(result.entries.filter((entry) => entry.kind === "narrow").map((entry) => entry.query)).toEqual([
+      "دستگاه مدل الف",
+      "دستگاه مدل الف",
+    ]);
+  });
   it("records a narrow query as skipped-duplicate when its hard phrase adds no new canonical words", () => {
     const synthetic: IntentContract = {
       ...contracts[0],
