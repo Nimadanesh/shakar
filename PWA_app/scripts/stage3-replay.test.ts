@@ -40,7 +40,7 @@ describe("Stage 3 replay detail reader", () => {
     let init: RequestInit | undefined;
     const state = { lastRequestAt: null as number | null, events: [] as Record<string, unknown>[] };
     const result = await readDetailLive("token /?", state, {
-      fetchImpl: async (url, requestInit) => {
+      fetchImpl: async (url: Parameters<typeof fetch>[0], requestInit: Parameters<typeof fetch>[1]) => {
         requestedUrl = String(url);
         init = requestInit;
         return detailResponse(200, liveDetail);

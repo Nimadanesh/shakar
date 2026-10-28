@@ -278,7 +278,7 @@ export function buildReplayArtifacts({ plan, executorResult, allHuntIds, grades,
     return { huntId, totalListings: listings.length, cityCounts: counts };
   });
 
-  const overlapInputs = {};
+  const overlapInputs: Record<string, string[]> = {};
   for (const [huntId, pool] of poolByHunt) {
     for (const listing of pool.listings) {
       overlapInputs[listing.token] ??= [];
