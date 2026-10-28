@@ -141,7 +141,7 @@ function parsePostRows(payload: unknown): ParsedPage | null {
 }
 
 function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === "AbortError";
+  return error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
 }
 
 function defaultSleep(ms: number): Promise<void> {
