@@ -331,7 +331,39 @@ async function writeJson(path, value) {
   await writeFile(path, JSON.stringify(value, null, 2) + "\n", "utf8");
 }
 
+/**
+ * Parse replay CLI arguments. The first non-option argument remains the output directory.
+ * Supports --max-pages N and --max-pages=N; default cap is five pages per query.
+ */
+export function parseReplayArgs(args) {
+  let outputDir;
+  let maxPagesPerQuery = 5;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--max-pages") {
+      const raw = args[index + 1];
+      if (raw === undefined) throw new Error("--max-pages requires a positive integer");
+      index += 1;
+      if (!/^[0-9]+$/.test(raw) || Number(raw) < 1 || !Number.isSafeInteger(Number(raw))) throw new Error("--max-pages requires a positive integer");
+      maxPagesPerQuery = Number(raw);
+    } else if (arg.startsWith("--max-pages=")) {
+      const raw = arg.slice("--max-pages=".length);
+      if (!/^[0-9]+$/.test(raw) || Number(raw) < 1 || !Number.isSafeInteger(Number(raw))) throw new Error("--max-pages requires a positive integer");
+      maxPagesPerQuery = Number(raw);
+    } else if (arg.startsWith("-")) {
+      throw new Error(`Unknown replay option: ${arg}`);
+    } else if (outputDir === undefined) {
+      outputDir = arg;
+    } else {
+      throw new Error("Only one output directory may be provided");
+    }
+  }
+  return { outputDir, maxPagesPerQuery };
+}
+
 export async function runStage3Replay(options = {}) {
+  const maxPagesPerQuery = options.maxPagesPerQuery ?? 5;
+  if (!Number.isSafeInteger(maxPagesPerQuery) || maxPagesPerQuery < 1) throw new Error("maxPagesPerQuery must be a positive integer");
   const outputDir = resolve(options.outputDir ?? join(ROOT, "..", "stage3-replay-output"));
   const fetchImpl = options.fetchImpl ?? fetch;
   const plan = options.plan ?? deriveStage3QueryPlan(approvedContracts.contracts, frozenCityMap.cities);
@@ -351,7 +383,7 @@ export async function runStage3Replay(options = {}) {
   ]));
   const executorResult = await (options.executePlan ?? executeStage3QueryPlan)(plan, {
     fetchImpl,
-    maxPagesPerQuery: 5,
+    maxPagesPerQuery,
     onEvent,
     knownTokensByHunt,
   });
@@ -426,6 +458,7 @@ export async function runStage3Replay(options = {}) {
     outputDir,
     paths,
     huntCount: allHuntIds.length,
+    maxPagesPerQuery,
     unmappedCitySlugs,
     ...(unmappedCitySlugs.length > 0 ? { cityMapWarning: `No frozen Divar numeric IDs for city slugs: ${unmappedCitySlugs.join(", ")}` } : {}),
     incompleteHunts: artifacts.sizeDistribution.filter((item) => !item.complete).map((item) => item.huntId),
@@ -452,9 +485,10 @@ export async function runStage3Replay(options = {}) {
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
 if (isMain) {
-  const outputDir = process.argv[2] ? (isAbsolute(process.argv[2]) ? process.argv[2] : resolve(process.cwd(), process.argv[2])) : undefined;
   try {
-    const summary = await runStage3Replay({ outputDir });
+    const args = parseReplayArgs(process.argv.slice(2));
+    const outputDir = args.outputDir ? (isAbsolute(args.outputDir) ? args.outputDir : resolve(process.cwd(), args.outputDir)) : undefined;
+    const summary = await runStage3Replay({ outputDir, maxPagesPerQuery: args.maxPagesPerQuery });
     process.stdout.write(JSON.stringify(summary, null, 2) + "\n");
   } catch (error) {
     process.stderr.write("Stage 3 replay failed: " + (error instanceof Error ? error.stack ?? error.message : String(error)) + "\n");

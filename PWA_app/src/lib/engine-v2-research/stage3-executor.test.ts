@@ -266,6 +266,27 @@ describe("Stage 3 polite Divar executor", () => {
     expect(result.pools[0].incompleteReasons).toContain("page-cap");
   });
 
+
+  it("fetches exactly ten pages when the page cap is ten", async () => {
+    let calls = 0;
+    const bodies: Record<string, unknown>[] = [];
+    const result = await executeStage3QueryPlan(plan([entry()]), {
+      fetchImpl: async (_input, init) => {
+        calls += 1;
+        bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return response([postRow("token-" + calls)], { has_next_page: true, data: { cursor: "c" + calls } });
+      },
+      minRequestIntervalMs: 0, jitterMaxMs: 0, maxPagesPerQuery: 10,
+    });
+    expect(calls).toBe(10);
+    expect(bodies[9].pagination_data).toEqual({ cursor: "c9" });
+    expect(result.events.find((event) => event.type === "page-stop")?.reason).toBe("page-cap");
+    expect(result.events.find((event) => event.type === "page-stop")?.page).toBe(9);
+    expect(result.pools[0].listings).toHaveLength(10);
+    expect(result.pools[0].complete).toBe(false);
+    expect(result.pools[0].incompleteReasons).toContain("page-cap");
+  });
+
   it("stops incomplete when Divar advertises another page without a cursor", async () => {
     const result = await executeStage3QueryPlan(plan([entry()]), {
       fetchImpl: async () => response([postRow("cursorless")], { has_next_page: true }),

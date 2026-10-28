@@ -6,6 +6,7 @@ import {
   buildReplayArtifacts,
   extractDetailFields,
   findMissingGoodTokens,
+  parseReplayArgs,
   readDetailLive,
   runStage3Replay,
 } from "./stage3-replay.mjs";
@@ -287,6 +288,44 @@ describe("Stage 3 incremental multi-query semantics", () => {
       expect(state.hunts.H01.knownTokens).toEqual(["old-A", "new-B"]);
       expect(summary.incremental).toBe(true);
       expect(summary.incrementalNote).toContain("complete known-token set is stored in incremental-state.json");
+    } finally {
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("Stage 3 replay page-cap CLI", () => {
+  it("defaults to five pages and accepts both max-pages forms", () => {
+    expect(parseReplayArgs([])).toEqual({ outputDir: undefined, maxPagesPerQuery: 5 });
+    expect(parseReplayArgs(["--max-pages", "10"])).toEqual({ outputDir: undefined, maxPagesPerQuery: 10 });
+    expect(parseReplayArgs(["./out", "--max-pages=10"])).toEqual({ outputDir: "./out", maxPagesPerQuery: 10 });
+  });
+  it("rejects missing, zero, non-integer, and unknown page-cap options", () => {
+    expect(() => parseReplayArgs(["--max-pages"])).toThrow(/positive integer/);
+    expect(() => parseReplayArgs(["--max-pages", "0"])).toThrow(/positive integer/);
+    expect(() => parseReplayArgs(["--max-pages", "2.5"])).toThrow(/positive integer/);
+    expect(() => parseReplayArgs(["--bogus"])).toThrow(/Unknown replay option/);
+  });
+  it.each([
+    { label: "default", options: {}, expected: 5 },
+    { label: "explicit ten", options: { maxPagesPerQuery: 10 }, expected: 10 },
+  ])("passes $label cap through to the executor", async ({ options, expected }) => {
+    const outputDir = await mkdtemp(join(tmpdir(), "stage3-page-cap-"));
+    const plan = {
+      entries: [{ order: 1, huntId: "H01", kind: "base", entityAlternativeIndex: 0, hardSlotValues: [], query: "کفی ماشین", city_ids: null, status: "queued", reason: "ready" }],
+      summary: { baseQueries: 1, narrowQueries: 0, skippedDuplicate: 0, emittedQueries: 1 },
+    };
+    let receivedCap: number | undefined;
+    try {
+      const summary = await runStage3Replay({
+        outputDir, plan, grades: [], allHuntIds: ["H01"], ...options,
+        executePlan: async (_plan: unknown, executorOptions: { maxPagesPerQuery?: number }) => {
+          receivedCap = executorOptions.maxPagesPerQuery;
+          return { pools: [{ huntId: "H01", listings: [], complete: true, incompleteReasons: [] }], events: [], stoppedByCircuitBreaker: false };
+        },
+      });
+      expect(receivedCap).toBe(expected);
+      expect(summary.maxPagesPerQuery).toBe(expected);
     } finally {
       await rm(outputDir, { recursive: true, force: true });
     }
