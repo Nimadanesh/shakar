@@ -33,8 +33,14 @@ const UNIT_MULTIPLIER: Array<{ unit: string; factor: number }> = [
   { unit: "میلون", factor: 1_000_000 },
   { unit: "ملیون", factor: 1_000_000 },
   { unit: "ملییون", factor: 1_000_000 },
+  // HANDOFF-5 (2026-11-02): ملیارد (milliard typo) and تومن (Toman
+  // spelling) are money units too; تومان/تومن factor is 1 (Toman is
+  // the internal unit).
+  { unit: "ملیارد", factor: 1_000_000_000 },
   { unit: "میل", factor: 1_000_000 },
   { unit: "هزار", factor: 1_000 },
+  { unit: "تومان", factor: 1 },
+  { unit: "تومن", factor: 1 },
 ];
 
 const MAX_PATTERNS = ["زیر", "حداکثر", "تا", "کمتر از", "پایین‌تر از", "پایین تر از"];
@@ -52,9 +58,11 @@ export const PRICE_STRUCTURAL_WORDS = [
   "میلون",
   "ملیون",
   "ملییون",
+  "ملیارد",
   "میل",
   "هزار",
   "تومان",
+  "تومن",
   "ت",
 ];
 /** Negation verbs («نه», «نمی‌خوام»…) — cue words, never content. Exported for the server query resolver. */
@@ -655,8 +663,11 @@ function parseAmount(raw: string, unit: string | undefined): number | null {
 }
 
 const AMOUNT = "([\\d۰-۹٠-٩][\\d۰-۹٠-٩\\s,،.٬]*)";
-// Longest first, so «میلیون» is not cut to «میل».
-const UNIT = "(میلیارد|میلیون|ملییون|ملیون|میلون|هزار|تومان|میل|ت)?";
+// HANDOFF-5 (2026-11-02): the unit is REQUIRED — a number is a price
+// only with a money unit beside it. Longest first, so «میلیون» is not
+// cut to «میل». Before this, the optional unit made «تا ۱۰۰ متری» a
+// priceMax of 100 and «رم حداقل ۱۶» a priceMin of 16.
+const UNIT = "(میلیارد|میلیون|ملییون|ملیون|میلون|ملیارد|هزار|تومان|تومن|میل|ت)";
 
 function findPriceBound(normalized: string, kind: "min" | "max"): { value: number; display: string } | null {
   const patterns = kind === "max" ? MAX_PATTERNS : MIN_PATTERNS;
@@ -666,7 +677,7 @@ function findPriceBound(normalized: string, kind: "min" | "max"): { value: numbe
     const value = parseAmount(match[1], match[2]);
     if (value === null) continue;
     const rawAmount = match[1].trim();
-    const scaleUnit = ["میلیارد", "میلیون", "میلون", "ملیون", "ملییون", "میل", "هزار"].includes(match[2]);
+    const scaleUnit = ["میلیارد", "میلیون", "میلون", "ملیون", "ملییون", "ملیارد", "میل", "هزار"].includes(match[2]);
     const displayAmount = scaleUnit ? `${rawAmount} ${match[2]}` : `${value.toLocaleString("fa-IR")} تومان`;
     return {
       value,
@@ -674,6 +685,53 @@ function findPriceBound(normalized: string, kind: "min" | "max"): { value: numbe
     };
   }
   return null;
+}
+
+/**
+ * HANDOFF-5 (2026-11-02): «ترجیحاً» domains. A preference domain starts
+ * after ترجیحاً/ترجیحا and ends at the next «،», a standalone «و» or
+ * «حتماً»/«حتما», or the end of the query. A price inside a domain is
+ * a SOFT preferred bound, never a hard one; the city after ترجیحاً is
+ * untouched (city detection reads the full query, not the blanked one).
+ * Spans are character positions so the hard-price scan can blank exactly
+ * the domain: blanking with "X" (never a digit, cue, or unit) also blocks
+ * a cue outside the domain from reaching a number inside it.
+ */
+interface PreferenceSpan {
+  start: number;
+  end: number;
+  text: string;
+}
+function preferenceSpans(normalized: string): PreferenceSpan[] {
+  const spans: PreferenceSpan[] = [];
+  const cueRe = /(^|\s)(ترجیحاً|ترجیحا)(?=\s|$)/g;
+  let m: RegExpExecArray | null;
+  while ((m = cueRe.exec(normalized)) !== null) {
+    const start = m.index + m[1].length + m[2].length;
+    let end = normalized.length;
+    const commaIdx = normalized.slice(start).search(/[،,]/);
+    if (commaIdx >= 0) end = start + commaIdx;
+    const after = normalized.slice(start, end);
+    let pos = start;
+    for (const tok of after.split(" ")) {
+      const clean = tok.replace(/[،,]+$/, "");
+      if (clean === "و" || clean === "حتماً" || clean === "حتما") {
+        end = pos;
+        break;
+      }
+      pos += tok.length + 1;
+    }
+    const text = normalized.slice(start, end).trim();
+    if (text !== "") spans.push({ start, end, text });
+  }
+  return spans;
+}
+function blankSpans(text: string, spans: PreferenceSpan[]): string {
+  const chars = text.split("");
+  for (const s of spans) {
+    for (let i = s.start; i < s.end; i++) chars[i] = "X";
+  }
+  return chars.join("");
 }
 
 function splitSegments(normalized: string): string[] {
@@ -879,7 +937,17 @@ export function interpretQuery(raw: string): Interpretation {
     });
   }
 
-  const max = findPriceBound(normalized, "max");  if (max) {
+  // HANDOFF-5: hard bounds read the query with «ترجیحاً» domains
+  // blanked, so a preferred price can never also become a hard bound.
+  // Preferred bounds are soft constraints of kind "preference" with a
+  // "preferredPriceMax:/preferredPriceMin:" id — the form (which reads
+  // only kind priceMin/priceMax/city/exclude) and the contract (which
+  // lifts only kind priceMax/priceMin) both ignore them, and the
+  // resolver picks them up by id prefix.
+  const prefSpans = preferenceSpans(normalized);
+  const hardQuery = blankSpans(normalized, prefSpans);
+  const max = findPriceBound(hardQuery, "max");
+  if (max) {
     pushUnique(applied, {
       id: `priceMax:${max.value}`,
       kind: "priceMax",
@@ -889,7 +957,7 @@ export function interpretQuery(raw: string): Interpretation {
       applied: true,
     });
   }
-  const min = findPriceBound(normalized, "min");
+  const min = findPriceBound(hardQuery, "min");
   if (min) {
     pushUnique(applied, {
       id: `priceMin:${min.value}`,
@@ -899,6 +967,21 @@ export function interpretQuery(raw: string): Interpretation {
       source: "inferred",
       applied: true,
     });
+  }
+  for (const kind of ["max", "min"] as const) {
+    for (const span of prefSpans) {
+      const b = findPriceBound(span.text, kind);
+      if (!b) continue;
+      pushUnique(applied, {
+        id: `preferredPrice${kind === "max" ? "Max" : "Min"}:${b.value}`,
+        kind: "preference",
+        value: String(b.value),
+        display: `ترجیحاً ${b.display}`,
+        source: "inferred",
+        applied: true,
+      });
+      break;
+    }
   }
 
   for (const rawSegment of splitSegments(segmentsFrom)) {

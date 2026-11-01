@@ -550,9 +550,32 @@ describe("HANDOFF-4 — suffix negation and typo-tolerant price", () => {
     expect(applied("گوشی سامسونگ زیر ۱۰ ملیون").find((c) => c.kind === "priceMax")?.value).toBe("10000000");
     expect(applied("آیفون ۱۵ پرو تا ۱۳۰ ملییون").find((c) => c.kind === "priceMax")?.value).toBe("130000000");
     expect(applied("ماشین لباسشویی تا ۲۰ میل").find((c) => c.kind === "priceMax")?.value).toBe("20000000");
-    expect(applied("تلسکوپ نجومی حتماً پایه دار چینی نباشه ترجیحاً زیر ۸ میلون").find((c) => c.kind === "priceMax")?.value).toBe("8000000");
+    // HANDOFF-5: the telescope price sits inside «ترجیحاً», so it is a
+    // soft preferred bound now, never a hard priceMax.
+    expect(applied("تلسکوپ نجومی حتماً پایه دار چینی نباشه ترجیحاً زیر ۸ میلون").find((c) => c.kind === "priceMax")).toBeUndefined();
+    expect(applied("تلسکوپ نجومی حتماً پایه دار چینی نباشه ترجیحاً زیر ۸ میلون").find((c) => c.id.startsWith("preferredPriceMax:"))?.value).toBe("8000000");
   });
   it("«میل لنگ» without a preceding number is not a price", () => {
     expect(applied("میل لنگ پراید").some((c) => c.kind === "priceMax" || c.kind === "priceMin")).toBe(false);
+  });
+});
+
+describe("HANDOFF-5 — money-only price and preferred price at interpret level", () => {
+  const applied = (raw: string) => interpretQuery(raw).applied;
+  it("a number without a money unit is not a price: «تا ۱۰۰ متری», «رم حداقل ۱۶»", () => {
+    expect(applied("آپارتمان ۸۰ تا ۱۰۰ متری").some((c) => c.kind === "priceMax" || c.kind === "priceMin")).toBe(false);
+    expect(applied("لپ‌تاپ رم حداقل ۱۶").some((c) => c.kind === "priceMax" || c.kind === "priceMin")).toBe(false);
+  });
+  it("«تومن» and «ملیارد» are money units", () => {
+    expect(applied("گوشی زیر ۱۰ تومن").find((c) => c.kind === "priceMax")?.value).toBe("10");
+    expect(applied("آپارتمان تا ۲ ملیارد").find((c) => c.kind === "priceMax")?.value).toBe("2000000000");
+  });
+  it("preferred price: domain ends at «و»/«حتماً»/comma, city after ترجیحاً still detected", () => {
+    const d = applied("دوچرخه کوهستان، ترجیحاً تهران زیر ۱۵ میلیون");
+    expect(d.find((c) => c.kind === "priceMax")).toBeUndefined();
+    expect(d.find((c) => c.id.startsWith("preferredPriceMax:"))?.value).toBe("15000000");
+    expect(d.find((c) => c.kind === "city")?.value).toBe("tehran");
+    const stopped = applied("گوشی ترجیحاً زیر ۸ میلیون و حتماً سالم");
+    expect(stopped.find((c) => c.id.startsWith("preferredPriceMax:"))?.value).toBe("8000000");
   });
 });

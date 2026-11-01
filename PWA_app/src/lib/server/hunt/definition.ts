@@ -199,6 +199,13 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   const maxC = applied.find((c) => c.kind === "priceMax");
   let priceMin = def.priceMin.trim() === "" && minC ? minC.value : def.priceMin;
   let priceMax = def.priceMax.trim() === "" && maxC ? maxC.value : def.priceMax;
+  // HANDOFF-5: soft preferred bounds («ترجیحاً زیر X») ride the
+  // "preferredPriceMax:/preferredPriceMin:" ids from interpret.ts.
+  // They are never hard filters and never fail open against each other.
+  const prefMaxC = applied.find((c) => c.id.startsWith("preferredPriceMax:"));
+  const prefMinC = applied.find((c) => c.id.startsWith("preferredPriceMin:"));
+  const preferredPriceMax = prefMaxC ? prefMaxC.value : "";
+  const preferredPriceMin = prefMinC ? prefMinC.value : "";
   // Contradictory bounds (min > max) filter out EVERYTHING — fail open
   // instead of guaranteeing an empty hunt.
   const minN = parsePriceBound(priceMin);
@@ -365,7 +372,7 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     // Price tokens: cue + number + unit (typo units included). Only
     // the number in a price pattern is removed, so «آیفون ۱۵» keeps ۱۵.
     const priceRe =
-      /(?:کمتر از|بیشتر از|پایین‌تر از|پایین تر از|زیر|حداکثر|حداقل|بالای|تا)\s+([\d۰-۹]+)\s*(میلیارد|میلیون|ملییون|ملیون|میلون|میل|هزار|تومان|ت)(?=\s|$|[،,])/g;
+      /(?:کمتر از|بیشتر از|پایین‌تر از|پایین تر از|زیر|حداکثر|حداقل|بالای|تا)\s+([\d۰-۹]+)\s*(میلیارد|میلیون|ملییون|ملیون|میلون|ملیارد|میل|هزار|تومان|تومن|ت)(?=\s|$|[،,])/g;
     let pm: RegExpExecArray | null;
     while ((pm = priceRe.exec(def.query)) !== null) {
       removal.add(pm[1]);
@@ -436,6 +443,161 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   // the direction default downstream when the form didn't answer.
   const roleMode = detectRoleMode(def.query);
 
+  // HANDOFF-5 (2026-11-02): numeric intake, last pass so no earlier
+  // cleaning re-strips its additions. Only include/should move here;
+  // exclude, absentAttributes, city, category, and hard prices are
+  // untouched. Rules, in order: (4) year floor, (1-2) number ranges
+  // and spec units, (3) bare cue+number, (7) function words. A number
+  // is removed from include only when its own expression consumes it;
+  // bare numbers («پژو ۲۰۶»، «آیفون ۱۳») and «مدل N» alone are kept.
+  let yearMin: number | null = null;
+  {
+    const qToks = normalizeForMatch(def.query).split(" ").filter(Boolean);
+    const faNum = (s: string): number | null => {
+      const en = s.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+      if (!/^\d+$/.test(en)) return null;
+      const n = Number(en);
+      return Number.isFinite(n) ? n : null;
+    };
+    const isNum = (t: string | undefined) => t !== undefined && faNum(t) !== null;
+    const MONEY_UNITS = new Set([
+      "میلیارد", "میلیون", "میلون", "ملیون", "ملییون", "ملیارد",
+      "میل", "هزار", "تومان", "تومن", "ت",
+    ]);
+    const SPEC_UNITS = new Set([
+      "متر", "متری", "گیگ", "گیگابایت", "مگ", "مگابایت", "ترابایت",
+      "اینچ", "لیتر", "وات", "سی‌سی", "سیسی", "کیلو", "نفره", "ساله",
+    ]);
+    // Rule 7: function words never enter include. «یک» is deliberately
+    // absent («یک خوابه» means something); «و» is not listed either.
+    const FUNCTION_WORDS = new Set([
+      "در", "یه", "با", "از", "برای", "به", "که", "را", "یا",
+    ]);
+    const consumed = new Set<number>();
+    const shouldAdd: string[] = [];
+    const pushShould = (v: string) => {
+      if (v !== "" && !shouldAdd.includes(v)) shouldAdd.push(v);
+    };
+
+    // Year floor: «مدل N به بالا», «N به بالا», «از N به بعد».
+    // N is 1300–1499, or 50–99 meaning 1300+N. Anything else leaves
+    // today's output untouched. First valid expression wins.
+    for (let i = 0; i < qToks.length && yearMin === null; i++) {
+      let numIdx = -1;
+      let span: number[] = [];
+      if (
+        qToks[i] === "مدل" && isNum(qToks[i + 1]) &&
+        qToks[i + 2] === "به" && qToks[i + 3] === "بالا"
+      ) {
+        numIdx = i + 1;
+        span = [i, i + 1, i + 2, i + 3];
+      } else if (
+        isNum(qToks[i]) && qToks[i + 1] === "به" && qToks[i + 2] === "بالا"
+      ) {
+        numIdx = i;
+        span = [i, i + 1, i + 2];
+      } else if (
+        qToks[i] === "از" && isNum(qToks[i + 1]) &&
+        qToks[i + 2] === "به" && qToks[i + 3] === "بعد"
+      ) {
+        numIdx = i + 1;
+        span = [i, i + 1, i + 2, i + 3];
+      }
+      if (numIdx < 0) continue;
+      const raw = faNum(qToks[numIdx])!;
+      if (raw >= 1300 && raw <= 1499) yearMin = raw;
+      else if (raw >= 50 && raw <= 99) yearMin = 1300 + raw;
+      else continue;
+      for (const p of span) consumed.add(p);
+    }
+
+    // Ranges «X تا Y واحد» and single «N واحد»: the unit applies to
+    // both numbers of a range. A money range only drops its first
+    // number from include (the second is already stripped as a price);
+    // a spec range drops both numbers and the unit, and the whole
+    // phrase goes to should. A single spec unit keeps its number in
+    // include and moves only the unit word to should.
+    for (let i = 0; i < qToks.length; i++) {
+      if (consumed.has(i)) continue;
+      if (
+        isNum(qToks[i]) && qToks[i + 1] === "تا" && isNum(qToks[i + 2]) &&
+        (MONEY_UNITS.has(qToks[i + 3] ?? "") || SPEC_UNITS.has(qToks[i + 3] ?? ""))
+      ) {
+        const unit = qToks[i + 3];
+        if (SPEC_UNITS.has(unit)) {
+          pushShould(qToks.slice(i, i + 4).join(" "));
+          consumed.add(i);
+          consumed.add(i + 2);
+          consumed.add(i + 3);
+        } else {
+          consumed.add(i);
+        }
+        i += 3;
+        continue;
+      }
+      if (isNum(qToks[i]) && SPEC_UNITS.has(qToks[i + 1] ?? "")) {
+        pushShould(qToks[i + 1]);
+        consumed.add(i + 1);
+        i += 1;
+        continue;
+      }
+    }
+
+    // Bare cue+number («رم حداقل ۱۶»): not a price without a unit.
+    // The whole expression goes to should, the number leaves include.
+    // A money or spec unit after the number means the price/unit paths
+    // above already own it, so it is skipped here.
+    const BARE_CUES: Array<readonly string[]> = [
+      ["کمتر", "از"],
+      ["بیشتر", "از"],
+      ["پایین", "تر", "از"],
+      ["زیر"],
+      ["تا"],
+      ["حداکثر"],
+      ["حداقل"],
+      ["بالای"],
+    ];
+    for (let i = 0; i < qToks.length; i++) {
+      if (consumed.has(i)) continue;
+      for (const cue of BARE_CUES) {
+        const ni = i + cue.length;
+        if (
+          cue.every((c, k) => qToks[i + k] === c) &&
+          isNum(qToks[ni]) && !consumed.has(ni)
+        ) {
+          const after = qToks[ni + 1];
+          if (after !== undefined && (MONEY_UNITS.has(after) || SPEC_UNITS.has(after))) break;
+          pushShould([...cue, qToks[ni]].join(" "));
+          consumed.add(ni);
+          break;
+        }
+      }
+    }
+
+    // Apply: drop include terms whose every surface token is consumed
+    // or a function word. Single-token terms are the norm; the
+    // every-token rule keeps phrases like «خط و خش» (و is not a
+    // function word here) intact.
+    const removalVals = new Set<string>();
+    for (const p of consumed) removalVals.add(qToks[p]);
+    for (const w of FUNCTION_WORDS) removalVals.add(w);
+    const keptInclude = include.filter((term) => {
+      const toks = normalizeForMatch(term).split(" ").filter(Boolean);
+      return !(toks.length > 0 && toks.every((t) => removalVals.has(t)));
+    });
+    include.splice(0, include.length, ...keptInclude);
+    const seenShould = new Set<string>();
+    for (const t of include) for (const s of tokenize(t)) seenShould.add(s);
+    for (const t of exclude) for (const s of tokenize(t)) seenShould.add(s);
+    for (const t of should) seenShould.add(stemToken(t));
+    for (const v of shouldAdd) {
+      if (!seenShould.has(stemToken(v))) {
+        should.push(v);
+        seenShould.add(stemToken(v));
+      }
+    }
+  }
+
   return {
     ...def,
     include,
@@ -447,6 +609,9 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     category,
     priceMin,
     priceMax,
+    yearMin,
+    preferredPriceMax,
+    preferredPriceMin,
     transaction,
     serviceIntent,
     roleMode,

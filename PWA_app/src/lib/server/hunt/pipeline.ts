@@ -101,6 +101,15 @@ export interface HuntDefinition {
   category: string;
   priceMin: string;
   priceMax: string;
+  /**
+   * HANDOFF-5 (2026-11-02), type only — no pipeline logic reads these
+   * yet (their use is step 3f). Soft year floor («مدل ۱۴۰۱ به بالا» →
+   * 1401, null = none) and soft preferred price bounds («ترجیحاً زیر
+   * X», "" = none), resolved in resolveHuntDefinition only.
+   */
+  yearMin?: number | null;
+  preferredPriceMax?: string;
+  preferredPriceMin?: string;
   transaction: "" | "rent" | "buy";
   condition: "" | "new" | "used" | "any";
   /**

@@ -250,11 +250,12 @@ describe("HANDOFF-2 — resolveHuntDefinition negation intake", () => {
 });
 
 describe("HANDOFF-4 — resolveHuntDefinition suffix negation and typo price", () => {
-  it("telescope: exclude {چینی}, include without چینی/نباشه/۸/میلون, price 8000000, no lone زیر in should", () => {
+  it("telescope: exclude {چینی}, include without چینی/نباشه/۸/میلون, preferred price 8000000 (HANDOFF-5: hard priceMax is now empty), no lone زیر in should", () => {
     const def = resolveHuntDefinition(body({ query: "تلسکوپ نجومی حتماً پایه دار چینی نباشه ترجیحاً زیر ۸ میلون" }))!;
     expect(def.exclude).toEqual(["چینی"]);
     expect(def.include).toEqual(["تلسکوپ", "نجومی", "پایه", "دار"]);
-    expect(def.priceMax).toBe("8000000");
+    expect(def.priceMax).toBe("");
+    expect(def.preferredPriceMax).toBe("8000000");
     expect(def.should).not.toContain("زیر");
     expect(def.should.join(" ")).not.toContain("۸");
     expect(def.should.join(" ")).not.toContain("میلون");
@@ -318,5 +319,87 @@ describe("HANDOFF-4 — resolveHuntDefinition suffix negation and typo price", (
     const def = resolveHuntDefinition(body({ query: "عینک آفتابی ری‌بن اصل حتماً نه دست دوم نه فیک ترجیحاً تهران" }))!;
     expect(def.exclude).toEqual(["دست دوم", "فیک"]);
     expect(def.include).toEqual(["عینک", "آفتابی", "ری", "اصل"]);
+  });
+});
+
+describe("HANDOFF-5 — numeric intake: money-only price, soft preferred price and year, drop function words", () => {
+  it("apartment range: 8 billion hard cap, range phrase to should, no range/function tokens in include", () => {
+    const def = resolveHuntDefinition(body({ query: "آپارتمان ۸۰ تا ۱۰۰ متری در سعادت‌آباد، آسانسور حتماً، طبقه اول نباشه، تا ۸ میلیارد" }))!;
+    expect(def.priceMax).toBe("8000000000");
+    expect(def.priceMin).toBe("");
+    expect(def.exclude).toEqual(["طبقه اول"]);
+    expect(def.include).toEqual(["آپارتمان", "سعادت", "آباد", "آسانسور"]);
+    expect(def.should).toContain("۸۰ تا ۱۰۰ متری");
+  });
+  it("«رم حداقل ۱۶» is not a price: no bound, ۱۶ out of include, expression in should", () => {
+    const def = resolveHuntDefinition(body({ query: "لپ‌تاپ ایسوس رم حداقل ۱۶" }))!;
+    expect(def.priceMin).toBe("");
+    expect(def.priceMax).toBe("");
+    expect(def.include).not.toContain("۱۶");
+    expect(def.should).toContain("حداقل ۱۶");
+  });
+  it("«رم ۱۶ گیگ»: no price, ۱۶ stays in include, گیگ moves to should", () => {
+    const def = resolveHuntDefinition(body({ query: "لپ‌تاپ ایسوس رم ۱۶ گیگ" }))!;
+    expect(def.priceMin).toBe("");
+    expect(def.priceMax).toBe("");
+    expect(def.include).toContain("۱۶");
+    expect(def.include).not.toContain("گیگ");
+    expect(def.should).toContain("گیگ");
+  });
+  it("«مدل ۱۴۰۱ به بالا»: yearMin 1401, مدل/۱۴۰۱/به/بالا out of include", () => {
+    const def = resolveHuntDefinition(body({ query: "پژو ۲۰۶ مدل ۱۴۰۱ به بالا" }))!;
+    expect(def.yearMin).toBe(1401);
+    expect(def.include).toEqual(["پژو", "۲۰۶"]);
+  });
+  it("«مدل ۹۸» alone keeps ۹۸ in include and sets no year", () => {
+    const def = resolveHuntDefinition(body({ query: "پژو ۲۰۶ مدل ۹۸" }))!;
+    expect(def.yearMin).toBeNull();
+    expect(def.include).toContain("۹۸");
+  });
+  it("two-digit year floor converts: «مدل ۹۸ به بالا» → 1398; «از ۱۴۰۰ به بعد» → 1400; out-of-range year sets nothing", () => {
+    expect(resolveHuntDefinition(body({ query: "پژو ۲۰۶ مدل ۹۸ به بالا" }))!.yearMin).toBe(1398);
+    expect(resolveHuntDefinition(body({ query: "پژو ۲۰۶ از ۱۴۰۰ به بعد" }))!.yearMin).toBe(1400);
+    expect(resolveHuntDefinition(body({ query: "پژو ۲۰۶ مدل ۱۵۰۰ به بالا" }))!.yearMin).toBeNull();
+  });
+  it("bike: preferred 15M, city untouched, ۲۶ stays, اینچ to should", () => {
+    const def = resolveHuntDefinition(body({ query: "دوچرخه کوهستان ۲۶ اینچ، ترجیحاً تهران زیر ۱۵ میلیون" }))!;
+    expect(def.priceMax).toBe("");
+    expect(def.preferredPriceMax).toBe("15000000");
+    expect(def.city).toBe("tehran");
+    expect(def.include).toContain("۲۶");
+    expect(def.include).not.toContain("اینچ");
+    expect(def.should).toContain("اینچ");
+  });
+  it("preferred min: «ترجیحاً بالای ۵ میلیون» is soft only", () => {
+    const def = resolveHuntDefinition(body({ query: "گوشی ترجیحاً بالای ۵ میلیون" }))!;
+    expect(def.priceMin).toBe("");
+    expect(def.preferredPriceMin).toBe("5000000");
+  });
+  it("hard and preferred coexist: preferred price plus a later hard cap", () => {
+    const def = resolveHuntDefinition(body({ query: "گوشی ترجیحاً زیر ۸ میلیون، تا ۲۰ میلیون" }))!;
+    expect(def.preferredPriceMax).toBe("8000000");
+    expect(def.priceMax).toBe("20000000");
+  });
+  it("bare numbers stay: «آیفون ۱۳» keeps ۱۳; «میز ۶ نفره» keeps ۶, نفره to should", () => {
+    expect(resolveHuntDefinition(body({ query: "آیفون ۱۳" }))!.include).toContain("۱۳");
+    const table = resolveHuntDefinition(body({ query: "میز ناهارخوری ۶ نفره" }))!;
+    expect(table.include).toContain("۶");
+    expect(table.include).not.toContain("نفره");
+    expect(table.should).toContain("نفره");
+    expect(table.priceMax).toBe("");
+  });
+  it("function words never enter include, but «یک» keeps its meaning", () => {
+    expect(resolveHuntDefinition(body({ query: "آپارتمان یک خوابه" }))!.include).toContain("یک");
+    const phone = resolveHuntDefinition(body({ query: "یه گوشی سامسونگ در حد نو" }))!;
+    expect(phone.include).not.toContain("یه");
+    expect(phone.include).not.toContain("در");
+    expect(phone.include).toContain("گوشی");
+  });
+  it("untouched anchors: «تابلو فرش نیستان» and the ری‌بن excludes", () => {
+    const t = resolveHuntDefinition(body({ query: "تابلو فرش نیستان" }))!;
+    expect(t.exclude).toEqual([]);
+    expect(t.include).toContain("نیستان");
+    const r = resolveHuntDefinition(body({ query: "عینک آفتابی ری‌بن اصل حتماً نه دست دوم نه فیک ترجیحاً تهران" }))!;
+    expect(r.exclude).toEqual(["دست دوم", "فیک"]);
   });
 });
