@@ -19,6 +19,7 @@ import {
   assessListingRole,
   floorMatFlatbedConflict,
   assessModelSpecificity,
+  isWholeVehicleQuery,
   assessQueryIntent,
   assessRepairPolarity,
   assessRepairService,
@@ -599,9 +600,23 @@ function semanticCapFires(
   // R8 (F2): the hunt's subject kind for the kind-aware marker guard
   // (sibling markers of the same kind are co-offered, not wrong items).
   const qKind = queryKindForDef(def.include, def.serviceIntent ?? false, def.category);
-  const identity = clash.clash
-    ? { mismatch: false as const, reason: "skipped:role-clash", tier: "near" as const }
-    : assessModelSpecificity(def.include, combined, def.category, qKind, def.query, title);
+  // HANDOFF-3a (2026-11-01): role-clash caps to near, but must not block
+  // the whole-vehicle part/service headline reject. Only an explicit
+  // assess reject whose reason starts with "part:" passes through a clash,
+  // and only for a whole-vehicle query (same BROAD_TYPE_ONLY_QUERIES
+  // mechanism, via isWholeVehicleQuery); every other assess result is
+  // still skipped on clash, as before.
+  const assessed = assessModelSpecificity(def.include, combined, def.category, qKind, def.query, title);
+  const identity =
+    clash.clash &&
+    !(
+      assessed.mismatch &&
+      assessed.tier === "reject" &&
+      assessed.reason.startsWith("part:") &&
+      isWholeVehicleQuery(def.query, def.include)
+    )
+      ? { mismatch: false as const, reason: "skipped:role-clash", tier: "near" as const }
+      : assessed;
   // R3 (2026-10-17): absent-attributes generalize the repair polarity
   // rule — «بدون رنگ» with no paint info is unknown, capped at near
   // (never exact); the نه-sourced repair rule is preserved as-is.
@@ -944,6 +959,36 @@ function evaluateDescription(
         dealerHits,
         huntWantsSellers,
     adRole,
+      };
+    }
+  }
+  // HANDOFF-3a (2026-11-01, owner decision): the existing wrongKind
+  // reject above runs only when missingInfo is empty. For a whole-vehicle
+  // hunt, a part/service headline reject must also run when MUST terms
+  // are missing, before the MUST-incomplete near verdict below. No new
+  // reject rule is written here: this reuses assessModelSpecificity via
+  // semanticCapFires, and only an explicit part: reject for a
+  // whole-vehicle query passes. Other reasons (training, sibling-variant,
+  // no-extra-variant) stay near. The title phase has no such check — this
+  // is the description-phase reject, and the ad is dropped here, not shown.
+  if (missingInfo.length > 0) {
+    const cap = semanticCapFires(def, combined, title);
+    const headlineWrong = cap.wrongItemKind;
+    if (
+      headlineWrong !== null &&
+      headlineWrong.startsWith("part:") &&
+      isWholeVehicleQuery(def.query, def.include)
+    ) {
+      return {
+        ...rejectedEvaluation(),
+        missingInfo,
+        providerHits,
+        goodsHits,
+        needsRepairHits,
+        dealerHits,
+        huntWantsSellers,
+        adRole,
+        rejectedKind: headlineWrong,
       };
     }
   }

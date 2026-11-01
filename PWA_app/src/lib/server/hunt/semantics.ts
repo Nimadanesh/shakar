@@ -985,6 +985,15 @@ const ISSUE16_TITLE_PART_MARKERS = [
   "گلگیر",
   "سپر",
   "یدکی",
+  // HANDOFF-3a (2026-11-01): whole-vehicle headline part/service heads.
+  // Kept in this title-only list (not PART_MARKERS) so broad legacy
+  // identity checks reading PART_MARKERS alone are untouched.
+  "قطعات",
+  "کارشناسی",
+  "تعمیر",
+  "تعمیرات",
+  "صافکاری",
+  "نقاشی",
 ];
 
 const PACKAGING_MARKERS = ["کارتون", "کارتن", "جعبه"];
@@ -1058,6 +1067,24 @@ function stripEdgeDigits(tok: string): string {
   return tok.replace(/^[\d۰-۹]+/u, "").replace(/[\d۰-۹]+$/u, "");
 }
 
+// HANDOFF-1 step B (2026-11-01), shared in HANDOFF-3a: the one closed
+// whole-vehicle list, and the only whole-vehicle mechanism. A type-only
+// query names no model, so exactly one word remains after discarding
+// transaction words and conjunctions, and it must be in this list.
+// evidence-earned from Issue 16; extend only with new evidence.
+const BROAD_TYPE_ONLY_QUERIES = new Set(["خودرو"]);
+export function isWholeVehicleQuery(
+  queryText?: string,
+  includeTerms: readonly string[] = []
+): boolean {
+  const source = queryText ? queryText : includeTerms.join(" ");
+  const remaining = normalizeForMatch(source)
+    .split(" ")
+    .filter(Boolean)
+    .filter((t) => !["خرید", "فروش", "معاوضه", "و", "یا", "با"].includes(t));
+  return remaining.length === 1 && BROAD_TYPE_ONLY_QUERIES.has(remaining[0]);
+}
+
 export function assessModelSpecificity(
   includeTerms: readonly string[],
   listingText: string,
@@ -1083,11 +1110,9 @@ export function assessModelSpecificity(
   const queryTokens = new Set(
     includeTerms.flatMap((t) => normalizeForMatch(t).split(" ").filter(Boolean))
   );
-
-  // Identity reasoning starts only from full lexical evidence; partial
-  // matches otherwise resolve to near via MUST-missing.
-  const allEvidenced = includeTerms.every((t) => textMatches(listingText, t, category));
-  if (!allEvidenced) return { mismatch: false, reason: "partial-evidence", tier: "near" };
+  // Shared whole-vehicle classification (HANDOFF-1 mechanism, moved here
+  // so the headline check below and the weak pass both use it).
+  const isQueryOnlyType = isWholeVehicleQuery(queryText, includeTerms);
 
   // Issue 16 (Capture 05F / 06C): description-only mentions must not override
   // a title whose leading subject is a different offered item. Reuse the
@@ -1113,6 +1138,26 @@ export function assessModelSpecificity(
   });
   const sparePartsHead = titleHead === "لوازم" && titleSubject[1] === "یدکی" &&
     !queryTokens.has("یدکی");
+
+  // HANDOFF-3a (2026-11-01): for a whole-vehicle query only, the same
+  // part/service title-head reject runs BEFORE partial-evidence, with the
+  // same part: reason (no new rule, no new reason prefix). The pipeline
+  // gates on this exact reason, so a non-part reason (training,
+  // sibling-variant, no-extra-variant) never becomes a headline reject.
+  if (isQueryOnlyType && (partHead || sparePartsHead)) {
+    const offered = sparePartsHead ? "لوازم یدکی" : partHead!;
+    return {
+      mismatch: true,
+      reason: `part:title-offering:"${offered}"`,
+      tier: "reject",
+    };
+  }
+
+  // Identity reasoning starts only from full lexical evidence; partial
+  // matches otherwise resolve to near via MUST-missing.
+  const allEvidenced = includeTerms.every((t) => textMatches(listingText, t, category));
+  if (!allEvidenced) return { mismatch: false, reason: "partial-evidence", tier: "near" };
+
   if (partHead || sparePartsHead) {
     const offered = sparePartsHead ? "لوازم یدکی" : partHead!;
     return {
@@ -1309,18 +1354,8 @@ export function assessModelSpecificity(
     };
   }
   const subjectClean = queryTokens.has(listingTokens[subjectIdx] ?? "");
-  // HANDOFF-1 step B (2026-11-01): a type-only query names no model, so a
-  // sibling-variant marker adds no unrequested specificity. Exactly one
-  // word remains after discarding transaction words and conjunctions, and
-  // it must be in the closed list below.
-  // evidence-earned from Issue 16; extend only with new evidence.
-  const BROAD_TYPE_ONLY_QUERIES = new Set(["خودرو"]);
-  const queryOnlyTypeSource = queryText ? queryText : includeTerms.join(" ");
-  const remainingQueryWords = normalizeForMatch(queryOnlyTypeSource)
-    .split(" ")
-    .filter(Boolean)
-    .filter((t) => !["خرید", "فروش", "معاوضه", "و", "یا", "با"].includes(t));
-  const isQueryOnlyType = remainingQueryWords.length === 1 && BROAD_TYPE_ONLY_QUERIES.has(remainingQueryWords[0]);
+  // isQueryOnlyType is computed at the top of this function (HANDOFF-1
+  // step B, shared via isWholeVehicleQuery) and reused here.
   for (const { markers, kind, subjectAware, subjectFirstOnly } of markerSets) {
     for (const rawMarker of markers) {
       const marker = normalizeForMatch(rawMarker);

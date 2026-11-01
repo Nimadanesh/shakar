@@ -2805,17 +2805,18 @@ describe("Issue 16 — source-pinned whole-vehicle item-kind characterization (C
     );
 
     // Baseline characterization observed in Capture 05F and Capture 05D.
-    // Wrong-kind catalyst/body/service rows survive as near, except D03's
-    // parts-only listing is rejected per owner decision (2026-11-01):
-    // a spare part is never shown for a whole-vehicle hunt; whole-vehicle
-    // positives survive as near, while tire-only exchange and D08 catalyst/exhaust control reject.
+    // HANDOFF-3a (2026-11-01): part/service headline listings are rejected
+    // for a whole-vehicle hunt, before demotion to near. Owner human grades
+    // (2026-11-01): B07=1, D02=1, D05=1, D07=1; all other rows=4.
+    // Whole-vehicle positives (B07, D02, D05, D07) survive as near, while
+    // tire-only exchange and D08 catalyst/exhaust control reject.
     // Future changes must pair improvements with these positive/negative controls.
     expect(outcomes).toEqual({
-      "I16-B01": "near",
-      "I16-B02": "near",
-      "I16-B03": "near",
-      "I16-B04": "near",
-      "I16-B05": "near",
+      "I16-B01": "rejected",
+      "I16-B02": "rejected",
+      "I16-B03": "rejected",
+      "I16-B04": "rejected",
+      "I16-B05": "rejected",
       "I16-B06": "rejected",
       "I16-B07": "near",
       "I16-D02": "near",

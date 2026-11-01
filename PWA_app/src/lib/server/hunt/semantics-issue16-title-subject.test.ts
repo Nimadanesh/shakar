@@ -99,6 +99,11 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
     expect(r.mismatch).toBe(false);
   });
 
+  // HANDOFF-3a (2026-11-01): before, this test expected mismatch=false
+  // (a recorded leak: a service headline survived as a whole-vehicle
+  // listing). After, it expects mismatch=true, tier reject, because this
+  // title is equivalent to I16-B02, whose owner human grade is 4
+  // (a service ad, not a vehicle). Date: 2026-11-01.
   it("preserves a whole-vehicle listing whose title offers a vehicle", () => {
     const include = ["خودرو"];
     const title = "کارشناسی وقیمت گذاری خودرو تصادفی و خریدار تصادفی";
@@ -110,7 +115,9 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
       "خودرو",
       title
     );
-    expect(r.mismatch).toBe(false);
+    expect(r.mismatch).toBe(true);
+    expect(r.tier).toBe("reject");
+    expect(r.reason).toContain('part:title-offering:"کارشناسی"');
   });
 
   it("rejects title-led parts for the actual broad buy/sell-vehicle query", () => {
@@ -234,5 +241,89 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
     expect(r.mismatch).toBe(true);
     expect(r.tier).toBe("reject");
     expect(r.reason).toContain('part:title-offering:"لوازم یدکی"');
+  });
+
+  // HANDOFF-3a (2026-11-01): a part/service word that is NOT the title
+  // head must not reject a whole-vehicle listing, and a whole-vehicle
+  // title head must not reject when the query itself hunts that head
+  // or names a different type. Only the headline rejects below.
+  it.each([
+    ["پراید ۱۳۱ مدل ۹۸ بدنه سالم", ["خرید", "فروش", "خودرو"], "خرید و فروش خودرو"],
+    ["پژو ۲۰۶ تیپ ۲ موتور تازه تعمیر", ["خرید", "فروش", "خودرو"], "خرید و فروش خودرو"],
+    ["فردا موتور FMC511 صفر", ["خرید", "فروش", "خودرو"], "خرید و فروش خودرو"],
+    ["فروش فوری اقساطی تویوتا کرولا", ["خرید", "فروش", "خودرو"], "خرید و فروش خودرو"],
+    ["فروش اقساطی خودرو", ["خرید", "فروش", "خودرو"], "خرید و فروش خودرو"],
+  ])("whole-vehicle query does not reject a non-head part/service word: %s", (title, include, queryText) => {
+    const terms = include as string[];
+    const r = assessModelSpecificity(
+      terms,
+      `${title} خرید و فروش خودرو`,
+      "vehicles",
+      queryKindForDef(terms, false, "vehicles"),
+      queryText as string,
+      title as string
+    );
+    expect(r.tier).not.toBe("reject");
+    expect(r.reason).not.toContain("part:title-offering:");
+  });
+
+  it("whole-vehicle query rejects a service headline", () => {
+    const include = ["خرید", "فروش", "خودرو"];
+    const title = "صافکاری و نقاشی خودرو";
+    const r = assessModelSpecificity(
+      include,
+      `${title} خرید و فروش خودرو`,
+      "vehicles",
+      queryKindForDef(include, false, "vehicles"),
+      "خرید و فروش خودرو",
+      title
+    );
+    expect(r.mismatch).toBe(true);
+    expect(r.tier).toBe("reject");
+    expect(r.reason).toContain('part:title-offering:"صافکاری"');
+  });
+
+  it("a query that itself hunts the head is not rejected", () => {
+    const include = ["صافکاری", "خودرو"];
+    const title = "صافکاری و نقاشی خودرو";
+    const r = assessModelSpecificity(
+      include,
+      title,
+      "vehicles",
+      queryKindForDef(include, false, "vehicles"),
+      "صافکاری خودرو",
+      title
+    );
+    expect(r.tier).not.toBe("reject");
+  });
+
+  it("a tire query is not rejected for its own tire title", () => {
+    const include = ["لاستیک"];
+    const title = "لاستیک بارز سایز ۱۴";
+    const r = assessModelSpecificity(
+      include,
+      title,
+      "vehicles",
+      queryKindForDef(include, false, "vehicles"),
+      "لاستیک",
+      title
+    );
+    expect(r.tier).not.toBe("reject");
+  });
+
+  it("records today's behaviour for a piano title with a body word (not endorsed, vehicle rule only)", () => {
+    const include = ["پیانو"];
+    const title = "پیانو دیجیتال بدنه سالم";
+    const r = assessModelSpecificity(
+      include,
+      title,
+      "vehicles",
+      queryKindForDef(include, false, "vehicles"),
+      "پیانو",
+      title
+    );
+    expect(r.mismatch).toBe(false);
+    expect(r.tier).toBe("near");
+    expect(r.reason).toBe("no-extra-variant");
   });
 });
