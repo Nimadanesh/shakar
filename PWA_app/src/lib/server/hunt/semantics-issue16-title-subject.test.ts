@@ -157,4 +157,82 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
     );
     expect(r.mismatch).toBe(false);
   });
+
+  it("type-only «خودرو» query does not mismatch on a «پلاس» variant", () => {
+    const include = ["خودرو"];
+    const title = "فروش دنا پلاس دنده‌ای مدل ۱۴۰۰";
+    const r = assessModelSpecificity(
+      include,
+      `${title} خرید و فروش خودرو`,
+      "all",
+      queryKindForDef(include, false, "all"),
+      "خودرو",
+      title
+    );
+    expect(r.mismatch).toBe(false);
+  });
+
+  it("records current behaviour for single-word «دنا» outside the type-only list (not endorsed)", () => {
+    const include = ["دنا"];
+    const title = "دنا پلاس";
+    const r = assessModelSpecificity(
+      include,
+      title,
+      "all",
+      queryKindForDef(include, false, "all"),
+      "دنا",
+      title
+    );
+    expect(r.mismatch).toBe(true);
+    expect(r.tier).toBe("near");
+    expect(r.reason).toContain('sibling-variant:listing-adds:"پلاس"');
+  });
+
+  it("specific «آیفون ۱۳ پرو» query still caps «پرو مکس» at near", () => {
+    const include = ["آیفون", "۱۳", "پرو"];
+    const title = "آیفون ۱۳ پرو مکس";
+    const r = assessModelSpecificity(
+      include,
+      title,
+      "all",
+      queryKindForDef(include, false, "all"),
+      "آیفون ۱۳ پرو",
+      title
+    );
+    expect(r.mismatch).toBe(true);
+    expect(r.tier).toBe("near");
+    expect(r.reason).toContain('sibling-variant:listing-adds:"مکس"');
+  });
+
+  it("records current behaviour for «وانت» on the broad buy/sell-vehicle query", () => {
+    const include = ["خرید", "فروش", "خودرو"];
+    const title = "فروش وانت نیسان";
+    const r = assessModelSpecificity(
+      include,
+      `${title} خرید و فروش خودرو؛ فروش وانت نیسان`,
+      "all",
+      queryKindForDef(include, false, "all"),
+      "خرید و فروش خودرو",
+      title
+    );
+    expect(r.mismatch).toBe(true);
+    expect(r.tier).toBe("near");
+    expect(r.reason).toContain('sibling-variant:subject:"وانت"');
+  });
+
+  it("broad buy/sell-vehicle query still rejects a spare-parts title", () => {
+    const include = ["خرید", "فروش", "خودرو"];
+    const title = "فروش لوازم یدکی پراید";
+    const r = assessModelSpecificity(
+      include,
+      `${title} خرید و فروش خودرو؛ فروش لوازم یدکی پراید`,
+      "all",
+      queryKindForDef(include, false, "all"),
+      "خرید و فروش خودرو",
+      title
+    );
+    expect(r.mismatch).toBe(true);
+    expect(r.tier).toBe("reject");
+    expect(r.reason).toContain('part:title-offering:"لوازم یدکی"');
+  });
 });

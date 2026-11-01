@@ -1309,6 +1309,18 @@ export function assessModelSpecificity(
     };
   }
   const subjectClean = queryTokens.has(listingTokens[subjectIdx] ?? "");
+  // HANDOFF-1 step B (2026-11-01): a type-only query names no model, so a
+  // sibling-variant marker adds no unrequested specificity. Exactly one
+  // word remains after discarding transaction words and conjunctions, and
+  // it must be in the closed list below.
+  // evidence-earned from Issue 16; extend only with new evidence.
+  const BROAD_TYPE_ONLY_QUERIES = new Set(["خودرو"]);
+  const queryOnlyTypeSource = queryText ? queryText : includeTerms.join(" ");
+  const remainingQueryWords = normalizeForMatch(queryOnlyTypeSource)
+    .split(" ")
+    .filter(Boolean)
+    .filter((t) => !["خرید", "فروش", "معاوضه", "و", "یا", "با"].includes(t));
+  const isQueryOnlyType = remainingQueryWords.length === 1 && BROAD_TYPE_ONLY_QUERIES.has(remainingQueryWords[0]);
   for (const { markers, kind, subjectAware, subjectFirstOnly } of markerSets) {
     for (const rawMarker of markers) {
       const marker = normalizeForMatch(rawMarker);
@@ -1320,6 +1332,8 @@ export function assessModelSpecificity(
       // («پراید وانت» — وانت is vehicle) is still a different model, and
       // the honest verdict is near via the weak pass, never exact.
       if (kind !== "sibling-variant" && queryKind != null && HEAD_KIND[marker] === queryKind) continue;
+      // HANDOFF-1 step B: type-only query, except «وانت» which keeps current behaviour.
+      if (kind === "sibling-variant" && isQueryOnlyType && marker !== "وانت") continue;
       const positions: number[] = [];
       listingTokens.forEach((tok, i) => {
         if (tok === marker) positions.push(i);

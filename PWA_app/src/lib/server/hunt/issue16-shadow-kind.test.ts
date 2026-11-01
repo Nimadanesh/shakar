@@ -159,8 +159,8 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
 
     expect(currentKind.mismatch).toBe(true);
     expect(currentKind.tier).toBe("reject");
-    // This assertion records the counter-risk; it is not an endorsed outcome.
-    expect(hypotheticalBroadPartKind.mismatch).toBe(false);
+    // Counter-risk closed by 67b8471a title-subject rule: part-led titles reject regardless of query kind.
+    expect(hypotheticalBroadPartKind.mismatch).toBe(true);
   });
 
   it("demonstrates the false-acceptance counter-risk when a specific-part hunt mentions a different part only secondarily", () => {
@@ -189,7 +189,8 @@ describe("Issue 16 — three-reader counter-risk (test-only)", () => {
 
     expect(currentKind.mismatch).toBe(true);
     expect(currentKind.tier).toBe("reject");
-    expect(hypotheticalBroadPartKind.mismatch).toBe(false);
+    // Counter-risk closed by 67b8471a title-subject rule: part-led titles reject regardless of query kind.
+    expect(hypotheticalBroadPartKind.mismatch).toBe(true);
   });
 
   it("keeps role-prefix parsing separate from the item-kind dictionary", () => {
