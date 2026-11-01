@@ -37,6 +37,11 @@ import {
   targetKindForDef,
 } from "./kindLexicon";
 import {
+  tierForVerdict,
+  tierReasonIsSoft,
+  type AdTier,
+} from "./tier";
+import {
   adjudicateAd,
   huntTargetKinds,
   mizanWrongKindRejects,
@@ -210,6 +215,31 @@ export interface ScoredAd {
    * detail was stale/failed or carried no slug.
    */
   categorySlug?: string;
+  /**
+   * HANDOFF-T (2026-11-02) — tier field, label only. 1 = exact, 2 = near
+   * with only soft reasons (sibling-variant / missing should), 3 = near
+   * with any other reason, 4 is never on a shown ad (rejections live in
+   * the trace only). Never changes verdict, filter, score, or order.
+   * Optional only so pre-existing hand-built ScoredAd fixtures in other
+   * tests keep compiling untouched; the pipeline always sets both.
+   */
+  tier?: AdTier;
+  /** Short reason codes behind tier (see tier.ts). Label only. */
+  tierReasons?: string[];
+}
+
+/**
+ * HANDOFF-T (2026-11-02) — internal trace entry, one per candidate.
+ * Not a UI field: runPipeline returns it alongside results, and the
+ * SSE "done" event (results + stats) does not carry it. Rejected ads
+ * keep their rejection reason; hidden candidates keep no tier number.
+ */
+export interface HuntTraceEntry {
+  sourceAdId: string;
+  title: string;
+  status: "shown" | "tier4" | "hidden:dupe" | "hidden:detail-cap";
+  tier?: AdTier;
+  reasons: string[];
 }
 
 export interface HuntStats {
@@ -1088,7 +1118,12 @@ function scoreAd(
 export async function collectCandidates(
   def: HuntDefinition,
   opts: CollectOptions = {}
-): Promise<{ candidates: Candidate[]; stats: HuntStats; endCursor?: unknown }> {
+): Promise<{
+  candidates: Candidate[];
+  stats: HuntStats;
+  endCursor?: unknown;
+  trace: HuntTraceEntry[];
+}> {
   const emit = opts.emit ?? (() => {});
   const stats: HuntStats = {
     adsSeen: 0,
@@ -1193,6 +1228,21 @@ export async function collectCandidates(
   // repost) wins, and ranking only orders the survivors.
   const { unique, dupsCollapsed } = collapseDupes(scored);
   stats.dupsCollapsed = dupsCollapsed;
+  // HANDOFF-T trace (label only): dupes merged here are hidden, not tier 4.
+  const trace: HuntTraceEntry[] = [];
+  if (dupsCollapsed > 0) {
+    const kept = new Set(unique);
+    for (const c of scored) {
+      if (!kept.has(c)) {
+        trace.push({
+          sourceAdId: c.sourceAdId,
+          title: c.title,
+          status: "hidden:dupe",
+          reasons: ["dupe"],
+        });
+      }
+    }
+  }
 
   // Ranking sort AFTER dedupe — the newest repost already survived.
   unique.sort((a, b) => b.titleStrength - a.titleStrength);
@@ -1225,14 +1275,35 @@ export async function collectCandidates(
   // Big-hunt signal: the UI suggests narrowing; pipeline continues with top 100.
   if (priced.length > 100) emit({ type: "big-hunt", candidates: priced.length });
 
-  return { candidates: priced, stats, endCursor };
+  // HANDOFF-T trace (label only): price-filtered candidates are tier 4
+  // with reason price-out-of-range (temporary until step 3f, per handoff).
+  if (priced.length !== unique.length) {
+    const kept = new Set(priced);
+    for (const c of unique) {
+      if (!kept.has(c)) {
+        trace.push({
+          sourceAdId: c.sourceAdId,
+          title: c.title,
+          status: "tier4",
+          tier: 4,
+          reasons: ["price-out-of-range"],
+        });
+      }
+    }
+  }
+
+  return { candidates: priced, stats, endCursor, trace };
 }
 
 export async function confirmCandidates(
   candidates: Candidate[],
   def: HuntDefinition,
   stats: HuntStats,
-  emit: (e: HuntEvent) => void = () => {}
+  emit: (e: HuntEvent) => void = () => {},
+  // HANDOFF-T: optional trace collector. Existing callers pass nothing
+  // and get exactly the old return (ScoredAd[]); runPipeline passes its
+  // trace array so detail-phase tiers/rejections land in the trace.
+  trace?: HuntTraceEntry[]
 ): Promise<ScoredAd[]> {
   // ---- Phase 4: details in prioritized batches of 10 ----------------------
   candidates.sort((a, b) => b.titleStrength - a.titleStrength);
@@ -1244,6 +1315,18 @@ export async function confirmCandidates(
   const detailCap =
     Number.isFinite(envCap) && envCap > 0 ? envCap : MAX_DETAILS_PER_HUNT;
   const toCheck = candidates.slice(0, detailCap);
+  // HANDOFF-T trace (label only): candidates beyond the detail cap are
+  // hidden, not tier 4.
+  if (trace && candidates.length > detailCap) {
+    for (const c of candidates.slice(detailCap)) {
+      trace.push({
+        sourceAdId: c.sourceAdId,
+        title: c.title,
+        status: "hidden:detail-cap",
+        reasons: ["detail-cap"],
+      });
+    }
+  }
   // Step 0.5: breadcrumb pairs from FRESH details only (a stale detail's
   // slug is unverified data — the same invariant that marks it
   // detailUnknown). Flushed once at the end of this function, fail-open.
@@ -1310,6 +1393,17 @@ export async function confirmCandidates(
       // terms become UNKNOWN (missingInfo), not a rejection.
       const ev = evaluateDescription(description, c.title, def, categorySlug);
       if (ev.verdict === "rejected") {
+        // HANDOFF-T trace (label only): rejection reason kept verbatim,
+        // same kind as the rejectedSample below.
+        if (trace) {
+          trace.push({
+            sourceAdId: c.sourceAdId,
+            title: c.title,
+            status: "tier4",
+            tier: 4,
+            reasons: [ev.rejectedKind ?? "no-match"],
+          });
+        }
         stats.rejectedNoMatch += 1;
         // R7: feed the false-rejection audit — sample the rejects.
         if (stats.rejectedSample.length < 12) {
@@ -1341,6 +1435,96 @@ export async function confirmCandidates(
         });
       }
       const { score, breakdown } = scoreAd(ev, mustCount, shouldCount, c.price);
+      // HANDOFF-T tier derivation (label only — nothing here feeds back
+      // into verdict, score, or order). The shown verdict is matchKind,
+      // not ev.verdict: a detailUnknown exact is shown as near (tier 3).
+      // For a cap demote, the container label "cap" is replaced by the
+      // underlying identity reason when that reason alone explains the
+      // cap and no other hard cap cause fires (role-clash, mixed
+      // transaction, absent-unknown, repair-unknown); otherwise "cap"
+      // (plus any specific hard cause found) stays, so a role-clash cap
+      // is tier 3 and a sibling-variant cap demote can be tier 2.
+      const matchKind: "exact" | "near" =
+        !detailUnknown && ev.verdict === "exact" ? "exact" : "near";
+      const tierReasons: string[] = [];
+      if (detailUnknown) tierReasons.push("detail-unknown");
+      if (mustCount === 0) tierReasons.push("no-must-terms");
+      if (ev.missingInfo.length > 0) tierReasons.push("partial-evidence");
+      const tierIdentity = assessModelSpecificity(
+        def.include,
+        `${c.title} ${description}`,
+        def.category,
+        queryKindForDef(def.include, def.serviceIntent ?? false, def.category),
+        def.query,
+        c.title
+      );
+      const tierIdentityReason =
+        tierIdentity.mismatch &&
+        tierIdentity.tier === "near" &&
+        tierIdentity.reason !== "partial-evidence"
+          ? tierIdentity.reason
+          : null;
+      if (ev.demotedBy === "cap") {
+        const combined = `${c.title} ${description}`;
+        const tierIntent = assessQueryIntent(
+          def.include.join(" "),
+          def.category,
+          def.transaction
+        );
+        const tierRoleMode = def.roleMode ?? "none";
+        const tierRole = assessListingRole(combined);
+        const tierExplicitBuy =
+          def.transaction === "buy" || detectTransaction(def.query) === "buy";
+        const tierNegativeRepair = (def.absentAttributes ?? []).some((a) =>
+          /تعمیر|تعویض/.test(a)
+        );
+        const tierRawClash = rolesClash(
+          tierRoleMode === "seek-buyer" || tierRoleMode === "self-seller"
+            ? { role: "buyer-seeking", reason: "query-role-mode:seek-buyer" }
+            : tierIntent,
+          tierRole,
+          tierExplicitBuy
+        );
+        const tierClash =
+          tierIntent.role === "product" &&
+          tierRole.role === "buyer-seeking" &&
+          !tierNegativeRepair
+            ? false
+            : tierRawClash.clash;
+        const tierAbsentUnknown = (def.absentAttributes ?? []).some((a) => {
+          const p = assessAbsencePolarity(combined, a).polarity;
+          return p === "unknown" || p === "implied";
+        });
+        const tierRepairUnknown =
+          def.exclude.some((t) => isRepairWord(t)) &&
+          assessRepairPolarity(combined).polarity === "unknown";
+        if (tierClash) tierReasons.push("role-clash");
+        if (isMixedTransactionTitle(c.title))
+          tierReasons.push("mixed-transaction");
+        if (tierAbsentUnknown) tierReasons.push("absent-unknown");
+        if (tierRepairUnknown) tierReasons.push("repair-unknown");
+        if (
+          tierIdentityReason &&
+          tierReasonIsSoft(tierIdentityReason) &&
+          !tierClash &&
+          !tierAbsentUnknown &&
+          !tierRepairUnknown &&
+          !isMixedTransactionTitle(c.title)
+        ) {
+          tierReasons.push(tierIdentityReason);
+        } else {
+          tierReasons.push("cap");
+          if (tierIdentityReason) tierReasons.push(tierIdentityReason);
+        }
+      } else if (ev.demotedBy) {
+        tierReasons.push(ev.demotedBy);
+        if (tierIdentityReason) tierReasons.push(tierIdentityReason);
+      } else if (tierIdentityReason) {
+        tierReasons.push(tierIdentityReason);
+      }
+      if (shouldCount > 0 && ev.shouldMatched < shouldCount)
+        tierReasons.push("missing-should");
+      const { tier } = tierForVerdict(matchKind, tierReasons);
       const ad: ScoredAd = {
         sourceAdId: c.sourceAdId,
         title: c.title,
@@ -1354,7 +1538,10 @@ export async function confirmCandidates(
         evidence: ev.evidence,
         // A failed/stale detail is never "exact" — the description was not
         // verified (spec §7). Honest ceiling: "near".
-        matchKind: !detailUnknown && ev.verdict === "exact" ? "exact" : "near",
+        matchKind,
+        // HANDOFF-T: label only.
+        tier,
+        tierReasons,
         missingInfo: ev.missingInfo,
         ...(detailUnknown ? { detailUnknown: true } : {}),
         // R12b (F3): carry the demote label onto the result card data.
@@ -1368,6 +1555,16 @@ export async function confirmCandidates(
         // Step 0.5: carry the verified leaf category on the result.
         ...(categorySlug ? { categorySlug } : {}),
       };
+      // HANDOFF-T trace (label only): shown ads carry their tier.
+      if (trace) {
+        trace.push({
+          sourceAdId: c.sourceAdId,
+          title: c.title,
+          status: "shown",
+          tier,
+          reasons: [...tierReasons],
+        });
+      }
       results.push(ad);
       batchConfirmed.push(ad);
     }
@@ -1522,12 +1719,19 @@ export async function runPipeline(
   def: HuntDefinition,
   emit: (e: HuntEvent) => void,
   opts: { startCursor?: unknown } = {}
-): Promise<{ results: ScoredAd[]; stats: HuntStats; endCursor?: unknown }> {
-  const { candidates, stats, endCursor } = await collectCandidates(def, {
+): Promise<{
+  results: ScoredAd[];
+  stats: HuntStats;
+  endCursor?: unknown;
+  trace: HuntTraceEntry[];
+}> {
+  const { candidates, stats, endCursor, trace } = await collectCandidates(def, {
     emit,
     startCursor: opts.startCursor,
   });
-  const results = await confirmCandidates(candidates, def, stats, emit);
+  const results = await confirmCandidates(candidates, def, stats, emit, trace);
+  // HANDOFF-T: trace is internal only — it is returned here, not emitted
+  // in the "done" event, so it never reaches the UI.
   emit({ type: "done", results, stats });
-  return { results, stats, endCursor };
+  return { results, stats, endCursor, trace };
 }

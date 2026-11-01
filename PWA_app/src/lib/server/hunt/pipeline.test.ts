@@ -2880,3 +2880,241 @@ describe("Issue 16 — source-pinned whole-vehicle item-kind characterization (C
     });
   });
 });
+
+describe("HANDOFF-T — tier field and internal trace (label only)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("locks Capture 05F tiers: rejections tier 4, survivors tier 3", async () => {
+    // Titles/descriptions copied verbatim from the 05F test above, so
+    // the survivors keep the exact near triggers (cap demote /
+    // missingInfo) that the original characterization locks.
+    const rows = [
+      {
+        sourceAdId: "I16-B01",
+        title: "خرید فروش انواع کاتالیزور خارجی ایران فرسوده",
+        description: "تعویض کاتالیزور نو فروش انواع طرح های کاتالیز ساخت طرح کاتالیز خریدار کاتالیز شما با بالاترین قیمت پرداخت نقدی درب محل",
+      },
+      {
+        sourceAdId: "I16-B02",
+        title: "کارشناسی وقیمت گذاری خودرو تصادفی /وخریدار تصادفی",
+        description: "پارس مدل 99 تیوفایو معاوضه با خودرو تصادفی باما در تماس باشید",
+      },
+      {
+        sourceAdId: "I16-B03",
+        title: "بدنه کاپوت گلگیر سپر چراغ قیمت عمده",
+        description: "باسلام پخش قطعات بدنه محصولات سایپا و ایران خودرو به تک فروشی به قیمت عمده کاپوت پراید 8200 گلگیر پراید3100 روکش در پراید 2900 گلگیر عقب پراید6300 کاپوت ۱۳۲. 9300 گلگیر ۱۳۲. 3600 کاپوت پژو 12800 گلگیر پژو3400 روکش درب پژو 3400 رکاب ۴۰۵ 3500 گلگیر عقب پژو 13500 کاپوت پارس14100 گلکیر پارس3150 رکاب پارس3280 کاپوت ۲۰۶ 11500 گلگیر ۲۰۶ 3850 روکش درب 3500 کاپوت سمند 14200 گلگیر سمند 3300 رکاب سمند 3800 روکش درب سمند 3500 گلگیر تیبا 4100 و.... قطعات بدنه را از صفر تا صد از ما بخواهید",
+      },
+      {
+        sourceAdId: "I16-B04",
+        title: "فروش بدنه استوک فابریک پژو، پراید، تیبا، دنا، سمند",
+        description: "فروش انواع بدنه استوک فابریک خودرو | قطعات بدنه رنگ فابریک فروش انواع قطعات و بدنه استوک فابریک خودرو با تنوع بالا، مناسب تعویض و تعمیر خودرو. موجودی قط ایران خودرو: پژو ۴۰۵، پژو پارس، پژو پرشیا، پژو ۲۰۶، پژو ۲۰۶ تیپ ۲، پژو ۲۰۶ تیپ ۳، پژو ۲۰۶ تیپ ۵، پژو ۲۰۷، سمند، سمند LX، سمند EF7، سورن، سورن پلاس، دنا، دنا پلاس، دنا پلاس توربو، رانا،تارا. سایپا: پراید صبا، پراید نسیم، پراید ۱۳۱، پراید ۱۳۲، پراید ۱۴۱، پراید ۱۵۱، تیبا، تیبا ۲، ساینا، ساینا S، کوییک، کوییک R، کوییک ، شاهین، چانگان CS35. قطعات موجود: درب جلو، درب عقب، درب صندوق، کاپوت، گلگیر جلو، گلگیر عقب، صندوق عقب، و سایر قطعات بدنه خودرو. ✅ بدنه استوک فابریک ✅ قطعات سالم و قابل استفاده ✅ قطعات رنگ فابریک در صورت موجودی ✅ مناسب خودروهای تصادفی و تعویض قطعه ✅ امکان ارسال به سراسر کشور استعلام قیمت و موجودی قبل از خرید برای اطلاع از موجودی نام خودرو + نام قطعه را ارسال کنید. *********** ثقفی یدک",
+      },
+      {
+        sourceAdId: "I16-B05",
+        title: "کاتالیزور o. تعمیر. o خرید خاک و منبع",
+        description: "تعمیر انواع کاتالیزور ماشین های خارجی چینی و ایرانی با ضمانت و بهترین کیفیت و ده سال سابقه در تعمیر خرید خاک و منبع مستهلک شما با بهترین قیمت تی هشت جک اس ۵ سراتو پژو ال نود ساندرو ماکسیما بنز بی ام و ون ایسزو بهترین دستگاه های تعمیر کاتالیزور برایه دریافت نوبت دهی تماس بگیرید",
+      },
+      {
+        sourceAdId: "I16-B06",
+        title: "لاستیک تیبا 95درصد معاوضه با پراید",
+        description: "لاستیکا فاق بلند هست 165هست مال تیبا معاوضه با لاستیک پراید نقدیم 9تومن خودم صفر خریدم کویر تایر",
+      },
+      {
+        sourceAdId: "I16-B07",
+        title: "فردا موتور FMC511/صفر و خشک برج روز/نمایندگی",
+        description: "صنعت خودرو جباری با بیش از ۱۵ سال سابقه درخشان⭐️⭐ سند آزاد و هزینه انتقال سند بر عهده نمایندگی است. شرایط فروش ویژه: ✅ فروش نقدی و تحویل فوری ✅ امکان خرید طلا، شمش، به قیمت روز بازار ✅ ۲۴ ساعت مهلت کارشناسی و رویت خودرو قبل از تسویه ✅ امکان معاوضه با خودروهای صفر و کارکرده ✅ تسویه پس از تحویل و تایید کارشناس شما ✅ بدون واسطه، خرید مطمئن و شفاف کارشناس فروش شما: خانم : علیزاده ☎️ برای اطلاعات بیشتر و دریافت قیمت لحظه‌ای خودرو، لطفاً با کارشناس فروش تماس بگیرید. در صورت مشغول بودن خطوط فروش، به صورت حضوری مراجعه نمایید",
+      },
+      {
+        sourceAdId: "I16-D02",
+        title: "فروش فوری اقساطی تویوتا/بیمه گارانتی/سندبنام شما",
+        description: "خرید خودرو اقساطی با شرایط ویژه از اتو خطیب کارشناس فروش شما خانم امیری عاملیت فروش خودروهای وارداتی، مونتاژی و ایرانی ✅ عضو رسمی اتحادیه با بیش از ۱۵ سال سابقه فعالیت مزایای خرید از اتو خطیب: ✔️ تحویل فوری هم‌زمان با عقد قرارداد ✔️ خرید اقساطی بدون ضامن، فقط با دسته‌چک صیادی ✔️ امکان پرداخت اقساط به‌صورت دو ماه یک‌بار ✔️ امکان تسویه زودتر از موعد ✔️ ۷۰٪ تخفیف بیمه بدنه ✔️ بیمه شخص ثالث کامل ✔️ گارانتی کمپانی ✔️ انتخاب مدل و رنگ دلخواه ✔️ پلاک و سند به نام خریدار ✔️ امکان استفاده از چک شخص ثالث ✔️ مهلت کارشناسی خودرو ✔️ آموزش کامل آپشن‌های خودرو هنگام تحویل ⏰ ساعات کاری مجموعه: شنبه تا چهارشنبه: ۸:۳۰ تا ۱۷:۰۰ پنج‌شنبه: ۸:۳۰ تا ۱۴:۰۰ برای دریافت مشاوره رایگان، از شرایط اقساط و موجودی خودروها بپرسید.",
+      },
+      {
+        sourceAdId: "I16-D03",
+        title: "فروش لوازم یدکی لیفان بدنه ، موتوری و جلوبندی",
+        description: "آریان یدک وارد کننده لوازم یدکی لیفان ✅ قطعات موتوری، بدنه، جلو بندی و... خودروهای لیفان 620، x60، x50، 820،520 امکان پرداخت در محل ✅ تضمین کیفیت و قیمت رقابتی ✅ ارسال 2 ساعته برای تهران ارسال 24 ساعته برای شهرستان ها امکان خرید حضوری با تخفیفات ویژه ✅ دارنده نماد اعتماد و ارائه فاکتور رسمی ✅ برای استعلام موجودی قطعه مورد نظرتون با ما در تماس باشید",
+      },
+      {
+        sourceAdId: "I16-D05",
+        title: "دنا پلاس توربو اتومات بدون رنگ 1400 فروش فوری",
+        description: "دنا پلاس توربو اتومات 1400 بدون رنگ کامل بدون ضربه شاسی جلو عقب پلمپ بدون صافکاری و پی دی آر بدنه مثل آینه داخل کابین در حد صفر همه مصرفیها تعویض رو 120 تا .تسمه تایم .روغن گیربکس. خنک کن .روغن موتور تازه تعویض شده کمک فنر عقب نو کمک فنر جلو تازه پیچی شده ماشین نرم و بی صر و صدا تایر جلو نو چینی خلاصه ماشین دست خودم بوده با وسواس نگهداری شده و تو پارکینگ بوده اکثرا مناسب مصرف کننده به دلیل نیاز مالی میفروشم",
+      },
+      {
+        sourceAdId: "I16-D07",
+        title: "فروش اقساطی خودرو",
+        description: "⚜️فروش اقساطی تمامی خودروها با شرایط استثنایی⚜️ فروش محصولات ایران خودرو / سایپا / مدیران خودرو / بهمن موتور / کرمان موتور ……… ✅ مبلغ پیش‌پرداخت: ۳۰ تا ۵۰ درصد در موعد تحویل ✅ موعد تحویل: 30 روزه کاری ✅ اقساط بلندمدت: ۱ تا ۵ سال ✅کمترین میزان سود نسبت به بازار ✅ امکان تسویه زودتر از موعد با کسر سود ✅بدون ضامن فقط با جک صیادی ✅تمامی خودرو ها دارای بیمه شخص ثالث ، بیمه بدنه و کارانتی فعال ✨ امکان نصب آپشن‌های آپکویی با گارانتی ۳ ساله✨",
+      },
+      {
+        sourceAdId: "I16-D08",
+        title: "پخش انواع اگزوز.طرح تعویض کاتالیزورهای فرسوده",
+        description: "انواع اگزوز و کاتالیست های ایرانی و خارجی.سبک و سنگین. نماینده شرکت های کاتالیست ایران دلکو و مشهد♻️ ♻️طرح تعویض کاتالیزورهای فرسوده با نو شرکتی ♻️ ♻️ساخت انواع اگزوزهای آفرود و کلاسیک خاک کاتالیزور .خاک دیزل ✅️خریدار انواع ضایعات کاتالیزور فرسوده ✅️خریدار ضایعات سنسور اکسیژن ✅️بدون واسطه با بهترین کیفیت و قیمت.",
+      },
+    ];
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map(({ sourceAdId, title }) => summary({ sourceAdId, title })),
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => {
+      const row = rows.find((item) => item.sourceAdId === id);
+      return {
+        sourceAdId: id,
+        title: row?.title ?? id,
+        price: null,
+        city: "تهران",
+        description: row?.description ?? "",
+        images: [],
+        categorySlug: "",
+      };
+    });
+    const def = resolveHuntDefinition({ query: "خرید و فروش خودرو" });
+    if (!def) throw new Error("could not resolve pinned Issue 16 target query");
+    const { results, trace } = await runPipeline(def, () => {});
+    const byId = Object.fromEntries(results.map((r) => [r.sourceAdId, r]));
+    const traceById = Object.fromEntries(trace.map((t) => [t.sourceAdId, t]));
+    for (const id of [
+      "I16-B01",
+      "I16-B02",
+      "I16-B03",
+      "I16-B04",
+      "I16-B05",
+      "I16-B06",
+      "I16-D03",
+      "I16-D08",
+    ]) {
+      expect(byId[id]).toBeUndefined();
+      expect(traceById[id]?.status).toBe("tier4");
+      expect(traceById[id]?.tier).toBe(4);
+      expect(traceById[id]?.reasons.length).toBeGreaterThan(0);
+    }
+    for (const id of ["I16-B01", "I16-B02", "I16-B03", "I16-B04", "I16-B05"]) {
+      expect(traceById[id]?.reasons[0]).toContain("part:");
+    }
+    for (const id of ["I16-B07", "I16-D02", "I16-D05", "I16-D07"]) {
+      expect(byId[id]?.matchKind).toBe("near");
+      expect(byId[id]?.tier).toBe(3);
+      expect(byId[id]?.tierReasons?.length).toBeGreaterThan(0);
+      expect(traceById[id]?.status).toBe("shown");
+      expect(traceById[id]?.tier).toBe(3);
+    }
+  });
+
+  it("traces hidden dupe, price-out-of-range tier 4, and detail-cap, without changing shown order", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "good", title: "گوشی سامسونگ نو", price: 100 }),
+        summary({ sourceAdId: "dupe", title: "گوشی سامسونگ نو", price: 100 }),
+        summary({ sourceAdId: "pricey", title: "گوشی سامسونگ نو", price: 20000000 }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: "گوشی سامسونگ نو",
+      price: id === "pricey" ? 20000000 : 100,
+      city: "تهران",
+      description: "گوشی سامسونگ نو سالم",
+      images: [],
+      categorySlug: "",
+    }));
+    const def = resolveHuntDefinition({ query: "گوشی تا ۱۰ میلیون" });
+    if (!def) throw new Error("could not resolve query");
+    const { results, trace } = await runPipeline(def, () => {});
+    expect(results.map((r) => r.sourceAdId)).toEqual(["good"]);
+    expect(results[0]?.tier).toBe(1);
+    const traceById = Object.fromEntries(trace.map((t) => [t.sourceAdId, t]));
+    expect(traceById["good"]?.status).toBe("shown");
+    expect(traceById["dupe"]?.status).toBe("hidden:dupe");
+    expect(traceById["dupe"]?.tier).toBeUndefined();
+    expect(traceById["pricey"]?.status).toBe("tier4");
+    expect(traceById["pricey"]?.tier).toBe(4);
+    expect(traceById["pricey"]?.reasons).toEqual(["price-out-of-range"]);
+  });
+
+  it("traces detail-cap candidates as hidden, not tier 4", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "c1", title: "گوشی نو مدل یک", price: 10 }),
+        summary({ sourceAdId: "c2", title: "گوشی نو مدل دو", price: 20 }),
+        summary({ sourceAdId: "c3", title: "گوشی نو مدل سه", price: 30 }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id === "c1" ? "گوشی نو مدل یک" : id === "c2" ? "گوشی نو مدل دو" : "گوشی نو مدل سه",
+      price: null,
+      city: "تهران",
+      description: "گوشی نو سالم",
+      images: [],
+      categorySlug: "",
+    }));
+    const def = resolveHuntDefinition({ query: "گوشی" });
+    if (!def) throw new Error("could not resolve query");
+    process.env.HUNT_MAX_DETAILS = "2";
+    try {
+      const { trace } = await runPipeline(def, () => {});
+      const capped = trace.filter((t) => t.status === "hidden:detail-cap");
+      expect(capped.length).toBe(1);
+      expect(capped[0]?.tier).toBeUndefined();
+      expect(trace.some((t) => t.status === "tier4")).toBe(false);
+    } finally {
+      delete process.env.HUNT_MAX_DETAILS;
+    }
+  });
+
+  it("behavior equality: shown ids, order, and all other result fields are unchanged by tier labeling", async () => {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [
+        summary({ sourceAdId: "exact", title: "گوشی سامسونگ" }),
+        summary({ sourceAdId: "near", title: "گوشی" }),
+        summary({ sourceAdId: "dead", title: "کبوتر خانگی" }),
+      ],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id === "dead" ? "کبوتر خانگی" : id === "near" ? "گوشی" : "گوشی سامسونگ",
+      price: null,
+      city: "تهران",
+      description:
+        id === "dead" ? "کبوتر خانگی زیبا" : id === "near" ? "گوشی نو سالم" : "گوشی سامسونگ نو سالم",
+      images: [],
+      categorySlug: "",
+    }));
+    const def = resolveHuntDefinition({ query: "گوشی سامسونگ" });
+    if (!def) throw new Error("could not resolve query");
+    const { results, trace } = await runPipeline(def, () => {});
+    expect(results.map((r) => r.sourceAdId)).toEqual(["exact", "near"]);
+    expect(results[0]?.matchKind).toBe("exact");
+    expect(results[0]?.tier).toBe(1);
+    expect(results[1]?.matchKind).toBe("near");
+    expect(results[1]?.tier).toBe(3);
+    for (const r of results) {
+      const { tier: _tier, tierReasons: _reasons, ...rest } = r;
+      expect(Object.keys(rest).sort()).toEqual(
+        [
+          "sourceAdId",
+          "title",
+          "price",
+          "priceText",
+          "city",
+          "thumbnail",
+          "score",
+          "breakdown",
+          "evidence",
+          "matchKind",
+          "missingInfo",
+          "descSnippet",
+        ].sort()
+      );
+    }
+    expect(trace.map((t) => t.sourceAdId).sort()).toEqual([
+      "dead",
+      "exact",
+      "near",
+    ]);
+    expect(trace.find((t) => t.sourceAdId === "dead")?.status).toBe("tier4");
+  });
+});
