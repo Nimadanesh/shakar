@@ -214,7 +214,12 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   for (const t of def.exclude) seenEx.add(tokenize(t).join(" "));
   const trueExcludes = [...def.exclude];
   for (const c of applied) {
-    if (c.kind !== "exclude" || c.id.startsWith("exclude:absent:")) continue;
+    if (
+      c.kind !== "exclude" ||
+      c.id.startsWith("exclude:absent:") ||
+      c.id.startsWith("exclude:soft:")
+    )
+      continue;
     const key = tokenize(c.value).join(" ");
     if (key !== "" && !seenEx.has(key)) {
       trueExcludes.push(c.value);
@@ -245,9 +250,25 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     if (dismissedAbsent.has(tokenize(t.text).join(" "))) continue;
     pushAbsent(t.text);
   }
-  const exclude = trueExcludes.filter(
+  // HANDOFF-4: soft suffix negation («X نداشته باشه» / «X نداره») is
+  // an absence, like «بدون X» — merged here, never a hard exclude.
+  // Only the "exclude:soft:" constraints from interpret.ts are merged;
+  // the old "exclude:absent:" constraints (from «بدون») are untouched,
+  // so «بدون خط و خش» stays exactly as today.
+  for (const c of applied) {
+    if (c.kind === "exclude" && c.id.startsWith("exclude:soft:")) {
+      pushAbsent(c.value);
+    }
+  }
+  // HANDOFF-4, rule 4: an exclude never equals the subject head (the
+  // first include word). If it does, that exclude is not created.
+  const headTokens = include.length > 0 ? tokenize(include[0]).join(" ") : "";
+  let exclude = trueExcludes.filter(
     (t) => !absentKeys.has(tokenize(t).join(" "))
   );
+  if (headTokens !== "") {
+    exclude = exclude.filter((t) => tokenize(t).join(" ") !== headTokens);
+  }
 
   // 5. SHOULD terms from preference cues («ترجیحاً تمیز», flaw #19).
   // Ranking boost only — never filters, never penalizes. Deduped against
@@ -325,6 +346,84 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   }
   should.length = 0;
   should.push(...cleanedShould);
+
+  // HANDOFF-4: strip negated, marker, price and inert tokens from
+  // include and should. The rest of include is untouched, and the
+  // subject head (include[0]) is never stripped by an exclude.
+  // Price hard/softness is unchanged — only the words leave.
+  {
+    const removal = new Set<string>();
+    for (const t of exclude) for (const tok of tokenize(t)) removal.add(tok);
+    // Absent words are not content either — the same filter the contract
+    // applies to its own mustNot stems. This is what makes a soft
+    // «نداشته باشه» behave like «بدون»: its words leave include too.
+    for (const t of absentAttributes) for (const tok of tokenize(t)) removal.add(tok);
+    for (const m of [
+      "نباشه", "نباشد", "نیست", "نیستش", "نداشته", "باشه", "باشد", "نداره",
+    ])
+      for (const tok of tokenize(m)) removal.add(tok);
+    // Price tokens: cue + number + unit (typo units included). Only
+    // the number in a price pattern is removed, so «آیفون ۱۵» keeps ۱۵.
+    const priceRe =
+      /(?:کمتر از|بیشتر از|پایین‌تر از|پایین تر از|زیر|حداکثر|حداقل|بالای|تا)\s+([\d۰-۹]+)\s*(میلیارد|میلیون|ملییون|ملیون|میلون|میل|هزار|تومان|ت)(?=\s|$|[،,])/g;
+    let pm: RegExpExecArray | null;
+    while ((pm = priceRe.exec(def.query)) !== null) {
+      removal.add(pm[1]);
+      removal.add(pm[2]);
+    }
+    // Double negation «بدون X نباشه/نباشد»: X is inert — remove it
+    // from include, exclude and absentAttributes as well.
+    const inert = new Set<string>();
+    {
+      const qtoks = normalizeForMatch(def.query).split(" ").filter(Boolean);
+      const bi = qtoks.indexOf("بدون");
+      if (bi >= 0) {
+        for (let j = bi + 1; j < qtoks.length; j++) {
+          if (qtoks[j] === "نباشه" || qtoks[j] === "نباشد") {
+            for (const tok of qtoks.slice(bi + 1, j)) {
+              if (tok !== "و" && tok !== "یا") {
+                for (const st of tokenize(tok)) inert.add(st);
+              }
+            }
+            break;
+          }
+          if (j - bi > 4) break;
+        }
+      }
+    }
+    for (const tok of inert) removal.add(tok);
+    const keptInclude = include.filter((term, idx) => {
+      if (idx === 0) return true;
+      const toks = tokenize(term);
+      return !(toks.length > 0 && toks.every((t) => removal.has(t)));
+    });
+    include.splice(0, include.length, ...keptInclude);
+    exclude = exclude.filter((t) => {
+      const toks = tokenize(t);
+      return !(toks.length > 0 && toks.every((tok) => inert.has(tok)));
+    });
+    const keptAbsent = absentAttributes.filter((t) => {
+      const toks = tokenize(t);
+      return !(toks.length > 0 && toks.every((tok) => inert.has(tok)));
+    });
+    absentAttributes.splice(0, absentAttributes.length, ...keptAbsent);
+    const priceCues = new Set(["زیر", "تا", "حداکثر", "حداقل", "بالای"]);
+    const strippedShould: string[] = [];
+    for (const s of should) {
+      const kept = s
+        .split(" ")
+        .filter(Boolean)
+        .filter((tok) => {
+          const toks = tokenize(tok);
+          return !(toks.length > 0 && toks.every((t) => removal.has(t)));
+        });
+      if (kept.length === 0) continue;
+      if (kept.every((tok) => priceCues.has(tok))) continue;
+      strippedShould.push(kept.join(" "));
+    }
+    should.length = 0;
+    should.push(...strippedShould);
+  }
 
   // 6. Service intent (P0, HumanTest S3): «تعمیر یخچال» wants a repairer,
   // not a fridge. Computed from the raw query text — never guessed from

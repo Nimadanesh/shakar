@@ -248,3 +248,75 @@ describe("HANDOFF-2 — resolveHuntDefinition negation intake", () => {
     expect(def.should).toEqual(["پنجره"]);
   });
 });
+
+describe("HANDOFF-4 — resolveHuntDefinition suffix negation and typo price", () => {
+  it("telescope: exclude {چینی}, include without چینی/نباشه/۸/میلون, price 8000000, no lone زیر in should", () => {
+    const def = resolveHuntDefinition(body({ query: "تلسکوپ نجومی حتماً پایه دار چینی نباشه ترجیحاً زیر ۸ میلون" }))!;
+    expect(def.exclude).toEqual(["چینی"]);
+    expect(def.include).toEqual(["تلسکوپ", "نجومی", "پایه", "دار"]);
+    expect(def.priceMax).toBe("8000000");
+    expect(def.should).not.toContain("زیر");
+    expect(def.should.join(" ")).not.toContain("۸");
+    expect(def.should.join(" ")).not.toContain("میلون");
+  });
+  it("phone: exclude {دست دوم}, include without دوم/نباشه, بدون absent as today", () => {
+    const def = resolveHuntDefinition(body({ query: "گوشی سامسونگ بدون خط و خش، دست دوم نباشه" }))!;
+    expect(def.exclude).toEqual(["دست دوم"]);
+    expect(def.include).toEqual(["گوشی", "سامسونگ"]);
+    expect(def.absentAttributes).toEqual(["خط و خش دست"]);
+  });
+  it("laptop / phone / bike / handsfree / table: hard suffix excludes, head kept", () => {
+    const laptop = resolveHuntDefinition(body({ query: "لپ‌تاپ ایسوس، استوک نباشه" }))!;
+    expect(laptop.exclude).toEqual(["استوک"]);
+    expect(laptop.include).toEqual(["لپ", "تاپ", "ایسوس"]);
+    const phone = resolveHuntDefinition(body({ query: "گوشی، آیفون نباشه" }))!;
+    expect(phone.exclude).toEqual(["آیفون"]);
+    expect(phone.include).toEqual(["گوشی"]);
+    const bike = resolveHuntDefinition(body({ query: "دوچرخه کوهستان، دوچرخه برقی نباشه" }))!;
+    expect(bike.exclude).toEqual(["برقی"]);
+    expect(bike.include).toEqual(["دوچرخه"]);
+    const handsfree = resolveHuntDefinition(body({ query: "هندزفری، سیم دار نباشه" }))!;
+    expect(handsfree.exclude).toEqual(["سیم دار"]);
+    expect(handsfree.include).toEqual(["هندزفری"]);
+    const table = resolveHuntDefinition(body({ query: "میز نهارخوری، شیشه‌ای نباشه" }))!;
+    expect(table.exclude).toEqual(["شیشه‌ای"]);
+    expect(table.include).toEqual(["میز", "نهارخوری"]);
+  });
+  it("«نداشته باشه» is soft: no exclude, absent {خط و خش}, words leave include", () => {
+    const def = resolveHuntDefinition(body({ query: "گوشی سامسونگ، خط و خش نداشته باشه" }))!;
+    expect(def.exclude).toEqual([]);
+    expect(def.absentAttributes).toEqual(["خط و خش"]);
+    expect(def.include).toEqual(["گوشی", "سامسونگ"]);
+  });
+  it("double negation: «بدون گارانتی نباشه» leaves گارانتی inert", () => {
+    const def = resolveHuntDefinition(body({ query: "یخچال ساید بای ساید، بدون گارانتی نباشه" }))!;
+    expect(def.exclude).not.toContain("گارانتی");
+    expect(def.absentAttributes).not.toContain("گارانتی");
+    expect(def.include).not.toContain("گارانتی");
+  });
+  it("«تابلو فرش نیستان» makes no exclude", () => {
+    const def = resolveHuntDefinition(body({ query: "تابلو فرش نیستان" }))!;
+    expect(def.exclude).toEqual([]);
+  });
+  it("typo prices: 10 ملیون → 10000000, 130 ملییون → 130000000, 20 میل → 20000000, model ۱۵ kept", () => {
+    const a = resolveHuntDefinition(body({ query: "گوشی سامسونگ زیر ۱۰ ملیون" }))!;
+    expect(a.priceMax).toBe("10000000");
+    expect(a.include).toEqual(["گوشی", "سامسونگ"]);
+    const b = resolveHuntDefinition(body({ query: "آیفون ۱۵ پرو تا ۱۳۰ ملییون" }))!;
+    expect(b.priceMax).toBe("130000000");
+    expect(b.include).toEqual(["آیفون", "۱۵", "پرو"]);
+    const c = resolveHuntDefinition(body({ query: "ماشین لباسشویی تا ۲۰ میل" }))!;
+    expect(c.priceMax).toBe("20000000");
+    expect(c.include).toEqual(["ماشین", "لباسشویی"]);
+  });
+  it("«میل لنگ پراید» has no price and keeps میل in include", () => {
+    const def = resolveHuntDefinition(body({ query: "میل لنگ پراید" }))!;
+    expect(def.priceMax).toBe("");
+    expect(def.include).toContain("میل");
+  });
+  it("«نه X» from HANDOFF-2 is untouched", () => {
+    const def = resolveHuntDefinition(body({ query: "عینک آفتابی ری‌بن اصل حتماً نه دست دوم نه فیک ترجیحاً تهران" }))!;
+    expect(def.exclude).toEqual(["دست دوم", "فیک"]);
+    expect(def.include).toEqual(["عینک", "آفتابی", "ری", "اصل"]);
+  });
+});

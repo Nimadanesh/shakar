@@ -27,6 +27,13 @@ function mentionsCity(normalized: string, name: string): boolean {
 const UNIT_MULTIPLIER: Array<{ unit: string; factor: number }> = [
   { unit: "میلیارد", factor: 1_000_000_000 },
   { unit: "میلیون", factor: 1_000_000 },
+  // HANDOFF-4 (2026-11-01): typo-tolerant million units, same factor.
+  // "میل" counts only when a price pattern (cue + number) precedes it,
+  // so «میل لنگ» is never a price.
+  { unit: "میلون", factor: 1_000_000 },
+  { unit: "ملیون", factor: 1_000_000 },
+  { unit: "ملییون", factor: 1_000_000 },
+  { unit: "میل", factor: 1_000_000 },
   { unit: "هزار", factor: 1_000 },
 ];
 
@@ -42,6 +49,10 @@ export const PRICE_STRUCTURAL_WORDS = [
   ...MIN_PATTERNS,
   "میلیارد",
   "میلیون",
+  "میلون",
+  "ملیون",
+  "ملییون",
+  "میل",
   "هزار",
   "تومان",
   "ت",
@@ -644,7 +655,8 @@ function parseAmount(raw: string, unit: string | undefined): number | null {
 }
 
 const AMOUNT = "([\\d۰-۹٠-٩][\\d۰-۹٠-٩\\s,،.٬]*)";
-const UNIT = "(میلیارد|میلیون|هزار|تومان|ت)?";
+// Longest first, so «میلیون» is not cut to «میل».
+const UNIT = "(میلیارد|میلیون|ملییون|ملیون|میلون|هزار|تومان|میل|ت)?";
 
 function findPriceBound(normalized: string, kind: "min" | "max"): { value: number; display: string } | null {
   const patterns = kind === "max" ? MAX_PATTERNS : MIN_PATTERNS;
@@ -654,7 +666,7 @@ function findPriceBound(normalized: string, kind: "min" | "max"): { value: numbe
     const value = parseAmount(match[1], match[2]);
     if (value === null) continue;
     const rawAmount = match[1].trim();
-    const scaleUnit = match[2] === "میلیارد" || match[2] === "میلیون" || match[2] === "هزار";
+    const scaleUnit = ["میلیارد", "میلیون", "میلون", "ملیون", "ملییون", "میل", "هزار"].includes(match[2]);
     const displayAmount = scaleUnit ? `${rawAmount} ${match[2]}` : `${value.toLocaleString("fa-IR")} تومان`;
     return {
       value,
@@ -745,6 +757,76 @@ function addExcludeTerm(
 }
 
 /**
+ * HANDOFF-4 (2026-11-01): suffix negation. A marker at the end of a
+ * clause («X نباشه», «X نیست») is a hard exclude for X; «X نداشته باشه»
+ * / «X نداره» is a soft absence, like «بدون X». Markers are independent
+ * words only — «نیستان» (contains «نیست» as a substring) never fires.
+ * «بدون X نباشه» is a double negation: X is inert, so no constraint is
+ * pushed here at all (definition.ts strips X from include).
+ */
+const SUFFIX_HARD = new Set(["نباشه", "نباشد", "نیست", "نیستش"]);
+const SUFFIX_SOFT: ReadonlyArray<readonly string[]> = [
+  ["نداشته", "باشه"],
+  ["نداشته", "باشد"],
+  ["نداره"],
+];
+const SUFFIX_BOUNDARIES = new Set([
+  "حتماً", "حتما", "ترجیحاً", "ترجیحا", "و", "یا", "نه", "ولی", "اما",
+  "نباشه", "نباشد", "نیست", "نیستش", "نداشته", "نداره",
+]);
+const SUFFIX_WEAK = new Set(["دار", "ای", "ها", "های", "تر", "ترین"]);
+const SUFFIX_ORDINALS = new Set([
+  "اول", "دوم", "سوم", "چهارم", "پنجم", "ششم", "هفتم", "هشتم", "نهم", "دهم",
+  "یازدهم", "دوازدهم", "یکم",
+]);
+function suffixWeakToken(tok: string): boolean {
+  const clean = tok.replace(/‌/g, "");
+  if (/^[\d۰-۹٠-٩]+$/.test(clean)) return true;
+  if (SUFFIX_ORDINALS.has(clean)) return true;
+  if (clean.length <= 2) return true;
+  return SUFFIX_WEAK.has(clean);
+}
+function findSuffixMarker(tokens: string[]): {
+  kind: "hard" | "soft" | "double";
+  start: number;
+  length: number;
+} | null {
+  for (let i = 0; i < tokens.length; i++) {
+    let kind: "hard" | "soft" | null = null;
+    let length = 0;
+    if (SUFFIX_HARD.has(tokens[i])) {
+      kind = "hard";
+      length = 1;
+    } else {
+      for (const seq of SUFFIX_SOFT) {
+        if (seq.every((t, k) => tokens[i + k] === t)) {
+          kind = "soft";
+          length = seq.length;
+          break;
+        }
+      }
+    }
+    if (kind === null) continue;
+    const after = tokens.slice(i + length);
+    const clauseEnd =
+      after.length === 0 ||
+      ["ترجیحاً", "ترجیحا", "و", "یا", "ولی", "اما", "نه"].includes(after[0]);
+    if (!clauseEnd) continue;
+    // Double negation: «بدون X نباشه/نباشد» — X is inert, not a ban
+    // and not an absence. The marker itself must be نباشه/نباشد.
+    if (
+      kind === "hard" &&
+      (tokens[i] === "نباشه" || tokens[i] === "نباشد") &&
+      tokens.slice(0, i).includes("بدون")
+    ) {
+      return { kind: "double", start: i, length };
+    }
+    return { kind, start: i, length };
+  }
+  return null;
+}
+
+/**
  * Conservative rule-based interpretation of a Persian natural-language query.
  * Only high-confidence patterns (known city, explicit price bound, explicit
  * negation, preference cue) produce constraints. Vague language yields nothing:
@@ -820,6 +902,58 @@ export function interpretQuery(raw: string): Interpretation {
   }
 
   for (const rawSegment of splitSegments(segmentsFrom)) {
+    // HANDOFF-4 suffix negation, before the «نه» path (which is untouched).
+    // The negated piece is cut at the last boundary; a hard exclude is
+    // the last word, or the last two when the last word is weak — never
+    // more. A soft marker gives an "exclude:soft:" constraint, which
+    // definition.ts merges into absentAttributes (never a hard exclude).
+    // A double negation pushes nothing and the segment is skipped.
+    {
+      const segTokens = rawSegment.split(" ").filter(Boolean);
+      const found = findSuffixMarker(segTokens);
+      if (found !== null) {
+        if (found.kind === "double") {
+          continue;
+        }
+        let cut = 0;
+        for (let i = 0; i < found.start; i++) {
+          // A soft attribute keeps its internal «و» («خط و خش»); a hard
+          // exclude cuts at «و»/«یا» as a clause boundary.
+          if (found.kind === "soft" && (segTokens[i] === "و" || segTokens[i] === "یا")) continue;
+          if (SUFFIX_BOUNDARIES.has(segTokens[i])) cut = i + 1;
+        }
+        const piece = segTokens.slice(cut, found.start);
+        if (piece.length === 0) {
+          continue;
+        }
+        if (found.kind === "hard") {
+          const last = piece[piece.length - 1];
+          const term =
+            piece.length >= 2 && suffixWeakToken(last)
+              ? piece.slice(-2).join(" ")
+              : last;
+          pushUnique(applied, {
+            id: `exclude:${term}`,
+            kind: "exclude",
+            value: term,
+            display: term,
+            source: "inferred",
+            applied: true,
+          });
+        } else {
+          const term = piece.slice(-4).join(" ");
+          pushUnique(applied, {
+            id: `exclude:soft:${term}`,
+            kind: "exclude",
+            value: term,
+            display: term,
+            source: "inferred",
+            applied: true,
+          });
+        }
+        continue;
+      }
+    }
     // Inline «نه»: «زیر ۲۰۰ میلیون نه دیجیتال» → content + exclude term.
     // The remainder keeps flowing through the other checks (price, city…).
     let segment = rawSegment;

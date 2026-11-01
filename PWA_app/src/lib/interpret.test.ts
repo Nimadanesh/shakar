@@ -512,3 +512,47 @@ describe("HANDOFF-2 — negation intake: «نه X» is cut at its boundaries", (
     expect(excludes("پرده آماده برای پنجره")).toEqual([]);
   });
 });
+
+describe("HANDOFF-4 — suffix negation and typo-tolerant price", () => {
+  const applied = (raw: string) => interpretQuery(raw).applied;
+  const excludes = (raw: string) =>
+    applied(raw).filter((c) => c.kind === "exclude" && !c.id.startsWith("exclude:soft:")).map((c) => c.value);
+  const softs = (raw: string) =>
+    applied(raw).filter((c) => c.id.startsWith("exclude:soft:")).map((c) => c.value);
+  it("«چینی نباشه» after حتماً → {چینی} only, not the whole clause", () => {
+    expect(excludes("تلسکوپ نجومی حتماً پایه دار چینی نباشه ترجیحاً زیر ۸ میلون")).toEqual(["چینی"]);
+  });
+  it("«دست دوم نباشه» → {دست دوم} (دوم is a weak ordinal)", () => {
+    expect(excludes("گوشی سامسونگ بدون خط و خش، دست دوم نباشه")).toContain("دست دوم");
+  });
+  it("«استوک نباشه» → {استوک}; «آیفون نباشه» → {آیفون}; «برقی نباشه» → {برقی} only", () => {
+    expect(excludes("لپ‌تاپ ایسوس، استوک نباشه")).toContain("استوک");
+    expect(excludes("گوشی، آیفون نباشه")).toContain("آیفون");
+    expect(excludes("دوچرخه کوهستان، دوچرخه برقی نباشه")).toEqual(["برقی"]);
+  });
+  it("«سیم دار نباشه» → {سیم دار}, not {دار} alone", () => {
+    expect(excludes("هندزفری، سیم دار نباشه")).toEqual(["سیم دار"]);
+  });
+  it("«شیشه‌ای نباشه» → {شیشه‌ای}", () => {
+    expect(excludes("میز نهارخوری، شیشه‌ای نباشه")).toEqual(["شیشه‌ای"]);
+  });
+  it("«نیستان» never fires («نیست» must be an independent word)", () => {
+    expect(excludes("تابلو فرش نیستان")).toEqual([]);
+  });
+  it("«نداشته باشه» is soft, never a hard exclude", () => {
+    expect(excludes("گوشی سامسونگ، خط و خش نداشته باشه")).toEqual([]);
+    expect(softs("گوشی سامسونگ، خط و خش نداشته باشه")).toEqual(["خط و خش"]);
+  });
+  it("«بدون گارانتی نباشه» pushes nothing (double negation is inert)", () => {
+    expect(applied("یخچال ساید بای ساید، بدون گارانتی نباشه").filter((c) => c.kind === "exclude")).toEqual([]);
+  });
+  it("typo million units are prices: میلون، ملیون، ملییون، میل", () => {
+    expect(applied("گوشی سامسونگ زیر ۱۰ ملیون").find((c) => c.kind === "priceMax")?.value).toBe("10000000");
+    expect(applied("آیفون ۱۵ پرو تا ۱۳۰ ملییون").find((c) => c.kind === "priceMax")?.value).toBe("130000000");
+    expect(applied("ماشین لباسشویی تا ۲۰ میل").find((c) => c.kind === "priceMax")?.value).toBe("20000000");
+    expect(applied("تلسکوپ نجومی حتماً پایه دار چینی نباشه ترجیحاً زیر ۸ میلون").find((c) => c.kind === "priceMax")?.value).toBe("8000000");
+  });
+  it("«میل لنگ» without a preceding number is not a price", () => {
+    expect(applied("میل لنگ پراید").some((c) => c.kind === "priceMax" || c.kind === "priceMin")).toBe(false);
+  });
+});
