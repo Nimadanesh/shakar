@@ -205,3 +205,46 @@ describe("parsePriceBound", () => {  it("parses digits-only and Persian digits",
     expect(parsePriceBound("0")).toBeNull();
   });
 });
+
+describe("HANDOFF-2 — resolveHuntDefinition negation intake", () => {
+  it("J1: exclude = {کرکره، تور ساده}, should carries no negated word", () => {
+    const def = resolveHuntDefinition(body({ query: "پرده آماده یا سفارشی برای پنجره پذیرایی، پارچه‌ای ضخیم، نه کرکره و نه تور ساده" }))!;
+    expect(def.exclude).toContain("کرکره");
+    expect(def.exclude).toContain("تور ساده");
+    expect(def.exclude).not.toContain("کرکره و");
+    expect(def.should).toEqual(["پنجره پذیرایی پارچه ای ضخیم"]);
+    expect(def.should.join(" ")).not.toContain("کرکره");
+    expect(def.should.join(" ")).not.toContain("تور");
+  });
+  it("J2: exclude = {هندزفری سیم‌دار ارزان}", () => {
+    const def = resolveHuntDefinition(body({ query: "هدفون بی‌سیم سونی یا جی‌بی‌ال با نویزکنسلینگ، سالم با باکس، نه هندزفری سیم‌دار ارزان" }))!;
+    expect(def.exclude).toContain("هندزفری سیم‌دار ارزان");
+    expect(def.should).toEqual([]);
+  });
+  it("J3: exclude = {دوچرخه بچه‌گانه، برقی}, no «ترجیحا» in any exclude", () => {
+    const def = resolveHuntDefinition(body({ query: "دوچرخه کوهستان ۲۶ اینچ، دنده شیمانو، نه دوچرخه بچه‌گانه و نه برقی، ترجیحاً تهران زیر ۱۵ میلیون" }))!;
+    expect(def.exclude).toContain("دوچرخه بچه‌گانه");
+    expect(def.exclude).toContain("برقی");
+    expect(def.exclude.every((t) => !t.includes("ترجیحا"))).toBe(true);
+  });
+  it("«میز نهارخوری چوبی» → no exclude", () => {
+    const def = resolveHuntDefinition(body({ query: "میز نهارخوری چوبی" }))!;
+    expect(def.exclude).toEqual([]);
+  });
+  it("«پرده، نه کرکره یا تور» → {کرکره، تور}", () => {
+    const def = resolveHuntDefinition(body({ query: "پرده، نه کرکره یا تور" }))!;
+    expect(def.exclude).toContain("کرکره");
+    expect(def.exclude).toContain("تور");
+    expect(def.exclude).toHaveLength(2);
+  });
+  it("«گوشی سامسونگ، نه آیفون، سالم» → {آیفون}", () => {
+    const def = resolveHuntDefinition(body({ query: "گوشی سامسونگ، نه آیفون، سالم" }))!;
+    expect(def.exclude).toEqual(["آیفون"]);
+  });
+  it("a sentence without «نه» keeps today's output exactly", () => {
+    const def = resolveHuntDefinition(body({ query: "پرده آماده برای پنجره" }))!;
+    expect(def.include).toEqual(["پرده", "آماده"]);
+    expect(def.exclude).toEqual([]);
+    expect(def.should).toEqual(["پنجره"]);
+  });
+});

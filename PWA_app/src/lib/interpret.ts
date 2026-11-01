@@ -701,11 +701,47 @@ function addExcludeTerm(
     }
   };
   const term = normalizePersian(rawTerm);
-  if (term.split(" ").filter(Boolean).length > 3 && term.includes(" و ")) {
-    for (const part of term.split(" و ")) push(normalizePersian(part));
-    return;
+  // HANDOFF-2 (2026-11-01): a negated phrase is cut at its boundaries, not
+  // pushed whole. «و»/«یا»/«نه» (independent words only) split the phrase
+  // into separate excludes («نه X و نه Y» → X, Y; «نه X یا Y» → X, Y), so
+  // no exclude starts/ends with a conjunction and none is conjunction-only.
+  // «،»/«,»/«ولی»/«اما»/«ترجیحاً»/«ترجیحا» STOP the negation: what follows
+  // is a new segment, a contrast, or a preference — never another exclude.
+  // The negated phrase itself is not fragmented («هندزفری سیم‌دار ارزان»
+  // stays one exclude). The ≤3-word push cap above is unchanged, so a
+  // long piece with no boundary still drops exactly as before.
+  const pieces: string[] = [];
+  let current: string[] = [];
+  const flush = () => {
+    if (current.length > 0) pieces.push(current.join(" "));
+    current = [];
+  };
+  const STOP = new Set(["ترجیحاً", "ترجیحا", "ولی", "اما"]);
+  const SPLIT = new Set(["و", "یا", "نه"]);
+  for (const rawTok of term.split(" ").filter(Boolean)) {
+    const hasComma = /[،,]$/.test(rawTok);
+    const tok = rawTok.replace(/[،,]+$/, "");
+    if (tok === "") {
+      flush();
+      break;
+    }
+    if (STOP.has(tok)) {
+      flush();
+      break;
+    }
+    if (SPLIT.has(tok)) {
+      flush();
+      if (hasComma) break;
+      continue;
+    }
+    current.push(tok);
+    if (hasComma) {
+      flush();
+      break;
+    }
   }
-  push(term);
+  flush();
+  for (const piece of pieces) push(piece);
 }
 
 /**

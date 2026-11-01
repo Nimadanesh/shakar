@@ -272,6 +272,60 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     }
   }
 
+  // HANDOFF-2 (2026-11-01): strip the negated part from SHOULD text.
+  // A purpose clause can carry the whole clause including «نه X»
+  // («برای پنجره پذیرایی، پارچه‌ای ضخیم، نه کرکره و نه تور ساده»),
+  // which would otherwise boost exactly the banned thing. Cut at the
+  // first independent «نه» token («نهار»/«نهال» are untouched: they are
+  // not a «نه» token), drop trailing conjunctions/preference cues,
+  // then drop any token sequence that is itself an exclude term.
+  // Anything without a negation passes through byte-identical.
+  // Both surface forms: tokenized (contract SHOULD, ZWNJ already split)
+  // and space-split (interpret preferences, ZWNJ kept).
+  const excludeTokenSeqs = exclude.flatMap((t) => [
+    tokenize(t),
+    t.split(" ").filter(Boolean),
+  ]);
+  const cleanedShould: string[] = [];
+  for (const s of should) {
+    const toks = s.split(" ").filter(Boolean);
+    const neIdx = toks.findIndex(
+      (t) => t.replace(/[،,]+$/, "") === "نه"
+    );
+    let kept = neIdx >= 0 ? toks.slice(0, neIdx) : toks;
+    while (
+      kept.length > 0 &&
+      ["و", "یا", "ترجیحاً", "ترجیحا", "ولی", "اما"].includes(
+        kept[kept.length - 1].replace(/[،,]+$/, "")
+      )
+    ) {
+      kept.pop();
+    }
+    const keptToks = kept.map((t) => t.replace(/[،,]+$/, ""));
+    const out: string[] = [];
+    for (let i = 0; i < keptToks.length; ) {
+      let matched = 0;
+      for (const seq of excludeTokenSeqs) {
+        if (
+          seq.length > 0 &&
+          keptToks.slice(i, i + seq.length).join(" ") === seq.join(" ")
+        ) {
+          matched = Math.max(matched, seq.length);
+        }
+      }
+      if (matched > 0) {
+        i += matched;
+      } else {
+        out.push(kept[i]);
+        i += 1;
+      }
+    }
+    const cleaned = out.join(" ");
+    if (cleaned !== "") cleanedShould.push(cleaned);
+  }
+  should.length = 0;
+  should.push(...cleanedShould);
+
   // 6. Service intent (P0, HumanTest S3): «تعمیر یخچال» wants a repairer,
   // not a fridge. Computed from the raw query text — never guessed from
   // ad text. The Q4 guard («یخچال تعمیری» = repaired good) lives inside

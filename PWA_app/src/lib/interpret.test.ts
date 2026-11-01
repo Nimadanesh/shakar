@@ -475,3 +475,40 @@ describe("detectRoleMode — R7 speech-act role (HumanTest S4)", () => {
     expect(detectRoleMode(query)).toBe(expected);
   });
 });
+
+describe("HANDOFF-2 — negation intake: «نه X» is cut at its boundaries", () => {
+  const excludes = (raw: string) =>
+    interpretQuery(raw).applied.filter((c) => c.kind === "exclude").map((c) => c.value);
+  it("J1: «نه کرکره و نه تور ساده» → {کرکره، تور ساده}, no glued «کرکره و»", () => {
+    const ex = excludes("پرده آماده یا سفارشی برای پنجره پذیرایی، پارچه‌ای ضخیم، نه کرکره و نه تور ساده");
+    expect(ex).toContain("کرکره");
+    expect(ex).toContain("تور ساده");
+    expect(ex).not.toContain("کرکره و");
+    expect(ex.every((t) => !t.startsWith("و") && !t.endsWith("و") && !t.includes("ترجیحا"))).toBe(true);
+  });
+  it("J2: «نه هندزفری سیم‌دار ارزان» stays one exclude", () => {
+    expect(excludes("هدفون بی‌سیم سونی یا جی‌بی‌ال با نویزکنسلینگ، سالم با باکس، نه هندزفری سیم‌دار ارزان")).toContain("هندزفری سیم‌دار ارزان");
+  });
+  it("J3: «نه دوچرخه بچه‌گانه و نه برقی» → {دوچرخه بچه‌گانه، برقی}, no «ترجیحا»", () => {
+    const ex = excludes("دوچرخه کوهستان ۲۶ اینچ، دنده شیمانو، نه دوچرخه بچه‌گانه و نه برقی، ترجیحاً تهران زیر ۱۵ میلیون");
+    expect(ex).toContain("دوچرخه بچه‌گانه");
+    expect(ex).toContain("برقی");
+    expect(ex).not.toContain("دوچرخه بچه‌گانه و");
+    expect(ex.every((t) => !t.includes("ترجیحا"))).toBe(true);
+  });
+  it("«میز نهارخوری چوبی» makes no exclude («نه» must be an independent word)", () => {
+    expect(excludes("میز نهارخوری چوبی")).toEqual([]);
+  });
+  it("«پرده، نه کرکره یا تور» → {کرکره، تور}", () => {
+    const ex = excludes("پرده، نه کرکره یا تور");
+    expect(ex).toContain("کرکره");
+    expect(ex).toContain("تور");
+    expect(ex).toHaveLength(2);
+  });
+  it("«گوشی سامسونگ، نه آیفون، سالم» → {آیفون} only", () => {
+    expect(excludes("گوشی سامسونگ، نه آیفون، سالم")).toEqual(["آیفون"]);
+  });
+  it("a sentence without «نه» makes no exclude", () => {
+    expect(excludes("پرده آماده برای پنجره")).toEqual([]);
+  });
+});
