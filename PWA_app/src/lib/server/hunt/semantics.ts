@@ -5,6 +5,7 @@ import {
   normalizeForMatch,
   stemToken,
   textMatches,
+  unifyChars,
 } from "@/lib/persianNormalize";
 import { includesWord, isServiceDemandTerm, SERVICE_DEMAND_FAMILY, ROLE_WORDS } from "@/lib/interpret";
 import { HEAD_KIND, HEAD_SKIP_TOKENS } from "./kindLexicon";
@@ -415,6 +416,99 @@ export function assessRepairPolarity(text: string): {
  *   history, so it must not reject. Unknown polarity is capped at near by
  *   the verdict stage instead — preserved, never exact.
  */
+/**
+ * HANDOFF-4b (2026-11-02): negation-aware exclude matching.
+ *
+ * An occurrence of an exclude term is negated when a negation marker is
+ * an independent word within 2 words after it (نیست، نیستش، نمی‌باشد،
+ * نمیباشد، نداره، ندارد، نداشته) or within 2 words before it (بدون، نه،
+ * غیر). The 2-word window never crosses . ، ! ؟ : — a barrier stops the
+ * window, so «چینی. نیست» still fires. Markers are whole tokens only:
+ * «نیستان» is not «نیست» and «نهار» is not «نه».
+ *
+ * The exclude fires when even one occurrence is not negated. If no
+ * occurrence can be located (e.g. a synonym-alias shape), the old
+ * firing behavior is preserved — negation only suppresses what it
+ * positively finds negated.
+ */
+const EXCLUDE_NEGATION_AFTER = new Set([
+  "نیست",
+  "نیستش",
+  "نمیباشد",
+  "نداره",
+  "ندارد",
+  "نداشته",
+]);
+const EXCLUDE_NEGATION_BEFORE = new Set(["بدون", "نه", "غیر"]);
+type ExcludeStreamEl = { token: string } | { barrier: true };
+function excludeTokenStream(text: string): ExcludeStreamEl[] {
+  const unified = unifyChars(text).replace(/‌/g, " ");
+  const withBarriers = unified.replace(/[\.،!؟:]/g, " \u0001 ");
+  const stream: ExcludeStreamEl[] = [];
+  for (const part of withBarriers.split(/\s+/).filter(Boolean)) {
+    if (part === "\u0001") {
+      stream.push({ barrier: true });
+      continue;
+    }
+    const cleaned = part.replace(
+      /[()«»""''\[\]{}<>|/\\\-–—_+=*~@#$%^&`,؛]/g,
+      ""
+    );
+    if (cleaned === "") continue;
+    const stemmed = stemToken(cleaned);
+    if (stemmed === "") continue;
+    stream.push({ token: stemmed });
+  }
+  return stream;
+}
+export function excludeHasUnnegatedOccurrence(
+  text: string,
+  term: string,
+  category?: string
+): boolean {
+  const stream = excludeTokenStream(text);
+  let foundAny = false;
+  for (const variant of expandSynonyms(term, category)) {
+    const variantTokens = variant.split(" ").filter(Boolean);
+    if (variantTokens.length === 0) continue;
+    for (let i = 0; i < stream.length; i++) {
+      let pos = i;
+      let ok = true;
+      for (const vt of variantTokens) {
+        const el = stream[pos];
+        if (!el || "barrier" in el || el.token !== vt) {
+          ok = false;
+          break;
+        }
+        pos++;
+      }
+      if (!ok) continue;
+      foundAny = true;
+      const end = pos - 1;
+      const after: string[] = [];
+      for (let p = end + 1; p < stream.length && after.length < 2; p++) {
+        const el = stream[p];
+        if ("barrier" in el) break;
+        after.push(el.token);
+      }
+      const afterNegated =
+        after.some((t) => EXCLUDE_NEGATION_AFTER.has(t)) ||
+        (after[0] === "نمی" && after[1] === "باشد");
+      const before: string[] = [];
+      for (let p = i - 1; p >= 0 && before.length < 2; p--) {
+        const el = stream[p];
+        if ("barrier" in el) break;
+        before.push(el.token);
+      }
+      const beforeNegated = before.some((t) =>
+        EXCLUDE_NEGATION_BEFORE.has(t)
+      );
+      if (!afterNegated && !beforeNegated) return true;
+    }
+  }
+  return !foundAny;
+}
+
 export function exclusionFires(
   text: string,
   term: string,
@@ -424,7 +518,7 @@ export function exclusionFires(
   if (isRepairWord(term)) {
     return assessRepairPolarity(text).polarity === "present";
   }
-  return true;
+  return excludeHasUnnegatedOccurrence(text, term, category);
 }
 
 /** Buyer-seeking subject words: explicit only at the START of the text. */

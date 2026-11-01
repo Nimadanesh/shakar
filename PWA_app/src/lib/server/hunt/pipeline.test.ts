@@ -27,6 +27,7 @@ vi.mock("../divar/taxonomy", () => ({
 import { divarProvider } from "../divar/divarClient";
 import { collapseDupes, runPipeline } from "./pipeline";
 import { resolveHuntDefinition } from "./definition";
+import { exclusionFires } from "./semantics";
 
 const mockSearchLists = vi.mocked(divarProvider.searchLists);
 const mockGetDetail = vi.mocked(divarProvider.getDetail);
@@ -532,6 +533,58 @@ describe("intent buckets — flaw #19 (MUST/SHOULD/MUST-NOT/UNKNOWN)", () => {
     const done = await doneOf(def19({ exclude: ["کهنه"] }));
     expect(done.results).toEqual([]);
     expect(done.stats.rejectedNoMatch).toBe(1);
+  });
+
+  describe("HANDOFF-4b — negation-aware exclude matching", () => {
+    it("function: a negated occurrence does not fire", () => {
+      expect(exclusionFires("تلسکوپ سلسترون، چینی نیست، ساخت آمریکا", "چینی")).toBe(false);
+      expect(exclusionFires("آیفون آکبند، دست دوم نیست", "دست دوم")).toBe(false);
+      expect(exclusionFires("ری‌بن نه فیک، اصل با کارت", "فیک")).toBe(false);
+      expect(exclusionFires("پرده پارچه‌ای، کرکره ندارد", "کرکره")).toBe(false);
+      expect(exclusionFires("تلسکوپ چینی نیست", "چینی")).toBe(false);
+    });
+    it("function: a non-negated occurrence fires, even beside a negated one", () => {
+      expect(exclusionFires("تلسکوپ چینی سالم", "چینی")).toBe(true);
+      expect(exclusionFires("بدنه چینی نیست ولی پایه‌اش چینی است", "چینی")).toBe(true);
+      expect(exclusionFires("کرکره برقی نو", "کرکره")).toBe(true);
+    });
+    it("function: punctuation closes the 2-word window", () => {
+      expect(exclusionFires("تلسکوپ چینی. نیست مشابهش در بازار", "چینی")).toBe(true);
+    });
+    it("function: «نیستان» is not a negation", () => {
+      expect(exclusionFires("تابلو فرش نیستان", "تابلو")).toBe(true);
+    });
+    it("pipeline title phase: «تلسکوپ چینی نیست» survives", async () => {
+      mockSearchLists.mockResolvedValueOnce({
+        listings: [summary({ sourceAdId: "t1", title: "تلسکوپ چینی نیست" })],
+        hasMore: false,
+      });
+      detail({ t1: "تلسکوپ سلسترون ساخت آمریکا" });
+      const done = await doneOf(
+        def19({ query: "تلسکوپ", include: ["تلسکوپ"], exclude: ["چینی"] })
+      );
+      expect(done.results.map((r) => r.sourceAdId)).toEqual(["t1"]);
+    });
+    it("pipeline detail phase: a negated description survives, a plain one dies", async () => {
+      mockSearchLists.mockResolvedValueOnce({
+        listings: [summary({ sourceAdId: "d1", title: "تلسکوپ سلسترون" })],
+        hasMore: false,
+      });
+      detail({ d1: "تلسکوپ سلسترون، چینی نیست، ساخت آمریکا" });
+      const kept = await doneOf(
+        def19({ query: "تلسکوپ", include: ["تلسکوپ"], exclude: ["چینی"] })
+      );
+      expect(kept.results.map((r) => r.sourceAdId)).toEqual(["d1"]);
+      mockSearchLists.mockResolvedValueOnce({
+        listings: [summary({ sourceAdId: "d2", title: "تلسکوپ سلسترون" })],
+        hasMore: false,
+      });
+      detail({ d2: "تلسکوپ چینی سالم" });
+      const killed = await doneOf(
+        def19({ query: "تلسکوپ", include: ["تلسکوپ"], exclude: ["چینی"] })
+      );
+      expect(killed.results).toEqual([]);
+    });
   });
 
   it("condition contradiction still rejects (flaw #15)", async () => {
