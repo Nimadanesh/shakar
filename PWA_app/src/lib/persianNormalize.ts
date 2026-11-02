@@ -17,6 +17,7 @@
  */
 
 import { BRAND_ALIASES } from "./brandAliases";
+import { MODEL_FAMILIES, type ModelFamily } from "./modelFamilies";
 
 /** Unify Arabic-script variants to Persian, strip diacritics/tatweel. */
 export function unifyChars(text: string): string {
@@ -516,6 +517,14 @@ export function textMatchesRelated(adText: string, term: string, category?: stri
 export function textMatches(adText: string, term: string, category?: string): boolean {
   const brandGroup = brandGroupOfTerm(term);
   if (brandGroup !== null) return brandGroupsInText(adText).has(brandGroup);
+  // HANDOFF-4b F1: a family term matches ONLY its own family, exactly
+  // (Latin case-insensitive, hyphen/space-insensitive via the window
+  // scan) — never its brand, never another family. This branch is
+  // what lets a lowercased exclude («mavic», as the parser emits it)
+  // match a capitalized title occurrence («Mavic»): the generic path
+  // below is Latin-case-sensitive and would miss it.
+  const family = familyOfTerm(term);
+  if (family !== undefined) return familiesInText(adText).has(family.id);
   return expandSynonyms(term, category).some((syn) =>
     containsNormalizedTerm(adText, syn, false)
   );
@@ -532,6 +541,9 @@ export function textMatches(adText: string, term: string, category?: string): bo
 export function textMatchesInclude(adText: string, term: string, category?: string): boolean {
   const brandGroup = brandGroupOfTerm(term);
   if (brandGroup !== null) return brandGroupsInText(adText).has(brandGroup);
+  // HANDOFF-4b F1: same family rule as textMatches.
+  const family = familyOfTerm(term);
+  if (family !== undefined) return familiesInText(adText).has(family.id);
   return expandSynonyms(term, category).some((syn) =>
     containsNormalizedTerm(adText, syn, true)
   );
@@ -810,6 +822,112 @@ export const BRAND_SET: ReadonlySet<string> = new Set(
     "bmw",
     "benz",
     "mercedes",
+    // HANDOFF-4b (2026-11-03): every model family in modelFamilies.ts,
+    // all forms (Persian + Latin), so layer B never runs on any of
+    // them. The .map below normalizes (ZWNJ/space removed), so the
+    // forms are written here as in the handoff list. No Latin form
+    // for کوییک («quick» is a common word) — Persian form only.
+    "گلکسی",
+    "آیپد",
+    "مک‌بوک",
+    "ایرپاد",
+    "ردمی",
+    "پوکو",
+    "میت‌بوک",
+    "پلی‌استیشن",
+    "براویا",
+    "اکسپریا",
+    "تینک‌پد",
+    "آیدیاپد",
+    "ذن‌بوک",
+    "ویووبوک",
+    "اسپایر",
+    "پاویلیون",
+    "الیت‌بوک",
+    "پروبوک",
+    "اینسپایرون",
+    "وسترو",
+    "الین‌ویر",
+    "ایکس‌باکس",
+    "پاورشات",
+    "کول‌پیکس",
+    "اینستکس",
+    "ماویک",
+    "آواتا",
+    "پارتی‌باکس",
+    "ساندکور",
+    "پاورکور",
+    "جی‌شاک",
+    "ادیفایس",
+    "ددیکا",
+    "مگنیفیکا",
+    "ساینا",
+    "کوییک",
+    "سراتو",
+    "اسپورتیج",
+    "النترا",
+    "توسان",
+    "سانتافه",
+    "کرولا",
+    "کمری",
+    "پرادو",
+    "ماکسیما",
+    "ساندرو",
+    "مگان",
+    "تیگو",
+    "آریزو",
+    "کلاوینوا",
+    "ویتارا",
+    "galaxy",
+    "ipad",
+    "macbook",
+    "airpods",
+    "redmi",
+    "poco",
+    "matebook",
+    "playstation",
+    "bravia",
+    "xperia",
+    "thinkpad",
+    "ideapad",
+    "zenbook",
+    "vivobook",
+    "aspire",
+    "pavilion",
+    "elitebook",
+    "probook",
+    "inspiron",
+    "vostro",
+    "alienware",
+    "xbox",
+    "powershot",
+    "coolpix",
+    "instax",
+    "mavic",
+    "avata",
+    "partybox",
+    "soundcore",
+    "powercore",
+    "gshock",
+    "edifice",
+    "dedica",
+    "magnifica",
+    "saina",
+    "cerato",
+    "sportage",
+    "elantra",
+    "tucson",
+    "santafe",
+    "corolla",
+    "camry",
+    "prado",
+    "maxima",
+    "sandero",
+    "megane",
+    "tiggo",
+    "arrizo",
+    "clavinova",
+    "vitara",
   ].map((w) => normalizeForMatch(w).replace(/ /g, ""))
 );
 
@@ -856,9 +974,34 @@ const BRAND_FORM_MAP: ReadonlyMap<string, string> = (() => {
   return map;
 })();
 
+/**
+ * HANDOFF-4b F1 — family forms, keyed like brands (brandKey shape).
+ * The map is text-side: a family form in text resolves to its family
+ * entry, whose brandId is what the brand checks compare. The TERM side
+ * stays separate — brandGroupOfTerm above never sees family forms, so
+ * a query family term matches only itself (F2 direction), never its
+ * brand. First-wins; the list has no colliding forms (pinned by test).
+ */
+const FAMILY_FORM_MAP: ReadonlyMap<string, ModelFamily> = (() => {
+  const map = new Map<string, ModelFamily>();
+  for (const family of MODEL_FAMILIES) {
+    for (const form of [family.fa, family.en]) {
+      if (form === "") continue;
+      const key = brandKey(form);
+      if (key !== "" && !map.has(key)) map.set(key, family);
+    }
+  }
+  return map;
+})();
+
 /** The brand group of a single query term, or null when the term is not a brand form. */
 export function brandGroupOfTerm(term: string): string | null {
   return BRAND_FORM_MAP.get(brandKey(term)) ?? null;
+}
+
+/** The family of a single query term, or null when the term is not a family form. */
+export function familyOfTerm(term: string): ModelFamily | undefined {
+  return FAMILY_FORM_MAP.get(brandKey(term));
 }
 
 /**
@@ -867,7 +1010,12 @@ export function brandGroupOfTerm(term: string): string | null {
  * check, which scans its own token stream.
  */
 export function brandGroupOfForm(form: string): string | null {
-  return BRAND_FORM_MAP.get(form) ?? null;
+  // HANDOFF-4b F1/F4: a family form in text counts as its brand group
+  // here too, so the exclusion scan finds family occurrences of an
+  // excluded brand (and its 4b negation windows apply to them).
+  return (
+    BRAND_FORM_MAP.get(form) ?? FAMILY_FORM_MAP.get(form)?.brandId ?? null
+  );
 }
 
 /**
@@ -885,7 +1033,11 @@ export function brandGroupsInText(text: string): ReadonlySet<string> {
   for (let i = 0; i < tokens.length; i++) {
     for (let len = 1; len <= 3 && i + len <= tokens.length; len++) {
       const form = tokens.slice(i, i + len).join("");
-      const group = BRAND_FORM_MAP.get(form);
+      // HANDOFF-4b F1/F2: a family form in text counts as its brand
+      // group — this is what makes a query brand match a family-only
+      // title, in the MUST loop, the title phase, and brandOnly.
+      const group =
+        BRAND_FORM_MAP.get(form) ?? FAMILY_FORM_MAP.get(form)?.brandId;
       if (group === undefined) continue;
       if (
         /^[a-z]{2}$/.test(form) &&
@@ -895,6 +1047,28 @@ export function brandGroupsInText(text: string): ReadonlySet<string> {
         continue;
       }
       found.add(group);
+    }
+  }
+  return found;
+}
+
+/**
+ * HANDOFF-4b F1 — all family ids present in a text, by the same exact
+ * full-word 1–3-token window scan. A family term matches only its own
+ * family (never its brand, never another family): the caller compares
+ * against one family id.
+ */
+export function familiesInText(text: string): ReadonlySet<string> {
+  const tokens = normalizeForMatch(text)
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean);
+  const found = new Set<string>();
+  for (let i = 0; i < tokens.length; i++) {
+    for (let len = 1; len <= 3 && i + len <= tokens.length; len++) {
+      const form = tokens.slice(i, i + len).join("");
+      const family = FAMILY_FORM_MAP.get(form);
+      if (family !== undefined) found.add(family.id);
     }
   }
   return found;

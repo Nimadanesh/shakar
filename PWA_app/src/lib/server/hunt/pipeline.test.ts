@@ -4134,3 +4134,279 @@ describe("HANDOFF-4 — brand: exact Latin/Persian match + brand-only tier-3 cap
     expect(traceReason(trace, "a1")).toContain("kind:brand-other-kind");
   });
 });
+
+describe("HANDOFF-4b — model families: brand ← family substitution", () => {
+  type Row = { sourceAdId: string; title: string };
+
+  function listings(rows: Row[]) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  // Full path: sentence → resolveHuntDefinition → runPipeline with a
+  // mock provider; description = title.
+  async function runAds(
+    query: string,
+    rows: Row[],
+    extra: Partial<HuntDefinition> = {}
+  ) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+      ...extra,
+    });
+    if (!def) throw new Error("no definition for " + query);
+    listings(rows);
+    detail(Object.fromEntries(rows.map((r) => [r.sourceAdId, r.title])));
+    return runPipeline(def, () => {});
+  }
+
+  async function runOne(query: string, title: string, extra: Partial<HuntDefinition> = {}) {
+    return runAds(query, [{ sourceAdId: "a1", title }], extra);
+  }
+
+  function traceReason(
+    trace: Array<{ sourceAdId: string; reasons?: string[] }>,
+    id: string
+  ): string[] {
+    return trace.find((t) => t.sourceAdId === id)?.reasons ?? [];
+  }
+
+  it("F3-a: «پهپاد DJI» + «پهپاد Mavic 3 اصلی» → same tier as «پهپاد DJI Mavic 3 اصلی»", async () => {
+    const a = await runOne("پهپاد DJI", "پهپاد Mavic 3 اصلی");
+    const b = await runOne("پهپاد DJI", "پهپاد DJI Mavic 3 اصلی");
+    expect(a.results).toHaveLength(1);
+    expect(b.results).toHaveLength(1);
+    expect(a.results[0].tier).toBe(b.results[0].tier);
+  });
+
+  it("F3-b: «پهپاد دی‌جی‌آی» + «Avata 2 کمبو» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("پهپاد دی‌جی‌آی", "Avata 2 کمبو");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F3-a: «گوشی سامسونگ» + «گوشی گلکسی A54» → same tier as «گوشی سامسونگ A54»", async () => {
+    const a = await runOne("گوشی سامسونگ", "گوشی گلکسی A54");
+    const b = await runOne("گوشی سامسونگ", "گوشی سامسونگ A54");
+    expect(a.results).toHaveLength(1);
+    expect(b.results).toHaveLength(1);
+    expect(a.results[0].tier).toBe(b.results[0].tier);
+  });
+
+  it("F3-b: «گوشی سامسونگ» + «گلکسی S23 اولترا» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("گوشی سامسونگ", "گلکسی S23 اولترا");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F3-b: «گوشی سامسونگ» + «Galaxy S23» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("گوشی سامسونگ", "Galaxy S23");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F3-b: «گوشی شیائومی» + «ردمی نوت ۱۲» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("گوشی شیائومی", "ردمی نوت ۱۲");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F3-b: «لپ‌تاپ ایسوس» + «Zenbook 14» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("لپ‌تاپ ایسوس", "Zenbook 14");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F3-a: «لپ‌تاپ اچ‌پی» + «لپ‌تاپ پاویلیون ۱۵» → same tier as «لپ‌تاپ اچ‌پی ۱۵»", async () => {
+    const a = await runOne("لپ‌تاپ اچ‌پی", "لپ‌تاپ پاویلیون ۱۵");
+    const b = await runOne("لپ‌تاپ اچ‌پی", "لپ‌تاپ اچ‌پی ۱۵");
+    expect(a.results).toHaveLength(1);
+    expect(b.results).toHaveLength(1);
+    expect(a.results[0].tier).toBe(b.results[0].tier);
+  });
+
+  it("F3-b: «لپ‌تاپ dell» + «Inspiron 3520» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("لپ‌تاپ dell", "Inspiron 3520");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F3-b: «کنسول سونی» + «پلی‌استیشن ۵ دو دسته» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("کنسول سونی", "پلی‌استیشن ۵ دو دسته");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F3-b: «ماشین تویوتا» + «کرولا ۲۰۱۰ تمیز» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("ماشین تویوتا", "کرولا ۲۰۱۰ تمیز");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F3-b: «اسپیکر جی‌بی‌ال» + «پارتی‌باکس ۱۱۰» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("اسپیکر جی‌بی‌ال", "پارتی‌باکس ۱۱۰");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F6: «پهپاد DJI» + «باتری Mavic 3» → tier 4, kind:accessory-head", async () => {
+    const { results, trace } = await runOne("پهپاد DJI", "باتری Mavic 3");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:accessory-head");
+  });
+
+  it("G1: «پهپاد DJI» + «تعمیر Mavic در محل» → tier 4, kind:service-head-general", async () => {
+    const { results, trace } = await runOne("پهپاد DJI", "تعمیر Mavic در محل");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:service-head-general");
+  });
+
+  it("G2: «پهپاد DJI» + «خریدار Mavic» → tier 4, direction:buyer", async () => {
+    const { results, trace } = await runOne("پهپاد DJI", "خریدار Mavic");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("direction:buyer");
+  });
+
+  it("F6: «گوشی سامسونگ» + «قاب گلکسی S23» → tier 4, kind:accessory-head", async () => {
+    const { results, trace } = await runOne("گوشی سامسونگ", "قاب گلکسی S23");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:accessory-head");
+  });
+
+  it("F2 other brand: «گوشی شیائومی» + «Galaxy S23» → tier 4, no-match", async () => {
+    const { results, trace } = await runOne("گوشی شیائومی", "Galaxy S23");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("no-match");
+  });
+
+  it("F4: «پهپاد، دی‌جی‌آی نباشه» + «پهپاد Mavic 3 اصلی» → rejected (title phase)", async () => {
+    const { results, stats } = await runOne("پهپاد، دی‌جی‌آی نباشه", "پهپاد Mavic 3 اصلی");
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(1);
+  });
+
+  it("F1 no fuzzy: «گوشی هوآوی» + «mate 20 pro» → tier 4, no-match", async () => {
+    const { results, trace } = await runOne("گوشی هوآوی", "mate 20 pro");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("no-match");
+  });
+
+  it("F1 no fuzzy: «گوشی سامسونگ» + «گلکسیی ۲۰» → tier 4, no-match", async () => {
+    const { results, trace } = await runOne("گوشی سامسونگ", "گلکسیی ۲۰");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("no-match");
+  });
+
+  it("F4 4b: «پهپاد، دی‌جی‌آی نباشه» + «پهپاد اسنپتین، Mavic نیست» → not rejected", async () => {
+    const { results } = await runOne("پهپاد، دی‌جی‌آی نباشه", "پهپاد اسنپتین، Mavic نیست");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+  });
+
+  it("accepted risk: «تلویزیون سامسونگ» + «گلکسی S23» → shown tier 3 (never 1/2)", async () => {
+    const { results } = await runOne("تلویزیون سامسونگ", "گلکسی S23");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("accepted risk: «کنسول سونی» + «بازی پلی‌استیشن ۵ فیفا» → shown tier 3 (never 1/2)", async () => {
+    const { results } = await runOne("کنسول سونی", "بازی پلی‌استیشن ۵ فیفا");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("F2 direction: «پهپاد Mavic» + «پهپاد DJI» → tier 3 partial-evidence (family term does not match brand)", async () => {
+    const { results } = await runOne("پهپاد Mavic", "پهپاد DJI");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("partial-evidence");
+  });
+
+  it("amendment 4: «پهپاد DJI، Mavic نباشه» + «پهپاد Avata 2» → shown tier 3", async () => {
+    const { results } = await runOne("پهپاد DJI، Mavic نباشه", "پهپاد Avata 2");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+  });
+
+  it("amendment 4: «ماشین هیوندای» + «Santa Fe ۲۰۱۴» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("ماشین هیوندای", "Santa Fe ۲۰۱۴");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("amendment 4: «ساعت کاسیو» + «G-Shock GA-2100» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("ساعت کاسیو", "G-Shock GA-2100");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("amendment 4: «پهپاد DJI، Mavic نباشه» + «پهپاد Mavic 3 اصلی» → rejected (title phase)", async () => {
+    const { results, stats } = await runOne("پهپاد DJI، Mavic نباشه", "پهپاد Mavic 3 اصلی");
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(1);
+  });
+
+  it("amendment 4 record: «گوشی اپل» + «iPad Pro ۱۱ اینچ» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("گوشی اپل", "iPad Pro ۱۱ اینچ");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("amendment 4 record: «گوشی اپل» + «ایرپاد پرو ۲» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("گوشی اپل", "ایرپاد پرو ۲");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("amendment 4 record: «لپ‌تاپ اپل» + «MacBook Pro M1» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("لپ‌تاپ اپل", "MacBook Pro M1");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("amendment 4 record: «گوشی سامسونگ» + «Galaxy Watch 5» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("گوشی سامسونگ", "Galaxy Watch 5");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("amendment 4 record: «گوشی سامسونگ» + «Galaxy Tab S8» → tier 3, kind:brand-only", async () => {
+    const { results } = await runOne("گوشی سامسونگ", "Galaxy Tab S8");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+});
