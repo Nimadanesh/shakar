@@ -162,6 +162,18 @@ for (const [key, kind] of Object.entries(HEAD_KIND)) {
 }
 
 /**
+ * HEAD_KIND keyed by spaceless form — HANDOFF-2ج §1 ONLY.
+ * The spaceless form of a key (normalizeForMatch, then spaces/ZWNJ
+ * removed). First key wins on collision (verified: no two keys collide).
+ * No key is added, removed, or renamed here — this is only an index.
+ */
+const HEAD_KIND_SPACELESS: Map<string, string> = new Map();
+for (const [key, kind] of Object.entries(HEAD_KIND)) {
+  const sk = normalizeForMatch(key).replace(/[\s\u200C]/g, "");
+  if (!HEAD_KIND_SPACELESS.has(sk)) HEAD_KIND_SPACELESS.set(sk, kind);
+}
+
+/**
  * The ad's subject kind from its title: skip sale cues, then longest
  * head-NP match (2 tokens, then 1). Returns null when unknown — the gate
  * never fires on unknown (anti-overfilter law).
@@ -274,6 +286,26 @@ export function queryKindForDef(
   serviceIntent: boolean,
   category: string
 ): string | null {
+  // HANDOFF-2ج §1: spaceless subject match, BEFORE the spaced loop.
+  // The spaced loop below only matches a key that OPENS the phrase, so a
+  // spaced subject («ماشین ظرف شویی») fell back to the short key «ماشین»
+  // (vehicle) while the glued key «ماشین ظرفشویی» (appliance) never
+  // matched — the kind gate then rejected the right ad. The spaceless
+  // form of the first 1-3 include words (the subject, position 0 —
+  // mirroring "key opens the phrase") is compared with FULL EQUALITY
+  // against the spaceless form of each key, longest window first, so the
+  // full subject beats its own first word. Position 0 only: scanning any
+  // position would change glued service hunts («تعمیر ماشین لباسشویی»:
+  // service → appliance) and فروش/خرید-led hunts, which must not change.
+  // No stemming and no length guard (3-letter keys exist, e.g. «پژو»).
+  for (let len = Math.min(3, include.length); len >= 1; len--) {
+    const windowSpaceless = normalizeForMatch(include.slice(0, len).join(" ")).replace(
+      /[\s\u200C]/g,
+      ""
+    );
+    const kind = HEAD_KIND_SPACELESS.get(windowSpaceless);
+    if (kind !== undefined) return kind;
+  }
   const phrase = include.join(" ");
   // Longest lexicon key that opens the phrase (the subject comes first).
   let best: string | null = null;

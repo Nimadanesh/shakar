@@ -184,3 +184,27 @@ describe("Issue 16 — Capture 05F supplement 02 title-head characterization (ev
     expect(kindGateRejects(queryKind, adKindForTitle("فروش فوری دنا پلاس توربو اتومات"))).toBeNull();
   });
 });
+
+describe("kindLexicon — HANDOFF-2ج §1: spaceless query-kind matching", () => {
+  it("spaced subjects resolve to the glued key's kind", () => {
+    expect(queryKindForDef(["ماشین", "ظرف", "شویی"], false, "")).toBe(
+      "appliance"
+    );
+    expect(queryKindForDef(["ماشین", "لباس", "شویی"], false, "")).toBe(
+      "appliance"
+    );
+  });
+
+  it("unchanged: bare subject, service-led, and فروش-led queries", () => {
+    // Bare «ماشین» is still a vehicle hunt.
+    expect(queryKindForDef(["ماشین"], false, "")).toBe("vehicle");
+    // Service word first: the spaceless scan starts at the subject
+    // (position 0), so the service kind is preserved, not the target's.
+    expect(queryKindForDef(["تعمیر", "ماشین", "ظرف", "شویی"], true, "")).toBe(
+      "service"
+    );
+    // فروش-led: no key opens the phrase and no position-0 window matches,
+    // so the result stays null (as before the fix).
+    expect(queryKindForDef(["فروش", "ماشین", "ظرف", "شویی"], false, "")).toBeNull();
+  });
+});

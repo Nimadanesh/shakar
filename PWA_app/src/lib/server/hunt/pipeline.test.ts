@@ -3650,3 +3650,80 @@ describe("HANDOFF-2ب — query compounding + general-gate fixes + marked title 
     expect(done.results).toHaveLength(1);
   });
 });
+
+describe("HANDOFF-2ج — spaceless query-kind matching (kindLexicon §1)", () => {
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  // Full path, as the handoff requires: sentence →
+  // resolveHuntDefinition → pipeline with a mock provider → tier.
+  // Bullet 1 of §2 («ماشین ظرف شویی» + «ماشین ظرفشویی ۱۲ نفره») is
+  // covered by the existing HANDOFF-2ب §1 test of the same sentence and
+  // title, which failed before this fix and must now pass — not
+  // duplicated here.
+  async function runSentence(
+    query: string,
+    title: string,
+    extra: Partial<HuntDefinition> = {}
+  ) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+      ...extra,
+    });
+    if (!def) throw new Error("no definition for " + query);
+    listings([{ sourceAdId: "a1", title }]);
+    detail({ a1: title });
+    const done = await doneOf(def);
+    return { done, def };
+  }
+
+  it("§2: «ماشین لباس شویی» matches the glued appliance title", async () => {
+    const { done } = await runSentence(
+      "ماشین لباس شویی",
+      "ماشین لباسشویی ۸ کیلویی"
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBeLessThanOrEqual(3);
+  });
+
+  it("§2: «ماشین» + «ماشین ۲۰۶ تیپ ۵ مدل ۹۸» keeps the f6cf7231 result", async () => {
+    // Base result measured on f6cf7231 before the fix: shown, tier 1.
+    const { done } = await runSentence("ماشین", "ماشین ۲۰۶ تیپ ۵ مدل ۹۸");
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(1);
+  });
+
+  it("§2: «ماشین» + «ماشین ظرفشویی ۱۲ نفره» keeps the f6cf7231 result", async () => {
+    // Base result measured on f6cf7231 before the fix: 0 results
+    // (kind:domain:appliance-not-vehicle) — the bare «ماشین» hunt is a
+    // vehicle hunt, so the appliance ad must still be rejected.
+    const { done } = await runSentence("ماشین", "ماشین ظرفشویی ۱۲ نفره");
+    expect(done.results).toHaveLength(0);
+  });
+});
