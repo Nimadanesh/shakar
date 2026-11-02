@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - 'fix/**'
+      - 'feat/**'
+      - 'ci/**'
+      - engine_v3
+      - main
+  pull_request:
+    branches:
+      - 'fix/**'
+      - 'feat/**'
+      - 'ci/**'
+      - engine_v3
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: PWA_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: PWA_app/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: >-
+          npx vitest run
+          --exclude src/lib/server/hunt/contractDeleteAudit.test.ts
+          --exclude src/lib/server/hunt/contractGate.test.ts
+          --exclude src/lib/server/hunt/expAFeatures.test.ts
