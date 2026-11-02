@@ -1243,6 +1243,12 @@ const K_REJECT_REASONS = new Set([
   "kind:accessory-for",
   "kind:store-listing",
   "transaction:rent-only",
+  // HANDOFF-1 (2026-11-02): the general gate's reject reasons pass
+  // through the same two 3a sites as K's (reject before demote). No K
+  // rule changes: this set is pipeline gating, not a K rule.
+  "kind:service-head-general",
+  "direction:buyer",
+  "kind:accessory-head",
 ]);
 
 /** True for a K reject reason — the pipeline's 3a sites gate on this. */
@@ -1338,6 +1344,287 @@ function generalKindGate(
       return { mismatch: true, reason: "transaction:mixed", tier: "near" };
     }
   }
+  return null;
+}
+
+/**
+ * HANDOFF-1 (2026-11-02) — general gate: services, buyer, accessories.
+ * Closed lists only, from general Persian marketplace words —
+ * «واژه‌های عمومی؛ نه از مجموعه‌های طلایی یا بیرونی».
+ * Runs in assessModelSpecificity right after the K gate (same
+ * reject-before-demote position, before partial-evidence); its reject
+ * reasons pass through the pipeline's 3a sites via
+ * isGeneralKindRejectReason, like K's. G0's fillers are used ONLY to
+ * find the head — nothing is removed from matching — and the K gate's
+ * own head (titleHead) is untouched: the G head continues skipping
+ * from the K head's position.
+ */
+// G0 — extra head fillers, on top of the K head's skip set (which
+// already covers فروش، فوری، نو and the rest): «واژه‌های عمومی؛ نه از
+// مجموعه‌های طلایی یا بیرونی».
+const G_HEAD_EXTRA_FILLERS = normKWords([
+  "ساز",
+  "وسیله",
+  "دستگاه",
+  "پک",
+  "ست",
+  "اصل",
+  "اورجینال",
+  "آکبند",
+  "ویژه",
+]);
+// G1 — service heads, every hunt: «واژه‌های عمومی؛ نه از مجموعه‌های
+// طلایی یا بیرونی».
+const G_SERVICE_HEADS = normKWords([
+  "تعمیر",
+  "تعمیرات",
+  "نصب",
+  "آموزش",
+  "کلاس",
+  "مدرسه",
+  "تدریس",
+  "ساخت",
+  "تعویض",
+  "کارشناسی",
+  "شستشو",
+]);
+// G1 exception — origin words after «ساخت»: «واژه‌های عمومی؛ نه از
+// مجموعه‌های طلایی یا بیرونی».
+const G_ORIGIN_WORDS = normKWords([
+  "ایران",
+  "ژاپن",
+  "آلمان",
+  "چین",
+  "کره",
+  "ترکیه",
+  "ایتالیا",
+  "آمریکا",
+  "فرانسه",
+  "انگلیس",
+  "تایوان",
+  "مالزی",
+  "کشور",
+  "داخل",
+  "خارج",
+]);
+// G2 — buyer trigger words: «واژه‌های عمومی؛ نه از مجموعه‌های طلایی
+// یا بیرونی».
+const G_BUYER_TRIGGERS = normKWords(["فرسوده", "ضایعات", "اسقاط", "اسقاطی"]);
+const G_BUYER_TOP_PRICE = normKPhrases([["بالاترین", "قیمت"]]);
+// G3 — accessory heads. «قطعه» is deliberately absent (amendment 2:
+// «قطعه زمین» is a real-estate ad); «قطعات» stays: «واژه‌های عمومی؛
+/// نه از مجموعه‌های طلایی یا بیرونی».
+const G_ACCESSORY_HEADS = normKWords([
+  "کیف",
+  "قاب",
+  "کاور",
+  "گارد",
+  "محافظ",
+  "شارژر",
+  "کابل",
+  "باتری",
+  "فیلتر",
+  "لوازم",
+  "قطعات",
+  "میز",
+  "پایه",
+  "براکت",
+  "کنترل",
+]);
+// G3 connectors between head and subject. «به‌همراه» normalizes to
+// [به، همراه], so «همراه» covers it; a bare «به» is NOT a connector.
+const G_CONNECTORS = normKWords(["و", "با", "همراه"]);
+
+function isSingleLatinLetter(tok: string): boolean {
+  return /^[A-Za-z]$/.test(tok);
+}
+
+/**
+ * True when a "+" joins head and subject in the raw title.
+ * Normalization strips "+" (probe: «میز + صندلی» → [میز، صندلی]), so
+ * the check re-normalizes the raw title with "+" replaced by a
+ * sentinel token and aligns it against the normalized tokens: PLUS
+ * tokens are pure insertions, everything else keeps order and count.
+ * A literal Latin "PLUS" in a title is treated the same way —
+ * conservative (it deactivates the rule, never fires it).
+ */
+function plusBetweenHeadAndSubject(
+  rawTitle: string,
+  titleTokens: readonly string[],
+  headIdx: number,
+  subjIdx: number
+): boolean {
+  if (!rawTitle.includes("+")) return false;
+  const plusTokens = normalizeForMatch(rawTitle.replace(/\+/g, " PLUS "))
+    .split(" ")
+    .filter(Boolean);
+  let ti = 0;
+  let pi = 0;
+  let headPlus = -1;
+  let subjPlus = -1;
+  while (pi < plusTokens.length && ti < titleTokens.length) {
+    if (plusTokens[pi] === "PLUS") {
+      pi += 1;
+      continue;
+    }
+    if (ti === headIdx) headPlus = pi;
+    if (ti === subjIdx) {
+      subjPlus = pi;
+      break;
+    }
+    ti += 1;
+    pi += 1;
+  }
+  if (headPlus < 0 || subjPlus < 0) return false;
+  return plusTokens.slice(headPlus + 1, subjPlus).includes("PLUS");
+}
+
+function generalGate(
+  titleTokens: readonly string[],
+  titleHeadStart: number,
+  includeTerms: readonly string[],
+  queryText: string | undefined,
+  listingTitleRaw: string
+): { readonly mismatch: boolean; readonly reason: string; readonly tier: "reject" | "near" } | null {
+  // Query words, K-style: include tokens plus raw-query tokens.
+  const queryWords = new Set<string>();
+  for (const t of includeTerms) {
+    for (const w of normalizeForMatch(t).split(" ").filter(Boolean)) {
+      queryWords.add(w);
+    }
+  }
+  const queryTextTokens = queryText
+    ? normalizeForMatch(queryText).split(" ").filter(Boolean)
+    : [];
+  for (const w of queryTextTokens) queryWords.add(w);
+
+  // G0 — find the head: continue skipping from the K head's position.
+  let gIdx = titleHeadStart;
+  while (gIdx < titleTokens.length) {
+    const t = titleTokens[gIdx];
+    if (G_HEAD_EXTRA_FILLERS.has(t)) {
+      gIdx += 1;
+      continue;
+    }
+    if (
+      (t === "یک" || t === "دو" || t === "سه") &&
+      titleTokens[gIdx + 1] === "عدد"
+    ) {
+      gIdx += 2;
+      continue;
+    }
+    if (t === "دوعدد") {
+      gIdx += 1;
+      continue;
+    }
+    break;
+  }
+  const gHead = titleTokens[gIdx];
+  const gNext = titleTokens[gIdx + 1];
+
+  // G1 — service head, every hunt. Skipped when the query itself has
+  // the word. «طرح» is never a G filler, so a طرح-led title heads on
+  // طرح (not a service word) — the طرح+تعویض/نوسازی exception holds
+  // by construction, and no G1 reject fires for it.
+  if (
+    gHead !== undefined &&
+    G_SERVICE_HEADS.has(gHead) &&
+    !queryWords.has(gHead)
+  ) {
+    const exempt =
+      (gHead === "ساخت" && gNext !== undefined && G_ORIGIN_WORDS.has(gNext)) ||
+      (gHead === "تعویض" && gNext === "با") ||
+      (gHead === "نصب" && gNext === "شده") ||
+      (gHead === "کلاس" &&
+        gNext !== undefined &&
+        (isSingleLatinLetter(gNext) || isNumericToken(gNext)));
+    if (!exempt) {
+      return { mismatch: true, reason: "kind:service-head-general", tier: "reject" };
+    }
+  }
+
+  // G2 — buyer, unless the query itself hunts a buyer or a buy-and-sell
+  // catalogue. The gate covers all three bullets below.
+  const queryHasBuyer =
+    queryWords.has("خریدار") ||
+    queryWords.has("خریدوفروش") ||
+    containsTokenSeq(queryTextTokens, ["خرید", "و", "فروش"]);
+  if (!queryHasBuyer) {
+    if (
+      gHead === "خریدار" ||
+      titleTokens.includes("خریداریم") ||
+      titleTokens.includes("خریدارم")
+    ) {
+      return { mismatch: true, reason: "direction:buyer", tier: "reject" };
+    }
+    const first = titleTokens[0];
+    if (
+      first === "خرید" &&
+      titleTokens[1] !== "فروش" &&
+      !(titleTokens[1] === "و" && titleTokens[2] === "فروش")
+    ) {
+      const hasTrigger =
+        [...G_BUYER_TRIGGERS].some((w) => titleTokens.includes(w)) ||
+        G_BUYER_TOP_PRICE.some((seq) => containsTokenSeq(titleTokens, seq));
+      if (hasTrigger) {
+        return { mismatch: true, reason: "direction:buyer", tier: "reject" };
+      }
+    }
+    if (
+      (first === "خرید" &&
+        titleTokens[1] === "و" &&
+        titleTokens[2] === "فروش") ||
+      first === "خریدوفروش" ||
+      (first === "خرید" && titleTokens[1] === "فروش")
+    ) {
+      return { mismatch: true, reason: "store:buy-sell", tier: "near" };
+    }
+  }
+
+  // G3 — accessory head. The whole-word check is against include terms
+  // as whole strings (not split tokens): «پایه‌دار» normalizes to
+  // [پایه، دار], so a token-set check would wrongly exempt a «پایه»
+  // head for a پایه‌دار hunt. A head that is itself an include term
+  // (brand/model) is likewise exempt — same check.
+  if (gHead !== undefined && G_ACCESSORY_HEADS.has(gHead)) {
+    const includeWholes = new Set(
+      includeTerms
+        .map((t) => normalizeForMatch(t))
+        .filter((s) => s !== "")
+    );
+    if (!includeWholes.has(gHead) && includeTerms.length > 0) {
+      const subjectSeq = normalizeForMatch(includeTerms[0])
+        .split(" ")
+        .filter(Boolean);
+      let subjPos = -1;
+      for (let i = gIdx + 1; i + subjectSeq.length <= titleTokens.length; i++) {
+        if (subjectSeq.every((s, k) => titleTokens[i + k] === s)) {
+          subjPos = i;
+          break;
+        }
+      }
+      // N-equivalence fallback: one title token matching the whole
+      // subject term (covers glued spellings like لپتاپ ≡ لپ‌تاپ).
+      if (subjPos < 0) {
+        for (let i = gIdx + 1; i < titleTokens.length; i++) {
+          if (textMatches(titleTokens[i], includeTerms[0])) {
+            subjPos = i;
+            break;
+          }
+        }
+      }
+      if (subjPos >= 0) {
+        const between = titleTokens.slice(gIdx + 1, subjPos);
+        const hasConnector =
+          between.some((t) => G_CONNECTORS.has(t)) ||
+          plusBetweenHeadAndSubject(listingTitleRaw, titleTokens, gIdx, subjPos);
+        if (!hasConnector) {
+          return { mismatch: true, reason: "kind:accessory-head", tier: "reject" };
+        }
+      }
+    }
+  }
+
   return null;
 }
 
@@ -1438,6 +1725,20 @@ export function assessModelSpecificity(
       transaction
     );
     if (k) return k;
+  }
+
+  // HANDOFF-1 (2026-11-02): the general gate — services, buyer,
+  // accessories — same position as K (before partial-evidence), so a G
+  // reject is a rejection even when MUST terms are missing.
+  {
+    const g = generalGate(
+      titleTokens,
+      titleHeadStart,
+      includeTerms,
+      queryText,
+      listingTitle ?? ""
+    );
+    if (g) return g;
   }
 
   // Identity reasoning starts only from full lexical evidence; partial
@@ -1599,6 +1900,18 @@ export function assessModelSpecificity(
       if (marker === "" || queryTokens.has(marker)) continue;
       // R8 (F2): kind-aware guard — same-kind sibling, not a wrong item.
       if (queryKind != null && HEAD_KIND[marker] === queryKind) continue;
+      // HANDOFF-1 G4: «دستگاه» immediately before the query subject
+      // (first query token) is a unit counter («دستگاه تردمیل»), not
+      // equipment — the equipment:offering rule does not fire for it.
+      // Only this condition changes; تجهیزات and یخچال are unaffected.
+      if (
+        kind === "equipment" &&
+        marker === "دستگاه" &&
+        firstQueryIdx > 0 &&
+        listingTokens[firstQueryIdx - 1] === "دستگاه"
+      ) {
+        continue;
+      }
       if (phraseHas(marker)) {
         return {
           mismatch: true,

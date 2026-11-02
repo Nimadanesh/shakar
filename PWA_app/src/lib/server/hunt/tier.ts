@@ -37,13 +37,20 @@ export interface TierAssignment {
 }
 
 /**
- * Explicit tier-3 reasons (HANDOFF-K, 2026-11-02): a near verdict with
- * one of these is tier 3, never tier 2. transaction:mixed (a title with
- * both rent and sell words in a buy hunt) caps at tier 3 — it is not
- * soft, so it already fell through to tier 3; this names it explicitly
- * so the tier-3 list is checkable, not implicit.
+ * Explicit tier-3 reasons (HANDOFF-K, 2026-11-02; HANDOFF-1 adds
+ * store:buy-sell): a near verdict with one of these is tier 3, never
+ * tier 2. transaction:mixed (a title with both rent and sell words in
+ * a buy hunt) caps at tier 3 — it is not soft, so it already fell
+ * through to tier 3; this names it explicitly so the tier-3 list is
+ * checkable, not implicit. store:buy-sell (a buy-and-sell catalogue
+ * title) is the same kind of cap.
  */
-export const TIER3_REASONS = new Set(["transaction:mixed"]);
+export const TIER3_REASONS = new Set([
+  "transaction:mixed",
+  // HANDOFF-1 (2026-11-02): a buy-and-sell catalogue title caps at tier
+  // 3, never tier 2 — it is a shop, not a clean direct offer.
+  "store:buy-sell",
+]);
 
 /** A reason is soft only if it is exactly a tier-2 reason. */
 export function tierReasonIsSoft(reason: string): boolean {

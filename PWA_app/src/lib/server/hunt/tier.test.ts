@@ -116,3 +116,11 @@ describe("HANDOFF-K — mixed transaction caps at tier 3", () => {
     expect(tierReasonIsSoft("transaction:mixed")).toBe(false);
   });
 });
+
+describe("HANDOFF-1 — buy-and-sell catalogue caps at tier 3", () => {
+  it("tier 3: near with store:buy-sell, alone or with cap", () => {
+    expect(tierForVerdict("near", ["store:buy-sell"]).tier).toBe(3);
+    expect(tierForVerdict("near", ["cap", "store:buy-sell"]).tier).toBe(3);
+    expect(tierReasonIsSoft("store:buy-sell")).toBe(false);
+  });
+});

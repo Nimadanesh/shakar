@@ -520,3 +520,330 @@ describe("HANDOFF-K — general kind gate (closed lists, GOLDEN-REPORT-2 titles)
     }
   );
 });
+
+describe("HANDOFF-1 — general gate: services, buyer, accessories", () => {
+  const cases: Array<
+    [
+      string,
+      string[],
+      string,
+      string,
+      (
+        | { kind: "reject"; reason: string }
+        | { kind: "not-rejected" }
+      ),
+    ]
+  > = [
+    // G1 — service heads (all hunts).
+    [
+      "G1: تعمیرات head rejects for a laptop hunt",
+      ["لپ‌تاپ"],
+      "لپ‌تاپ",
+      "تعمیرات تخصصی لپ‌تاپ در محل",
+      { kind: "reject", reason: "kind:service-head-general" },
+    ],
+    [
+      "G1: آموزش head rejects for a guitar hunt",
+      ["گیتار"],
+      "گیتار",
+      "آموزش گیتار مقدماتی",
+      { kind: "reject", reason: "kind:service-head-general" },
+    ],
+    [
+      "G1: کلاس head rejects for a violin hunt",
+      ["ویولن"],
+      "ویولن",
+      "کلاس خصوصی ویولن",
+      { kind: "reject", reason: "kind:service-head-general" },
+    ],
+    [
+      "G1: نصب head rejects for a cooler hunt",
+      ["کولر", "گازی"],
+      "کولر گازی",
+      "نصب کولر گازی با ضمانت",
+      { kind: "reject", reason: "kind:service-head-general" },
+    ],
+    [
+      "G1: ساخت head rejects for a TV-stand hunt",
+      ["میز", "تلویزیون"],
+      "میز تلویزیون",
+      "ساخت میز تلویزیون سفارشی",
+      { kind: "reject", reason: "kind:service-head-general" },
+    ],
+    [
+      "G1: تعویض head rejects for a laptop hunt",
+      ["لپ‌تاپ"],
+      "لپ‌تاپ",
+      "تعویض باتری لپ‌تاپ در محل",
+      { kind: "reject", reason: "kind:service-head-general" },
+    ],
+    [
+      "G1: a service-word query does not reject its own head",
+      ["آموزش", "گیتار"],
+      "آموزش گیتار",
+      "آموزش گیتار مقدماتی",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G1: نصب‌شده is installed, not an installer",
+      ["تلویزیون"],
+      "تلویزیون",
+      "نصب‌شده روی دیوار، تلویزیون ۵۵ اینچ",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G1: ساخت + origin word is made-in, not a maker",
+      ["چرخ", "خیاطی"],
+      "چرخ خیاطی",
+      "ساخت ژاپن، چرخ خیاطی برقی",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G1: تعویض + با is an exchange offer, not a service",
+      ["آیفون", "۱۳"],
+      "آیفون ۱۳",
+      "تعویض با گوشی بالاتر، آیفون ۱۳",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G1: طرح + تعویض is a plan, not a service",
+      ["یخچال"],
+      "یخچال",
+      "طرح تعویض یخچال کهنه با نو",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G1: طرح + نوسازی is a plan, not a service",
+      ["کولر", "آبی"],
+      "کولر آبی",
+      "طرح نوسازی کولر آبی",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G1 amendment 4: کلاس + Latin letter/model is a car class, not a service",
+      ["بنز"],
+      "بنز",
+      "کلاس E 200 بنز",
+      { kind: "not-rejected" },
+    ],
+    // G2 — buyer.
+    [
+      "G2: خریدار head rejects for a fridge hunt",
+      ["یخچال"],
+      "یخچال",
+      "خریدار یخچال کارکرده",
+      { kind: "reject", reason: "direction:buyer" },
+    ],
+    [
+      "G2: خرید + scrap trigger rejects for a cooler hunt",
+      ["کولر"],
+      "کولر",
+      "خرید کولر فرسوده به بالاترین قیمت",
+      { kind: "reject", reason: "direction:buyer" },
+    ],
+    [
+      "G2: خریداریم anywhere rejects for a vacuum hunt",
+      ["جاروبرقی"],
+      "جاروبرقی",
+      "جاروبرقی خریداریم",
+      { kind: "reject", reason: "direction:buyer" },
+    ],
+    [
+      "G2: خرید + فوری without a trigger does not reject",
+      ["تلویزیون"],
+      "تلویزیون",
+      "خرید فوری تلویزیون ۵۵ اینچ",
+      { kind: "not-rejected" },
+    ],
+    // G3 — accessory heads.
+    [
+      "G3: کیف head rejects for a laptop hunt",
+      ["لپ‌تاپ"],
+      "لپ‌تاپ",
+      "کیف لپ‌تاپ ۱۵ اینچ",
+      { kind: "reject", reason: "kind:accessory-head" },
+    ],
+    [
+      "G3: قاب head rejects for a Samsung phone hunt",
+      ["گوشی", "سامسونگ"],
+      "گوشی سامسونگ",
+      "قاب گوشی سامسونگ A54",
+      { kind: "reject", reason: "kind:accessory-head" },
+    ],
+    [
+      "G3: شارژر head rejects for a laptop hunt",
+      ["لپ‌تاپ"],
+      "لپ‌تاپ",
+      "شارژر لپ‌تاپ اصل",
+      { kind: "reject", reason: "kind:accessory-head" },
+    ],
+    [
+      "G3: میز head rejects for a TV hunt",
+      ["تلویزیون"],
+      "تلویزیون",
+      "میز تلویزیون چوبی",
+      { kind: "reject", reason: "kind:accessory-head" },
+    ],
+    [
+      "G3: پایه head rejects for a telescope hunt (پایه‌دار is not پایه)",
+      ["تلسکوپ", "نجومی", "پایه‌دار"],
+      "تلسکوپ نجومی حتماً پایه دار",
+      "پایه تلسکوپ آلومینیومی",
+      { kind: "reject", reason: "kind:accessory-head" },
+    ],
+    [
+      "G3: و between head and subject deactivates the rule",
+      ["میز", "تحریر"],
+      "میز تحریر",
+      "صندلی و میز تحریر",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G3: a brand/model head in the include has no effect",
+      ["گوشی", "سامسونگ"],
+      "گوشی سامسونگ",
+      "سامسونگ گلکسی A54 گوشی سالم",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G3 amendment 2: قطعه is not an accessory head (قطعه زمین)",
+      ["زمین"],
+      "زمین",
+      "قطعه زمین مسکونی ۲۰۰ متری",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G3 amendment 3: با between head and subject deactivates the rule",
+      ["صندلی"],
+      "صندلی",
+      "میز ناهارخوری با صندلی",
+      { kind: "not-rejected" },
+    ],
+    // G0 — generic heads are only head-finding fillers.
+    [
+      "G0: ساز is skipped, the guitar itself is not rejected",
+      ["گیتار"],
+      "گیتار",
+      "ساز گیتار کلاسیک یاماها",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G0: وسیله is skipped, the treadmill itself is not rejected",
+      ["تردمیل"],
+      "تردمیل",
+      "وسیله ورزشی تردمیل خانگی",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G0+G4: دستگاه before the subject is a counter, not equipment",
+      ["تردمیل"],
+      "تردمیل",
+      "دستگاه تردمیل برقی",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G0: پک is skipped, the guitar itself is not rejected",
+      ["گیتار", "الکتریک"],
+      "گیتار الکتریک",
+      "پک گیتار الکتریک با آمپ",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G0: ست is skipped, the pot itself is not rejected",
+      ["قابلمه"],
+      "قابلمه",
+      "ست قابلمه گرانیتی",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G0: دو عدد is skipped, the headphone itself is not rejected",
+      ["هدفون"],
+      "هدفون",
+      "دو عدد هدفون بی‌سیم",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G0: دوعدد is skipped, the headphone itself is not rejected",
+      ["هدفون"],
+      "هدفون",
+      "دوعدد هدفون",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G0: فروش/نو/آکبند/دستگاه are skipped, the treadmill is not rejected",
+      ["تردمیل"],
+      "تردمیل",
+      "فروش نو آکبند دستگاه تردمیل",
+      { kind: "not-rejected" },
+    ],
+    [
+      "G0: اصل is skipped, the headphone itself is not rejected",
+      ["هدفون", "سونی"],
+      "هدفون سونی",
+      "اصل هدفون سونی",
+      { kind: "not-rejected" },
+    ],
+  ];
+  it.each(cases)(
+    "%s",
+    (_label, include, queryText, title, expected) => {
+      const r = assessModelSpecificity(
+        include,
+        title,
+        "all",
+        queryKindForDef(include, false, "all"),
+        queryText,
+        title
+      );
+      if (expected.kind === "reject") {
+        expect(r.mismatch).toBe(true);
+        expect(r.tier).toBe("reject");
+        expect(r.reason).toBe(expected.reason);
+      } else {
+        expect(r.mismatch && r.tier === "reject").toBe(false);
+      }
+    }
+  );
+
+  it("G2: a buy-and-sell catalogue title caps at near, never rejects", () => {
+    const r = assessModelSpecificity(
+      ["لپ‌تاپ"],
+      "خرید و فروش لپ‌تاپ استوک",
+      "all",
+      queryKindForDef(["لپ‌تاپ"], false, "all"),
+      "لپ‌تاپ",
+      "خرید و فروش لپ‌تاپ استوک"
+    );
+    expect(r.mismatch).toBe(true);
+    expect(r.tier).toBe("near");
+    expect(r.reason).toBe("store:buy-sell");
+  });
+
+  it("G2: a buy-and-sell query is untouched by G2", () => {
+    const r = assessModelSpecificity(
+      ["خرید", "فروش", "خودرو"],
+      "خرید و فروش پراید",
+      "all",
+      queryKindForDef(["خرید", "فروش", "خودرو"], false, "all"),
+      "خرید و فروش خودرو",
+      "خرید و فروش پراید"
+    );
+    expect(r.tier).not.toBe("reject");
+    expect(r.reason).not.toBe("direction:buyer");
+    expect(r.reason).not.toBe("store:buy-sell");
+  });
+
+  it("amendment 1: a non-list head leaves the rank unchanged", () => {
+    const r = assessModelSpecificity(
+      ["تلویزیون"],
+      "دیوارکوب تلویزیون متحرک",
+      "all",
+      queryKindForDef(["تلویزیون"], false, "all"),
+      "تلویزیون",
+      "دیوارکوب تلویزیون متحرک"
+    );
+    expect(r.mismatch).toBe(false);
+    expect(r.reason).toBe("no-extra-variant");
+    expect(r.tier).toBe("near");
+  });
+});
