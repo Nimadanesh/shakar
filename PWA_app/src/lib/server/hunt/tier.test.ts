@@ -146,6 +146,12 @@ describe("tier — HANDOFF-3: price reasons cap at tier 3", () => {
     });
   });
 
+  it("near + kind:brand-only → tier 3, never tier 2 (HANDOFF-4)", () => {
+    expect(tierForVerdict("near", ["kind:brand-only"]).tier).toBe(3);
+    expect(tierForVerdict("near", ["partial-evidence", "kind:brand-only"]).tier).toBe(3);
+    expect(tierReasonIsSoft("kind:brand-only")).toBe(false);
+  });
+
   it("near + price:implausible → tier 3, never tier 2", () => {
     expect(tierForVerdict("near", ["price:implausible"])).toEqual({
       tier: 3,

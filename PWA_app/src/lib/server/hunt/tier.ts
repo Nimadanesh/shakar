@@ -69,6 +69,10 @@ export const TIER3_REASONS = new Set([
   // a near verdict carrying it can never be tier 2.
   "price:out-of-range",
   "price:implausible",
+  // HANDOFF-4 (2026-11-03): a brand-only ad (the query brand is present
+  // but the subject word is not) caps at tier 3, never tier 1 or 2.
+  // Note for the tier-2 step: this reason must STAY tier 3.
+  "kind:brand-only",
 ]);
 
 /** A reason is soft only if it is exactly a tier-2 reason. */

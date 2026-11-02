@@ -16,6 +16,8 @@
  * would match a preposition). Only the safe, regular noun affixes.
  */
 
+import { BRAND_ALIASES } from "./brandAliases";
+
 /** Unify Arabic-script variants to Persian, strip diacritics/tatweel. */
 export function unifyChars(text: string): string {
   return (
@@ -506,8 +508,14 @@ export function textMatchesRelated(adText: string, term: string, category?: stri
  * True if the ad text contains the term or an exact alias applicable to the
  * supplied category. Related concepts do not count as exact evidence.
  * The plain path applies spelling groups 1–16 only (excludes included).
+ *
+ * HANDOFF-4 R1: a brand term matches ONLY its own brand group, exactly
+ * (brandGroupOfTerm / brandGroupsInText below) — never via synonyms,
+ * stemming, or the one-letter guess.
  */
 export function textMatches(adText: string, term: string, category?: string): boolean {
+  const brandGroup = brandGroupOfTerm(term);
+  if (brandGroup !== null) return brandGroupsInText(adText).has(brandGroup);
   return expandSynonyms(term, category).some((syn) =>
     containsNormalizedTerm(adText, syn, false)
   );
@@ -517,8 +525,13 @@ export function textMatches(adText: string, term: string, category?: string): bo
  * HANDOFF-N: the include path. Same as textMatches, plus synonym/suffix
  * groups 17–22. The pipeline calls this for include terms only; excludes
  * keep the plain path.
+ *
+ * HANDOFF-4 R1: same brand rule as textMatches — a brand term matches
+ * only its own brand group, exactly.
  */
 export function textMatchesInclude(adText: string, term: string, category?: string): boolean {
+  const brandGroup = brandGroupOfTerm(term);
+  if (brandGroup !== null) return brandGroupsInText(adText).has(brandGroup);
   return expandSynonyms(term, category).some((syn) =>
     containsNormalizedTerm(adText, syn, true)
   );
@@ -647,8 +660,245 @@ export const BRAND_SET: ReadonlySet<string> = new Set(
     "توشیبا",
     "هایسنس",
     "اسنوا",
+    // HANDOFF-4 (2026-11-03): every brand in brandAliases.ts, all forms
+    // (Persian + Latin), so layer B never runs on any of them. Duplicates
+    // of the entries above collapse in the Set.
+    "سامسونگ",
+    "اپل",
+    "شیائومی",
+    "شیامی",
+    "شیاومی",
+    "هوآوی",
+    "هواوی",
+    "آنر",
+    "نوکیا",
+    "موتورولا",
+    "وان‌پلاس",
+    "ریلمی",
+    "اوپو",
+    "ویوو",
+    "گوگل",
+    "سونی",
+    "ال‌جی",
+    "لنوو",
+    "ایسوس",
+    "اسوس",
+    "ایسر",
+    "اچ‌پی",
+    "مایکروسافت",
+    "کانن",
+    "نیکون",
+    "فوجی‌فیلم",
+    "گوپرو",
+    "دی‌جی‌آی",
+    "جی‌بی‌ال",
+    "انکر",
+    "آنکر",
+    "بیتس",
+    "کاسیو",
+    "سیکو",
+    "هایسنس",
+    "پاناسونیک",
+    "توشیبا",
+    "هیتاچی",
+    "ایکس‌ویژن",
+    "جی‌پلاس",
+    "فیلیپس",
+    "فلیپس",
+    "تفال",
+    "مولینکس",
+    "بوش",
+    "زیمنس",
+    "کنوود",
+    "دلونگی",
+    "الکترولوکس",
+    "آریستون",
+    "اسنوا",
+    "پارس‌خزر",
+    "امرسان",
+    "پاکشوما",
+    "دوو",
+    "ماکیتا",
+    "دیوالت",
+    "رونیکس",
+    "پژو",
+    "سایپا",
+    "ایران‌خودرو",
+    "کیا",
+    "هیوندای",
+    "هیوندا",
+    "تویوتا",
+    "نیسان",
+    "رنو",
+    "چری",
+    "ام‌وی‌ام",
+    "لیفان",
+    "یاماها",
+    "سوزوکی",
+    "بی‌ام‌و",
+    "بنز",
+    "مرسدس",
+    "samsung",
+    "apple",
+    "xiaomi",
+    "huawei",
+    "honor",
+    "nokia",
+    "motorola",
+    "oneplus",
+    "realme",
+    "oppo",
+    "vivo",
+    "google",
+    "sony",
+    "lg",
+    "lenovo",
+    "asus",
+    "acer",
+    "hp",
+    "dell",
+    "microsoft",
+    "canon",
+    "nikon",
+    "fujifilm",
+    "gopro",
+    "dji",
+    "jbl",
+    "anker",
+    "bose",
+    "beats",
+    "casio",
+    "seiko",
+    "hisense",
+    "panasonic",
+    "toshiba",
+    "hitachi",
+    "xvision",
+    "gplus",
+    "philips",
+    "tefal",
+    "moulinex",
+    "braun",
+    "bosch",
+    "siemens",
+    "kenwood",
+    "delonghi",
+    "electrolux",
+    "ariston",
+    "snowa",
+    "parskhazar",
+    "emersun",
+    "pakshoma",
+    "daewoo",
+    "makita",
+    "dewalt",
+    "ronix",
+    "peugeot",
+    "saipa",
+    "irankhodro",
+    "kia",
+    "hyundai",
+    "toyota",
+    "nissan",
+    "renault",
+    "chery",
+    "mvm",
+    "jac",
+    "lifan",
+    "yamaha",
+    "suzuki",
+    "bmw",
+    "benz",
+    "mercedes",
   ].map((w) => normalizeForMatch(w).replace(/ /g, ""))
 );
+
+/**
+ * HANDOFF-4 (2026-11-03) R1 — exact brand matching.
+ *
+ * Every form of a brand maps to its group id: Persian forms and Latin
+ * forms alike, in spaceless layer-A form (so «ال‌جی» is «الجی» and
+ * «جی‌بی‌ال» is «جیبیال»), Latin lowercased. Space/ZWNJ variants need
+ * no listing — the window scan below joins 1–3 consecutive tokens, so
+ * «جی بی ال», «جی‌بی‌ال» and «جیبیال» all read as «جیبیال».
+ *
+ * Equality is FULL-WORD only: no prefix, no substring, no one-letter
+ * guess («سونیا» never matches «سونی», «سامسونت» never matches
+ * «سامسونگ»). The N-group brands (هوندا، نینتندو، ری‌بن، آیفون) are
+ * indexed here, not repeated in brandAliases.ts — R2 applies to them
+ * too, by the handoff's explicit list.
+ */
+function brandKey(form: string): string {
+  return normalizeForMatch(form).toLowerCase().replace(/ /g, "");
+}
+
+const BRAND_FORM_MAP: ReadonlyMap<string, string> = (() => {
+  const map = new Map<string, string>();
+  const add = (form: string, id: string) => {
+    const key = brandKey(form);
+    if (key !== "" && !map.has(key)) map.set(key, id);
+  };
+  for (const group of BRAND_ALIASES) {
+    for (const form of group.fa) add(form, group.id);
+    for (const form of group.latin) add(form, group.id);
+  }
+  // N-group brands (forms as in the N spelling maps; «آیفون» folds to
+  // «ایفون», «ری‌بن» reads as «ریبن» — the same keys the scan produces).
+  const nBrands: ReadonlyArray<readonly [string, readonly string[]]> = [
+    ["honda", ["هوندا", "هندا", "honda"]],
+    ["nintendo", ["نینتندو", "نیتندو", "nintendo"]],
+    ["iphone", ["آیفون", "iphone"]],
+    ["rayban", ["ری‌بن", "rayban"]],
+  ];
+  for (const [id, forms] of nBrands) {
+    for (const form of forms) add(form, id);
+  }
+  return map;
+})();
+
+/** The brand group of a single query term, or null when the term is not a brand form. */
+export function brandGroupOfTerm(term: string): string | null {
+  return BRAND_FORM_MAP.get(brandKey(term)) ?? null;
+}
+
+/**
+ * The brand group of an already-spaceless form (a window scan joins its
+ * own tokens), or null. Used by the exclusion path's brand-negation
+ * check, which scans its own token stream.
+ */
+export function brandGroupOfForm(form: string): string | null {
+  return BRAND_FORM_MAP.get(form) ?? null;
+}
+
+/**
+ * All brand groups present in a text, by exact full-word equality over
+ * 1–3-token windows. A two-letter Latin brand («lg», «hp») immediately
+ * after a number («2 hp») is NOT a brand; a glued «2hp» never matches
+ * anyway, because full-word equality fails.
+ */
+export function brandGroupsInText(text: string): ReadonlySet<string> {
+  const tokens = normalizeForMatch(text)
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean);
+  const found = new Set<string>();
+  for (let i = 0; i < tokens.length; i++) {
+    for (let len = 1; len <= 3 && i + len <= tokens.length; len++) {
+      const form = tokens.slice(i, i + len).join("");
+      const group = BRAND_FORM_MAP.get(form);
+      if (group === undefined) continue;
+      if (
+        /^[a-z]{2}$/.test(form) &&
+        i > 0 &&
+        /^[0-9۰-۹٠-٩]+$/.test(tokens[i - 1])
+      ) {
+        continue;
+      }
+      found.add(group);
+    }
+  }
+  return found;
+}
 
 /** True when two layer-A spaceless forms differ by exactly one letter: one substitution, one deletion, or one insertion. Transpositions (two operations) do not count. */
 export function isOneLetterDifferent(a: string, b: string): boolean {

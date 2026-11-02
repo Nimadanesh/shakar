@@ -1,6 +1,8 @@
 import "server-only";
 
 import {
+  brandGroupOfForm,
+  brandGroupOfTerm,
   expandSynonyms,
   normalizeForMatch,
   stemToken,
@@ -8,7 +10,7 @@ import {
   unifyChars,
 } from "@/lib/persianNormalize";
 import { includesWord, isServiceDemandTerm, SERVICE_DEMAND_FAMILY, ROLE_WORDS } from "@/lib/interpret";
-import { HEAD_KIND, HEAD_SKIP_TOKENS } from "./kindLexicon";
+import { adKindForTitle, HEAD_KIND, HEAD_SKIP_TOKENS } from "./kindLexicon";
 
 /**
  * Phase-1 semantic assessments (deterministic, rule-based).
@@ -538,12 +540,112 @@ export function excludeHasUnnegatedOccurrence(
   return !foundAny;
 }
 
+/**
+ * HANDOFF-4 4b for brands: unstemmed variant of excludeTokenStream.
+ * Brand matching is exact and unstemmed, but the negation windows
+ * (barriers, 2-token reach) are the generic path's. Latin lowercased —
+ * the generic stream never lowercases because its variants are
+ * Persian, but brand forms are Latin-or-Persian.
+ */
+type BrandStreamEl = { token: string } | { barrier: true };
+function excludeBrandTokenStream(text: string): BrandStreamEl[] {
+  const unified = unifyChars(text).replace(/‌/g, " ");
+  const withBarriers = unified.replace(/[\.،!؟:]/g, " \u0001 ");
+  const stream: BrandStreamEl[] = [];
+  for (const part of withBarriers.split(/\s+/).filter(Boolean)) {
+    if (part === "\u0001") {
+      stream.push({ barrier: true });
+      continue;
+    }
+    const cleaned = part
+      .replace(/[()«»""''\[\]{}<>|/\\\-\–—_+=*~@#$%^&`,؛]/g, "")
+      .toLowerCase();
+    if (cleaned === "") continue;
+    stream.push({ token: cleaned });
+  }
+  return stream;
+}
+
+/**
+ * HANDOFF-4 4b for brands: true when the brand has an unnegated
+ * occurrence in the text. Same negation windows as the generic path
+ * (2 tokens after/before, barriers bound the window) and the same
+ * default (no occurrence found → true, the conservative fire). The
+ * generic path cannot serve brands: it matches stemmed Persian surface
+ * variants, so a Latin «Sony» occurrence is invisible to it and its
+ * default-true would fire even on a negated «Sony نیست».
+ */
+function excludeBrandHasUnnegatedOccurrence(
+  text: string,
+  group: string
+): boolean {
+  const stream = excludeBrandTokenStream(text);
+  let foundAny = false;
+  for (let i = 0; i < stream.length; i++) {
+    for (let len = 1; len <= 3; len++) {
+      const window: string[] = [];
+      let blocked = false;
+      for (let k = 0; k < len; k++) {
+        const el = stream[i + k];
+        if (!el || "barrier" in el) {
+          blocked = true;
+          break;
+        }
+        window.push(el.token);
+      }
+      if (blocked) break;
+      const form = window.join("");
+      if (brandGroupOfForm(form) !== group) continue;
+      // R1 two-letter rule, same as brandGroupsInText.
+      if (/^[a-z]{2}$/.test(form) && i > 0) {
+        const prev = stream[i - 1];
+        if (
+          prev &&
+          !("barrier" in prev) &&
+          /^[0-9۰-۹٠-٩]+$/.test(prev.token)
+        ) {
+          continue;
+        }
+      }
+      foundAny = true;
+      const end = i + len - 1;
+      const after: string[] = [];
+      for (let p = end + 1; p < stream.length && after.length < 2; p++) {
+        const el = stream[p];
+        if ("barrier" in el) break;
+        after.push(el.token);
+      }
+      const afterNegated =
+        after.some((t) => EXCLUDE_NEGATION_AFTER.has(t)) ||
+        (after[0] === "نمی" && after[1] === "باشد");
+      const before: string[] = [];
+      for (let p = i - 1; p >= 0 && before.length < 2; p--) {
+        const el = stream[p];
+        if ("barrier" in el) break;
+        before.push(el.token);
+      }
+      const beforeNegated = before.some((t) =>
+        EXCLUDE_NEGATION_BEFORE.has(t)
+      );
+      if (!afterNegated && !beforeNegated) return true;
+    }
+  }
+  return !foundAny;
+}
+
 export function exclusionFires(
   text: string,
   term: string,
   category?: string
 ): boolean {
   if (!textMatches(text, term, category)) return false;
+  // HANDOFF-4 4b for brands: the generic negation check matches stemmed
+  // Persian surface variants only, so it is blind to cross-script brand
+  // occurrences («Sony») and would fire even on a negated one.
+  const brandGroup = brandGroupOfTerm(term);
+  if (brandGroup !== null) {
+    return excludeBrandHasUnnegatedOccurrence(text, brandGroup);
+  }
   if (isRepairWord(term)) {
     return assessRepairPolarity(text).polarity === "present";
   }
@@ -1630,12 +1732,35 @@ function isMultiItemSubject(rawTitle: string, subjectTerm: string): boolean {
   return false;
 }
 
+/**
+ * HANDOFF-4 R3 — brand-only ad whose title head is a known kindLexicon
+ * type word with a kind different from the query kind: tier 4
+ * (kind:brand-other-kind). An unknown head kind or an unknown query
+ * kind yields null, so the R2 tier-3 cap stands. Called only for
+ * brand-only ads, after all other rejections — it undoes no rejection.
+ */
+export function brandOtherKindRejects(
+  queryKind: string | null,
+  title: string
+): string | null {
+  if (queryKind === null) return null;
+  const adKind = adKindForTitle(title);
+  if (adKind === null || adKind === queryKind) return null;
+  return "kind:brand-other-kind";
+}
+
 function generalGate(
   titleTokens: readonly string[],
   titleHeadStart: number,
   includeTerms: readonly string[],
   queryText: string | undefined,
-  listingTitleRaw: string
+  listingTitleRaw: string,
+  /**
+   * HANDOFF-4 R3 (amendment 1): R2 is active — the subject word is
+   * absent, only the brand is present. Only the G3 clause below reads
+   * this; G1 and G2 already run without a subject-in-title condition.
+   */
+  brandOnly = false
 ): { readonly mismatch: boolean; readonly reason: string; readonly tier: "reject" | "near" } | null {
   // Query words, K-style: include tokens plus raw-query tokens.
   const queryWords = new Set<string>();
@@ -1800,6 +1925,21 @@ function generalGate(
           return { mismatch: true, reason: "kind:accessory-head", tier: "reject" };
         }
       }
+      // HANDOFF-4 R3 (amendment 1): when R2 is active (brand-only — the
+      // subject word is absent from the title), an accessory head
+      // rejects even without the subject after it: the ad IS the
+      // accessory, not the hunted item. Exception: the hunt itself
+      // wants an accessory (the subject word is an accessory head),
+      // so this clause does not apply.
+      if (brandOnly && subjPos < 0) {
+        const subjectIsAccessory = normalizeForMatch(includeTerms[0])
+          .split(" ")
+          .filter(Boolean)
+          .some((t) => G_ACCESSORY_HEADS.has(t));
+        if (!subjectIsAccessory) {
+          return { mismatch: true, reason: "kind:accessory-head", tier: "reject" };
+        }
+      }
     }
   }
 
@@ -1823,7 +1963,13 @@ export function assessModelSpecificity(
   /** Listing title, when available; description-only mentions must not override the advertised subject. */
   listingTitle?: string,
   /** Hunt transaction ("buy" enables the K5 rent-only safety net); absent = no transaction gate. */
-  transaction?: string
+  transaction?: string,
+  /**
+   * HANDOFF-4 R3 (amendment 1): R2 is active for this ad (brand-only).
+   * Threaded to generalGate's G3 clause only; every other gate reads
+   * it as false by default.
+   */
+  brandOnly = false
 ): { readonly mismatch: boolean; readonly reason: string; readonly tier: "reject" | "near" } {
   if (includeTerms.length === 0) return { mismatch: false, reason: "no-must-terms", tier: "near" };
   const listingNorm = normalizeForMatch(listingText);
@@ -1914,7 +2060,8 @@ export function assessModelSpecificity(
       titleHeadStart,
       includeTerms,
       queryText,
-      listingTitle ?? ""
+      listingTitle ?? "",
+      brandOnly
     );
     if (g) return g;
   }

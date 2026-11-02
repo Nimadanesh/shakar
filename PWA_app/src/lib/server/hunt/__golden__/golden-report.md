@@ -49,25 +49,25 @@
 
 | ردیف | عنوان | قیمت (تومان) | شهر | نمره مالک | ویژه | ردیف A | دلیل A | ردیف B | دلیل B |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | PCX ADV160 CLICK160 HONDA STYLO160هوندا استایلو۱۶۰ | 1,000 | تهران | 2 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
-| 2 | هوندا ۱۲۵ | 112,000,000 | تهران | 1 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
-| 3 | طرح وسپا دایچی jp150 هوندا ۱۲۵ هوندا ۲۰۰ | 295,000,000 | اصفهان | 4 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
+| 1 | PCX ADV160 CLICK160 HONDA STYLO160هوندا استایلو۱۶۰ | 1,000 | تهران | 2 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
+| 2 | هوندا ۱۲۵ | 112,000,000 | تهران | 1 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
+| 3 | طرح وسپا دایچی jp150 هوندا ۱۲۵ هوندا ۲۰۰ | 295,000,000 | اصفهان | 4 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
 | 4 | فروش cbr600زیر قیمت ایران | 695,000,000 | قائم‌شهر | 2 | — | 4 | no-match | 4 | no-match |
 | 5 | رهرو | 200,000,000 | مشهد | 4 | — | 4 | no-match | 4 | no-match |
-| 6 | هوندا فورزا ۳۵۰.  مدل ۴۰۵. | 4,100,000,000 | تهران | 1 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
-| 7 | موتور هندا مزایده | 38,000,000 | احمدآبادمستوفی | 1 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
-| 8 | موتور هوندا و مگلی طرح رپسول زیر قیمت | 140,000,000 | مرودشت | 2 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
-| 9 | موتور سیوان شکاری 150سی سی  هندا اپاچی تریل | 120,000,000 | نسیم‌شهر | 2 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
+| 6 | هوندا فورزا ۳۵۰.  مدل ۴۰۵. | 4,100,000,000 | تهران | 1 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
+| 7 | موتور هندا مزایده | 38,000,000 | احمدآبادمستوفی | 1 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
+| 8 | موتور هوندا و مگلی طرح رپسول زیر قیمت | 140,000,000 | مرودشت | 2 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
+| 9 | موتور سیوان شکاری 150سی سی  هندا اپاچی تریل | 120,000,000 | نسیم‌شهر | 2 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
 | 10 | نیکتاز 250 رنگ خاص | 235,000,000 | فیروزآباد (فارس) | 4 | — | 4 | no-match | 4 | no-match |
-| 11 | موتور هندا ۱۲۵ اروین | 140,000,000 | ملارد | 1 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
-| 12 | هندا شهباز 125 پنج دنده 92 | 118,000,000 | چابکسر | 1 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
-| 13 | موتور هندا ۱۲۵ | 55,000,000 | امیدیه | 1 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
-| 14 | موتور هوندا | 135,000,000 | رباط‌کریم | 1 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
+| 11 | موتور هندا ۱۲۵ اروین | 140,000,000 | ملارد | 1 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
+| 12 | هندا شهباز 125 پنج دنده 92 | 118,000,000 | چابکسر | 1 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
+| 13 | موتور هندا ۱۲۵ | 55,000,000 | امیدیه | 1 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
+| 14 | موتور هوندا | 135,000,000 | رباط‌کریم | 1 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
 | 15 | موتور تریل بهرو یا فلات طرح کی تی ام | 380,000,000 | قم | 4 | — | 4 | no-match | 4 | no-match |
-| 16 | موتور هوندا کلیک ۱۵۰ اصلی اندونزی | 780,000,000 | مشهد | 1 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
+| 16 | موتور هوندا کلیک ۱۵۰ اصلی اندونزی | 780,000,000 | مشهد | 1 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
 | 17 | طرح ویو احسان | 310,000,000 | تهران | 4 | — | 4 | no-match | 4 | no-match |
 | 18 | موتور دیگری ۲۵۰ | 410,000,000 | تهران | 4 | — | 4 | no-match | 4 | no-match |
-| 19 | موتور هوندا 200 کبیر مدل ۹۷ | 135,000,000 | کلاچای | 1 | — | 3 | partial-evidence | 3 | detail-unknown، partial-evidence |
+| 19 | موتور هوندا 200 کبیر مدل ۹۷ | 135,000,000 | کلاچای | 1 | — | 3 | kind:brand-only | 3 | detail-unknown، kind:brand-only |
 | 20 | موتور پرواز ۲۰۰ ۱۴۰۲ | 180,000,000 | مشهد | 4 | — | 4 | no-match | 4 | no-match |
 
 | حالت | شمرده‌شده | نمایش | ردیف ۴ | hidden | نشت | گم‌شده | توافق دقیق | توافق ±۱ | نمره ۱ در ۵ اول | جفت وارونه |
@@ -507,8 +507,8 @@
 
 | شکار | ردیف | عنوان | حالت | ردیف موتور | دلیل موتور |
 |---|---|---|---|---|---|
-| 1 | 3 | طرح وسپا دایچی jp150 هوندا ۱۲۵ هوندا ۲۰۰ | A | 3 | partial-evidence |
-| 1 | 3 | طرح وسپا دایچی jp150 هوندا ۱۲۵ هوندا ۲۰۰ | B | 3 | detail-unknown، partial-evidence |
+| 1 | 3 | طرح وسپا دایچی jp150 هوندا ۱۲۵ هوندا ۲۰۰ | A | 3 | kind:brand-only |
+| 1 | 3 | طرح وسپا دایچی jp150 هوندا ۱۲۵ هوندا ۲۰۰ | B | 3 | detail-unknown، kind:brand-only |
 | 3 | 6 | Minecraft Nintendo switch نینتندو سویچ | A | 3 | price:implausible |
 | 3 | 6 | Minecraft Nintendo switch نینتندو سویچ | B | 3 | detail-unknown، price:implausible |
 | 4 | 4 | ۱۴ پرو مکس قابل معاوضه با ۱۵ پرو مکس | A | 3 | partial-evidence، price:out-of-range |

@@ -1,6 +1,8 @@
 import "server-only";
 
 import {
+  brandGroupOfTerm,
+  brandGroupsInText,
   normalizeForMatch,
   spacelessMatches,
   subjectMatchesByOneLetter,
@@ -23,6 +25,7 @@ import {
   assessBaitTitle,
   assessDemandGoods,
   assessListingRole,
+  brandOtherKindRejects,
   floorMatFlatbedConflict,
   assessModelSpecificity,
   isGeneralKindRejectReason,
@@ -549,6 +552,14 @@ export interface DescriptionEvaluation {
    * Never set by gate decisions — gates never call the B predicate.
    */
   spellingGuess?: boolean;
+  /**
+   * HANDOFF-4 (2026-11-03) R2: the subject word is missing, but a query
+   * brand is present in the title or description (R1 exact matching),
+   * so the subject counts as satisfied-with-doubt. The ad is kept but
+   * capped: verdict near, tier reason kind:brand-only (tier 3). Set
+   * only for survivors — every rejection above runs first.
+   */
+  brandOnly?: boolean;
 }
 
 function rejectedEvaluation(): DescriptionEvaluation {
@@ -632,7 +643,12 @@ function countDealerHits(text: string): number {
 function semanticCapFires(
   def: HuntDefinition,
   combined: string,
-  title: string
+  title: string,
+  /**
+   * HANDOFF-4 R3 (amendment 1): R2 is active for this ad (brand-only).
+   * Threaded to assessModelSpecificity's G3 clause only.
+   */
+  brandOnly = false
 ): { fire: boolean; wrongItemKind: string | null } {
   let intent = assessQueryIntent(def.include.join(" "), def.category, def.transaction);
   // R7 (2026-10-18): the query's speech-act role IS the query intent. A
@@ -676,7 +692,7 @@ function semanticCapFires(
   // general kind gate: a K reject passes through a clash for every hunt
   // (no whole-vehicle condition — the gate itself is the condition).
   // Transaction is threaded to the check so K5 can fire.
-  const assessed = assessModelSpecificity(def.include, combined, def.category, qKind, def.query, title, def.transaction);
+  const assessed = assessModelSpecificity(def.include, combined, def.category, qKind, def.query, title, def.transaction, brandOnly);
   const identity =
     clash.clash &&
     !(
@@ -876,7 +892,9 @@ function evaluateDescription(
   }
   // 3. MUST with UNKNOWN semantics.
   const evidence: string[] = [];
-  const missingInfo: string[] = [];
+  // HANDOFF-4 R2: reassigned below when a brand-only survivor drops its
+  // subject from the missing set (satisfied-with-doubt).
+  let missingInfo: string[] = [];
   let mustTitle = 0;
   let mustDesc = 0;
   // HANDOFF-2 layer B: the title head, computed once for the subject
@@ -989,6 +1007,21 @@ function evaluateDescription(
     } else {
       missingInfo.push(term);
     }
+  }
+  // HANDOFF-4 R2 candidate: the SUBJECT (first include term) is missing,
+  // but a query brand is present in the title or description (R1 exact
+  // matching). Only a candidate here: the R3 rejections below (3a gates,
+  // then the other-kind check) run first, and only a survivor becomes
+  // brand-only. anyOf groups never hold the subject, so they cannot
+  // change this candidate.
+  let brandOnlyCandidate = false;
+  if (def.include.length > 0 && termOutcome[0] === null) {
+    const titleBrands = brandGroupsInText(title);
+    const descBrands = brandGroupsInText(description);
+    brandOnlyCandidate = def.include.some((t) => {
+      const g = brandGroupOfTerm(t);
+      return g !== null && (titleBrands.has(g) || descBrands.has(g));
+    });
   }
   // HANDOFF-N: each anyOf group is ONE requirement, satisfied by ANY
   // member (title first, then description, same as a single term).
@@ -1153,7 +1186,7 @@ function evaluateDescription(
   // no-extra-variant) stay near. The title phase has no such check — this
   // is the description-phase reject, and the ad is dropped here, not shown.
   if (missingInfo.length > 0) {
-    const cap = semanticCapFires(def, combined, title);
+    const cap = semanticCapFires(def, combined, title, brandOnlyCandidate);
     const headlineWrong = cap.wrongItemKind;
     // HANDOFF-K (2026-11-02): the 3a headline block, extended to the
     // general kind gate — a K reject also runs when MUST terms are
@@ -1178,11 +1211,42 @@ function evaluateDescription(
       };
     }
   }
+  // HANDOFF-4 R3: a brand-only ad whose title head is a known type word
+  // with a kind different from the query kind is tier 4 — the wrong
+  // kind of item, not a near miss. Runs after the 3a gates above, so a
+  // G/K rejection keeps its own reason; it undoes no rejection.
+  // HANDOFF-4 R2 (only for survivors): the subject counts as
+  // satisfied-with-doubt — it leaves the missing set, so the verdict
+  // below can be exact and the tier derivation forces near with
+  // kind:brand-only. Other missing terms stay missing; the subject
+  // joins neither the evidence nor the title/desc counts.
+  let brandOnly = false;
+  if (brandOnlyCandidate) {
+    const qKind = queryKindForDef(def.include, def.serviceIntent ?? false, def.category);
+    const otherKind = brandOtherKindRejects(qKind, title);
+    if (otherKind !== null) {
+      return {
+        ...rejectedEvaluation(),
+        missingInfo,
+        providerHits,
+        goodsHits,
+        needsRepairHits,
+        dealerHits,
+        huntWantsSellers,
+        adRole,
+        rejectedKind: otherKind,
+      };
+    }
+    brandOnly = true;
+    missingInfo = missingInfo.filter((t) => t !== def.include[0]);
+  }
   return {
     // HANDOFF-2: a B-matched subject is never exact — the guess caps
     // the ad at near, and the tier derivation adds spelling-guess.
+    // HANDOFF-4: a brand-only subject is never exact either.
     verdict: spellingGuess || missingInfo.length > 0 ? "near" : "exact",
     spellingGuess,
+    brandOnly,
     evidence,
     missingInfo,
     mustTitle,
@@ -1605,7 +1669,10 @@ export async function confirmCandidates(
       // (plus any specific hard cause found) stays, so a role-clash cap
       // is tier 3 and a sibling-variant cap demote can be tier 2.
       const matchKind: "exact" | "near" =
-        !detailUnknown && ev.verdict === "exact" && !ev.spellingGuess
+        !detailUnknown &&
+        ev.verdict === "exact" &&
+        !ev.spellingGuess &&
+        !ev.brandOnly
           ? "exact"
           : "near";
       const tierReasons: string[] = [];
@@ -1690,6 +1757,8 @@ export async function confirmCandidates(
       // HANDOFF-2: a B-matched subject always carries its cap reason,
       // whichever demote branch (if any) already fired.
       if (ev.spellingGuess) tierReasons.push("spelling-guess");
+      // HANDOFF-4: a brand-only subject always carries its cap reason.
+      if (ev.brandOnly) tierReasons.push("kind:brand-only");
       if (shouldCount > 0 && ev.shouldMatched < shouldCount)
         tierReasons.push("missing-should");
       // HANDOFF-3 P2: explicit price bounds never reject — a known
