@@ -1,0 +1,1617 @@
+{
+  "mode": "A",
+  "summary": {
+    "counted": 194,
+    "grade4Count": 59,
+    "leak": 10,
+    "leakTier1": 1,
+    "leakTier2": 0,
+    "leakWithoutBait": 8,
+    "missed": 1,
+    "missed1": 0,
+    "missed2": 1,
+    "grade3Hidden": 26
+  },
+  "rows": [
+    {
+      "hunt": 1,
+      "row": 1,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 2,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 3,
+      "grade": 4,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 4,
+      "grade": 2,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 1,
+      "row": 5,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 1,
+      "row": 6,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 7,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 8,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 9,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 10,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 1,
+      "row": 11,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 12,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 13,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 14,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 15,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 1,
+      "row": 16,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 17,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 1,
+      "row": 18,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 1,
+      "row": 19,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 1,
+      "row": 20,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 2,
+      "row": 1,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 2,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 3,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 4,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 5,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 6,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 2,
+      "row": 7,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 8,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 9,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 10,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 11,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 2,
+      "row": 12,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 13,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 2,
+      "row": 14,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 15,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 16,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 17,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 18,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 19,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 2,
+      "row": 20,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 1,
+      "grade": 1,
+      "special": null,
+      "tier": 2,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 2,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 3,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 4,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 3,
+      "row": 5,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 6,
+      "grade": 4,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 7,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 3,
+      "row": 8,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 9,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 10,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 11,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 12,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 13,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 3,
+      "row": 14,
+      "grade": 1,
+      "special": null,
+      "tier": 2,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 15,
+      "grade": 1,
+      "special": null,
+      "tier": 2,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 16,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 3,
+      "row": 17,
+      "grade": 2,
+      "special": "borderline",
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 3,
+      "row": 18,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 3,
+      "row": 19,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 3,
+      "row": 20,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 1,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 2,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 3,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 4,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 5,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 6,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 7,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 8,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 9,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 10,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 11,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 12,
+      "grade": 4,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 4,
+      "row": 13,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 14,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 15,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 16,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 17,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 18,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 19,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 4,
+      "row": 20,
+      "grade": 4,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 5,
+      "row": 1,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 2,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 3,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 4,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 5,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 6,
+      "grade": 4,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 5,
+      "row": 7,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 8,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 9,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 10,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 11,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 12,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 13,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 14,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 15,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 16,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 17,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 18,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 19,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 5,
+      "row": 20,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 6,
+      "row": 1,
+      "grade": 4,
+      "special": "city-filter",
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 2,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 3,
+      "grade": 3,
+      "special": "borderline",
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 6,
+      "row": 4,
+      "grade": 4,
+      "special": "city-filter",
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 6,
+      "row": 5,
+      "grade": 4,
+      "special": "city-filter",
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 6,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 7,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 6,
+      "row": 8,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 9,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 10,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 11,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 12,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 13,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 14,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 15,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 6,
+      "row": 16,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 6,
+      "row": 17,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 18,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 19,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 6,
+      "row": 20,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 7,
+      "row": 1,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 2,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 3,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 4,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 5,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 6,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 7,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 8,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 9,
+      "grade": 2,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 7,
+      "row": 10,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 11,
+      "grade": 2,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 7,
+      "row": 12,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 13,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 14,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 7,
+      "row": 15,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 16,
+      "grade": 2,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 7,
+      "row": 17,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 18,
+      "grade": 3,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 7,
+      "row": 19,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 7,
+      "row": 20,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 1,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 2,
+      "grade": 3,
+      "special": "borderline",
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 3,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 4,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 8,
+      "row": 5,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 8,
+      "row": 6,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 7,
+      "grade": 3,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 8,
+      "row": 8,
+      "grade": 4,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 9,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 10,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 11,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 8,
+      "row": 12,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 13,
+      "grade": 4,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 14,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 15,
+      "grade": 4,
+      "special": null,
+      "tier": 4,
+      "status": "tier4"
+    },
+    {
+      "hunt": 8,
+      "row": 16,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 17,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 18,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 19,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 8,
+      "row": 20,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 1,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 2,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 3,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 4,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 5,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 6,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 7,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 8,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 9,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 10,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 11,
+      "grade": 1,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 12,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 13,
+      "grade": 2,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 14,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 15,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 16,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 17,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 18,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 19,
+      "grade": 4,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 9,
+      "row": 20,
+      "grade": 1,
+      "special": null,
+      "tier": 1,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 1,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 2,
+      "grade": 4,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 3,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 4,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 5,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 6,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 7,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 8,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 9,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 10,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 11,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 12,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 13,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 14,
+      "grade": 2,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 15,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 16,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 17,
+      "grade": 4,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 18,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 19,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    },
+    {
+      "hunt": 10,
+      "row": 20,
+      "grade": 3,
+      "special": null,
+      "tier": 3,
+      "status": "shown"
+    }
+  ]
+}

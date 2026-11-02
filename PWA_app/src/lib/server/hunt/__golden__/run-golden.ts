@@ -50,11 +50,16 @@
  *
  * No measurement number is asserted anywhere; the only test is the
  * data-sanity test in golden-data.test.ts.
+ *
+ * HANDOFF-0: evalHunt and the TitleRow/HuntLabels types are exported
+ * for reuse by golden-guard.test.ts and update-golden-baseline.ts.
+ * main() is guarded to direct execution only, so importing this file
+ * runs nothing and writes nothing. Direct execution is unchanged.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { divarProvider } from "../../divar/divarClient";
 import { resolveHuntDefinition } from "../definition";
@@ -62,7 +67,7 @@ import { runPipeline, type HuntTraceEntry } from "../pipeline";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-interface TitleRow {
+export interface TitleRow {
   id: string;
   hunt: number;
   row: number;
@@ -71,7 +76,7 @@ interface TitleRow {
   city: string;
 }
 
-interface HuntLabels {
+export interface HuntLabels {
   hunt: number;
   sentence: string;
   searchQuery: string;
@@ -169,7 +174,7 @@ interface ModeSummaryB {
 // HANDOFF-K: accepted-bait rows, keyed "hunt-row". Owner decision: these
 // two hunt-4 rows are accepted bait (owner grade 3), so leak is reported
 // both with and without them. JSON grades are untouched.
-const ACCEPTED_BAIT_ROWS = new Set(["4-12", "4-20"]);
+export const ACCEPTED_BAIT_ROWS = new Set(["4-12", "4-20"]);
 
 const COACH_EXAMPLES: string[] = [
   "آپارتمان ۸۰ تا ۱۰۰ متری در سعادت‌آباد، آسانسور حتماً، طبقه اول نباشه، تا ۸ میلیارد",
@@ -194,7 +199,7 @@ function tierLabel(tier: number | null, status: string): string {
   return tier === null ? "?" : String(tier);
 }
 
-async function evalHunt(
+export async function evalHunt(
   hunt: HuntLabels,
   ads: TitleRow[],
   mode: "A" | "B"
@@ -678,7 +683,17 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// HANDOFF-0: main() runs ONLY when this file is executed directly
+// (npx tsx run-golden.ts). Importing it (golden-guard.test.ts,
+// update-golden-baseline.ts) must not run the evaluation or rewrite
+// golden-report.md: under vitest/tsx-import, process.argv[1] is the
+// worker/entry script, never this file, so the guard stays closed.
+const isDirectRun =
+  process.argv[1] !== undefined &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isDirectRun) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
