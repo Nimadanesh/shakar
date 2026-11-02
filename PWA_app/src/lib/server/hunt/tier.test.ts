@@ -108,3 +108,11 @@ describe("HANDOFF-T — tier field, pure function", () => {
     });
   });
 });
+
+describe("HANDOFF-K — mixed transaction caps at tier 3", () => {
+  it("tier 3: near with transaction:mixed, alone or with cap", () => {
+    expect(tierForVerdict("near", ["transaction:mixed"]).tier).toBe(3);
+    expect(tierForVerdict("near", ["cap", "transaction:mixed"]).tier).toBe(3);
+    expect(tierReasonIsSoft("transaction:mixed")).toBe(false);
+  });
+});

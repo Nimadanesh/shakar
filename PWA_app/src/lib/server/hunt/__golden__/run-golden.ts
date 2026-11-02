@@ -34,6 +34,12 @@
  * Metric definitions (stated so the numbers are checkable):
  * - leak: owner grade 4, but shown (tier 1-3).
  * - missed: owner grade 1 or 2, but tier 4 or hidden.
+ * - grade-3-hidden (HANDOFF-K): owner grade 3, but tier 4 or hidden.
+ *   Counted rows only, same convention as leak/missed.
+ * - accepted bait (HANDOFF-K): hunt 4 rows 12 and 20. The owner accepts
+ *   them as grade 3 (bait accepted), so leak is reported twice: with
+ *   them (standard count) and without them (excluding those two rows
+ *   from the leak count). JSON grades are untouched.
  * - exact / ±1 agreement: over counted rows WITH a tier number only.
  *   Hidden rows have no tier number, so they are excluded from the
  *   agreement denominator but counted in "missed" when their grade is
@@ -102,6 +108,8 @@ interface HuntSummary {
   hiddenA: number;
   leakA: number;
   missedA: number;
+  grade3HiddenA: number;
+  leakWithoutBaitA: number;
   exactA: number;
   within1A: number;
   first5Grade1A: number;
@@ -112,6 +120,8 @@ interface HuntSummary {
   hiddenB: number;
   leakB: number;
   missedB: number;
+  grade3HiddenB: number;
+  leakWithoutBaitB: number;
   exactB: number;
   within1B: number;
   first5Grade1B: number;
@@ -130,6 +140,8 @@ interface ModeSummaryA {
   hiddenA: number;
   leakA: number;
   missedA: number;
+  grade3HiddenA: number;
+  leakWithoutBaitA: number;
   exactA: number;
   within1A: number;
   first5Grade1A: number;
@@ -144,6 +156,8 @@ interface ModeSummaryB {
   hiddenB: number;
   leakB: number;
   missedB: number;
+  grade3HiddenB: number;
+  leakWithoutBaitB: number;
   exactB: number;
   within1B: number;
   first5Grade1B: number;
@@ -151,6 +165,11 @@ interface ModeSummaryB {
   pairsB: number;
   matrixB: number[][];
 }
+
+// HANDOFF-K: accepted-bait rows, keyed "hunt-row". Owner decision: these
+// two hunt-4 rows are accepted bait (owner grade 3), so leak is reported
+// both with and without them. JSON grades are untouched.
+const ACCEPTED_BAIT_ROWS = new Set(["4-12", "4-20"]);
 
 const COACH_EXAMPLES: string[] = [
   "آپارتمان ۸۰ تا ۱۰۰ متری در سعادت‌آباد، آسانسور حتماً، طبقه اول نباشه، تا ۸ میلیارد",
@@ -270,6 +289,8 @@ function summarize(hunt: number, rows: AdEval[]): HuntSummary {
     let hidden = 0;
     let leak = 0;
     let missed = 0;
+    let grade3Hidden = 0;
+    let leakWithoutBait = 0;
     let exact = 0;
     let within1 = 0;
     let tiered = 0;
@@ -279,12 +300,18 @@ function summarize(hunt: number, rows: AdEval[]): HuntSummary {
       if (status === "shown") shown += 1;
       else if (status === "tier4") tier4 += 1;
       else hidden += 1;
-      if (r.grade === 4 && status === "shown") leak += 1;
+      if (r.grade === 4 && status === "shown") {
+        leak += 1;
+        if (!ACCEPTED_BAIT_ROWS.has(`${r.hunt}-${r.row}`)) leakWithoutBait += 1;
+      }
       if (
         (r.grade === 1 || r.grade === 2) &&
         (status === "tier4" || status.startsWith("hidden"))
       ) {
         missed += 1;
+      }
+      if (r.grade === 3 && (status === "tier4" || status.startsWith("hidden"))) {
+        grade3Hidden += 1;
       }
       if (tier !== null) {
         tiered += 1;
@@ -312,6 +339,8 @@ function summarize(hunt: number, rows: AdEval[]): HuntSummary {
         hiddenA: hidden,
         leakA: leak,
         missedA: missed,
+        grade3HiddenA: grade3Hidden,
+        leakWithoutBaitA: leakWithoutBait,
         exactA: exact,
         within1A: within1,
         first5Grade1A: first5Grade1,
@@ -326,6 +355,8 @@ function summarize(hunt: number, rows: AdEval[]): HuntSummary {
       hiddenB: hidden,
       leakB: leak,
       missedB: missed,
+      grade3HiddenB: grade3Hidden,
+      leakWithoutBaitB: leakWithoutBait,
       exactB: exact,
       within1B: within1,
       first5Grade1B: first5Grade1,
@@ -426,6 +457,8 @@ async function main(): Promise<void> {
     let hidden = 0;
     let leak = 0;
     let missed = 0;
+    let grade3Hidden = 0;
+    let leakWithoutBait = 0;
     let exact = 0;
     let within1 = 0;
     let tiered = 0;
@@ -435,8 +468,12 @@ async function main(): Promise<void> {
       if (status === "shown") shown += 1;
       else if (status === "tier4") tier4 += 1;
       else hidden += 1;
-      if (r.grade === 4 && status === "shown") leak += 1;
+      if (r.grade === 4 && status === "shown") {
+        leak += 1;
+        if (!ACCEPTED_BAIT_ROWS.has(`${r.hunt}-${r.row}`)) leakWithoutBait += 1;
+      }
       if ((r.grade === 1 || r.grade === 2) && (status === "tier4" || status.startsWith("hidden"))) missed += 1;
+      if (r.grade === 3 && (status === "tier4" || status.startsWith("hidden"))) grade3Hidden += 1;
       if (tier !== null) {
         tiered += 1;
         matrix[r.grade - 1][tier - 1] += 1;
@@ -459,7 +496,7 @@ async function main(): Promise<void> {
         pairs += s.pairsB;
       }
     }
-    return { shown, tier4, hidden, leak, missed, exact, within1, tiered, matrix, first5, inverted, pairs };
+    return { shown, tier4, hidden, leak, missed, grade3Hidden, leakWithoutBait, exact, within1, tiered, matrix, first5, inverted, pairs };
   };
   const totalA = total("A");
   const totalB = total("B");
@@ -474,7 +511,7 @@ async function main(): Promise<void> {
   lines.push("ردیف از trace مرحله T خوانده شد. آگهی بدون trace در فاز تیتر رد شده است (پیش‌نامزد) و با دلیل title-exclude ردیف ۴ ثبت شد.");
   lines.push("ردیف‌های ویژه در جدول‌ها آمده‌اند ولی در هیچ عدد کل شمرده نشده‌اند: city-filter (شکار ۶ ردیف‌های ۱، ۴، ۵ — ماک فیلتر شهر اعمال نمی‌کند) و borderline (ردیف‌های دارای «؟»: شکار ۳ ردیف ۱۷، شکار ۶ ردیف ۳، شکار ۸ ردیف ۲). شکار ۷ فقط با سناریو الف خوانده شد.");
   lines.push("تعریف‌ها: نشت = نمره مالک ۴ ولی نمایش‌داده‌شده (ردیف ۱ تا ۳). گم‌شده = نمره مالک ۱ یا ۲ ولی ردیف ۴ یا hidden. توافق دقیق و ±۱ فقط روی ردیف‌های دارای عدد ردیف حساب شده‌اند؛ hidden عدد ندارد، پس از مخرج توافق کنار است ولی در گم‌شده (اگر نمره ۱ یا ۲ باشد) شمرده می‌شود. ماتریس هم فقط ردیف‌های دارای عدد را دارد.");
-  lines.push("قیمت: سقف/کف قیمت در موتور همیشه فیلتر سخت فاز 3b است (آگهی با قیمت نامعلوم می‌ماند)؛ «ترجیحاً زیر X» هم به همان سقف سخت می‌رود و قیمت را نرم نمی‌کند.");
+  lines.push("قیمت: سقف/کف قیمت در موتور همیشه فیلتر سخت فاز 3b است (آگهی با قیمت نامعلوم می‌ماند)؛ «ترجیحاً زیر X» از HANDOFF-5 به سقف نرم preferredPriceMax می‌رود و فیلتر سخت نمی‌سازد (فاز 3f هنوز آن را نخوانده است).");
   lines.push("");
   lines.push("## جمع‌بندی کل");
   lines.push("");
@@ -484,6 +521,14 @@ async function main(): Promise<void> {
   lines.push(`| B | ${counted.length} | ${totalB.shown} | ${totalB.tier4} | ${totalB.hidden} | ${totalB.leak} | ${totalB.missed} | ${pct(totalB.exact, totalB.tiered)} (${totalB.exact}/${totalB.tiered}) | ${pct(totalB.within1, totalB.tiered)} (${totalB.within1}/${totalB.tiered}) | ${totalB.first5} | ${pct(totalB.inverted, totalB.pairs)} (${totalB.inverted}/${totalB.pairs}) |`);
   lines.push("");
   lines.push(`ردیف‌های ویژه (خارج از عددهای کل): ${specialRows.length} عدد — city-filter: ${specialRows.filter((r) => r.special === "city-filter").length}، borderline: ${specialRows.filter((r) => r.special === "borderline").length}.`);
+  lines.push("");
+  lines.push("## عددهای تازه — HANDOFF-K");
+  lines.push("");
+  lines.push(`نمره ۳ پنهان‌شده (نمره مالک ۳ ولی ردیف ۴ یا hidden، فقط ردیف‌های شمرده‌شده): حالت A: ${totalA.grade3Hidden}، حالت B: ${totalB.grade3Hidden}.`);
+  lines.push(`نشت با طعمه قبول‌شده / بدون آن (شکار ۴ ردیف‌های ۱۲ و ۲۰ طعمه قبول‌شده‌اند، طبق تصمیم مالک ردیف ۳): حالت A: ${totalA.leak} / ${totalA.leakWithoutBait}، حالت B: ${totalB.leak} / ${totalB.leakWithoutBait}.`);
+  lines.push("");
+  lines.push("یادداشت مالک (HANDOFF-K، اصلاح ۴): نمره ۳ داخل JSON طلایی برای شکار ۷ ردیف‌های ۱ و ۴ قدیمی است — هر دو آگهی فقط‌اجاره‌اند و در شکار خرید همیشه ردیف ۴ می‌شوند (تصمیم مالک: آگهی فقط‌اجاره در شکار خرید همیشه ردیف ۴ است). JSON دست نخورده و این دو ردیف از قانون «هیچ نمره ۱ تا ۳ پایین نرود» مستثنا هستند.");
+  lines.push("شکارهای ۵ و ۷ با transaction=buy در اجراکننده اجرا شدند (اصلاح ۳) — همان پاسخ «خرید یا اجاره» در JSON طلایی، بدون تغییر JSON.");
   lines.push("");
   lines.push("### ماتریس کل — حالت A (سطر = نمره مالک، ستون = ردیف موتور)");
   lines.push("");
@@ -521,6 +566,7 @@ async function main(): Promise<void> {
     const tieredB = s.matrixB.flat().reduce((a, b) => a + b, 0);
     lines.push(`| A | ${s.counted} | ${s.shownA} | ${s.tier4A} | ${s.hiddenA} | ${s.leakA} | ${s.missedA} | ${pct(s.exactA, tieredA)} (${s.exactA}/${tieredA}) | ${pct(s.within1A, tieredA)} (${s.within1A}/${tieredA}) | ${s.first5Grade1A} | ${pct(s.invertedA, s.pairsA)} (${s.invertedA}/${s.pairsA}) |`);
     lines.push(`| B | ${s.counted} | ${s.shownB} | ${s.tier4B} | ${s.hiddenB} | ${s.leakB} | ${s.missedB} | ${pct(s.exactB, tieredB)} (${s.exactB}/${tieredB}) | ${pct(s.within1B, tieredB)} (${s.within1B}/${tieredB}) | ${s.first5Grade1B} | ${pct(s.invertedB, s.pairsB)} (${s.invertedB}/${s.pairsB}) |`);
+    lines.push(`نمره ۳ پنهان‌شده: A: ${s.grade3HiddenA}، B: ${s.grade3HiddenB}. نشت بدون طعمه قبول‌شده: A: ${s.leakWithoutBaitA}، B: ${s.leakWithoutBaitB}.`);
     lines.push("");
     lines.push(`ماتریس شکار ${s.hunt} — حالت A (سطر = نمره مالک):`);
     lines.push("");

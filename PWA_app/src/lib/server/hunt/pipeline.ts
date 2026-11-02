@@ -19,6 +19,7 @@ import {
   assessListingRole,
   floorMatFlatbedConflict,
   assessModelSpecificity,
+  isGeneralKindRejectReason,
   isWholeVehicleQuery,
   assessQueryIntent,
   assessRepairPolarity,
@@ -645,14 +646,19 @@ function semanticCapFires(
   // and only for a whole-vehicle query (same BROAD_TYPE_ONLY_QUERIES
   // mechanism, via isWholeVehicleQuery); every other assess result is
   // still skipped on clash, as before.
-  const assessed = assessModelSpecificity(def.include, combined, def.category, qKind, def.query, title);
+  // HANDOFF-K (2026-11-02): the same pass-through, extended to the
+  // general kind gate: a K reject passes through a clash for every hunt
+  // (no whole-vehicle condition — the gate itself is the condition).
+  // Transaction is threaded to the check so K5 can fire.
+  const assessed = assessModelSpecificity(def.include, combined, def.category, qKind, def.query, title, def.transaction);
   const identity =
     clash.clash &&
     !(
       assessed.mismatch &&
       assessed.tier === "reject" &&
-      assessed.reason.startsWith("part:") &&
-      isWholeVehicleQuery(def.query, def.include)
+      ((assessed.reason.startsWith("part:") &&
+        isWholeVehicleQuery(def.query, def.include)) ||
+        isGeneralKindRejectReason(assessed.reason))
     )
       ? { mismatch: false as const, reason: "skipped:role-clash", tier: "near" as const }
       : assessed;
@@ -1013,10 +1019,15 @@ function evaluateDescription(
   if (missingInfo.length > 0) {
     const cap = semanticCapFires(def, combined, title);
     const headlineWrong = cap.wrongItemKind;
+    // HANDOFF-K (2026-11-02): the 3a headline block, extended to the
+    // general kind gate — a K reject also runs when MUST terms are
+    // missing, before the MUST-incomplete near verdict below. The 3a
+    // part: + whole-vehicle condition is unchanged.
     if (
       headlineWrong !== null &&
-      headlineWrong.startsWith("part:") &&
-      isWholeVehicleQuery(def.query, def.include)
+      ((headlineWrong.startsWith("part:") &&
+        isWholeVehicleQuery(def.query, def.include)) ||
+        isGeneralKindRejectReason(headlineWrong))
     ) {
       return {
         ...rejectedEvaluation(),
@@ -1465,7 +1476,10 @@ export async function confirmCandidates(
         def.category,
         queryKindForDef(def.include, def.serviceIntent ?? false, def.category),
         def.query,
-        c.title
+        c.title,
+        // HANDOFF-K: same check as semanticCapFires, so a K5 mixed cap
+        // re-derives its transaction:mixed reason in the trace.
+        def.transaction
       );
       const tierIdentityReason =
         tierIdentity.mismatch &&

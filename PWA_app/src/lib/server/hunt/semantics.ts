@@ -1179,6 +1179,168 @@ export function isWholeVehicleQuery(
   return remaining.length === 1 && BROAD_TYPE_ONLY_QUERIES.has(remaining[0]);
 }
 
+/**
+ * HANDOFF-K (2026-11-02) — general kind gate: closed lists only, every
+ * word earned from GOLDEN-REPORT-2 titles. No word outside these lists
+ * is added. The gate runs in assessModelSpecificity right after the 3a
+ * headline check and before partial-evidence, and the pipeline gates on
+ * its reject reasons at the same two 3a sites (role-clash pass-through
+ * and the missingInfo headline block) — so a K reject is a tier-4
+ * rejection, never a demotion. transaction:mixed is a cap (tier 3 via
+ * tier.ts), never a rejection.
+ */
+// K lists are written in surface form and normalized once here, because
+// the gate compares against already-normalized title/query tokens
+// (normalizeForMatch folds آ→ا, so «آپارتمان» only ever appears as
+// «اپارتمان» in the token stream — a literal «آپارتمان» phrase would
+// never match, as the «هتل آپارتمان» probe proved).
+const normKWords = (words: readonly string[]): Set<string> =>
+  new Set(words.flatMap((w) => normalizeForMatch(w).split(" ").filter(Boolean)));
+const normKPhrases = (phrases: ReadonlyArray<readonly string[]>): Array<readonly string[]> =>
+  phrases.map((seq) =>
+    seq.flatMap((w) => normalizeForMatch(w).split(" ").filter(Boolean))
+  );
+const K1_SERVICE_EXEMPT_QUERY_WORDS = normKWords([
+  "خدمات",
+  "نصب",
+  "تعمیر",
+  "تعمیرات",
+  "سرویس",
+  "کارشناسی",
+  "آموزش",
+]);
+const K2_CONSOLE_TOPICS = normKWords([
+  "نینتندو",
+  "سوییچ",
+  "سویچ",
+  "nintendo",
+  "switch",
+  "ps5",
+]);
+const K4_STORE_MARKERS = normKPhrases([
+  ["انواع"],
+  ["موجود", "است"],
+  ["مدل", "های", "جدید"],
+]);
+const K5_RENT_WORDS = normKWords([
+  "اجاره",
+  "رهن",
+  "رنت",
+  "روزانه",
+  "ساعتی",
+  "تایمی",
+]);
+const K5_RENT_PHRASES = normKPhrases([
+  ["هتل", "آپارتمان"],
+  ["مبله", "دربست"],
+]);
+const K5_SELL_WORDS = normKWords(["فروش", "خرید"]);
+
+/** Reject reasons of the general kind gate (transaction:mixed is a cap, not here). */
+const K_REJECT_REASONS = new Set([
+  "kind:service-head",
+  "kind:game-for-console",
+  "kind:accessory-for",
+  "kind:store-listing",
+  "transaction:rent-only",
+]);
+
+/** True for a K reject reason — the pipeline's 3a sites gate on this. */
+export function isGeneralKindRejectReason(reason: string): boolean {
+  return K_REJECT_REASONS.has(reason);
+}
+
+function foldLatinToken(tok: string): string {
+  return /[a-zA-Z]/.test(tok) ? tok.toLowerCase() : tok;
+}
+
+function faToEnToken(tok: string): string {
+  return tok.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+}
+
+function isNumericToken(tok: string): boolean {
+  return /^\d+$/.test(faToEnToken(tok));
+}
+
+function containsTokenSeq(tokens: readonly string[], seq: readonly string[]): boolean {
+  if (seq.length === 0 || seq.length > tokens.length) return false;
+  for (let i = 0; i + seq.length <= tokens.length; i++) {
+    if (seq.every((s, k) => tokens[i + k] === s)) return true;
+  }
+  return false;
+}
+
+function generalKindGate(
+  titleTokens: readonly string[],
+  titleHead: string | undefined,
+  queryTokens: ReadonlySet<string>,
+  queryWords: ReadonlySet<string>,
+  queryNumerics: ReadonlySet<string>,
+  transaction: string | undefined
+): { readonly mismatch: boolean; readonly reason: string; readonly tier: "reject" | "near" } | null {
+  if (titleHead === undefined) return null;
+  // K1 — service head, for every hunt: «خدمات …» offers a service, not
+  // the item. Skipped when the query itself hunts a service word.
+  if (titleHead === "خدمات") {
+    const huntsService = [...K1_SERVICE_EXEMPT_QUERY_WORDS].some((w) =>
+      queryWords.has(w)
+    );
+    if (!huntsService) {
+      return { mismatch: true, reason: "kind:service-head", tier: "reject" };
+    }
+  }
+  // K2 — game head for a console hunt: the game is not the console.
+  // Only the head counts («… با ۴۵ بازی» is not a game head).
+  const huntsConsole = [...queryTokens].some((t) =>
+    K2_CONSOLE_TOPICS.has(foldLatinToken(t))
+  );
+  if (huntsConsole && titleHead === "بازی" && !queryWords.has("بازی")) {
+    return { mismatch: true, reason: "kind:game-for-console", tier: "reject" };
+  }
+  // K3 — «Y برای X»: an accessory made for the queried item. Only when
+  // the word right after «برای» is a query term, and the head is neither
+  // a query term (topic, brand, or model) — otherwise it is the item.
+  for (let i = 0; i < titleTokens.length; i++) {
+    if (titleTokens[i] === "برای" && i + 1 < titleTokens.length) {
+      const after = titleTokens[i + 1];
+      if (queryTokens.has(after) && !queryTokens.has(titleHead)) {
+        return { mismatch: true, reason: "kind:accessory-for", tier: "reject" };
+      }
+    }
+  }
+  // K4 — store listing for a specific model: a marker phrase, a numeric
+  // query, and none of the query's numbers in the title.
+  if (queryNumerics.size > 0) {
+    const titleNumerics = new Set(
+      titleTokens.filter(isNumericToken).map(faToEnToken)
+    );
+    const sharesNumeric = [...queryNumerics].some((n) => titleNumerics.has(n));
+    const hasMarker = K4_STORE_MARKERS.some((seq) =>
+      containsTokenSeq(titleTokens, seq)
+    );
+    if (!sharesNumeric && hasMarker) {
+      return { mismatch: true, reason: "kind:store-listing", tier: "reject" };
+    }
+  }
+  // K5 — transaction safety net, buy hunts only: rent-only title in a
+  // buy hunt is a rejection; a mixed title caps at tier 3, never rejects.
+  if (transaction === "buy") {
+    const rentFound =
+      [...K5_RENT_WORDS].some((w) => titleTokens.includes(w)) ||
+      K5_RENT_PHRASES.some((seq) => containsTokenSeq(titleTokens, seq));
+    if (rentFound) {
+      const sellFound = [...K5_SELL_WORDS].some((w) =>
+        titleTokens.includes(w)
+      );
+      if (!sellFound) {
+        return { mismatch: true, reason: "transaction:rent-only", tier: "reject" };
+      }
+      return { mismatch: true, reason: "transaction:mixed", tier: "near" };
+    }
+  }
+  return null;
+}
+
 export function assessModelSpecificity(
   includeTerms: readonly string[],
   listingText: string,
@@ -1194,7 +1356,9 @@ export function assessModelSpecificity(
   /** Original user query; used to distinguish a requested «طرح X» from a misleading sibling variant. */
   queryText?: string,
   /** Listing title, when available; description-only mentions must not override the advertised subject. */
-  listingTitle?: string
+  listingTitle?: string,
+  /** Hunt transaction ("buy" enables the K5 rent-only safety net); absent = no transaction gate. */
+  transaction?: string
 ): { readonly mismatch: boolean; readonly reason: string; readonly tier: "reject" | "near" } {
   if (includeTerms.length === 0) return { mismatch: false, reason: "no-must-terms", tier: "near" };
   const listingNorm = normalizeForMatch(listingText);
@@ -1217,6 +1381,9 @@ export function assessModelSpecificity(
   const titleHeadSkip = new Set([
     ...SUBJECT_SKIP_TOKENS,
     "خرید", "انواع", "فوری", "اقساطی", "استوک", "فابریک", "نو", "کامل", "صفر",
+    // HANDOFF-K (2026-11-02): the only filler added — «خریدفروش» as one
+    // glued token («خریدفروش خدمات …» heads on خدمات, not on the sale cue).
+    "خریدفروش",
   ]);
   let titleHeadStart = 0;
   while (titleHeadStart < titleTokens.length && titleHeadSkip.has(titleTokens[titleHeadStart])) {
@@ -1245,6 +1412,32 @@ export function assessModelSpecificity(
       reason: `part:title-offering:"${offered}"`,
       tier: "reject",
     };
+  }
+
+  // HANDOFF-K (2026-11-02): the general kind gate, same position as 3a —
+  // before partial-evidence, so a K reject is a rejection even when MUST
+  // terms are missing (the pipeline's 3a sites gate on its reasons).
+  {
+    const queryWords = new Set<string>();
+    for (const t of queryTokens) queryWords.add(t);
+    if (queryText) {
+      for (const t of normalizeForMatch(queryText).split(" ").filter(Boolean)) {
+        queryWords.add(t);
+      }
+    }
+    const queryNumerics = new Set<string>();
+    for (const t of queryTokens) {
+      if (isNumericToken(t)) queryNumerics.add(faToEnToken(t));
+    }
+    const k = generalKindGate(
+      titleTokens,
+      titleHead,
+      queryTokens,
+      queryWords,
+      queryNumerics,
+      transaction
+    );
+    if (k) return k;
   }
 
   // Identity reasoning starts only from full lexical evidence; partial

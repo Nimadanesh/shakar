@@ -3118,3 +3118,76 @@ describe("HANDOFF-T — tier field and internal trace (label only)", () => {
     expect(trace.find((t) => t.sourceAdId === "dead")?.status).toBe("tier4");
   });
 });
+
+describe("HANDOFF-K — general kind gate (pipeline)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function runOneAd(
+    defQuery: Parameters<typeof resolveHuntDefinition>[0],
+    title: string
+  ) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "ad1", title })],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title,
+      price: null,
+      city: "تهران",
+      description: title,
+      images: [],
+      categorySlug: "",
+    }));
+    const def = resolveHuntDefinition(defQuery);
+    if (!def) throw new Error("could not resolve query");
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (event) => events.push(event));
+    const done = events.find((event) => event.type === "done");
+    if (done?.type !== "done") throw new Error("pipeline did not emit done");
+    return done.results.find((r) => r.sourceAdId === "ad1");
+  }
+
+  it("K4 rejects a store listing even when model numbers are missing (missingInfo path)", async () => {
+    // include [آیفون، 15، پرو]: only آیفون is evidenced, so missingInfo
+    // is non-empty — the reject must come from the generalized 3a
+    // headline block, not the missingInfo-empty cap path.
+    const result = await runOneAd({ query: "آیفون 15 پرو" }, "انواع آیفون موجود است");
+    expect(result).toBeUndefined();
+  });
+
+  it("K2 rejects a game head even when the console spelling variant leaves MUST missing", async () => {
+    // سویچ does not evidence سوییچ, so missingInfo is non-empty.
+    const result = await runOneAd({ query: "نینتندو سوییچ" }, "بازی اسپرت نینتندو سویچ");
+    expect(result).toBeUndefined();
+  });
+
+  it("K1 rejects a service head through the cap path", async () => {
+    const result = await runOneAd(
+      { query: "نینتندو سوییچ" },
+      "فروش خدمات نینتندو سوییچ Nintendo PS5 بازی نصبشده"
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it("K5 rejects a rent-only title in a buy hunt", async () => {
+    const result = await runOneAd(
+      { query: "آپارتمان", transaction: "buy" },
+      "اجاره آپارتمان ۹۰ متری وکیل آباد"
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it("K5 mixed rent+sell title stays shown, capped at tier 3", async () => {
+    const result = await runOneAd(
+      { query: "آپارتمان", transaction: "buy" },
+      "فروش یا اجاره آپارتمان ۱۰۰ متری"
+    );
+    expect(result).toBeDefined();
+    expect(result?.matchKind).toBe("near");
+    expect(result?.tier).toBe(3);
+    expect(result?.tierReasons).toContain("transaction:mixed");
+  });
+});

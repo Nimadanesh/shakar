@@ -327,3 +327,196 @@ describe("Issue 16 — title subject outranks description-only mentions", () => 
     expect(r.reason).toBe("no-extra-variant");
   });
 });
+
+describe("HANDOFF-K — general kind gate (closed lists, GOLDEN-REPORT-2 titles)", () => {
+  type Expectation =
+    | { kind: "reject"; reason: string }
+    | { kind: "near"; reason: string }
+    | { kind: "not-rejected" };
+  const cases: [
+    string,
+    string[],
+    string,
+    string,
+    string | undefined,
+    Expectation,
+  ][] = [
+    [
+      "K2: game head for a console hunt rejects",
+      ["نینتندو", "سوییچ"],
+      "نینتندو سوییچ",
+      "بازی Super Mario Odyssey برای نینتندو سوییچ ۱",
+      undefined,
+      { kind: "reject", reason: "kind:game-for-console" },
+    ],
+    [
+      "K2: game head with the سویچ spelling variant rejects",
+      ["نینتندو", "سوییچ"],
+      "نینتندو سوییچ",
+      "بازی اسپرت نینتندو سویچ",
+      undefined,
+      { kind: "reject", reason: "kind:game-for-console" },
+    ],
+    [
+      "K1: service head after a sale cue rejects",
+      ["نینتندو", "سوییچ"],
+      "نینتندو سوییچ",
+      "فروش خدمات نینتندو سوییچ Nintendo PS5 بازی نصبشده",
+      undefined,
+      { kind: "reject", reason: "kind:service-head" },
+    ],
+    [
+      "K1: glued خریدفروش is a filler, so the head is خدمات",
+      ["نینتندو", "سوییچ"],
+      "نینتندو سوییچ",
+      "خریدفروش خدمات نینتندو سوییچ Nintendoبازی نصبشده",
+      undefined,
+      { kind: "reject", reason: "kind:service-head" },
+    ],
+    [
+      "K2: a console itself with games mentioned later does not reject",
+      ["نینتندو", "سوییچ"],
+      "نینتندو سوییچ",
+      "نینتندو سوییچ لایت مرجانی کپی‌خور با ۴۵ بازی خاص",
+      undefined,
+      { kind: "not-rejected" },
+    ],
+    [
+      "K2: a hunt for games does not reject a game head",
+      ["بازی", "نینتندو", "سوییچ"],
+      "بازی نینتندو سوییچ",
+      "بازی اسپرت نینتندو سویچ",
+      undefined,
+      { kind: "not-rejected" },
+    ],
+    [
+      "K3: برای followed by a non-query word does not reject",
+      ["تلسکوپ"],
+      "تلسکوپ",
+      "تلسکوپ برای دیدن ماه و سیارات",
+      undefined,
+      { kind: "not-rejected" },
+    ],
+    [
+      "K4: store marker with no query number in the title rejects",
+      ["آیفون", "15", "پرو"],
+      "آیفون 15 پرو",
+      "انواع آیفون موجود است",
+      undefined,
+      { kind: "reject", reason: "kind:store-listing" },
+    ],
+    [
+      "K4: مدل های جدید marker rejects",
+      ["آیفون", "15", "پرو"],
+      "آیفون 15 پرو",
+      "مدل های جدید آیفون",
+      undefined,
+      { kind: "reject", reason: "kind:store-listing" },
+    ],
+    [
+      "K4: title carrying the query number does not reject",
+      ["آیفون", "15", "پرو"],
+      "آیفون 15 پرو",
+      "انواع آیفون ۱۵ موجود است",
+      undefined,
+      { kind: "not-rejected" },
+    ],
+    [
+      "K4: a query with no number does not reject a store listing",
+      ["آیفون"],
+      "آیفون",
+      "انواع آیفون موجود است",
+      undefined,
+      { kind: "not-rejected" },
+    ],
+    [
+      "K5: rent-only title in a buy hunt rejects",
+      ["آپارتمان"],
+      "آپارتمان",
+      "اجاره آپارتمان ۹۰ متری وکیل آباد",
+      "buy",
+      { kind: "reject", reason: "transaction:rent-only" },
+    ],
+    [
+      "K5: هتل آپارتمان phrase in a buy hunt rejects",
+      ["آپارتمان"],
+      "آپارتمان",
+      "هتل آپارتمان مشهد",
+      "buy",
+      { kind: "reject", reason: "transaction:rent-only" },
+    ],
+    [
+      "K5: mixed rent+sell title caps at tier 3, never rejects",
+      ["آپارتمان"],
+      "آپارتمان",
+      "فروش یا اجاره آپارتمان ۱۰۰ متری",
+      "buy",
+      { kind: "near", reason: "transaction:mixed" },
+    ],
+    [
+      "K5: a sell-only title in a buy hunt does not reject",
+      ["ویلا"],
+      "ویلا",
+      "فروش منزل ویلای واقع در کرونی با سند تک برگ",
+      "buy",
+      { kind: "not-rejected" },
+    ],
+    [
+      "3a untouched: a catalyst catalogue still rejects with part:",
+      ["خرید", "فروش", "خودرو"],
+      "خرید و فروش خودرو",
+      "خرید فروش انواع کاتالیزور",
+      undefined,
+      { kind: "reject", reason: "part:title-offering:\"کاتالیزور\"" },
+    ],
+    [
+      "K1 correction: a service-word query does not reject a خدمات head",
+      ["نصب", "کولر"],
+      "نصب کولر",
+      "خدمات نصب کولر",
+      undefined,
+      { kind: "not-rejected" },
+    ],
+    [
+      "K5 correction: مبله دربست phrase in a buy hunt rejects",
+      ["ویلا"],
+      "ویلا",
+      "ویلا مبله دربست",
+      "buy",
+      { kind: "reject", reason: "transaction:rent-only" },
+    ],
+    [
+      "K5 correction: bare دربست without مبله does not reject",
+      ["آپارتمان"],
+      "آپارتمان",
+      "ساختمان دربست ۳ طبقه",
+      "buy",
+      { kind: "not-rejected" },
+    ],
+  ];
+  it.each(cases)(
+    "%s",
+    (_label, include, queryText, title, transaction, expected) => {
+      const r = assessModelSpecificity(
+        include,
+        title,
+        "all",
+        queryKindForDef(include, false, "all"),
+        queryText,
+        title,
+        transaction
+      );
+      if (expected.kind === "reject") {
+        expect(r.mismatch).toBe(true);
+        expect(r.tier).toBe("reject");
+        expect(r.reason).toBe(expected.reason);
+      } else if (expected.kind === "near") {
+        expect(r.mismatch).toBe(true);
+        expect(r.tier).toBe("near");
+        expect(r.reason).toBe(expected.reason);
+      } else {
+        expect(r.mismatch && r.tier === "reject").toBe(false);
+      }
+    }
+  );
+});
