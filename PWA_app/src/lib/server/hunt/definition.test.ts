@@ -253,7 +253,8 @@ describe("HANDOFF-4 — resolveHuntDefinition suffix negation and typo price", (
   it("telescope: exclude {چینی}, include without چینی/نباشه/۸/میلون, preferred price 8000000 (HANDOFF-5: hard priceMax is now empty), no lone زیر in should", () => {
     const def = resolveHuntDefinition(body({ query: "تلسکوپ نجومی حتماً پایه دار چینی نباشه ترجیحاً زیر ۸ میلون" }))!;
     expect(def.exclude).toEqual(["چینی"]);
-    expect(def.include).toEqual(["تلسکوپ", "نجومی", "پایه", "دار"]);
+    // HANDOFF-N B.3: a حتماً-scoped «پایه دار» joins to must «پایه‌دار».
+    expect(def.include).toEqual(["تلسکوپ", "نجومی", "پایه‌دار"]);
     expect(def.priceMax).toBe("");
     expect(def.preferredPriceMax).toBe("8000000");
     expect(def.should).not.toContain("زیر");
@@ -269,7 +270,8 @@ describe("HANDOFF-4 — resolveHuntDefinition suffix negation and typo price", (
   it("laptop / phone / bike / handsfree / table: hard suffix excludes, head kept", () => {
     const laptop = resolveHuntDefinition(body({ query: "لپ‌تاپ ایسوس، استوک نباشه" }))!;
     expect(laptop.exclude).toEqual(["استوک"]);
-    expect(laptop.include).toEqual(["لپ", "تاپ", "ایسوس"]);
+    // HANDOFF-N B.2: «لپ‌تاپ» stays one word.
+    expect(laptop.include).toEqual(["لپ‌تاپ", "ایسوس"]);
     const phone = resolveHuntDefinition(body({ query: "گوشی، آیفون نباشه" }))!;
     expect(phone.exclude).toEqual(["آیفون"]);
     expect(phone.include).toEqual(["گوشی"]);
@@ -318,7 +320,8 @@ describe("HANDOFF-4 — resolveHuntDefinition suffix negation and typo price", (
   it("«نه X» from HANDOFF-2 is untouched", () => {
     const def = resolveHuntDefinition(body({ query: "عینک آفتابی ری‌بن اصل حتماً نه دست دوم نه فیک ترجیحاً تهران" }))!;
     expect(def.exclude).toEqual(["دست دوم", "فیک"]);
-    expect(def.include).toEqual(["عینک", "آفتابی", "ری", "اصل"]);
+    // HANDOFF-N B.2: «ری‌بن» stays one word (the «بن» city claim is repaired).
+    expect(def.include).toEqual(["عینک", "آفتابی", "ری‌بن", "اصل"]);
   });
 });
 
@@ -328,7 +331,8 @@ describe("HANDOFF-5 — numeric intake: money-only price, soft preferred price a
     expect(def.priceMax).toBe("8000000000");
     expect(def.priceMin).toBe("");
     expect(def.exclude).toEqual(["طبقه اول"]);
-    expect(def.include).toEqual(["آپارتمان", "سعادت", "آباد", "آسانسور"]);
+    // HANDOFF-N B.2: «سعادت‌آباد» stays one word.
+    expect(def.include).toEqual(["آپارتمان", "سعادت‌آباد", "آسانسور"]);
     expect(def.should).toContain("۸۰ تا ۱۰۰ متری");
   });
   it("«رم حداقل ۱۶» is not a price: no bound, ۱۶ out of include, expression in should", () => {
@@ -401,5 +405,75 @@ describe("HANDOFF-5 — numeric intake: money-only price, soft preferred price a
     expect(t.include).toContain("نیستان");
     const r = resolveHuntDefinition(body({ query: "عینک آفتابی ری‌بن اصل حتماً نه دست دوم نه فیک ترجیحاً تهران" }))!;
     expect(r.exclude).toEqual(["دست دوم", "فیک"]);
+  });
+});
+
+describe("HANDOFF-N — sentence understanding (closed lists only)", () => {
+  it("sentence 4: «پرو یا پرومکس» becomes one anyOf group, «یا» leaves include", () => {
+    const def = resolveHuntDefinition(body({ query: "آیفون 15 پرو یا پرومکس ۲۵۶ میخوام تا ۹۰ میل" }))!;
+    expect(def.includeAnyOf).toEqual([["پرو", "پرومکس"]]);
+    expect(def.include).not.toContain("یا");
+    expect(def.include).toContain("آیفون");
+    expect(def.priceMax).toBe("90000000");
+  });
+  it("sentence 7: include [ویلا], should [حیاط‌دار], no bare «دار»", () => {
+    const def = resolveHuntDefinition(body({ query: "ویلا شیراز حیاط دار" }))!;
+    expect(def.include).toEqual(["ویلا"]);
+    expect(def.should).toContain("حیاط‌دار");
+    expect(def.include).not.toContain("دار");
+    expect(def.city).toBe("shiraz");
+  });
+  it("sentence 8: «تخت خواب» is the subject; letter-number price is soft; ده/میل leave include", () => {
+    const def = resolveHuntDefinition(body({ query: "تخت خواب دونفره چوبی میخوام در تهران باشه حتما سالم نه رنگ پریده ترجیحا زیر ده میل" }))!;
+    expect(def.include).toContain("تخت خواب");
+    expect(def.include).toContain("دونفره");
+    expect(def.include).toContain("چوبی");
+    expect(def.include).toContain("سالم");
+    expect(def.include).not.toContain("ده");
+    expect(def.include).not.toContain("میل");
+    expect(def.priceMax).toBe("");
+    expect(def.preferredPriceMax).toBe("10000000");
+    expect(def.city).toBe("tehran");
+  });
+  it("sentence 9: «ری‌بن» stays one word; ترجیحاً تهران is a preferred city", () => {
+    const def = resolveHuntDefinition(body({ query: "عینک آفتابی ری‌بن اصل حتماً نه دست دوم نه فیک ترجیحاً تهران" }))!;
+    expect(def.include).toContain("ری‌بن");
+    expect(def.include).not.toContain("ری");
+    expect(def.city).toBe("tehran");
+    expect(def.citySource).toBe("preference");
+  });
+  it("sentence 10 (owner decision 2026-11-02): نجومی stays in include as a MUST; include carries must «پایه‌دار»", () => {
+    const def = resolveHuntDefinition(body({ query: "تلسکوپ نجومی حتماً پایه دار نه چینی ترجیحاً زیر ۸ میل" }))!;
+    expect(def.include).toContain("پایه‌دار");
+    expect(def.include).toContain("نجومی");
+    expect(def.include).not.toContain("دار");
+    expect(def.preferredPriceMax).toBe("8000000");
+  });
+  it("sentences 12 and 16: «لپ‌تاپ» stays one word", () => {
+    expect(resolveHuntDefinition(body({ query: "لپ‌تاپ گیمینگ، RTX 4060 حتماً، رم ۱۶ گیگ، تا ۸۰ میلیون" }))!.include).toContain("لپ‌تاپ");
+    expect(resolveHuntDefinition(body({ query: "یه لپ‌تاپ سبک برای دانشگاه، ۱۴ اینچ، رم حداقل ۱۶، تا ۴۰ میلیون" }))!.include).toContain("لپ‌تاپ");
+  });
+  it("sentence 15: «تهران،» with attached punctuation is a hard city", () => {
+    const def = resolveHuntDefinition(body({ query: "پژو ۲۰۷، مدل ۱۴۰۱ به بالا، تهران، تا ۱ میلیارد" }))!;
+    expect(def.city).toBe("tehran");
+    expect(def.citySource).toBe("text");
+    expect(def.yearMin).toBe(1401);
+  });
+  it("sentence 16: no priceMin, no «یه»", () => {
+    const def = resolveHuntDefinition(body({ query: "یه لپ‌تاپ سبک برای دانشگاه، ۱۴ اینچ، رم حداقل ۱۶، تا ۴۰ میلیون" }))!;
+    expect(def.priceMin).toBe("");
+    expect(def.priceMax).toBe("40000000");
+    expect(def.include).not.toContain("یه");
+  });
+  it("«یک» stays before a count noun, «یه» drops elsewhere", () => {
+    expect(resolveHuntDefinition(body({ query: "آپارتمان یک خوابه" }))!.include).toContain("یک");
+    expect(resolveHuntDefinition(body({ query: "یه گوشی سامسونگ" }))!.include).not.toContain("یه");
+  });
+  it("bike: «تهران زیر» leaves should; تهران is preferred; soft 15M", () => {
+    const def = resolveHuntDefinition(body({ query: "دوچرخه کوهستان ۲۶ اینچ، ترجیحاً تهران زیر ۱۵ میلیون" }))!;
+    expect(def.should).not.toContain("تهران زیر");
+    expect(def.city).toBe("tehran");
+    expect(def.citySource).toBe("preference");
+    expect(def.preferredPriceMax).toBe("15000000");
   });
 });

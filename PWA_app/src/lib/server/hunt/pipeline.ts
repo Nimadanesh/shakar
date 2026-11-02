@@ -1,6 +1,10 @@
 import "server-only";
 
-import { normalizeForMatch, textMatches } from "@/lib/persianNormalize";
+import {
+  normalizeForMatch,
+  textMatches,
+  textMatchesInclude,
+} from "@/lib/persianNormalize";
 import {
   DEALER_CUES,
   DEALER_FIRST_PERSON,
@@ -82,6 +86,12 @@ import { parsePriceBound } from "./definition";
 export interface HuntDefinition {
   query: string;
   include: string[];
+  /**
+   * HANDOFF-N (2026-11-02): one-of groups from «X یا Y» in the query.
+   * Each group is ONE requirement, satisfied by any member. Empty when
+   * the query has no option group.
+   */
+  includeAnyOf?: string[][];
   exclude: string[];
   /**
    * SHOULD terms — ranking boost only (flaw #19, 2026-10-09). Populated
@@ -97,7 +107,7 @@ export interface HuntDefinition {
    * otherwise. Persisted so a future "why did my hunt run in X?!" is
    * answerable from the definition alone.
    */
-  citySource?: "text" | "picker";
+  citySource?: "text" | "picker" | "preference";
   /** App category key ("real-estate", "mobile", ...). */
   category: string;
   priceMin: string;
@@ -436,7 +446,9 @@ function titleScore(ad: ListingSummary, def: HuntDefinition): {
   let strength = 0;
   let needsDetailReview = false;
   for (const term of def.include) {
-    if (textMatches(ad.title, term)) {
+    // HANDOFF-N: include terms match with synonym groups (17–22);
+    // excludes keep the spelling-only path via exclusionFires above.
+    if (textMatchesInclude(ad.title, term)) {
       strength += 2; // MUST weighs double at the title (flaw #19)
       if (isWeasel(ad.title, term)) needsDetailReview = true;
     }
@@ -861,14 +873,29 @@ function evaluateDescription(
       serviceIntent &&
       isServiceDemandTerm(term) &&
       SERVICE_DEMAND_FAMILY.some((w) => textMatches(combined, w));
-    if (textMatches(title, term)) {
+    // HANDOFF-N: include terms match with synonym groups (17–22).
+    if (textMatchesInclude(title, term)) {
       mustTitle += 1;
       evidence.push(term);
-    } else if (demandSatisfied || textMatches(description, term)) {
+    } else if (demandSatisfied || textMatchesInclude(description, term)) {
       mustDesc += 1;
       evidence.push(term);
     } else {
       missingInfo.push(term); // UNKNOWN — penalized in scoring, never dropped
+    }
+  }
+  // HANDOFF-N: each anyOf group is ONE requirement, satisfied by ANY
+  // member (title first, then description, same as a single term).
+  for (const group of def.includeAnyOf ?? []) {
+    const label = group.join(" یا ");
+    if (group.some((m) => textMatchesInclude(title, m))) {
+      mustTitle += 1;
+      evidence.push(label);
+    } else if (group.some((m) => textMatchesInclude(description, m))) {
+      mustDesc += 1;
+      evidence.push(label);
+    } else {
+      missingInfo.push(label);
     }
   }
   // 3b. Satisfied absent-attributes join the evidence — «چرا این آگهی؟»
@@ -1351,7 +1378,8 @@ export async function confirmCandidates(
   // slug is unverified data — the same invariant that marks it
   // detailUnknown). Flushed once at the end of this function, fail-open.
   const slugPairs = new Map<string, string>();
-  const mustCount = def.include.length;
+  // HANDOFF-N: each anyOf group counts as one requirement.
+  const mustCount = def.include.length + (def.includeAnyOf?.length ?? 0);
   // Pre-#19 snapshots lack the SHOULD bucket — normalize, never crash.
   const shouldCount = def.should?.length ?? 0;
   const results: ScoredAd[] = [];

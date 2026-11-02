@@ -4,11 +4,13 @@ import {
   normalizeForMatch,
   stemToken,
   textMatches,
+  textMatchesInclude,
   textMatchesRelated,
   relatedConceptTerms,
   tokenize,
   unifyChars,
 } from "./persianNormalize";
+import { exclusionFires } from "./server/hunt/semantics";
 
 describe("unifyChars", () => {
   it("unifies Arabic Yeh/Kaf to Persian", () => {
@@ -169,5 +171,68 @@ describe("textMatches", () => {
   });
   it("is empty-safe", () => {
     expect(textMatches("", "موبایل")).toBe(false);
+  });
+});
+
+describe("HANDOFF-N — closed-list matching equivalence", () => {
+  it("spelling groups match both ways on either path (هوندا/هندا، نینتندو/سوییچ)", () => {
+    expect(textMatches("موتور هندا ۱۲۵", "هوندا")).toBe(true);
+    expect(textMatches("موتور هوندا ۱۲۵", "هندا")).toBe(true);
+    expect(textMatches("Minecraft Nintendo switch نینتندو سویچ", "نینتندو")).toBe(true);
+    expect(textMatches("Minecraft Nintendo switch نینتندو سویچ", "سوییچ")).toBe(true);
+  });
+  it("glued forms match their spaced parts (دناپلاس، دنامدل۹۶، ۱۵پرومکس، دوخوابه)", () => {
+    expect(textMatches("دناپلاس ۶دنده بارینگ صفرخشک", "دنا")).toBe(true);
+    expect(textMatches("دناپلاس ۶دنده بارینگ صفرخشک", "پلاس")).toBe(true);
+    expect(textMatches("دنامدل۹۶", "دنا")).toBe(true);
+    expect(textMatches("آیفون ۱۵پرومکس", "پرو")).toBe(true);
+    expect(textMatches("آیفون ۱۵پرومکس", "پرومکس")).toBe(true);
+    expect(textMatches("آیفون 15promax", "پرو")).toBe(true);
+    expect(textMatches("آیفون 15promax", "پرومکس")).toBe(true);
+    expect(textMatches("فروش ویلایی ۲ خوابه میعاد", "دوخوابه")).toBe(true);
+    expect(textMatches("فروش ویلایی دو خواب میعاد", "دوخوابه")).toBe(true);
+    expect(textMatches("فروش ویلایی 2خوابه میعاد", "دوخوابه")).toBe(true);
+  });
+  it("ری‌بن matches Ray-Ban, ریبن and ری بن", () => {
+    expect(textMatches("عینک Ray-Ban Wayfarer", "ری‌بن")).toBe(true);
+    expect(textMatches("عینک ریبن اصل", "ری‌بن")).toBe(true);
+    expect(textMatches("عینک ری بن اصل", "ری‌بن")).toBe(true);
+  });
+  it("دونفره matches دو نفره", () => {
+    expect(textMatches("تخت دو نفره با دراور", "دونفره")).toBe(true);
+  });
+  it("synonym/suffix groups match ONLY on the include path", () => {
+    expect(textMatches("دنا پلاس اتوماتیک اپشنال", "اتومات")).toBe(false);
+    expect(textMatchesInclude("دنا پلاس اتوماتیک اپشنال", "اتومات")).toBe(true);
+    expect(textMatches("فروش خانه ویلایی", "ویلا")).toBe(false);
+    expect(textMatchesInclude("فروش خانه ویلایی", "ویلا")).toBe(true);
+    expect(textMatches("تخت سرویس خواب چوبی", "تخت خواب")).toBe(false);
+    expect(textMatchesInclude("تخت سرویس خواب چوبی", "تخت خواب")).toBe(true);
+    expect(textMatches("عینک دودی اصل", "عینک آفتابی")).toBe(false);
+    expect(textMatchesInclude("عینک دودی اصل", "عینک آفتابی")).toBe(true);
+    expect(textMatches("آپارتمان آسانسوردار", "آسانسور")).toBe(false);
+    expect(textMatchesInclude("آپارتمان آسانسوردار", "آسانسور")).toBe(true);
+    // The spaced form already contains the bare token, so both paths match;
+    // only the glued form separates them.
+    expect(textMatches("آپارتمان آسانسور دار", "آسانسور")).toBe(true);
+    expect(textMatchesInclude("آپارتمان آسانسور دار", "آسانسور")).toBe(true);
+  });
+  it("forbidden mappings stay forbidden", () => {
+    expect(textMatches("تخت یکنفره جنس خوب", "تخت خواب")).toBe(false);
+    expect(textMatchesInclude("تخت یکنفره جنس خوب", "تخت خواب")).toBe(false);
+    expect(textMatches("موتور هوندا", "موتورسیکلت")).toBe(false);
+    expect(textMatchesInclude("موتور هوندا", "موتورسیکلت")).toBe(false);
+  });
+  it("exclude safety: دست‌دوم fires, negated دست‌دوم does not, اصل does not fire on اورجینال", () => {
+    expect(exclusionFires("آیفون دست‌دوم سالم", "دست دوم")).toBe(true);
+    expect(exclusionFires("آیفون آکبند، دست‌دوم نیست", "دست دوم")).toBe(false);
+    expect(exclusionFires("عینک اورجینال", "اصل")).toBe(false);
+  });
+  it("HANDOFF-N-2 amendment 1: a digit between two letter runs never splits (شکار ۳ ردیف ۱۳ stays unmatched)", () => {
+    const title = "پلی1فت)بازیCDسوییچ۴نینتندوps2میکرو۵نصبps3یکproسونی";
+    expect(textMatches(title, "نینتندو")).toBe(false);
+    expect(textMatches(title, "سوییچ")).toBe(false);
+    expect(textMatchesInclude(title, "نینتندو")).toBe(false);
+    expect(textMatchesInclude(title, "سوییچ")).toBe(false);
   });
 });

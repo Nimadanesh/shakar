@@ -32,6 +32,16 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
     Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
   const query = str(b.query).trim();
   if (query === "") return null;
+  // HANDOFF-N: a stored definition's anyOf groups round-trip (the kamin
+  // replay path rebuilds through here); resolveHuntDefinition recomputes
+  // them fresh from the query for live hunts.
+  const strArrArr = (v: unknown): string[][] =>
+    Array.isArray(v)
+      ? v
+          .filter((x): x is unknown[] => Array.isArray(x))
+          .map((x) => x.filter((y): y is string => typeof y === "string"))
+          .filter((x) => x.length > 0)
+      : [];
   const transaction = b.transaction === "rent" || b.transaction === "buy" ? b.transaction : "";
   const condition =
     b.condition === "new" || b.condition === "used" || b.condition === "any"
@@ -58,6 +68,7 @@ export function toHuntDefinition(body: unknown): HuntDefinition | null {
   return {
     query,
     include: strArr(b.include),
+    includeAnyOf: strArrArr(b.includeAnyOf),
     exclude: strArr(b.exclude),
     should: [],
     city: str(b.city) || "all",
@@ -171,7 +182,11 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   // client-side — so a surviving conflict always resolves to the text.
   const cityC = applied.find((c) => c.kind === "city");
   const city = cityC ? cityC.value : def.city;
-  const citySource = cityC ? ("text" as const) : ("picker" as const);
+  // HANDOFF-N: reassigned to "preference" below when the city is named
+  // only inside ترجیحاً domains.
+  let citySource: "text" | "picker" | "preference" = cityC
+    ? "text"
+    : "picker";
 
   // 3. Category from text when the picker didn't choose one. Explicit
   // picker wins. An unmapped text category ("personal") falls back to "all"
@@ -371,8 +386,9 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
       for (const tok of tokenize(m)) removal.add(tok);
     // Price tokens: cue + number + unit (typo units included). Only
     // the number in a price pattern is removed, so «آیفون ۱۵» keeps ۱۵.
+    // HANDOFF-N: letter-numbers count too («زیر ده میل» removes ده/میل).
     const priceRe =
-      /(?:کمتر از|بیشتر از|پایین‌تر از|پایین تر از|زیر|حداکثر|حداقل|بالای|تا)\s+([\d۰-۹]+)\s*(میلیارد|میلیون|ملییون|ملیون|میلون|ملیارد|میل|هزار|تومان|تومن|ت)(?=\s|$|[،,])/g;
+      /(?:کمتر از|بیشتر از|پایین‌تر از|پایین تر از|زیر|حداکثر|حداقل|بالای|تا)\s+([\d۰-۹]+|یک|دو|سه|پنج|ده|صد)\s*(میلیارد|میلیون|ملییون|ملیون|میلون|ملیارد|میل|هزار|تومان|تومن|ت)(?=\s|$|[،,])/g;
     let pm: RegExpExecArray | null;
     while ((pm = priceRe.exec(def.query)) !== null) {
       removal.add(pm[1]);
@@ -468,11 +484,24 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
       "متر", "متری", "گیگ", "گیگابایت", "مگ", "مگابایت", "ترابایت",
       "اینچ", "لیتر", "وات", "سی‌سی", "سیسی", "کیلو", "نفره", "ساله",
     ]);
-    // Rule 7: function words never enter include. «یک» is deliberately
-    // absent («یک خوابه» means something); «و» is not listed either.
+    // Rule 7: function words never enter include — HANDOFF-N: «یک»
+    // joins them, EXCEPT when the next word is one of the count nouns
+    // below («یک خوابه» means something; «یه گوشی» does not).
     const FUNCTION_WORDS = new Set([
-      "در", "یه", "با", "از", "برای", "به", "که", "را", "یا",
+      "در", "یه", "یک", "با", "از", "برای", "به", "که", "را", "یا",
     ]);
+    const ONE_EXCEPTIONS = new Set([
+      "خوابه", "خواب", "طبقه", "نفره", "ساله", "ماهه", "متری", "کاره",
+    ]);
+    const keepOne = new Set<string>();
+    for (let i = 0; i + 1 < qToks.length; i++) {
+      if (
+        (qToks[i] === "یک" || qToks[i] === "یه") &&
+        ONE_EXCEPTIONS.has(qToks[i + 1])
+      ) {
+        keepOne.add(qToks[i]);
+      }
+    }
     const consumed = new Set<number>();
     const shouldAdd: string[] = [];
     const pushShould = (v: string) => {
@@ -583,6 +612,8 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     for (const w of FUNCTION_WORDS) removalVals.add(w);
     const keptInclude = include.filter((term) => {
       const toks = normalizeForMatch(term).split(" ").filter(Boolean);
+      // A lone «یک»/«یه» kept by the exception above survives.
+      if (toks.length === 1 && keepOne.has(toks[0])) return true;
       return !(toks.length > 0 && toks.every((t) => removalVals.has(t)));
     });
     include.splice(0, include.length, ...keptInclude);
@@ -598,9 +629,199 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
     }
   }
 
+  // HANDOFF-N (2026-11-02): sentence-understanding repairs. Only
+  // include/should/city move here; exclude, absentAttributes and hard
+  // prices are untouched.
+  const includeAnyOf: string[][] = [];
+  {
+    const qToks = normalizeForMatch(def.query).split(" ").filter(Boolean);
+    const termToks = (t: string) =>
+      normalizeForMatch(t).split(" ").filter(Boolean);
+    const isSingle = (t: string, w: string) => {
+      const toks = termToks(t);
+      return toks.length === 1 && toks[0] === w;
+    };
+
+    // B.1: «X یا Y» between two include terms becomes one anyOf group.
+    // The group counts as ONE requirement, satisfied by either member.
+    for (let i = 1; i + 1 < qToks.length; i++) {
+      if (qToks[i] !== "یا") continue;
+      const x = qToks[i - 1];
+      const y = qToks[i + 1];
+      const xi = include.findIndex((t) => isSingle(t, x));
+      const yi = include.findIndex((t) => isSingle(t, y));
+      if (xi < 0 || yi < 0 || xi === yi) continue;
+      includeAnyOf.push([include[xi], include[yi]]);
+      include.splice(Math.max(xi, yi), 1);
+      include.splice(Math.min(xi, yi), 1);
+    }
+
+    // B.2: ZWNJ words stay one word. The contract splits them (its
+    // surface split cuts ZWNJ), so merge adjacent fragments in include,
+    // and repair a fragment whose other half the city lexicon swallowed
+    // («بن» is a Divar city — «ری‌بن» reaches include as lone «ری»).
+    const ZWNJ_WORDS: Array<[string, string, string]> = [
+      ["لپ‌تاپ", "لپ", "تاپ"],
+      ["سعادت‌آباد", "سعادت", "آباد"],
+      ["ری‌بن", "ری", "بن"],
+    ];
+    for (const [word, f1, f2] of ZWNJ_WORDS) {
+      // Compare in folded form: term/query tokens are normalized
+      // («آباد»→«اباد»), while the stored word keeps its raw spelling.
+      const ff1 = normalizeForMatch(f1).split(" ")[0];
+      const ff2 = normalizeForMatch(f2).split(" ")[0];
+      for (let i = 0; i + 1 < include.length; i++) {
+        if (isSingle(include[i], ff1) && isSingle(include[i + 1], ff2)) {
+          include.splice(i, 2, word);
+          break;
+        }
+      }
+      if (
+        !include.some((t) => termToks(t).join(" ") === `${ff1} ${ff2}`) &&
+        !include.includes(word)
+      ) {
+        const qi = qToks.findIndex(
+          (t, i) => t === ff1 && qToks[i + 1] === ff2
+        );
+        const fi = include.findIndex((t) => isSingle(t, ff1));
+        if (qi >= 0 && fi >= 0) include.splice(fi, 1, word);
+      }
+      for (let s = 0; s < should.length; s++) {
+        const toks = should[s].split(" ").filter(Boolean);
+        const out: string[] = [];
+        for (let i = 0; i < toks.length; i++) {
+          if (toks[i] === f1 && toks[i + 1] === f2) {
+            out.push(word);
+            i++;
+          } else {
+            out.push(toks[i]);
+          }
+        }
+        should[s] = out.join(" ");
+      }
+    }
+
+    // B.3: «X دار» joins to «X‌دار». A حتماً-scoped pair stays a MUST
+    // (include); an unscoped pair is a feature, so it moves to SHOULD.
+    // Any other bare «دار» never stays in include.
+    for (const x of ["پایه", "حیاط"]) {
+      const joined = `${x}‌دار`;
+      // Folded comparison («حیاط»→«حیات» under normalization); the
+      // stored word keeps its raw spelling.
+      const fx = normalizeForMatch(x).split(" ")[0];
+      let scoped = false;
+      for (let k = 0; k + 2 < qToks.length; k++) {
+        if (
+          (qToks[k] === "حتماً" || qToks[k] === "حتما") &&
+          qToks[k + 1] === fx &&
+          qToks[k + 2] === "دار"
+        ) {
+          scoped = true;
+          break;
+        }
+      }
+      for (let i = 0; i + 1 < include.length; i++) {
+        if (!isSingle(include[i], fx) || !isSingle(include[i + 1], "دار"))
+          continue;
+        if (scoped) {
+          include.splice(i, 2, joined);
+        } else {
+          include.splice(i, 2);
+          if (!should.includes(joined)) should.push(joined);
+        }
+        break;
+      }
+      for (let s = 0; s < should.length; s++) {
+        const toks = should[s].split(" ").filter(Boolean);
+        const out: string[] = [];
+        for (let i = 0; i < toks.length; i++) {
+          if (toks[i] === x && toks[i + 1] === "دار") {
+            out.push(joined);
+            i++;
+          } else {
+            out.push(toks[i]);
+          }
+        }
+        should[s] = out.join(" ");
+      }
+    }
+    for (let i = include.length - 1; i >= 0; i--) {
+      if (isSingle(include[i], "دار")) include.splice(i, 1);
+    }
+
+    // B.4: the «تخت خواب» subject. The contract's city branch swallows
+    // «تخت» (a Divar city name), leaving lone «خواب» — replace it with
+    // the full subject, or insert the subject when it is absent.
+    if (qToks[0] === "تخت" && qToks[1] === "خواب") {
+      const خوابIdx = include.findIndex((t) => {
+        const toks = termToks(t);
+        return toks.length === 1 && toks[0] === "خواب";
+      });
+      const fullIdx = include.findIndex((t) => {
+        const toks = termToks(t);
+        return toks.length === 2 && toks[0] === "تخت" && toks[1] === "خواب";
+      });
+      if (خوابIdx >= 0) include.splice(خوابIdx, 1, "تخت خواب");
+      else if (fullIdx < 0) include.unshift("تخت خواب");
+    }
+
+    // B.8: a «<city> زیر» leftover in SHOULD (a city + price cue from a
+    // ترجیحاً domain whose price was already lifted) is not a wish.
+    if (city !== "all") {
+      const cityNames = KNOWN_CITIES.find((c) => c.id === city)?.names ?? [];
+      const cityToks = new Set(
+        cityNames.map((n) => normalizeForMatch(n).split(" ").filter(Boolean).join(" "))
+      );
+      for (let s = should.length - 1; s >= 0; s--) {
+        const toks = normalizeForMatch(should[s]).split(" ").filter(Boolean);
+        if (
+          toks.length === 2 &&
+          toks[1] === "زیر" &&
+          cityToks.has(toks[0])
+        ) {
+          should.splice(s, 1);
+        }
+      }
+    }
+
+    // B.8 (city source): a city named ONLY inside ترجیحاً domains is
+    // preferred, not hard. Any mention outside a domain keeps it hard.
+    if (city !== "all" && citySource === "text") {
+      const rawToks = def.query.split(/\s+/).filter(Boolean);
+      const stripPunct = (t: string) => t.replace(/[،,.]+$/, "");
+      const domainIdx = new Set<number>();
+      for (let i = 0; i < rawToks.length; i++) {
+        const cue = stripPunct(rawToks[i]);
+        if (cue !== "ترجیحاً" && cue !== "ترجیحا") continue;
+        for (let j = i + 1; j < rawToks.length; j++) {
+          const clean = stripPunct(rawToks[j]);
+          if (clean === "و" || clean === "حتماً" || clean === "حتما") break;
+          domainIdx.add(j);
+          if (/[،,]$/.test(rawToks[j])) break;
+        }
+      }
+      const citySeqs = (
+        KNOWN_CITIES.find((c) => c.id === city)?.names ?? []
+      ).map((n) => normalizeForMatch(n).split(" ").filter(Boolean));
+      const seqHas = (toks: string[], seq: string[]) =>
+        seq.length > 0 &&
+        toks.some((_, i) => seq.every((s, k) => toks[i + k] === s));
+      const domainToks = rawToks
+        .filter((_, i) => domainIdx.has(i))
+        .map(stripPunct);
+      const outsideToks = rawToks
+        .filter((_, i) => !domainIdx.has(i))
+        .map(stripPunct);
+      const inDomain = citySeqs.some((seq) => seqHas(domainToks, seq));
+      const outside = citySeqs.some((seq) => seqHas(outsideToks, seq));
+      if (inDomain && !outside) citySource = "preference";
+    }
+  }
+
   return {
     ...def,
     include,
+    includeAnyOf,
     exclude,
     absentAttributes,
     should,

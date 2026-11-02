@@ -579,3 +579,25 @@ describe("HANDOFF-5 — money-only price and preferred price at interpret level"
     expect(stopped.find((c) => c.id.startsWith("preferredPriceMax:"))?.value).toBe("8000000");
   });
 });
+
+describe("HANDOFF-N — price bounds: bare-ت word boundary and letter-numbers", () => {
+  it("«تا» no longer donates its ت: sentence 16 has no priceMin", () => {
+    const applied = kinds("یه لپ‌تاپ سبک برای دانشگاه، ۱۴ اینچ، رم حداقل ۱۶، تا ۴۰ میلیون");
+    expect(applied).toContain("priceMax:40000000");
+    expect(applied.some((c) => c.startsWith("priceMin:"))).toBe(false);
+  });
+  it("a genuine bare «ت» still works: «تا ۵ ت» is a 5-toman cap", () => {
+    expect(kinds("یه گوشی تا ۵ ت")).toContain("priceMax:5");
+  });
+  it("letter-numbers before a money unit become digits: «زیر ده میل» → soft 10M", () => {
+    const applied = kinds("تخت خواب دونفره چوبی میخوام در تهران باشه حتما سالم نه رنگ پریده ترجیحا زیر ده میل");
+    // The preference constraint's kind is "preference" (its id is preferredPriceMax).
+    expect(applied).toContain("preference:10000000");
+  });
+  it("a letter-number NOT before a money unit is not a price: «ده نفره»", () => {
+    expect(kinds("ماشین ده نفره").some((c) => c.startsWith("price"))).toBe(false);
+  });
+  it("«تهران،» with attached punctuation is recognized as the city", () => {
+    expect(kinds("پژو ۲۰۷، مدل ۱۴۰۱ به بالا، تهران، تا ۱ میلیارد")).toContain("city:tehran");
+  });
+});

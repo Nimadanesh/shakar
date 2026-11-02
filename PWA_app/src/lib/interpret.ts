@@ -669,10 +669,47 @@ const AMOUNT = "([\\d۰-۹٠-٩][\\d۰-۹٠-٩\\s,،.٬]*)";
 // priceMax of 100 and «رم حداقل ۱۶» a priceMin of 16.
 const UNIT = "(میلیارد|میلیون|ملییون|ملیون|میلون|ملیارد|هزار|تومان|تومن|میل|ت)";
 
+// HANDOFF-N: letter-numbers count ONLY immediately before a money unit
+// («زیر ده میل» → 10,000,000; «ماشین ده نفره» → no price). The bare «ت»
+// unit is deliberately included: «ده ت» converts, while «ده تا» does not
+// (the boundary after the unit blocks «تا» from donating its ت).
+const LETTER_NUMBERS: Array<[string, number]> = [
+  ["صد", 100],
+  ["ده", 10],
+  ["پنج", 5],
+  ["سه", 3],
+  ["دو", 2],
+  ["یک", 1],
+];
+const MONEY_UNITS_RE =
+  "(میلیارد|میلیون|ملییون|ملیون|میلون|ملیارد|میل|هزار|تومان|تومن|ت)";
+function letterNumbersToDigits(text: string): string {
+  let out = text;
+  for (const [word, digit] of LETTER_NUMBERS) {
+    out = out.replace(
+      new RegExp(
+        `(^|\\s)${word}(?=\\s+${MONEY_UNITS_RE}(\\s|$|[،,.!؟?]))`,
+        "g"
+      ),
+      `$1${digit}`
+    );
+  }
+  return out;
+}
+
 function findPriceBound(normalized: string, kind: "min" | "max"): { value: number; display: string } | null {
+  // Letter-numbers are digits by the time either scan (hard or preference
+  // domain) reads the text, so both scans share the conversion.
+  normalized = letterNumbersToDigits(normalized);
   const patterns = kind === "max" ? MAX_PATTERNS : MIN_PATTERNS;
   for (const cue of patterns) {
-    const match = normalized.match(new RegExp(`${cue}\\s+${AMOUNT}\\s*${UNIT}`));
+    // HANDOFF-N: the unit must end at a word boundary. Without it, the
+    // bare «ت» unit matched the first letter of «تا» («رم حداقل ۱۶، تا ۴۰
+    // میلیون» wrongly set priceMin 16 in sentence 16). A genuine «۵ ت»
+    // still works (end of string is a boundary).
+    const match = normalized.match(
+      new RegExp(`${cue}\\s+${AMOUNT}\\s*${UNIT}(?=\\s|$|[،,.!؟?])`)
+    );
     if (!match) continue;
     const value = parseAmount(match[1], match[2]);
     if (value === null) continue;
@@ -899,8 +936,15 @@ export function interpretQuery(raw: string): Interpretation {
   // rewrite once so the EXCLUDE_PREFIXES path below handles every spelling.
   const segmentsFrom = normalized.replace(/بی‌رنگ|بیرنگ|بی رنگ/g, "بدون رنگ");
 
+  // HANDOFF-N: a city name with trailing punctuation («تهران،») is the
+  // city. Only the city check sees the stripped copy — every other
+  // classifier keeps the raw normalized text.
+  const cityNormalized = normalized
+    .split(" ")
+    .map((t) => t.replace(/[،,.]+$/, ""))
+    .join(" ");
   for (const city of KNOWN_CITIES) {
-    if (city.names.some((name) => mentionsCity(normalized, name))) {
+    if (city.names.some((name) => mentionsCity(cityNormalized, name))) {
       pushUnique(applied, {
         id: `city:${city.id}`,
         kind: "city",

@@ -387,11 +387,19 @@ function contractRow(sentence: string, answer?: { transaction?: string; conditio
     def.priceMin !== "" || def.priceMax !== ""
       ? "سخت"
       : "—";
+  // HANDOFF-N: a city named only inside ترجیحاً domains is preferred.
   const cityHard =
-    def.city !== "all"
-      ? `سخت (${def.citySource ?? "?"})`
-      : "— (بدون فیلتر شهر)";
-  return `| ${esc(sentence)} | ${esc(def.include.join("، "))} | ${esc(def.exclude.join("، "))} | ${esc((def.should ?? []).join("، "))} | ${esc((def.absentAttributes ?? []).join("، "))} | ${def.priceMin || "—"} | ${def.priceMax || "—"} | ${priceHard} | ${def.city} | ${cityHard} | ${def.transaction || "—"} | ${def.condition || "—"} | ${def.category} |`;
+    def.city === "all"
+      ? "— (بدون فیلتر شهر)"
+      : def.citySource === "preference"
+        ? "ترجیحی (preference)"
+        : `سخت (${def.citySource ?? "?"})`;
+  // HANDOFF-N: anyOf groups leave include, so show them in its cell.
+  const includeCell = [
+    ...def.include,
+    ...(def.includeAnyOf ?? []).map((g) => `یکی‌از: ${g.join(" یا ")}`),
+  ].join("، ");
+  return `| ${esc(sentence)} | ${esc(includeCell)} | ${esc(def.exclude.join("، "))} | ${esc((def.should ?? []).join("، "))} | ${esc((def.absentAttributes ?? []).join("، "))} | ${def.priceMin || "—"} | ${def.priceMax || "—"} | ${priceHard} | ${def.city} | ${cityHard} | ${def.transaction || "—"} | ${def.condition || "—"} | ${def.category} |`;
 }
 
 async function main(): Promise<void> {
