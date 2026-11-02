@@ -263,6 +263,10 @@ export interface HuntTraceEntry {
   status: "shown" | "tier4" | "hidden:dupe" | "hidden:detail-cap";
   tier?: AdTier;
   reasons: string[];
+  // HANDOFF-3 P4: the run's price reference (median of known prices of
+  // shown candidates), written on shown entries when P4 computed one.
+  // For future kamin-contract storage; internal only, never emitted.
+  priceReference?: number;
 }
 
 export interface HuntStats {
@@ -1270,6 +1274,23 @@ function scoreAd(
  * confirmCandidates with ONLY the new ids — details are never re-fetched
  * for ads the user already knows about.
  */
+/**
+ * HANDOFF-3 (2026-11-03) — price softness constants.
+ * P1: a price at or below this (0, 1, 1000, …) is a placeholder and
+ * counts as UNKNOWN in every price rule — never a cap, never a reject.
+ * P4: a known price below this fraction of the reference price is
+ * implausible (bait); the reference needs at least this many known
+ * prices among shown candidates, else P4 is off.
+ */
+const PRICE_PLACEHOLDER_MAX = 10000;
+const PRICE_IMPLAUSIBLE_FRACTION = 0.1;
+const PRICE_REFERENCE_MIN_COUNT = 5;
+
+/** HANDOFF-3 P1: placeholder prices (≤ 10000) read as unknown. */
+function effectivePrice(price: number | null): number | null {
+  return price === null || price <= PRICE_PLACEHOLDER_MAX ? null : price;
+}
+
 export async function collectCandidates(
   def: HuntDefinition,
   opts: CollectOptions = {}
@@ -1410,42 +1431,21 @@ export async function collectCandidates(
   stats.candidates = unique.length;
   emit({ type: "candidates", count: unique.length, dupsCollapsed: stats.dupsCollapsed });
 
-  // ---- Phase 3b: price bounds (hunt specs are honored) ---------------------
-  // Unknown-price ads STAY (contract) — only KNOWN prices outside the range
-  // are dropped. Runs before the details budget so we never spend detail
-  // fetches on ads the price spec already rules out.
-  const minPrice = parsePriceBound(def.priceMin);
-  const maxPrice = parsePriceBound(def.priceMax);
-  let priced = unique;
-  if (minPrice !== null || maxPrice !== null) {
-    priced = unique.filter(
-      (c) =>
-        c.price === null ||
-        (minPrice === null || c.price >= minPrice) &&
-          (maxPrice === null || c.price <= maxPrice)
-    );
-    stats.candidates = priced.length;
-  }
+  // ---- Phase 3b: price bounds (HANDOFF-3: price never rejects) ------------
+  // Owner decision: a price outside the explicit bounds NO LONGER drops
+  // the ad. All candidates flow to the detail phase; the tier-3 cap
+  // (reason price:out-of-range) is applied at tiering in
+  // confirmCandidates, AFTER every rejection rule (principle 3a), so a
+  // rejected ad keeps its rejection reason and an out-of-range ad that
+  // survives is shown capped at tier 3, never hidden. Unknown prices
+  // (incl. P1 placeholders ≤ 10000) were never dropped and still pass.
+  // P3 (request widening) does not apply: the pipeline never sends
+  // price bounds to the provider (searchLists gets no price params, and
+  // divarClient sends none), so there is nothing to widen.
+  const priced = unique;
 
   // Big-hunt signal: the UI suggests narrowing; pipeline continues with top 100.
   if (priced.length > 100) emit({ type: "big-hunt", candidates: priced.length });
-
-  // HANDOFF-T trace (label only): price-filtered candidates are tier 4
-  // with reason price-out-of-range (temporary until step 3f, per handoff).
-  if (priced.length !== unique.length) {
-    const kept = new Set(priced);
-    for (const c of unique) {
-      if (!kept.has(c)) {
-        trace.push({
-          sourceAdId: c.sourceAdId,
-          title: c.title,
-          status: "tier4",
-          tier: 4,
-          reasons: ["price-out-of-range"],
-        });
-      }
-    }
-  }
 
   return { candidates: priced, stats, endCursor, trace };
 }
@@ -1470,6 +1470,10 @@ export async function confirmCandidates(
   const detailCap =
     Number.isFinite(envCap) && envCap > 0 ? envCap : MAX_DETAILS_PER_HUNT;
   const toCheck = candidates.slice(0, detailCap);
+  // HANDOFF-3 P2: explicit price bounds, parsed once per run (cap, not
+  // reject — applied at tiering below, after every rejection rule).
+  const priceMinBound = parsePriceBound(def.priceMin);
+  const priceMaxBound = parsePriceBound(def.priceMax);
   // HANDOFF-T trace (label only): candidates beyond the detail cap are
   // hidden, not tier 4.
   if (trace && candidates.length > detailCap) {
@@ -1688,7 +1692,20 @@ export async function confirmCandidates(
       if (ev.spellingGuess) tierReasons.push("spelling-guess");
       if (shouldCount > 0 && ev.shouldMatched < shouldCount)
         tierReasons.push("missing-should");
-      const { tier } = tierForVerdict(matchKind, tierReasons);
+      // HANDOFF-3 P2: explicit price bounds never reject — a known
+      // (post-P1) price outside the bounds caps at tier 3. The cap
+      // forces near: tierForVerdict gives tier 1 to ANY exact verdict
+      // regardless of reasons, so an exact verdict carrying this reason
+      // must become near first, or the cap would be a no-op.
+      const effPrice = effectivePrice(c.price);
+      const priceOutOfRange =
+        effPrice !== null &&
+        ((priceMinBound !== null && effPrice < priceMinBound) ||
+          (priceMaxBound !== null && effPrice > priceMaxBound));
+      if (priceOutOfRange) tierReasons.push("price:out-of-range");
+      const finalMatchKind: "exact" | "near" =
+        priceOutOfRange && matchKind === "exact" ? "near" : matchKind;
+      const { tier } = tierForVerdict(finalMatchKind, tierReasons);
       const ad: ScoredAd = {
         sourceAdId: c.sourceAdId,
         title: c.title,
@@ -1702,7 +1719,9 @@ export async function confirmCandidates(
         evidence: ev.evidence,
         // A failed/stale detail is never "exact" — the description was not
         // verified (spec §7). Honest ceiling: "near".
-        matchKind,
+        // HANDOFF-3 P2: finalMatchKind carries the price cap (an exact
+        // verdict capped by price is near, tier 3 — never exact tier 1).
+        matchKind: finalMatchKind,
         // HANDOFF-T: label only.
         tier,
         tierReasons,
@@ -1740,6 +1759,58 @@ export async function confirmCandidates(
       total: toCheck.length,
       confirmed: batchConfirmed,
     });
+  }
+
+  // ---- HANDOFF-3 P4: implausible-price cap (bait) --------------------------
+  // Reference = median of known (post-P1) prices of SHOWN candidates
+  // (results before this pass — candidates that did not become tier 4;
+  // hidden dupe/detail-cap ads never took a tier and are not counted).
+  // Needs at least 5 prices, else P4 is off. A shown price below 10%
+  // of the reference is treated as unknown AND capped at tier 3
+  // (reason price:implausible; owner decision: bait is tier 3, not 4).
+  // Runs before the Phase-5 sort so a forced near verdict re-sorts
+  // correctly. The reference is written into the trace (shown entries)
+  // for future kamin-contract storage.
+  const shownKnownPrices = results
+    .map((r) => effectivePrice(r.price))
+    .filter((p): p is number => p !== null);
+  let priceReference: number | null = null;
+  if (shownKnownPrices.length >= PRICE_REFERENCE_MIN_COUNT) {
+    const sorted = [...shownKnownPrices].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    priceReference =
+      sorted.length % 2 === 1
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  if (priceReference !== null) {
+    const shownTrace = new Map<string, HuntTraceEntry>();
+    if (trace) {
+      for (const t of trace) {
+        if (t.status === "shown") {
+          shownTrace.set(t.sourceAdId, t);
+          t.priceReference = priceReference;
+        }
+      }
+    }
+    for (const ad of results) {
+      const eff = effectivePrice(ad.price);
+      if (eff !== null && eff < PRICE_IMPLAUSIBLE_FRACTION * priceReference) {
+        const reasons = ad.tierReasons ?? (ad.tierReasons = []);
+        if (!reasons.includes("price:implausible")) {
+          reasons.push("price:implausible");
+        }
+        if (ad.matchKind === "exact") ad.matchKind = "near";
+        ad.tier = tierForVerdict(ad.matchKind, reasons).tier;
+        const entry = shownTrace.get(ad.sourceAdId);
+        if (entry) {
+          if (!entry.reasons.includes("price:implausible")) {
+            entry.reasons.push("price:implausible");
+          }
+          entry.tier = ad.tier;
+        }
+      }
+    }
   }
 
   // ---- Phase 5: ranking (R12: moved BEFORE the Mizan block) ---------------
@@ -1876,6 +1947,49 @@ export async function confirmCandidates(
   // Runs after ranking/judging, on already-computed results — capture is
   // observation-only and can never change what the user sees.
   stats.slugCapture = await flushSlugCaptures(slugPairs);
+
+  // ---- HANDOFF-3 P5: preferred-price order inside each tier ---------------
+  // Within each tier: in-preferred-range first, unknown price second,
+  // outside-preferred-range last; today's order preserved inside each
+  // group (stable). Tiers never change here — this only reorders.
+  // Implemented as a per-tier stable partition: each tier's items keep
+  // their current slots, so cross-tier interleaving (Phase 5 sorts by
+  // matchKind/score, not by tier) is untouched. No preferred bounds →
+  // no-op. Preference never changes a tier (HANDOFF-5 softness, kept).
+  const prefMin = parsePriceBound(def.preferredPriceMin ?? "");
+  const prefMax = parsePriceBound(def.preferredPriceMax ?? "");
+  if (prefMin !== null || prefMax !== null) {
+    const groupOf = (ad: ScoredAd): number => {
+      const eff = effectivePrice(ad.price);
+      if (eff === null) return 1;
+      if (
+        (prefMin === null || eff >= prefMin) &&
+        (prefMax === null || eff <= prefMax)
+      )
+        return 0;
+      return 2;
+    };
+    const slotsByTier = new Map<number, number[]>();
+    results.forEach((ad, i) => {
+      const slots = slotsByTier.get(ad.tier ?? 0) ?? [];
+      slots.push(i);
+      slotsByTier.set(ad.tier ?? 0, slots);
+    });
+    const reordered = [...results];
+    for (const slots of slotsByTier.values()) {
+      const items = slots.map((i) => results[i]);
+      const sortedItems = items
+        .map((ad, k) => ({ ad, k }))
+        .sort((x, y) => groupOf(x.ad) - groupOf(y.ad) || x.k - y.k)
+        .map((d) => d.ad);
+      slots.forEach((slot, k) => {
+        reordered[slot] = sortedItems[k];
+      });
+    }
+    results.length = 0;
+    results.push(...reordered);
+  }
+
   return results;
 }
 

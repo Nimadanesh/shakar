@@ -132,3 +132,24 @@ describe("HANDOFF-2 — one-letter guess caps at tier 3", () => {
     expect(tierReasonIsSoft("spelling-guess")).toBe(false);
   });
 });
+
+describe("tier — HANDOFF-3: price reasons cap at tier 3", () => {
+  it("near + price:out-of-range → tier 3, never tier 2", () => {
+    expect(tierForVerdict("near", ["price:out-of-range"])).toEqual({
+      tier: 3,
+      reasons: ["price:out-of-range"],
+    });
+    // Even alongside a soft reason, the price cap dominates.
+    expect(tierForVerdict("near", ["missing-should", "price:out-of-range"])).toEqual({
+      tier: 3,
+      reasons: ["missing-should", "price:out-of-range"],
+    });
+  });
+
+  it("near + price:implausible → tier 3, never tier 2", () => {
+    expect(tierForVerdict("near", ["price:implausible"])).toEqual({
+      tier: 3,
+      reasons: ["price:implausible"],
+    });
+  });
+});

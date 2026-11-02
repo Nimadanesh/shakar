@@ -443,7 +443,17 @@ describe("runPipeline", () => {
     const done = events.find((e) => e.type === "done");
     if (done?.type !== "done") throw new Error("no done event");
     const ids = done.results.map((r) => r.sourceAdId).sort();
-    expect(ids).toEqual(["a1", "a4"]);
+    // HANDOFF-3 (owner order 2026-11-03): price never rejects. Under
+    // P1 ALL four toy prices here (10, 150, 500) are ≤ 10000, hence
+    // placeholders = unknown: no bound can cap them, so all four show
+    // tier 1. This test now guards P1 + no-drop; the cap itself is
+    // covered by the HANDOFF-3 P2 tests at real (million) scale.
+    expect(ids).toEqual(["a1", "a2", "a3", "a4"]);
+    const byId = Object.fromEntries(done.results.map((r) => [r.sourceAdId, r]));
+    expect(byId["a2"].tier).toBe(1);
+    expect(byId["a2"].tierReasons).not.toContain("price:out-of-range");
+    expect(byId["a3"].tier).toBe(1);
+    expect(byId["a3"].tierReasons).not.toContain("price:out-of-range");
   });
 });
 
@@ -3003,7 +3013,9 @@ describe("HANDOFF-T — tier field and internal trace (label only)", () => {
     }
   });
 
-  it("traces hidden dupe, price-out-of-range tier 4, and detail-cap, without changing shown order", async () => {
+  // HANDOFF-3 (owner order 2026-11-03): price never rejects — the
+  // out-of-range ad is now shown capped at tier 3, not hidden tier 4.
+  it("traces hidden dupe, price-out-of-range tier 3, and detail-cap, without changing shown order", async () => {
     mockSearchLists.mockResolvedValueOnce({
       listings: [
         summary({ sourceAdId: "good", title: "گوشی سامسونگ نو", price: 100 }),
@@ -3024,15 +3036,19 @@ describe("HANDOFF-T — tier field and internal trace (label only)", () => {
     const def = resolveHuntDefinition({ query: "گوشی تا ۱۰ میلیون" });
     if (!def) throw new Error("could not resolve query");
     const { results, trace } = await runPipeline(def, () => {});
-    expect(results.map((r) => r.sourceAdId)).toEqual(["good"]);
+    // HANDOFF-3: pricey is no longer dropped — shown capped at tier 3
+    // (good stays exact tier 1 first, pricey near tier 3 second).
+    expect(results.map((r) => r.sourceAdId)).toEqual(["good", "pricey"]);
     expect(results[0]?.tier).toBe(1);
+    expect(results[1]?.tier).toBe(3);
+    expect(results[1]?.tierReasons).toContain("price:out-of-range");
     const traceById = Object.fromEntries(trace.map((t) => [t.sourceAdId, t]));
     expect(traceById["good"]?.status).toBe("shown");
     expect(traceById["dupe"]?.status).toBe("hidden:dupe");
     expect(traceById["dupe"]?.tier).toBeUndefined();
-    expect(traceById["pricey"]?.status).toBe("tier4");
-    expect(traceById["pricey"]?.tier).toBe(4);
-    expect(traceById["pricey"]?.reasons).toEqual(["price-out-of-range"]);
+    expect(traceById["pricey"]?.status).toBe("shown");
+    expect(traceById["pricey"]?.tier).toBe(3);
+    expect(traceById["pricey"]?.reasons).toContain("price:out-of-range");
   });
 
   it("traces detail-cap candidates as hidden, not tier 4", async () => {
@@ -3725,5 +3741,179 @@ describe("HANDOFF-2ج — spaceless query-kind matching (kindLexicon §1)", () =
     // vehicle hunt, so the appliance ad must still be rejected.
     const { done } = await runSentence("ماشین", "ماشین ظرفشویی ۱۲ نفره");
     expect(done.results).toHaveLength(0);
+  });
+});
+
+describe("HANDOFF-3 — price never rejects (soft caps + preference order)", () => {
+  type Row = { sourceAdId: string; title: string; price?: number | null };
+
+  function listings(rows: Row[]) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  // Full path: sentence → resolveHuntDefinition → runPipeline with a
+  // mock provider. Price logic reads the LIST price (detail price never
+  // overwrites it), so rows carry the price in listings.
+  async function runAds(
+    query: string,
+    rows: Row[],
+    extra: Partial<HuntDefinition> = {}
+  ) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+      ...extra,
+    });
+    if (!def) throw new Error("no definition for " + query);
+    listings(rows);
+    detail(Object.fromEntries(rows.map((r) => [r.sourceAdId, r.title])));
+    return runPipeline(def, () => {});
+  }
+
+  const M = 1000000;
+
+  it("P2: cap 50M + ad 60M → shown, tier ≤ 3, reason price:out-of-range", async () => {
+    const { results } = await runAds("گوشی تا ۵۰ میلیون", [
+      { sourceAdId: "a1", title: "گوشی سامسونگ نو", price: 60 * M },
+    ]);
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBeLessThanOrEqual(3);
+    expect(results[0].tierReasons).toContain("price:out-of-range");
+  });
+
+  it("P2: floor 20M + ad 10M → shown, tier ≤ 3", async () => {
+    // "از ۲۰ میلیون" does not parse as a floor (probe-verified), so the
+    // floor bound is set directly; the cap rule is what is tested here.
+    const { results } = await runAds(
+      "گوشی",
+      [{ sourceAdId: "a1", title: "گوشی سامسونگ نو", price: 10 * M }],
+      { priceMin: "20000000" }
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBeLessThanOrEqual(3);
+    expect(results[0].tierReasons).toContain("price:out-of-range");
+  });
+
+  it("P2: cap 50M + ad 40M → no price cap", async () => {
+    const { results } = await runAds("گوشی تا ۵۰ میلیون", [
+      { sourceAdId: "a1", title: "گوشی سامسونگ نو", price: 40 * M },
+    ]);
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+    expect(results[0].tierReasons).not.toContain("price:out-of-range");
+  });
+
+  it("P1: ad 1000 تومان with cap 50M → unknown price, no tier-3 price cap", async () => {
+    const { results } = await runAds("گوشی تا ۵۰ میلیون", [
+      { sourceAdId: "a1", title: "گوشی سامسونگ نو", price: 1000 },
+    ]);
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+    expect(results[0].tierReasons).not.toContain("price:out-of-range");
+  });
+
+  it("P1: ad 0 تومان → unknown price", async () => {
+    const { results } = await runAds("گوشی تا ۵۰ میلیون", [
+      { sourceAdId: "a1", title: "گوشی سامسونگ نو", price: 0 },
+    ]);
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+    expect(results[0].tierReasons).not.toContain("price:out-of-range");
+  });
+
+  it("P1 (proof): floor 20M + ad 1000 تومان → placeholder is unknown, shown, no cap", async () => {
+    // Unlike the cap tests above (where the placeholder is in range
+    // anyway), this one FAILS without P1: the base filter drops a
+    // 1000-تومان price below a 20M floor. P1 makes it unknown → shown.
+    const { results } = await runAds(
+      "گوشی",
+      [{ sourceAdId: "a1", title: "گوشی سامسونگ نو", price: 1000 }],
+      { priceMin: "20000000" }
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+    expect(results[0].tierReasons).not.toContain("price:out-of-range");
+  });
+
+  it("P4: 6 ads at 190M–210M + one 15M ad → the 15M ad is price:implausible, tier ≤ 3", async () => {
+    const rows: Row[] = [
+      { sourceAdId: "p190", title: "گوشی سامسونگ", price: 190 * M },
+      { sourceAdId: "p195", title: "گوشی شیائومی", price: 195 * M },
+      { sourceAdId: "p200a", title: "گوشی نوکیا", price: 200 * M },
+      { sourceAdId: "p200b", title: "گوشی هواوی", price: 200 * M },
+      { sourceAdId: "p205", title: "گوشی الجی", price: 205 * M },
+      { sourceAdId: "p210", title: "گوشی سونی", price: 210 * M },
+      { sourceAdId: "cheap", title: "گوشی اپل", price: 15 * M },
+    ];
+    const { results, trace } = await runAds("گوشی", rows);
+    expect(results).toHaveLength(7);
+    const byId = Object.fromEntries(results.map((r) => [r.sourceAdId, r]));
+    // Median of [15,190,195,200,200,205,210]M is 200M; 10% is 20M.
+    expect(byId["cheap"].tier).toBeLessThanOrEqual(3);
+    expect(byId["cheap"].tierReasons).toContain("price:implausible");
+    for (const id of ["p190", "p195", "p200a", "p200b", "p205", "p210"]) {
+      expect(byId[id].tier).toBe(1);
+      expect(byId[id].tierReasons).not.toContain("price:implausible");
+    }
+    const refs = trace
+      .map((t) => t.priceReference)
+      .filter((v) => v !== undefined);
+    expect(refs).toContain(200 * M);
+  });
+
+  it("P4: 4 known prices + one very cheap ad → P4 off (fewer than 5 prices)", async () => {
+    const rows: Row[] = [
+      { sourceAdId: "p200a", title: "گوشی سامسونگ", price: 200 * M },
+      { sourceAdId: "p195", title: "گوشی شیائومی", price: 195 * M },
+      { sourceAdId: "p205", title: "گوشی نوکیا", price: 205 * M },
+      { sourceAdId: "cheap", title: "گوشی اپل", price: 15 * M },
+    ];
+    const { results, trace } = await runAds("گوشی", rows);
+    expect(results).toHaveLength(4);
+    const byId = Object.fromEntries(results.map((r) => [r.sourceAdId, r]));
+    expect(byId["cheap"].tier).toBe(1);
+    expect(byId["cheap"].tierReasons).not.toContain("price:implausible");
+    expect(trace.every((t) => t.priceReference === undefined)).toBe(true);
+  });
+
+  it("P5: preferred ≤ 30M, same-tier ads 20M / unknown / 40M → order 20M, unknown, 40M; tiers unchanged", async () => {
+    const rows: Row[] = [
+      { sourceAdId: "hi", title: "گوشی سامسونگ", price: 40 * M },
+      { sourceAdId: "unk", title: "گوشی شیائومی", price: null },
+      { sourceAdId: "lo", title: "گوشی نوکیا", price: 20 * M },
+    ];
+    const { results } = await runAds("گوشی ترجیحاً زیر ۳۰ میلیون", rows);
+    expect(results.map((r) => r.sourceAdId)).toEqual(["lo", "unk", "hi"]);
+    expect(results.every((r) => r.tier === 1)).toBe(true);
+  });
+
+  it("3a: tier-4 (exclude) ad at 60M with cap 50M → still tier 4 by exclude, not by price", async () => {
+    // Title-phase excludes never become candidates (no trace entry —
+    // golden convention: tier 4 / title-exclude); the price cap must
+    // not rescue them and must not replace the reason.
+    const { results, trace, stats } = await runAds(
+      "گوشی تا ۵۰ میلیون",
+      [{ sourceAdId: "bad", title: "گوشی خراب", price: 60 * M }],
+      { exclude: ["خراب"] }
+    );
+    expect(results).toHaveLength(0);
+    expect(trace.find((t) => t.sourceAdId === "bad")).toBeUndefined();
+    expect(stats.titleRejected).toBe(1);
   });
 });

@@ -60,6 +60,15 @@ export const TIER3_REASONS = new Set([
   "service:build",
   "service:also-sells",
   "kind:multi-item",
+  // HANDOFF-3 (2026-11-03): price never rejects. A known price outside
+  // the explicit bounds caps at tier 3 (price:out-of-range), and a
+  // bait/implausible price caps at tier 3 (price:implausible). Note:
+  // price:out-of-range was never a tier.ts entry — it was a Phase-3b
+  // trace-only reason for dropped candidates; the "move" from tier 4
+  // to tier 3 is the removal of the Phase-3b drop plus this entry, so
+  // a near verdict carrying it can never be tier 2.
+  "price:out-of-range",
+  "price:implausible",
 ]);
 
 /** A reason is soft only if it is exactly a tier-2 reason. */
