@@ -482,6 +482,35 @@ export function excludeHasUnnegatedOccurrence(
         }
         pos++;
       }
+      // HANDOFF-2 layer A2: a glued occurrence counts too («سیمدار» for
+      // «سیم دار») — otherwise the fallback below would fire even on a
+      // NEGATED glued occurrence («سیمدار نیست»), breaking 4b. The
+      // spaceless window is 1–3 stream tokens, no barrier inside, at
+      // least 4 letters; digits survive as tokens (so they break
+      // equality) and ، is a barrier (so it breaks the window) — the
+      // same digit/mark guards as the general A2 function.
+      if (!ok) {
+        const variantSpaceless = variantTokens.join("");
+        if (variantSpaceless.length >= 4) {
+          for (let len = 1; len <= 3; len++) {
+            const window: string[] = [];
+            let blocked = false;
+            for (let k = 0; k < len; k++) {
+              const el = stream[i + k];
+              if (!el || "barrier" in el) {
+                blocked = true;
+                break;
+              }
+              window.push(el.token);
+            }
+            if (!blocked && window.join("") === variantSpaceless) {
+              ok = true;
+              pos = i + len;
+              break;
+            }
+          }
+        }
+      }
       if (!ok) continue;
       foundAny = true;
       const end = pos - 1;
@@ -1494,6 +1523,54 @@ function plusBetweenHeadAndSubject(
   }
   if (headPlus < 0 || subjPlus < 0) return false;
   return plusTokens.slice(headPlus + 1, subjPlus).includes("PLUS");
+}
+
+/**
+ * HANDOFF-2 (2026-11-02): the title HEAD after the K head skip and the
+ * G0 extra fillers — the same head generalGate finds, exposed for the
+ * pipeline's layer-B check (B2: the title word must be the head).
+ * ADDITIVE ONLY: this mirrors the two skip loops without touching
+ * generalGate or any gate logic; it reads the same sets.
+ */
+export function titleHeadAfterG0Fillers(title: string): string | undefined {
+  const titleTokens = normalizeForMatch(title).split(" ").filter(Boolean);
+  let idx = 0;
+  // K head skip (mirrors assessModelSpecificity's titleHeadSkip).
+  const kSkip = new Set([
+    ...SUBJECT_SKIP_TOKENS,
+    "خرید",
+    "انواع",
+    "فوری",
+    "اقساطی",
+    "استوک",
+    "فابریک",
+    "نو",
+    "کامل",
+    "صفر",
+    "خریدفروش",
+  ]);
+  while (idx < titleTokens.length && kSkip.has(titleTokens[idx])) idx += 1;
+  // G0 extra fillers (mirrors generalGate), including «X عدد» pairs.
+  while (idx < titleTokens.length) {
+    const t = titleTokens[idx];
+    if (G_HEAD_EXTRA_FILLERS.has(t)) {
+      idx += 1;
+      continue;
+    }
+    if (
+      (t === "یک" || t === "دو" || t === "سه") &&
+      titleTokens[idx + 1] === "عدد"
+    ) {
+      idx += 2;
+      continue;
+    }
+    if (t === "دوعدد") {
+      idx += 1;
+      continue;
+    }
+    break;
+  }
+  return titleTokens[idx];
 }
 
 function generalGate(

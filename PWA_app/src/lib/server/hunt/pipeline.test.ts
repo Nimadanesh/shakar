@@ -3194,3 +3194,211 @@ describe("HANDOFF-K — general kind gate (pipeline)", () => {
     expect(result?.tierReasons).toContain("transaction:mixed");
   });
 });
+
+describe("HANDOFF-2 — orthography layer A (full verdict) and layer B (tier-3 cap)", () => {
+  function defOf(over: Partial<HuntDefinition>): HuntDefinition {
+    return {
+      query: "",
+      include: [],
+      exclude: [],
+      should: [],
+      city: "all",
+      category: "all",
+      priceMin: "",
+      priceMax: "",
+      transaction: "",
+      condition: "",
+      ...over,
+    };
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  it("layer A full verdict: glued query matches the spaced title at tier 1", async () => {
+    listings([{ sourceAdId: "a1", title: "جارو برقی نو" }]);
+    detail({ a1: "جارو برقی سالم" });
+    const done = await doneOf(
+      defOf({ query: "جاروبرقی", include: ["جاروبرقی"] })
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results[0].tier).toBe(1);
+  });
+
+  it("layer A full verdict: spaced query matches the glued title at tier 1", async () => {
+    listings([{ sourceAdId: "a2", title: "چایساز برقی" }]);
+    detail({ a2: "چایساز سالم" });
+    const done = await doneOf(
+      defOf({ query: "چای ساز", include: ["چای ساز"] })
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results[0].tier).toBe(1);
+  });
+
+  it("layer A exclude: glued سیمدار fires the سیم دار ban", async () => {
+    listings([{ sourceAdId: "e1", title: "هدفون سیمدار مشکی" }]);
+    detail({ e1: "هدفون سیمدار، سالم" });
+    const done = await doneOf(
+      defOf({ query: "هدفون", include: ["هدفون"], exclude: ["سیم دار"] })
+    );
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("layer A exclude: glued دستدوم fires the دست دوم ban", async () => {
+    listings([{ sourceAdId: "e2", title: "گوشی دستدوم" }]);
+    detail({ e2: "گوشی دستدوم سالم" });
+    const done = await doneOf(
+      defOf({ query: "گوشی", include: ["گوشی"], exclude: ["دست دوم"] })
+    );
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("layer A + 4b: negated glued سیمدار نیست does NOT fire the ban", async () => {
+    listings([{ sourceAdId: "e3", title: "هدفون، سیمدار نیست" }]);
+    detail({ e3: "هدفون سالم" });
+    const done = await doneOf(
+      defOf({ query: "هدفون", include: ["هدفون"], exclude: ["سیم دار"] })
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].sourceAdId).toBe("e3");
+  });
+
+  it("layer B never on exclude: دیجیتل does NOT fire the دیجیتال ban", async () => {
+    listings([{ sourceAdId: "e4", title: "ترازو دیجیتل" }]);
+    detail({ e4: "ترازو دقیق" });
+    const done = await doneOf(
+      defOf({ query: "ترازو", include: ["ترازو"], exclude: ["دیجیتال"] })
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].sourceAdId).toBe("e4");
+  });
+
+  it("layer B: گلدون matches گلدان at tier 3 with spelling-guess", async () => {
+    listings([{ sourceAdId: "b1", title: "گلدون سرامیکی" }]);
+    detail({ b1: "سرامیکی دست‌ساز" });
+    const done = await doneOf(defOf({ query: "گلدان", include: ["گلدان"] }));
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].matchKind).toBe("near");
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("spelling-guess");
+  });
+
+  it("layer B: مبلمون matches مبلمان at tier 3", async () => {
+    listings([{ sourceAdId: "b2", title: "مبلمون راحتی" }]);
+    detail({ b2: "راحتی نو" });
+    const done = await doneOf(defOf({ query: "مبلمان", include: ["مبلمان"] }));
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("spelling-guess");
+  });
+
+  it("layer B: اسبیکر matches اسپیکر at tier 3", async () => {
+    listings([{ sourceAdId: "b3", title: "اسبیکر بلوتوثی" }]);
+    detail({ b3: "بلوتوثی سالم" });
+    const done = await doneOf(defOf({ query: "اسپیکر", include: ["اسپیکر"] }));
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("spelling-guess");
+  });
+
+  it("layer B: تلوزیون matches تلویزیون at tier 3", async () => {
+    listings([{ sourceAdId: "b4", title: "تلوزیون ۴۳ اینچ" }]);
+    detail({ b4: "تلوزیون سالم" });
+    const done = await doneOf(
+      defOf({ query: "تلویزیون", include: ["تلویزیون"] })
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("spelling-guess");
+  });
+
+  it("layer B: کامپیتر matches کامپیوتر at tier 3", async () => {
+    listings([{ sourceAdId: "b5", title: "کامپیتر خانگی" }]);
+    detail({ b5: "خانگی سالم" });
+    const done = await doneOf(
+      defOf({ query: "کامپیوتر", include: ["کامپیوتر"] })
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("spelling-guess");
+  });
+
+  it("layer B head rule: گلدون mid-title is NOT the head, so no guess", async () => {
+    listings([{ sourceAdId: "h1", title: "میز و گلدون" }]);
+    detail({ h1: "میز چوبی" });
+    const done = await doneOf(defOf({ query: "گلدان", include: ["گلدان"] }));
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("layer B subject rule: the guess never applies to a non-subject word", async () => {
+    listings([{ sourceAdId: "s1", title: "لپتاپ اسبیکر بلوتوثی" }]);
+    detail({ s1: "بلوتوثی سالم" });
+    const done = await doneOf(
+      defOf({ query: "لپ‌تاپ اسپیکر دار", include: ["لپ‌تاپ", "اسپیکر"] })
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tierReasons).not.toContain("spelling-guess");
+  });
+
+  it("layer B brand rule: a brand subject never guesses, even as subject", async () => {
+    listings([{ sourceAdId: "br1", title: "سامسونت چرخدار" }]);
+    detail({ br1: "چرخدار سالم" });
+    const done = await doneOf(
+      defOf({ query: "سامسونگ", include: ["سامسونگ"] })
+    );
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("layer B accepted collision: برنده matches پرنده at tier 3, never 1 or 2", async () => {
+    listings([{ sourceAdId: "c1", title: "برنده جایزه" }]);
+    detail({ c1: "جایزه نقدی" });
+    const done = await doneOf(defOf({ query: "پرنده", include: ["پرنده"] }));
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("spelling-guess");
+  });
+
+  it("layer B accepted collision: بیمانه matches پیمانه at tier 3", async () => {
+    listings([{ sourceAdId: "c2", title: "بیمانه پلاستیکی" }]);
+    detail({ c2: "پلاستیکی سالم" });
+    const done = await doneOf(defOf({ query: "پیمانه", include: ["پیمانه"] }));
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("spelling-guess");
+  });
+
+  it("layer B + description phase: a B-matched ad is not dropped for the missing exact form in the description", async () => {
+    listings([{ sourceAdId: "d1", title: "گلدون سرامیکی" }]);
+    detail({ d1: "سرامیکی دست‌ساز، مناسب آپارتمان، بدون هیچ شکل دقیق واژه موضوع" });
+    const done = await doneOf(defOf({ query: "گلدان", include: ["گلدان"] }));
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("spelling-guess");
+  });
+});

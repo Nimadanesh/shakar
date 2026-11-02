@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   normalizeForMatch,
+  subjectMatchesByOneLetter,
   textMatches,
   textMatchesInclude,
 } from "@/lib/persianNormalize";
@@ -24,6 +25,7 @@ import {
   floorMatFlatbedConflict,
   assessModelSpecificity,
   isGeneralKindRejectReason,
+  titleHeadAfterG0Fillers,
   isWholeVehicleQuery,
   assessQueryIntent,
   assessRepairPolarity,
@@ -535,6 +537,13 @@ export interface DescriptionEvaluation {
    * branches; carried onto ScoredAd so battery audits can find firings.
    */
   demotedBy?: "bait" | "demand-goods" | "kind" | "cap";
+  /**
+   * HANDOFF-2 (2026-11-02): the subject (first include term) matched
+   * only via the one-letter guess on the title head. The ad is kept
+   * but capped: verdict near, tier reason spelling-guess (tier 3).
+   * Never set by gate decisions — gates never call the B predicate.
+   */
+  spellingGuess?: boolean;
 }
 
 function rejectedEvaluation(): DescriptionEvaluation {
@@ -865,7 +874,15 @@ function evaluateDescription(
   const missingInfo: string[] = [];
   let mustTitle = 0;
   let mustDesc = 0;
-  for (const term of def.include) {
+  // HANDOFF-2 layer B: the title head, computed once for the subject
+  // check below (B2: the title word must be the head, after G0 fillers).
+  const titleHeadForGuess = titleHeadAfterG0Fillers(title);
+  // Set when the SUBJECT (first include term) matches only via the
+  // one-letter guess — the ad is kept but capped at tier 3 (verdict
+  // near + spelling-guess reason in the tier derivation below).
+  let spellingGuess = false;
+  for (let termIdx = 0; termIdx < def.include.length; termIdx++) {
+    const term = def.include[termIdx];
     // P0: a service-demand MUST term («تعمیر») is satisfied when the demand
     // appears in ANY morphological form («تعمیرکار», «تعمیرات»…). Token-level
     // matching alone is blind to the agentive form — the S3 root cause.
@@ -880,6 +897,17 @@ function evaluateDescription(
     } else if (demandSatisfied || textMatchesInclude(description, term)) {
       mustDesc += 1;
       evidence.push(term);
+    } else if (
+      // HANDOFF-2 layer B (B5): ONLY the subject word (first include
+      // term), ONLY the title head, ONLY after layer A failed (this
+      // else-branch) — never on exclude, never in gate decisions.
+      termIdx === 0 &&
+      titleHeadForGuess !== undefined &&
+      subjectMatchesByOneLetter(term, titleHeadForGuess)
+    ) {
+      mustTitle += 1;
+      evidence.push(term);
+      spellingGuess = true;
     } else {
       missingInfo.push(term); // UNKNOWN — penalized in scoring, never dropped
     }
@@ -983,6 +1011,7 @@ function evaluateDescription(
       return {
         demotedBy: bait ? "bait" : "demand-goods",
         verdict: "near",
+        spellingGuess,
         evidence,
         missingInfo,
         mustTitle,
@@ -1003,6 +1032,7 @@ function evaluateDescription(
       return {
         demotedBy: "kind",
         verdict: "near",
+        spellingGuess,
         evidence,
         missingInfo,
         mustTitle,
@@ -1020,6 +1050,7 @@ function evaluateDescription(
       return {
         demotedBy: "cap",
         verdict: "near",
+        spellingGuess,
         evidence,
         missingInfo,
         mustTitle,
@@ -1070,7 +1101,10 @@ function evaluateDescription(
     }
   }
   return {
-    verdict: missingInfo.length === 0 ? "exact" : "near",
+    // HANDOFF-2: a B-matched subject is never exact — the guess caps
+    // the ad at near, and the tier derivation adds spelling-guess.
+    verdict: spellingGuess || missingInfo.length > 0 ? "near" : "exact",
+    spellingGuess,
     evidence,
     missingInfo,
     mustTitle,
@@ -1493,7 +1527,9 @@ export async function confirmCandidates(
       // (plus any specific hard cause found) stays, so a role-clash cap
       // is tier 3 and a sibling-variant cap demote can be tier 2.
       const matchKind: "exact" | "near" =
-        !detailUnknown && ev.verdict === "exact" ? "exact" : "near";
+        !detailUnknown && ev.verdict === "exact" && !ev.spellingGuess
+          ? "exact"
+          : "near";
       const tierReasons: string[] = [];
       if (detailUnknown) tierReasons.push("detail-unknown");
       if (mustCount === 0) tierReasons.push("no-must-terms");
@@ -1573,6 +1609,9 @@ export async function confirmCandidates(
       } else if (tierIdentityReason) {
         tierReasons.push(tierIdentityReason);
       }
+      // HANDOFF-2: a B-matched subject always carries its cap reason,
+      // whichever demote branch (if any) already fired.
+      if (ev.spellingGuess) tierReasons.push("spelling-guess");
       if (shouldCount > 0 && ev.shouldMatched < shouldCount)
         tierReasons.push("missing-should");
       const { tier } = tierForVerdict(matchKind, tierReasons);

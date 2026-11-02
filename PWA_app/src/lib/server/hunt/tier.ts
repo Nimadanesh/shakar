@@ -50,6 +50,10 @@ export const TIER3_REASONS = new Set([
   // HANDOFF-1 (2026-11-02): a buy-and-sell catalogue title caps at tier
   // 3, never tier 2 — it is a shop, not a clean direct offer.
   "store:buy-sell",
+  // HANDOFF-2 (2026-11-02): a subject matched only by the one-letter
+  // guess caps at tier 3, never tier 1 or 2. Note for the tier-2 step:
+  // this reason must STAY tier 3.
+  "spelling-guess",
 ]);
 
 /** A reason is soft only if it is exactly a tier-2 reason. */

@@ -124,3 +124,11 @@ describe("HANDOFF-1 — buy-and-sell catalogue caps at tier 3", () => {
     expect(tierReasonIsSoft("store:buy-sell")).toBe(false);
   });
 });
+
+describe("HANDOFF-2 — one-letter guess caps at tier 3", () => {
+  it("tier 3: near with spelling-guess, alone or with cap", () => {
+    expect(tierForVerdict("near", ["spelling-guess"]).tier).toBe(3);
+    expect(tierForVerdict("near", ["cap", "spelling-guess"]).tier).toBe(3);
+    expect(tierReasonIsSoft("spelling-guess")).toBe(false);
+  });
+});

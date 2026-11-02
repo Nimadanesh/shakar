@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   expandSynonyms,
+  isOneLetterDifferent,
   normalizeForMatch,
+  spacelessMatches,
   stemToken,
+  subjectMatchesByOneLetter,
   textMatches,
   textMatchesInclude,
   textMatchesRelated,
@@ -234,5 +237,68 @@ describe("HANDOFF-N — closed-list matching equivalence", () => {
     expect(textMatches(title, "سوییچ")).toBe(false);
     expect(textMatchesInclude(title, "نینتندو")).toBe(false);
     expect(textMatchesInclude(title, "سوییچ")).toBe(false);
+  });
+});
+
+describe("HANDOFF-2 layer A1 — remaining Arabic-script unification", () => {
+  it("unifies alef maksura, hamzated alefs, wasla, and heh-with-yeh", () => {
+    expect(unifyChars("موسى")).toBe("موسی");
+    expect(unifyChars("أحمد")).toBe("احمد");
+    expect(unifyChars("إلى")).toBe("الی");
+    expect(unifyChars("ٱلسلام")).toBe("السلام");
+    expect(unifyChars("ۀ")).toBe("ه");
+  });
+  it("Arabic letters and tatweel match via textMatches", () => {
+    expect(textMatches("كتري برقي", "کتری")).toBe(true);
+    expect(textMatches("تـلویزیون نو", "تلویزیون")).toBe(true);
+  });
+});
+
+describe("HANDOFF-2 layer A2 — spaceless matching", () => {
+  it("matches spaced, ZWNJ, and glued forms", () => {
+    expect(spacelessMatches("جارو برقی", "جاروبرقی")).toBe(true);
+    expect(spacelessMatches("جارو‌برقی", "جاروبرقی")).toBe(true);
+    expect(spacelessMatches("جاروبرقی", "جارو برقی")).toBe(true);
+    expect(spacelessMatches("ماشین لباسشویی", "ماشین لباس شویی")).toBe(true);
+    expect(spacelessMatches("ماشین لباس شویی", "ماشین لباسشویی")).toBe(true);
+    expect(spacelessMatches("چایساز", "چای ساز")).toBe(true);
+    expect(spacelessMatches("چای‌ساز", "چای ساز")).toBe(true);
+    expect(spacelessMatches("آبمیوه‌گیری", "آب میوه گیری")).toBe(true);
+  });
+  it("requires full equality, not a prefix (function-level only)", () => {
+    expect(spacelessMatches("جاروبرقی", "جارو")).toBe(false);
+  });
+  it("blocks a digit or mark between the glued pieces", () => {
+    expect(spacelessMatches("جارو ۲ برقی", "جاروبرقی")).toBe(false);
+    expect(spacelessMatches("جارو، برقی", "جاروبرقی")).toBe(false);
+  });
+  it("flows into textMatches (include and exclude paths)", () => {
+    expect(textMatches("جارو برقی نو", "جاروبرقی")).toBe(true);
+    expect(textMatches("هدفون سیمدار مشکی", "سیم دار")).toBe(true);
+  });
+});
+
+describe("HANDOFF-2 layer B — one-letter predicate", () => {
+  it("matches colloquial, near-letter, and typo forms", () => {
+    expect(subjectMatchesByOneLetter("گلدان", "گلدون")).toBe(true);
+    expect(subjectMatchesByOneLetter("مبلمان", "مبلمون")).toBe(true);
+    expect(subjectMatchesByOneLetter("اسپیکر", "اسبیکر")).toBe(true);
+    expect(subjectMatchesByOneLetter("تلویزیون", "تلوزیون")).toBe(true);
+    expect(subjectMatchesByOneLetter("کامپیوتر", "کامپیتر")).toBe(true);
+  });
+  it("accepts the registered collisions (capped at tier 3 by the pipeline)", () => {
+    expect(subjectMatchesByOneLetter("پرنده", "برنده")).toBe(true);
+    expect(subjectMatchesByOneLetter("پیمانه", "بیمانه")).toBe(true);
+  });
+  it("rejects short words, Latin, brands, and identical words", () => {
+    expect(subjectMatchesByOneLetter("خانه", "خانم")).toBe(false);
+    expect(subjectMatchesByOneLetter("laptop", "laptap")).toBe(false);
+    expect(subjectMatchesByOneLetter("سامسونگ", "سامسونت")).toBe(false);
+    expect(subjectMatchesByOneLetter("سامسونت", "سامسونگ")).toBe(false);
+    expect(subjectMatchesByOneLetter("گلدان", "گلدان")).toBe(false);
+  });
+  it("rejects two-letter differences", () => {
+    expect(isOneLetterDifferent("گلدان", "گلدوم")).toBe(false);
+    expect(isOneLetterDifferent("گلدان", "گلدان")).toBe(false);
   });
 });

@@ -24,6 +24,15 @@ export function unifyChars(text: string): string {
       .replace(/ي/g, "ی")
       .replace(/ك/g, "ک")
       .replace(/ة/g, "ه")
+      // HANDOFF-2 (2026-11-02) layer A1: the remaining Arabic-script
+      // variants — Alef Maksura → Yeh, Alef-with-Hamza / Alef Wasla →
+      // plain Alef, Heh-with-Yeh-above → Heh. Only ADDS unifications;
+      // no previously-matching form stops matching.
+      .replace(/ى/g, "ی")
+      .replace(/أ/g, "ا")
+      .replace(/إ/g, "ا")
+      .replace(/ٱ/g, "ا")
+      .replace(/ۀ/g, "ه")
       // Alef variants → plain Alef («آپارتمان» vs «اپارتمان» is THE most
       // common Persian spelling split in ads — missing this hid the
       // majority of apartment listings; flaw #9 in docs/output-quality.md)
@@ -449,6 +458,10 @@ function containsNormalizedTerm(
   term: string,
   includeSynonyms = false
 ): boolean {
+  // HANDOFF-2 layer A2: spaceless matching is an ADDITIONAL path (OR) —
+  // it never removes an existing match. It runs for both include and
+  // exclude (both callers reach this function), with the full verdict.
+  if (spacelessMatches(adText, term)) return true;
   const adTokens = canonicalizeTokens(adTextTokens(adText), includeSynonyms);
   if (adTokens.length === 0) return false;
   const raw = normalizeForMatch(term);
@@ -505,4 +518,188 @@ export function textMatchesInclude(adText: string, term: string, category?: stri
   return expandSynonyms(term, category).some((syn) =>
     containsNormalizedTerm(adText, syn, true)
   );
+}
+
+/**
+ * HANDOFF-2 (2026-11-02) layer A2 — spaceless matching.
+ *
+ * A term/phrase matches if its spaceless form (layer-A normalized, all
+ * spaces removed) equals the spaceless form of 1 to 3 CONSECUTIVE ad
+ * words. Full equality only — «جارو» never matches «جاروبرقی» — and the
+ * spaceless form must be at least 4 letters. A digit or mark between
+ * the glued pieces blocks the match: digits survive as tokens (so they
+ * break equality), and marks are replaced by a sentinel word before
+ * normalization, so a mark splits the token run («جارو، برقی» never
+ * matches «جاروبرقی», while «جارو برقی» and «جارو‌برقی» do).
+ *
+ * This only ADDS matches (amendment 2): it is OR-ed into
+ * containsNormalizedTerm, never replacing an existing match path.
+ */
+// Must mirror normalizeForMatch's punctuation set exactly: every char
+// it turns into a space becomes a sentinel word here instead.
+const MARK_SENTINEL = "ZZMARKZZ";
+const MARK_RE =
+  /[.,،؛:!؟?()«»""''\[\]{}<>|/\\\-–—_+=*~@#$%^&`]/g;
+
+export function spacelessMatches(adText: string, term: string): boolean {
+  // The ≥4 guard reads the unstemmed form; the comparison itself stems
+  // BOTH sides. Callers pass stemmed synonym keys («جاروبرقی» arrives
+  // as «جاروبرق»), so an unstemmed comparison would never meet a
+  // stemmed ad token («برقی» → «برق») — the stemming must be symmetric.
+  const termSpaceless = normalizeForMatch(term).replace(/ /g, "");
+  if (termSpaceless.length < 4) return false;
+  const termStemmed = normalizeForMatch(term)
+    .split(" ")
+    .filter(Boolean)
+    .map(stemToken)
+    .join("");
+  const tokens = normalizeForMatch(
+    adText.replace(MARK_RE, ` ${MARK_SENTINEL} `)
+  )
+    .split(" ")
+    .filter(Boolean)
+    .map((t) => (t === MARK_SENTINEL ? t : stemToken(t)));
+  // Scan each sentinel-free run for a 1–3-word window whose spaceless
+  // concatenation equals the term's spaceless form.
+  let run: string[] = [];
+  const runMatches = (runTokens: string[]): boolean => {
+    for (let i = 0; i < runTokens.length; i++) {
+      let concat = "";
+      for (let len = 1; len <= 3 && i + len <= runTokens.length; len++) {
+        concat += runTokens[i + len - 1];
+        if (concat === termStemmed) return true;
+      }
+    }
+    return false;
+  };
+  for (const t of tokens) {
+    if (t === MARK_SENTINEL) {
+      if (runMatches(run)) return true;
+      run = [];
+    } else {
+      run.push(t);
+    }
+  }
+  return runMatches(run);
+}
+
+/**
+ * HANDOFF-2 (2026-11-02) layer B — brand set (B4).
+ *
+ * Every brand/model name in the engine's own lists, plus exactly the
+ * fourteen names the handoff lists. Nothing else is added. Stored in
+ * spaceless layer-A form (so «ری‌بن» is «ریبن» and «ال‌جی» is «الجی»),
+ * which is the form the one-letter predicate compares. Latin forms
+ * (honda, nintendo, switch, iphone, rayban, promax, ps5) are listed
+ * for completeness but never reach this check — the Latin-letter ban
+ * in subjectMatchesByOneLetter fires first.
+ *
+ * Sources: HEAD_KIND makes/models (kindLexicon), the N spelling maps'
+ * brand/model entries (persianNormalize), K2 console topics
+ * (semantics), and the handoff's fourteen.
+ */
+export const BRAND_SET: ReadonlySet<string> = new Set(
+  [
+    // HEAD_KIND makes/models.
+    "پراید",
+    "پژو",
+    "سمند",
+    "دنا",
+    "تیبا",
+    // N spelling maps: canonical forms and their listed variants.
+    "هوندا",
+    "هندا",
+    "نینتندو",
+    "نیتندو",
+    "سوییچ",
+    "سویچ",
+    "آیفون",
+    "ری‌بن",
+    "پرو مکس",
+    "دنا پلاس",
+    // K2 console topics (Persian forms above; Latin forms below).
+    "ps5",
+    // Latin forms of the N/K2 brands, for completeness (defense in
+    // depth — the Latin-letter ban fires before this check in practice).
+    "honda",
+    "nintendo",
+    "switch",
+    "iphone",
+    "rayban",
+    "promax",
+    // The handoff's fourteen, exactly as written.
+    "سامسونگ",
+    "سامسونت",
+    "اپل",
+    "شیائومی",
+    "هوآوی",
+    "ال‌جی",
+    "سونی",
+    "نوکیا",
+    "لنوو",
+    "ایسوس",
+    "ایسر",
+    "پاناسونیک",
+    "توشیبا",
+    "هایسنس",
+    "اسنوا",
+  ].map((w) => normalizeForMatch(w).replace(/ /g, ""))
+);
+
+/** True when two layer-A spaceless forms differ by exactly one letter: one substitution, one deletion, or one insertion. Transpositions (two operations) do not count. */
+export function isOneLetterDifferent(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  if (a.length === b.length) {
+    let diffs = 0;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) {
+        diffs += 1;
+        if (diffs > 1) return false;
+      }
+    }
+    return diffs === 1;
+  }
+  const [short, long] = a.length < b.length ? [a, b] : [b, a];
+  let i = 0;
+  let j = 0;
+  let skipped = false;
+  while (i < short.length && j < long.length) {
+    if (short[i] === long[j]) {
+      i += 1;
+      j += 1;
+    } else if (!skipped) {
+      skipped = true;
+      j += 1;
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+const HAS_DIGIT_OR_LATIN = /[0-9۰-۹٠-٩A-Za-z]/;
+
+/**
+ * HANDOFF-2 (2026-11-02) layer B predicate — the full B2 condition
+ * except head-ness and subject-ness, which the pipeline enforces
+ * (it passes the title HEAD and the first include term only).
+ *
+ * Both words are compared in spaceless layer-A form: at least 5
+ * letters each, no digit or Latin letter in either, exactly one
+ * letter apart, and neither in the brand set. Layer A having already
+ * matched is checked by the caller (B is only tried after layer A
+ * fails), so it is not part of this predicate.
+ */
+export function subjectMatchesByOneLetter(
+  subjectWord: string,
+  titleWord: string
+): boolean {
+  const subject = normalizeForMatch(subjectWord).replace(/ /g, "");
+  const title = normalizeForMatch(titleWord).replace(/ /g, "");
+  if (subject.length < 5 || title.length < 5) return false;
+  if (HAS_DIGIT_OR_LATIN.test(subject) || HAS_DIGIT_OR_LATIN.test(title)) {
+    return false;
+  }
+  if (BRAND_SET.has(subject) || BRAND_SET.has(title)) return false;
+  return isOneLetterDifferent(subject, title);
 }
