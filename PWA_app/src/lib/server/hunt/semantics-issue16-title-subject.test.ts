@@ -846,4 +846,29 @@ describe("HANDOFF-1 — general gate: services, buyer, accessories", () => {
     expect(r.reason).toBe("no-extra-variant");
     expect(r.tier).toBe("near");
   });
+
+  it("HANDOFF-1B: G1 is off when the query itself wants an installer", () => {
+    const r = assessModelSpecificity(
+      ["نصاب", "کولر", "گازی"],
+      "نصب و تعمیر کولر گازی",
+      "all",
+      queryKindForDef(["نصاب", "کولر", "گازی"], false, "all"),
+      "نصاب کولر گازی می‌خوام",
+      "نصب و تعمیر کولر گازی"
+    );
+    expect(r.mismatch && r.tier === "reject").toBe(false);
+  });
+
+  it("HANDOFF-1B: G2 is off when the query itself wants a seller", () => {
+    const r = assessModelSpecificity(
+      ["یخچال"],
+      "خریدار یخچال کارکرده",
+      "all",
+      queryKindForDef(["یخچال"], false, "all"),
+      "فروشنده یخچال",
+      "خریدار یخچال کارکرده"
+    );
+    expect(r.mismatch && r.tier === "reject").toBe(false);
+    expect(r.reason).not.toBe("direction:buyer");
+  });
 });

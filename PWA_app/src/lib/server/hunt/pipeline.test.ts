@@ -1941,7 +1941,9 @@ describe("R7 speech-act role — seek-buyer (navid's R6 product decision)", () =
     });
     const done = await doneOf(def!);
     const ids = done.results.map((r) => r.sourceAdId);
-    expect(ids.indexOf("seller")).toBeLessThan(ids.indexOf("dealer"));
+    // به دستور مالک ۲۰۲۶-۱۱-۰۲: آگهی خریدار در شکار کالا رد می‌شود (direction:buyer)، نه تنزل.
+    expect(ids).toContain("seller");
+    expect(ids).not.toContain("dealer");
   });
 });
 
@@ -2096,7 +2098,8 @@ describe("R7 defeasible absence — counter-evidence defeats the universal (Deep
     const done = await doneOf(def);
     const kinds = kindsOf(done);
     // The new hard rejection is intentionally scoped to negative repair-history hunts.
-    expect(kinds["repair-service"]).toBe("near");
+    // به دستور مالک ۲۰۲۶-۱۱-۰۲: آگهی تعمیر در شکار کالا رد می‌شود (kind:service-head-general)، نه تنزل.
+    expect(kinds["repair-service"]).toBeUndefined();
   });
 
   it("keeps a piano ad whose Persian item name touches its Latin model code", async () => {

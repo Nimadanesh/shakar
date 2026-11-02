@@ -1434,6 +1434,23 @@ const G_ACCESSORY_HEADS = normKWords([
 // G3 connectors between head and subject. «به‌همراه» normalizes to
 // [به، همراه], so «همراه» covers it; a bare «به» is NOT a connector.
 const G_CONNECTORS = normKWords(["و", "با", "همراه"]);
+// HANDOFF-1B — role words that switch G1/G2 off (the query itself wants
+// a role/service): «واژه‌های عمومی؛ نه از مجموعه‌های طلایی یا بیرونی».
+const G_ROLE_SERVICE_WORDS = normKWords([
+  "نصاب",
+  "تعمیرکار",
+  "مربی",
+  "معلم",
+  "مدرس",
+]);
+const G_ROLE_BUYER_WORDS = normKWords([
+  "فروشنده",
+  "خریدار",
+  "خواهان",
+  "متقاضی",
+  "فروشندگان",
+  "خریداران",
+]);
 
 function isSingleLatinLetter(tok: string): boolean {
   return /^[A-Za-z]$/.test(tok);
@@ -1522,11 +1539,17 @@ function generalGate(
   const gHead = titleTokens[gIdx];
   const gNext = titleTokens[gIdx + 1];
 
-  // G1 — service head, every hunt. Skipped when the query itself has
-  // the word. «طرح» is never a G filler, so a طرح-led title heads on
-  // طرح (not a service word) — the طرح+تعویض/نوسازی exception holds
-  // by construction, and no G1 reject fires for it.
+  // G1 — service head, product hunts only (HANDOFF-1B). When the query
+  // itself wants a service/role — any K1 service word or role word —
+  // G1 is off and the previous demote behavior stays. «طرح» is never a
+  // G filler, so a طرح-led title heads on طرح (not a service word) —
+  // the طرح+تعویض/نوسازی exception holds by construction, and no G1
+  // reject fires for it.
+  const g1Off =
+    [...K1_SERVICE_EXEMPT_QUERY_WORDS].some((w) => queryWords.has(w)) ||
+    [...G_ROLE_SERVICE_WORDS].some((w) => queryWords.has(w));
   if (
+    !g1Off &&
     gHead !== undefined &&
     G_SERVICE_HEADS.has(gHead) &&
     !queryWords.has(gHead)
@@ -1543,12 +1566,15 @@ function generalGate(
     }
   }
 
-  // G2 — buyer, unless the query itself hunts a buyer or a buy-and-sell
-  // catalogue. The gate covers all three bullets below.
+  // G2 — buyer, product hunts only (HANDOFF-1B). The gate covers all
+  // three bullets below: a buyer/buy-and-sell query, or any role query
+  // (فروشنده، خریدار، خواهان، متقاضی and plurals), switches G2 off and
+  // the previous demote behavior stays.
   const queryHasBuyer =
     queryWords.has("خریدار") ||
     queryWords.has("خریدوفروش") ||
-    containsTokenSeq(queryTextTokens, ["خرید", "و", "فروش"]);
+    containsTokenSeq(queryTextTokens, ["خرید", "و", "فروش"]) ||
+    [...G_ROLE_BUYER_WORDS].some((w) => queryWords.has(w));
   if (!queryHasBuyer) {
     if (
       gHead === "خریدار" ||
@@ -1890,6 +1916,17 @@ export function assessModelSpecificity(
       };
     }
   }
+  // HANDOFF-1B G5: «کلاس» before a single Latin letter or a number/model
+  // («کلاس E 200») is a model name, not training — same predicate as the
+  // G1 کلاس exemption. Only the training rule is affected, and only for
+  // exact کلاس tokens (digit-glued forms keep the old behavior).
+  const isModelPrefixedClass = (idx: number): boolean => {
+    if (listingTokens[idx] !== "کلاس") return false;
+    const next = listingTokens[idx + 1];
+    return (
+      next !== undefined && (isSingleLatinLetter(next) || isNumericToken(next))
+    );
+  };
   // R6 — wrong-item phrase pass (strong signal → reject). Runs before the
   // weak adjacency pass below. Sibling variants are EXCLUDED: «پرومکس
   // آیفون ۱۳» is still the item (near, not rejected — honest spectrum).
@@ -1912,7 +1949,26 @@ export function assessModelSpecificity(
       ) {
         continue;
       }
-      if (phraseHas(marker)) {
+      // HANDOFF-1B G5: a model-prefixed کلاس is not training — the
+      // phrase fires only on a کلاس occurrence that is not model-prefixed.
+      const phraseFires =
+        kind === "training" && marker === "کلاس"
+          ? phraseIdx.some((gi) => {
+              if (purposeProtected.has(gi)) return false;
+              const tok = listingTokens[gi];
+              if (
+                !(
+                  tok === marker ||
+                  (stripEdgeDigits(tok) !== tok &&
+                    stripEdgeDigits(tok) === marker)
+                )
+              ) {
+                return false;
+              }
+              return !isModelPrefixedClass(gi);
+            })
+          : phraseHas(marker);
+      if (phraseFires) {
         return {
           mismatch: true,
           reason: `${kind}:offering:"${rawMarker}"`,
@@ -1973,6 +2029,13 @@ export function assessModelSpecificity(
       listingTokens.forEach((tok, i) => {
         if (tok === marker) positions.push(i);
       });
+      // HANDOFF-1B G5: drop model-prefixed کلاس occurrences from the
+      // training positions (same predicate as the phrase pass).
+      if (kind === "training" && marker === "کلاس") {
+        const kept = positions.filter((p) => !isModelPrefixedClass(p));
+        if (kept.length === 0) continue;
+        positions.splice(0, positions.length, ...kept);
+      }
       if (positions.length === 0) continue;
       if (positions.includes(subjectIdx)) {
         return {
