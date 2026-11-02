@@ -3,14 +3,14 @@
   "summary": {
     "counted": 194,
     "grade4Count": 59,
-    "leak": 10,
-    "leakTier1": 1,
+    "leak": 11,
+    "leakTier1": 0,
     "leakTier2": 0,
-    "leakWithoutBait": 8,
+    "leakWithoutBait": 9,
     "missed": 1,
     "missed1": 0,
     "missed2": 1,
-    "grade3Hidden": 26
+    "grade3Hidden": 11
   },
   "rows": [
     {
@@ -194,7 +194,7 @@
       "row": 3,
       "grade": 1,
       "special": null,
-      "tier": 1,
+      "tier": 3,
       "status": "shown"
     },
     {
@@ -378,7 +378,7 @@
       "row": 6,
       "grade": 4,
       "special": null,
-      "tier": 1,
+      "tier": 3,
       "status": "shown"
     },
     {
@@ -418,7 +418,7 @@
       "row": 11,
       "grade": 1,
       "special": null,
-      "tier": 1,
+      "tier": 3,
       "status": "shown"
     },
     {
@@ -426,7 +426,7 @@
       "row": 12,
       "grade": 1,
       "special": null,
-      "tier": 1,
+      "tier": 3,
       "status": "shown"
     },
     {
@@ -498,88 +498,88 @@
       "row": 1,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 2,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 3,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 4,
       "grade": 4,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 5,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 6,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 7,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 8,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 9,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 10,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 11,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
@@ -602,24 +602,24 @@
       "row": 14,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 15,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
       "row": 16,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
@@ -634,8 +634,8 @@
       "row": 18,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 4,
@@ -714,8 +714,8 @@
       "row": 8,
       "grade": 3,
       "special": null,
-      "tier": 4,
-      "status": "tier4"
+      "tier": 3,
+      "status": "shown"
     },
     {
       "hunt": 5,
@@ -1114,7 +1114,7 @@
       "row": 18,
       "grade": 3,
       "special": null,
-      "tier": 1,
+      "tier": 3,
       "status": "shown"
     },
     {
