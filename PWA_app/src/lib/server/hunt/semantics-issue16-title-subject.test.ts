@@ -530,6 +530,7 @@ describe("HANDOFF-1 — general gate: services, buyer, accessories", () => {
       string,
       (
         | { kind: "reject"; reason: string }
+        | { kind: "near"; reason: string }
         | { kind: "not-rejected" }
       ),
     ]
@@ -564,11 +565,14 @@ describe("HANDOFF-1 — general gate: services, buyer, accessories", () => {
       { kind: "reject", reason: "kind:service-head-general" },
     ],
     [
-      "G1: ساخت head rejects for a TV-stand hunt",
+      // به دستور مالک HANDOFF-2ب (۲۰۲۶-۱۱-۰۳): «ساخت» دیگر رد نمی‌کند؛
+      // سقف ردیف ۳ با دلیل service:build (انتظار پیشین: رد با دلیل
+      // kind:service-head-general).
+      "G1: ساخت head caps at tier 3 for a TV-stand hunt",
       ["میز", "تلویزیون"],
       "میز تلویزیون",
       "ساخت میز تلویزیون سفارشی",
-      { kind: "reject", reason: "kind:service-head-general" },
+      { kind: "near", reason: "service:build" },
     ],
     [
       "G1: تعویض head rejects for a laptop hunt",

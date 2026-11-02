@@ -3402,3 +3402,251 @@ describe("HANDOFF-2 — orthography layer A (full verdict) and layer B (tier-3 c
     expect(done.results[0].tierReasons).toContain("spelling-guess");
   });
 });
+
+describe("HANDOFF-2ب — query compounding + general-gate fixes + marked title heads", () => {
+  function listings(rows: Array<{ sourceAdId: string; title: string }>) {
+    mockSearchLists.mockResolvedValueOnce({
+      listings: rows.map((r) => summary({ ...r })),
+      hasMore: false,
+    });
+  }
+
+  function detail(descById: Record<string, string>) {
+    mockGetDetail.mockImplementation(async (id: string) => ({
+      sourceAdId: id,
+      title: id,
+      price: null,
+      city: "",
+      description: descById[id] ?? "",
+      images: [],
+      categorySlug: "",
+    }));
+  }
+
+  async function doneOf(def: HuntDefinition) {
+    const events: HuntEvent[] = [];
+    await runPipeline(def, (e) => events.push(e));
+    const done = events.find((e) => e.type === "done");
+    if (done?.type !== "done") throw new Error("no done event");
+    return done;
+  }
+
+  // Full path, as the handoff requires for §1: sentence →
+  // resolveHuntDefinition → pipeline with a mock provider → tier.
+  async function runSentence(
+    query: string,
+    title: string,
+    extra: Partial<HuntDefinition> = {}
+  ) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+      ...extra,
+    });
+    if (!def) throw new Error("no definition for " + query);
+    listings([{ sourceAdId: "a1", title }]);
+    detail({ a1: title });
+    const done = await doneOf(def);
+    return { done, def };
+  }
+
+  it("§1: «یه چای‌ساز برقی می‌خوام» keeps چای‌ساز one-piece and matches the glued title", async () => {
+    const { done, def } = await runSentence(
+      "یه چای‌ساز برقی می‌خوام",
+      "چایساز برقی سالم"
+    );
+    expect(def.include).toEqual(["چای‌ساز", "برقی"]);
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].matchKind).toBe("exact");
+    expect(done.results[0].tier).toBeLessThanOrEqual(3);
+  });
+
+  it("§1: «جارو‌برقی» matches the glued title", async () => {
+    const { done } = await runSentence("جارو‌برقی", "جاروبرقی کم‌کار");
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(1);
+  });
+
+  it("§1: «ماشین ظرف شویی» matches the glued title via the group rule", async () => {
+    const { done } = await runSentence(
+      "ماشین ظرف شویی",
+      "ماشین ظرفشویی ۱۲ نفره"
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(1);
+  });
+
+  it("§1: «ظرف‌شویی» matches the spaced title", async () => {
+    const { done } = await runSentence("ظرف‌شویی", "ظرف شویی ایستاده");
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(1);
+  });
+
+  it("§1: «بی‌سیم» is satisfied by «بیسیم»", async () => {
+    const { done } = await runSentence("هدفون بی‌سیم", "هدفون بیسیم");
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].missingInfo).not.toContain("بی‌سیم");
+  });
+
+  it("§1: «بی‌سیم» is NOT satisfied by «سیم دار»", async () => {
+    const { done } = await runSentence("هدفون بی‌سیم", "هدفون سیم دار");
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].missingInfo).toContain("بی‌سیم");
+  });
+
+  it("§1: exclude {بی‌سیم} rejects «تلفن بی سیم»", async () => {
+    const { done } = await runSentence("تلفن", "تلفن بی سیم", {
+      exclude: ["بی‌سیم"],
+    });
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§1-ج: «اتوبخار» matches «اتو بخاری» at tier ≤ 3", async () => {
+    // NOTE: layer A (stemmed spaceless: اتو + بخاری→بخار = اتوبخار)
+    // fires first here, so the ad lands at tier 1, not via the guess.
+    // The genuine multi-word-B proof is the کتابخونه test below.
+    const { done } = await runSentence("اتوبخار", "اتو بخاری سالم");
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBeLessThanOrEqual(3);
+  });
+
+  it("§1-ج: «کتابخونه» matches «کتاب خانه» only via the multi-word layer-B guess at tier 3", async () => {
+    // Layer A fails (کتابخونه ≠ کتابخانه, exact), single-word B fails
+    // (کتاب vs کتابخونه), multi-word B succeeds (کتاب خانه → 1 letter).
+    const { done } = await runSentence("کتابخونه", "کتاب خانه سالم");
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("spelling-guess");
+  });
+
+  it("§2-الف: «ساخت میز تلویزیون» caps at tier 3 with service:build", async () => {
+    const { done } = await runSentence(
+      "میز تلویزیون",
+      "ساخت میز تلویزیون سفارشی"
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("service:build");
+  });
+
+  it("§2-ب: «فروش و نصب کولر گازی» stays shown", async () => {
+    const { done } = await runSentence(
+      "کولر گازی",
+      "فروش و نصب کولر گازی با ضمانت"
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBeLessThanOrEqual(3);
+  });
+
+  it("§2-ب: «نصب و فروش انواع کولر گازی» caps at tier 3 with service:also-sells", async () => {
+    const { done } = await runSentence(
+      "کولر گازی",
+      "نصب و فروش انواع کولر گازی"
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("service:also-sells");
+  });
+
+  it("§2-ب: «نصب کولر گازی با ضمانت» still rejects (tier 4)", async () => {
+    const { done } = await runSentence("کولر گازی", "نصب کولر گازی با ضمانت");
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§2-ب: «تعمیر و فروش لپ‌تاپ» caps at tier 3 with service:also-sells", async () => {
+    const { done } = await runSentence("لپ‌تاپ", "تعمیر و فروش لپ‌تاپ");
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("service:also-sells");
+  });
+
+  it("§2-ب: «تعمیرات تخصصی لپ‌تاپ در محل» still rejects (tier 4)", async () => {
+    const { done } = await runSentence(
+      "لپ‌تاپ",
+      "تعمیرات تخصصی لپ‌تاپ در محل"
+    );
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§2-ب: «فروش خدمات نینتندو سوییچ» still rejects via K1 (tier 4)", async () => {
+    const { done } = await runSentence(
+      "نینتندو سوییچ",
+      "فروش خدمات نینتندو سوییچ"
+    );
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§2-ب (amendment 2): «آموزش و فروش ویولن» still rejects (tier 4)", async () => {
+    const { done } = await runSentence("ویولن", "آموزش و فروش ویولن");
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§2-ج: «لوازم آشپزخانه (چای‌ساز، توستر، کتری)» caps at tier 3 with kind:multi-item", async () => {
+    const { done } = await runSentence(
+      "چای‌ساز",
+      "لوازم آشپزخانه (چای‌ساز، توستر، کتری)"
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("kind:multi-item");
+  });
+
+  it("§2-ج: «لوازم آشپزخانه: چای‌ساز، توستر، کتری» caps at tier 3 with kind:multi-item", async () => {
+    const { done } = await runSentence(
+      "چای‌ساز",
+      "لوازم آشپزخانه: چای‌ساز، توستر، کتری"
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("kind:multi-item");
+  });
+
+  it("§2-ج: «کیف لپ‌تاپ ۱۵ اینچ» still rejects (tier 4)", async () => {
+    const { done } = await runSentence("لپ‌تاپ", "کیف لپ‌تاپ ۱۵ اینچ");
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§2-ج: «قاب گوشی سامسونگ A54» still rejects (tier 4)", async () => {
+    const { done } = await runSentence("گوشی سامسونگ", "قاب گوشی سامسونگ A54");
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§2-ج (amendment 3): «کیف لپ‌تاپ/تبلت» still rejects — two items are not a list", async () => {
+    const { done } = await runSentence("لپ‌تاپ", "کیف لپ‌تاپ/تبلت");
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§2-ج (amendment 3): «قاب (گوشی سامسونگ)» still rejects — one item is not a list", async () => {
+    const { done } = await runSentence("گوشی سامسونگ", "قاب (گوشی سامسونگ)");
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§2-ج (amendment 3): «لوازم خانگی (سرخ کن، خرد کن، جاروبرقی، پنکه)» caps at tier 3 with kind:multi-item", async () => {
+    const { done } = await runSentence(
+      "سرخ‌کن",
+      "لوازم خانگی (سرخ کن، خرد کن، جاروبرقی، پنکه)"
+    );
+    expect(done.results).toHaveLength(1);
+    expect(done.results[0].tier).toBe(3);
+    expect(done.results[0].tierReasons).toContain("kind:multi-item");
+  });
+
+  it("§3: «« مدرسهٔ گیتار » سراسر شهر» rejects (tier 4) once the hamza is folded", async () => {
+    const { done } = await runSentence(
+      "گیتار",
+      "« مدرسهٔ گیتار » سراسر شهر"
+    );
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§3: «\"آموزش\" ویولن خصوصی» rejects (tier 4)", async () => {
+    const { done } = await runSentence("ویولن", "\"آموزش\" ویولن خصوصی");
+    expect(done.results).toHaveLength(0);
+  });
+
+  it("§3: «(نو) گیتار کلاسیک» is not rejected", async () => {
+    const { done } = await runSentence("گیتار", "(نو) گیتار کلاسیک");
+    expect(done.results).toHaveLength(1);
+  });
+});

@@ -701,6 +701,105 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
       }
     }
 
+    // HANDOFF-2ب §1-الف (general rule, NO list): ANY ZWNJ-joined word
+    // in the raw query stays one word. The contract splits ZWNJ, so
+    // merge adjacent fragments back in include, should and exclude
+    // whenever the raw query holds them joined. This generalizes B.2's
+    // closed list (kept above for its lone-fragment repair, e.g.
+    // «ری‌بن» whose other half the city lexicon swallowed — a lone
+    // fragment has no adjacent pair to merge, so the general rule
+    // cannot repair it and B.2 still must).
+    // Fillers (می‌خوام، می‌خواهم، نمی‌خوام) can never resurrect here:
+    // the merge only touches fragments already present in the term
+    // lists, and fillers were dropped from them before this point.
+    {
+      const stripEdgePunct = (t: string) =>
+        t.replace(/^[،,.!؟?()«»""''\[\]{}]+|[،,.!؟?()«»""''\[\]{}]+$/g, "");
+      const rawQueryToks = def.query
+        .split(/[\s،,.!؟?]+/)
+        .filter(Boolean)
+        .map(stripEdgePunct)
+        .filter(Boolean);
+      const mergePhrase = (phrase: string, folded: string[], word: string) => {
+        const toks = phrase.split(" ").filter(Boolean);
+        const out: string[] = [];
+        for (let i = 0; i < toks.length; ) {
+          const hit =
+            folded.length > 0 &&
+            folded.every(
+              (f, k) =>
+                normalizeForMatch(toks[i + k] ?? "").split(" ")[0] === f
+            );
+          if (hit) {
+            out.push(word);
+            i += folded.length;
+          } else {
+            out.push(toks[i]);
+            i += 1;
+          }
+        }
+        return out.join(" ");
+      };
+      for (const raw of rawQueryToks) {
+        if (!raw.includes("‌")) continue;
+        const frags = raw.split("‌").filter(Boolean);
+        if (frags.length < 2) continue;
+        const folded = frags
+          .map((f) => normalizeForMatch(f).split(" ")[0])
+          .filter(Boolean);
+        if (folded.length !== frags.length) continue;
+        // include: consecutive single terms, or one phrase entry holding
+        // the whole fragment run.
+        for (let i = 0; i + folded.length <= include.length; i++) {
+          if (
+            folded.every((f, k) => isSingle(include[i + k], f))
+          ) {
+            include.splice(i, folded.length, raw);
+            break;
+          }
+        }
+        // Repair: a fragment the contract dropped as a verb/filler
+        // («کن» in «سرخ‌کن» — contract.ts is out of scope, so the
+        // fragment never reaches include). If the first fragment
+        // survived alone, restore the full word in its place. Fillers
+        // cannot repair: their first fragment is never in include
+        // (both halves were dropped), so no lone fragment exists.
+        if (
+          !include.includes(raw) &&
+          !include.some(
+            (t) => termToks(t).join(" ") === folded.join(" ")
+          )
+        ) {
+          const fi = include.findIndex((t) => isSingle(t, folded[0]));
+          if (fi >= 0) {
+            include.splice(fi, 1, raw);
+            // Other fragments of the same word must not linger as
+            // separate MUST terms (they would fail their own match
+            // and drag an exact down to near).
+            for (let j = include.length - 1; j >= 0; j--) {
+              if (
+                j !== fi &&
+                folded.slice(1).some((f) => isSingle(include[j], f))
+              ) {
+                include.splice(j, 1);
+              }
+            }
+          }
+        }
+        for (let i = 0; i < include.length; i++) {
+          if (termToks(include[i]).join(" ") === folded.join(" ")) {
+            include[i] = raw;
+          }
+        }
+        for (let s = 0; s < should.length; s++) {
+          should[s] = mergePhrase(should[s], folded, raw);
+        }
+        for (let e = 0; e < exclude.length; e++) {
+          exclude[e] = mergePhrase(exclude[e], folded, raw);
+        }
+      }
+    }
+
     // B.3: «X دار» joins to «X‌دار». A حتماً-scoped pair stays a MUST
     // (include); an unscoped pair is a feature, so it moves to SHOULD.
     // Any other bare «دار» never stays in include.

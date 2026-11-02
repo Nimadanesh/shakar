@@ -49,8 +49,12 @@ export function unifyChars(text: string): string {
       // peanut family has dedicated machinery), س/ص، ز/ذ/ض/ظ، ح/ه، ع/ا، غ/ق
       // (no verified wound; each needs its own collision audit).
       .replace(/ط/g, "ت")
-      // Arabic diacritics (fatha..sukun) + superscript alef
-      .replace(/[ً-ْٰ]/g, "")
+      // Arabic diacritics (fatha..sukun) + superscript alef + hamza
+      // above (U+0654, e.g. «مدرسهٔ» — HANDOFF-2ب §3: without it the
+      // hamza-bearing head never equals the service word «مدرسه» and
+      // the G1 gate misses). Superscript alef U+0670 was already in
+      // this class (probe-verified); only U+0654 is new here.
+      .replace(/[ً-ْٰٔ]/g, "")
       // Tatweel (kashida)
       .replace(/ـ/g, "")
   );

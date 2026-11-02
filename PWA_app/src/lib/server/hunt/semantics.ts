@@ -1417,6 +1417,17 @@ const G_SERVICE_HEADS = normKWords([
   "کارشناسی",
   "شستشو",
 ]);
+// HANDOFF-2ب §2-ب (+ amendment 2): service heads that ALSO sell cap
+// at tier 3 instead of rejecting — ONLY these five. آموزش، کلاس،
+// مدرسه، تدریس، کارشناسی still reject even with «فروش» in the title:
+// «واژه‌های عمومی؛ نه از مجموعه‌های طلایی یا بیرونی».
+const G_ALSO_SELLS_HEADS = normKWords([
+  "نصب",
+  "تعمیر",
+  "تعمیرات",
+  "تعویض",
+  "شستشو",
+]);
 // G1 exception — origin words after «ساخت»: «واژه‌های عمومی؛ نه از
 // مجموعه‌های طلایی یا بیرونی».
 const G_ORIGIN_WORDS = normKWords([
@@ -1532,7 +1543,7 @@ function plusBetweenHeadAndSubject(
  * ADDITIVE ONLY: this mirrors the two skip loops without touching
  * generalGate or any gate logic; it reads the same sets.
  */
-export function titleHeadAfterG0Fillers(title: string): string | undefined {
+function titleTokensFromHead(title: string): string[] {
   const titleTokens = normalizeForMatch(title).split(" ").filter(Boolean);
   let idx = 0;
   // K head skip (mirrors assessModelSpecificity's titleHeadSkip).
@@ -1570,7 +1581,53 @@ export function titleHeadAfterG0Fillers(title: string): string | undefined {
     }
     break;
   }
-  return titleTokens[idx];
+  return titleTokens.slice(idx);
+}
+
+export function titleHeadAfterG0Fillers(title: string): string | undefined {
+  return titleTokensFromHead(title)[0];
+}
+
+// HANDOFF-2ب §1-ج: the head tokens (same skips as above) for the
+// multi-word layer-B check in the pipeline.
+export function titleHeadTokensAfterG0Fillers(title: string): string[] {
+  return titleTokensFromHead(title);
+}
+
+/**
+ * HANDOFF-2ب §2-ج (+ amendment 3): true when the subject term is one
+ * item of a list of at least 3 items separated by «،» / «,» / «/» /
+ * «+» — inside parens/brackets, after «:», or bare. Item matching is
+ * exact spaceless equality (A2-style, no prefix): «سرخ کن» ≡
+ * «سرخ‌کن». One or two items never count as a list. The raw title is
+ * read (normalization strips the separators), and each candidate
+ * segment (whole title, paren/bracket contents, after-colon part) is
+ * tried: a segment saves only when it holds ≥3 items and one of them
+ * is the subject.
+ */
+function isMultiItemSubject(rawTitle: string, subjectTerm: string): boolean {
+  const subjSpaceless = normalizeForMatch(subjectTerm).replace(/ /g, "");
+  if (subjSpaceless === "") return false;
+  const segments: string[] = [rawTitle];
+  for (const m of rawTitle.matchAll(/\(([^)]*)\)|\[([^\]]*)\]/g)) {
+    segments.push(m[1] ?? m[2] ?? "");
+  }
+  const colonIdx = rawTitle.indexOf(":");
+  if (colonIdx >= 0) segments.push(rawTitle.slice(colonIdx + 1));
+  for (const seg of segments) {
+    const items = seg
+      .split(/[،,\/+]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (items.length < 3) continue;
+    for (const item of items) {
+      const cleaned = item.replace(/^[(\[«"'\s]+|[)\]»"'\s]+$/g, "");
+      if (normalizeForMatch(cleaned).replace(/ /g, "") === subjSpaceless) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function generalGate(
@@ -1639,6 +1696,19 @@ function generalGate(
         gNext !== undefined &&
         (isSingleLatinLetter(gNext) || isNumericToken(gNext)));
     if (!exempt) {
+      // HANDOFF-2ب §2-الف: «ساخت» no longer rejects — a maker listing
+      // caps at tier 3 (service:build).
+      if (gHead === "ساخت") {
+        return { mismatch: true, reason: "service:build", tier: "near" };
+      }
+      // HANDOFF-2ب §2-ب: a service head that also sells (the title
+      // has the word «فروش») caps at tier 3 (service:also-sells).
+      if (
+        G_ALSO_SELLS_HEADS.has(gHead) &&
+        titleTokens.includes("فروش")
+      ) {
+        return { mismatch: true, reason: "service:also-sells", tier: "near" };
+      }
       return { mismatch: true, reason: "kind:service-head-general", tier: "reject" };
     }
   }
@@ -1722,6 +1792,11 @@ function generalGate(
           between.some((t) => G_CONNECTORS.has(t)) ||
           plusBetweenHeadAndSubject(listingTitleRaw, titleTokens, gIdx, subjPos);
         if (!hasConnector) {
+          // HANDOFF-2ب §2-ج: the subject as one item of a ≥3-item
+          // list caps at tier 3 (kind:multi-item) instead of rejecting.
+          if (isMultiItemSubject(listingTitleRaw, includeTerms[0])) {
+            return { mismatch: true, reason: "kind:multi-item", tier: "near" };
+          }
           return { mismatch: true, reason: "kind:accessory-head", tier: "reject" };
         }
       }

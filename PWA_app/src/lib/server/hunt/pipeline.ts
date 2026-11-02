@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   normalizeForMatch,
+  spacelessMatches,
   subjectMatchesByOneLetter,
   textMatches,
   textMatchesInclude,
@@ -25,7 +26,7 @@ import {
   floorMatFlatbedConflict,
   assessModelSpecificity,
   isGeneralKindRejectReason,
-  titleHeadAfterG0Fillers,
+  titleHeadTokensAfterG0Fillers,
   isWholeVehicleQuery,
   assessQueryIntent,
   assessRepairPolarity,
@@ -876,11 +877,20 @@ function evaluateDescription(
   let mustDesc = 0;
   // HANDOFF-2 layer B: the title head, computed once for the subject
   // check below (B2: the title word must be the head, after G0 fillers).
-  const titleHeadForGuess = titleHeadAfterG0Fillers(title);
+  // HANDOFF-2ب §1-ج: the guess also measures the spaceless form of the
+  // first 2 or 3 head words («اتو بخاری» for «اتوبخار») — same
+  // conditions as HANDOFF-2 (subject only, ≥5 letters, no digit/Latin,
+  // outside the brand set, tier-3 cap, never on exclude).
+  const titleHeadTokensForGuess = titleHeadTokensAfterG0Fillers(title);
   // Set when the SUBJECT (first include term) matches only via the
   // one-letter guess — the ad is kept but capped at tier 3 (verdict
   // near + spelling-guess reason in the tier derivation below).
   let spellingGuess = false;
+  // Per-term outcomes, in include order. The group pass below fills
+  // unsatisfied runs; counts/evidence/missingInfo are rebuilt from
+  // these afterwards, in term order (unchanged semantics for every
+  // previously-satisfied term).
+  const termOutcome: Array<"title" | "desc" | "guess" | null> = [];
   for (let termIdx = 0; termIdx < def.include.length; termIdx++) {
     const term = def.include[termIdx];
     // P0: a service-demand MUST term («تعمیر») is satisfied when the demand
@@ -892,24 +902,88 @@ function evaluateDescription(
       SERVICE_DEMAND_FAMILY.some((w) => textMatches(combined, w));
     // HANDOFF-N: include terms match with synonym groups (17–22).
     if (textMatchesInclude(title, term)) {
-      mustTitle += 1;
-      evidence.push(term);
+      termOutcome.push("title");
     } else if (demandSatisfied || textMatchesInclude(description, term)) {
-      mustDesc += 1;
-      evidence.push(term);
+      termOutcome.push("desc");
     } else if (
       // HANDOFF-2 layer B (B5): ONLY the subject word (first include
       // term), ONLY the title head, ONLY after layer A failed (this
       // else-branch) — never on exclude, never in gate decisions.
       termIdx === 0 &&
-      titleHeadForGuess !== undefined &&
-      subjectMatchesByOneLetter(term, titleHeadForGuess)
+      (titleHeadTokensForGuess.length > 0 &&
+        (subjectMatchesByOneLetter(term, titleHeadTokensForGuess[0]) ||
+          (titleHeadTokensForGuess.length >= 2 &&
+            subjectMatchesByOneLetter(
+              term,
+              titleHeadTokensForGuess.slice(0, 2).join(" ")
+            )) ||
+          (titleHeadTokensForGuess.length >= 3 &&
+            subjectMatchesByOneLetter(
+              term,
+              titleHeadTokensForGuess.slice(0, 3).join(" ")
+            ))))
     ) {
+      termOutcome.push("guess");
+    } else {
+      termOutcome.push(null); // UNKNOWN — penalized in scoring, never dropped
+    }
+  }
+  // HANDOFF-2ب §1-ب: consecutive unsatisfied MUST terms (max 3) whose
+  // joined spaceless form matches via A2 count as satisfied, ALL of
+  // them. spacelessMatches with the joined terms IS the A2 window
+  // check (the joined form must equal 1–3 consecutive ad words, full
+  // equality, ≥4 letters, no digit/mark inside). Only unsatisfied
+  // runs are grouped, so no term is ever counted twice; longest
+  // window first, leftmost first.
+  for (let runStart = 0; runStart < def.include.length; ) {
+    if (termOutcome[runStart] !== null) {
+      runStart += 1;
+      continue;
+    }
+    let runEnd = runStart;
+    while (runEnd < def.include.length && termOutcome[runEnd] === null) {
+      runEnd += 1;
+    }
+    let i = runStart;
+    while (i < runEnd) {
+      let matchedLen = 0;
+      let matchedSide: "title" | "desc" | null = null;
+      for (let len = Math.min(3, runEnd - i); len >= 2; len--) {
+        const joined = def.include.slice(i, i + len).join(" ");
+        if (spacelessMatches(title, joined)) {
+          matchedLen = len;
+          matchedSide = "title";
+          break;
+        }
+        if (spacelessMatches(description, joined)) {
+          matchedLen = len;
+          matchedSide = "desc";
+          break;
+        }
+      }
+      if (matchedLen > 0 && matchedSide !== null) {
+        for (let k = 0; k < matchedLen; k++) {
+          termOutcome[i + k] = matchedSide;
+        }
+        i += matchedLen;
+      } else {
+        i += 1;
+      }
+    }
+    runStart = runEnd;
+  }
+  for (let termIdx = 0; termIdx < def.include.length; termIdx++) {
+    const term = def.include[termIdx];
+    const outcome = termOutcome[termIdx];
+    if (outcome === "title" || outcome === "guess") {
       mustTitle += 1;
       evidence.push(term);
-      spellingGuess = true;
+      if (outcome === "guess") spellingGuess = true;
+    } else if (outcome === "desc") {
+      mustDesc += 1;
+      evidence.push(term);
     } else {
-      missingInfo.push(term); // UNKNOWN — penalized in scoring, never dropped
+      missingInfo.push(term);
     }
   }
   // HANDOFF-N: each anyOf group is ONE requirement, satisfied by ANY

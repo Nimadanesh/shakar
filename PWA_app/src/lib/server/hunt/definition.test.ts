@@ -212,7 +212,9 @@ describe("HANDOFF-2 — resolveHuntDefinition negation intake", () => {
     expect(def.exclude).toContain("کرکره");
     expect(def.exclude).toContain("تور ساده");
     expect(def.exclude).not.toContain("کرکره و");
-    expect(def.should).toEqual(["پنجره پذیرایی پارچه ای ضخیم"]);
+    // HANDOFF-2ب §1-الف: «پارچه‌ای» (نیم‌فاصله‌دار در جمله) در should هم
+    // یک‌تکه می‌ماند — انتظار پیشین (با فاصله) رفتارِ پیش از ۱-الف بود.
+    expect(def.should).toEqual(["پنجره پذیرایی پارچه‌ای ضخیم"]);
     expect(def.should.join(" ")).not.toContain("کرکره");
     expect(def.should.join(" ")).not.toContain("تور");
   });

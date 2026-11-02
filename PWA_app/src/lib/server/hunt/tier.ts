@@ -54,6 +54,12 @@ export const TIER3_REASONS = new Set([
   // guess caps at tier 3, never tier 1 or 2. Note for the tier-2 step:
   // this reason must STAY tier 3.
   "spelling-guess",
+  // HANDOFF-2ب (2026-11-03): the three general-gate caps — a maker
+  // listing, a service head that also sells, and a subject that is
+  // one item of a ≥3-item list — all cap at tier 3, never tier 2.
+  "service:build",
+  "service:also-sells",
+  "kind:multi-item",
 ]);
 
 /** A reason is soft only if it is exactly a tier-2 reason. */
