@@ -4957,3 +4957,98 @@ describe("HANDOFF-4c2 — model mismatch (MM1–MM5, A1, A7)", () => {
     expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
   });
 });
+
+describe("HANDOFF-4c2b — MM3b: query code anywhere in the pre-marker title part switches the rule off", () => {
+  // Full path: sentence → resolveHuntDefinition → runPipeline with a
+  // mock provider. runOne uses description = title.
+  async function runOne(query: string, title: string) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+    });
+    if (!def) throw new Error("no definition for " + query);
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "a1", title })],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async () => ({
+      sourceAdId: "a1",
+      title,
+      price: null,
+      city: "",
+      description: title,
+      images: [],
+      categorySlug: "",
+    }));
+    return runPipeline(def, () => {});
+  }
+
+  function traceReason(
+    trace: Array<{ sourceAdId: string; reasons?: string[] }>,
+    id: string
+  ): string[] {
+    return trace.find((t) => t.sourceAdId === id)?.reasons ?? [];
+  }
+
+  async function expectShown(query: string, title: string, tier: number) {
+    const { results, trace } = await runOne(query, title);
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(tier);
+    expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
+  }
+
+  async function expectReject(query: string, title: string) {
+    const { results, trace } = await runOne(query, title);
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("model:mismatch");
+  }
+
+  it("shown tier 1: «آیفون ۱۵» + «آیفون ۱۴ پرو و ۱۵ پرو موجود»", async () => {
+    await expectShown("آیفون ۱۵", "آیفون ۱۴ پرو و ۱۵ پرو موجود", 1);
+  });
+
+  it("shown tier 2: «آیفون ۱۵» + «آیفون ۱۴ پرو مکس / ۱۵ پرو»", async () => {
+    await expectShown("آیفون ۱۵", "آیفون ۱۴ پرو مکس / ۱۵ پرو", 2);
+  });
+
+  it("shown tier 2: «آیفون ۱۵» + «آیفون ۱۴ پرو، ۱۵ پرو مکس»", async () => {
+    await expectShown("آیفون ۱۵", "آیفون ۱۴ پرو، ۱۵ پرو مکس", 2);
+  });
+
+  it("shown tier 2: «آیفون ۱۵» + «۱۵ پرو مکس و آیفون ۱۴ موجود» (کد بی‌لنگر)", async () => {
+    await expectShown("آیفون ۱۵", "۱۵ پرو مکس و آیفون ۱۴ موجود", 2);
+  });
+
+  it("shown tier 1: «پژو ۲۰۶» + «پژو ۲۰۷ صندوقدار، ۲۰۶ تیپ ۲»", async () => {
+    await expectShown("پژو ۲۰۶", "پژو ۲۰۷ صندوقدار، ۲۰۶ تیپ ۲", 1);
+  });
+
+  it("shown tier 3: «گوشی گلکسی S23» + «Galaxy A54 مشکی، S23 Ultra سفید»", async () => {
+    await expectShown("گوشی گلکسی S23", "Galaxy A54 مشکی، S23 Ultra سفید", 3);
+  });
+
+  it("shown tier 3: «کنسول پلی‌استیشن ۵» + «پلی‌استیشن ۴ اسلیم و ۵ دیجیتال»", async () => {
+    await expectShown("کنسول پلی‌استیشن ۵", "پلی‌استیشن ۴ اسلیم و ۵ دیجیتال", 3);
+  });
+
+  // B1: only asserts NOT model:mismatch — the real tier (1) is reported,
+  // not locked in, because it was never executed before and may be an
+  // old leak outside 4c2b.
+  it("accepted cost: «آیفون ۱۵» + «آیفون ۱۴ مناسب ۱۵ میلیون» → NOT model:mismatch", async () => {
+    const { trace } = await runOne("آیفون ۱۵", "آیفون ۱۴ مناسب ۱۵ میلیون");
+    expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
+  });
+
+  it("still tier 4: «آیفون ۱۵» + «آیفون ۱۴ پرو ۱۵۰ گیگ» (۱۵۰ برابر ۱۵ نیست)", async () => {
+    await expectReject("آیفون ۱۵", "آیفون ۱۴ پرو ۱۵۰ گیگ");
+  });
+
+  it("still tier 4: «گوشی گلکسی S23» + «Galaxy A54 با ۲۳ ماه گارانتی» (۲۳ بدون حرف، کد گلکسی نیست)", async () => {
+    await expectReject("گوشی گلکسی S23", "Galaxy A54 با ۲۳ ماه گارانتی");
+  });
+
+  it("still tier 4: «آیفون ۱۵» + «آیفون ۱۴ قابل معاوضه با ۱۵» (۱۵ بعد از نشانه‌ی معاوضه است)", async () => {
+    await expectReject("آیفون ۱۵", "آیفون ۱۴ قابل معاوضه با ۱۵");
+  });
+});

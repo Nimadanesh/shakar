@@ -2295,6 +2295,19 @@ function modelMismatchReject(
   if (!queryText || !listingTitle) return null;
   const query = queryModelCode(queryText);
   if (!query) return null;
+  // MM3b (2026-11-04): the query code anywhere in the pre-marker part
+  // of the title (same anchor's code shape, read from any token
+  // position) switches the rule off — a shop ad that also carries the
+  // wanted model is not a wrong-model ad. The anchor need not sit next
+  // to this code. Only more-off: no new reject is created here.
+  {
+    const tokens = normalizeForMatch(listingTitle).split(" ").filter(Boolean).map(foldLatinToken);
+    const part = tokens.slice(0, firstExchangeMarker(tokens));
+    for (let i = 0; i < part.length; i++) {
+      const read = readModelCodeAfter(part, i, query.anchor);
+      if (read !== null && read.code === query.code) return null;
+    }
+  }
   const titleCodes = titleModelCodes(listingTitle, query.anchor);
   if (titleCodes.length === 0) return null;
   if (titleCodes.includes(query.code)) return null;
