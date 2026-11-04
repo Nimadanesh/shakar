@@ -12,6 +12,11 @@ import {
 import { includesWord, isServiceDemandTerm, SERVICE_DEMAND_FAMILY, ROLE_WORDS } from "@/lib/interpret";
 import { adKindForTitle, HEAD_KIND, HEAD_SKIP_TOKENS, queryKindForDef } from "./kindLexicon";
 import {
+  SPEC_FAMILIES,
+  maskThousandNumbers,
+  unitFamilyOf,
+} from "./unitClasses";
+import {
   FAMILY_NEXT_WORD_KIND,
   FINE_KIND_WORDS,
   familyByToken,
@@ -2276,15 +2281,99 @@ function firstExchangeMarker(tokens: readonly string[]): number {
 // MM2: union of the same anchor's code lists in the title, cut at the
 // first exchange marker. Title only — never the description.
 function titleModelCodes(title: string, anchor: ModelAnchor): string[] {
-  const tokens = normalizeForMatch(title).split(" ").filter(Boolean).map(foldLatinToken);
+  const tokens = normalizeForMatch(maskThousandNumbers(title)).split(" ").filter(Boolean).map(foldLatinToken);
   const part = tokens.slice(0, firstExchangeMarker(tokens));
   const codes = new Set<string>();
   for (const occ of modelAnchorOccurrences(part, anchor)) {
-    for (const code of readModelCodeList(part, occ.start + occ.formLen, anchor).codes) {
+    for (const code of readModelCodeListTitle(part, occ.start + occ.formLen, anchor).codes) {
       codes.add(code);
     }
   }
   return [...codes];
+}
+
+// HANDOFF-4e1 (2026-11-04) — NE2, title-side code reads. A code
+// followed by a unit word (any family EXCEPT range — ا-۱: «تا» never
+// drops a code, so «آیفون ۱۱ تا ۱۴ پرو» keeps its list [11] and stays
+// rejected) is not a model code. Thousand pieces never reach these
+// readers: the title tokenizers above mask thousand numbers first.
+// queryModelCode (MM1) deliberately keeps the original readers.
+function readModelCodeAfterTitle(
+  tokens: readonly string[],
+  pos: number,
+  anchor: ModelAnchor
+): { code: string; next: number } | null {
+  const read = readModelCodeAfter(tokens, pos, anchor);
+  if (read === null) return null;
+  const after = tokens[read.next];
+  if (after !== undefined) {
+    const family = unitFamilyOf(after);
+    if (family !== null && family !== "range") return null;
+  }
+  return read;
+}
+
+// Title-side code list: same chaining as readModelCodeList (adjacency
+// or «و»), but the list CUTS at a code followed by a unit word.
+function readModelCodeListTitle(
+  tokens: readonly string[],
+  pos: number,
+  anchor: ModelAnchor
+): { codes: string[]; end: number } {
+  const first = readModelCodeAfterTitle(tokens, pos, anchor);
+  if (!first) return { codes: [], end: pos };
+  const codes = [first.code];
+  let i = first.next;
+  while (i < tokens.length) {
+    let j = i;
+    if (tokens[j] === "و") j += 1;
+    const next = j < tokens.length ? readModelCodeAfterTitle(tokens, j, anchor) : null;
+    if (!next) break;
+    codes.push(next.code);
+    i = next.next;
+  }
+  return { codes, end: i };
+}
+
+// HANDOFF-4e1 (2026-11-04) — NE1, number-term witness. Only for
+// include terms (or includeAnyOf members) that are only a number, and
+// only AFTER textMatchesInclude already matched (the caller checks
+// that first). An occurrence is a witness unless: its following token
+// is a role-family word unlike the query's following token, or the
+// query's following token is a spec family and the occurrence's is a
+// different spec family. A range following token («تا») counts as a
+// witness, like a word outside the table. Thousand pieces never
+// appear (masked before tokenizing), so they are never witnesses.
+export function isNumberOnlyTerm(term: string): boolean {
+  const norm = unifyModelDigits(normalizeForMatch(term).trim());
+  return norm !== "" && /^[0-9]+$/.test(norm);
+}
+
+export function numberTermWitnessed(term: string, rawText: string, queryText: string): boolean {
+  if (!isNumberOnlyTerm(term)) return true;
+  const termNum = unifyModelDigits(normalizeForMatch(term).trim());
+  // w_q from the FIRST occurrence in the query (ا-۴.۱).
+  const qToks = normalizeForMatch(queryText).split(" ").filter(Boolean).map(foldLatinToken);
+  let wq = "";
+  for (let i = 0; i < qToks.length; i++) {
+    if (unifyModelDigits(qToks[i]) === termNum) {
+      wq = qToks[i + 1] ?? "";
+      break;
+    }
+  }
+  const fQ = wq === "" ? null : unitFamilyOf(wq);
+  const toks = normalizeForMatch(maskThousandNumbers(rawText)).split(" ").filter(Boolean).map(foldLatinToken);
+  for (let i = 0; i < toks.length; i++) {
+    if (unifyModelDigits(toks[i]) !== termNum) continue;
+    const wt = toks[i + 1] ?? "";
+    const fT = wt === "" ? null : unitFamilyOf(wt);
+    if (fT === null || fT === "range") return true;
+    if (wt === wq || (fQ !== null && fT === fQ)) return true;
+    if (SPEC_FAMILIES.has(fT) && fQ === null) return true;
+    // Otherwise (role family unlike the query's, or a different spec
+    // family than the query's) this occurrence is not a witness.
+  }
+  return false;
 }
 
 // HANDOFF-4c2c (2026-11-04) — MM3c data.
@@ -2293,18 +2382,6 @@ function titleModelCodes(title: string, anchor: ModelAnchor): string[] {
 // to count as a witness (peugeot, pride and galaxy codes are long
 // enough that a bare number cannot be mistaken for one).
 const MM3C_SHORT_ANCHORS: ReadonlySet<string> = new Set(["iphone", "playstation", "mavic", "avata"]);
-
-// Unit/counter words (after normalizeForMatch; Latin case-insensitive):
-// a number followed by one of these is a price, a duration or a count,
-// not a model code.
-const MM3C_UNIT_WORDS: ReadonlySet<string> = new Set(
-  [
-    "میلیون", "ملیون", "میلیارد", "ملیارد", "تومان", "تومن", "هزار",
-    "ماه", "ماهه", "روز", "روزه", "هفته", "سال", "ساله", "ساعت",
-    "گیگ", "گیگابایت", "ترابایت", "ترا", "gb", "tb", "مگاپیکسل",
-    "اینچ", "درصد", "عدد", "تا", "دسته", "بازی",
-  ].map((w) => normalizeForMatch(w))
-);
 
 // Guard word marking a list separator in the raw title. It survives
 // normalizeForMatch as one lowercase token and never collides with a
@@ -2319,7 +2396,7 @@ const MM3C_GUARD = "zzsepzz";
 // exactly normalizeForMatch(title)'s tokens. A «و» token likewise
 // flags the token after it; a glued «و۱۵» is one token, not a «و».
 function titleTokensWithSeparatorFlags(rawTitle: string): { token: string; afterSeparator: boolean }[] {
-  const guarded = rawTitle.replace(/[/،,\-+]/g, ` ${MM3C_GUARD} `);
+  const guarded = maskThousandNumbers(rawTitle).replace(/[/،,\-+]/g, ` ${MM3C_GUARD} `);
   const tokens = normalizeForMatch(guarded).split(" ").filter(Boolean).map(foldLatinToken);
   const out: { token: string; afterSeparator: boolean }[] = [];
   let pending = false;
@@ -2348,18 +2425,19 @@ function modelMismatchReject(
   // wanted model is not a wrong-model ad. The anchor need not sit next
   // to this code. Only more-off: no new reject is created here.
   // MM3c (2026-11-04): a code read counts as a witness only if
-  // condition 1 (the token after the code is not a unit/counter word)
-  // holds, and — for short-code anchors only — condition 2 (the code
-  // is the title's first token, or follows a list separator).
+  // condition 1 (the token after the code is not a unit word — since
+  // HANDOFF-4e1 read from the unit table, not MM3C_UNIT_WORDS) holds,
+  // and — for short-code anchors only — condition 2 (the code is the
+  // title's first token, or follows a list separator).
   {
     const flagged = titleTokensWithSeparatorFlags(listingTitle);
     const tokens = flagged.map((f) => f.token);
     const cut = firstExchangeMarker(tokens);
     for (let i = 0; i < cut; i++) {
-      const read = readModelCodeAfter(tokens, i, query.anchor);
+      const read = readModelCodeAfterTitle(tokens, i, query.anchor);
       if (read === null || read.code !== query.code) continue;
       const after = read.next < tokens.length ? tokens[read.next] : null;
-      if (after !== null && MM3C_UNIT_WORDS.has(after)) continue;
+      if (after !== null && unitFamilyOf(after) !== null) continue;
       if (MM3C_SHORT_ANCHORS.has(query.anchor.id)) {
         const afterSeparator = flagged[i].afterSeparator || (i > 0 && tokens[i - 1] === "و");
         if (i !== 0 && !afterSeparator) continue;

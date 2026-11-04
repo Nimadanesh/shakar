@@ -40,6 +40,7 @@ import {
   fineKindReject,
   isRepairWord,
   isMixedTransactionTitle,
+  numberTermWitnessed,
   rolesClash,
 } from "./semantics";
 import {
@@ -924,9 +925,19 @@ function evaluateDescription(
       isServiceDemandTerm(term) &&
       SERVICE_DEMAND_FAMILY.some((w) => textMatches(combined, w));
     // HANDOFF-N: include terms match with synonym groups (17–22).
-    if (textMatchesInclude(title, term)) {
+    // HANDOFF-4e1 NE1: a number-only term counts only on a witness
+    // occurrence (title and description checked separately); a match
+    // with no witness falls through exactly like no match.
+    if (
+      textMatchesInclude(title, term) &&
+      numberTermWitnessed(term, title, def.query)
+    ) {
       termOutcome.push("title");
-    } else if (demandSatisfied || textMatchesInclude(description, term)) {
+    } else if (
+      demandSatisfied ||
+      (textMatchesInclude(description, term) &&
+        numberTermWitnessed(term, description, def.query))
+    ) {
       termOutcome.push("desc");
     } else if (
       // HANDOFF-2 layer B (B5): ONLY the subject word (first include
@@ -1028,10 +1039,20 @@ function evaluateDescription(
   // member (title first, then description, same as a single term).
   for (const group of def.includeAnyOf ?? []) {
     const label = group.join(" یا ");
-    if (group.some((m) => textMatchesInclude(title, m))) {
+    if (
+      group.some(
+        (m) => textMatchesInclude(title, m) && numberTermWitnessed(m, title, def.query)
+      )
+    ) {
       mustTitle += 1;
       evidence.push(label);
-    } else if (group.some((m) => textMatchesInclude(description, m))) {
+    } else if (
+      group.some(
+        (m) =>
+          textMatchesInclude(description, m) &&
+          numberTermWitnessed(m, description, def.query)
+      )
+    ) {
       mustDesc += 1;
       evidence.push(label);
     } else {

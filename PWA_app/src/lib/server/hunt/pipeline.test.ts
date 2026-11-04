@@ -5145,3 +5145,127 @@ describe("HANDOFF-4c2c — MM3c: a number in a price/duration/count role is not 
     await expectNotMismatch("گوشی گلکسی S23", "Galaxy A54 / S-23 Ultra");
   });
 });
+
+describe("HANDOFF-4e1 — number evidence: a number in a price/duration/count/spec role is not a witness", () => {
+  // Full path: sentence → resolveHuntDefinition → runPipeline with a
+  // mock provider. runOne uses description = title.
+  async function runOne(query: string, title: string) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+    });
+    if (!def) throw new Error("no definition for " + query);
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "a1", title })],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async () => ({
+      sourceAdId: "a1",
+      title,
+      price: null,
+      city: "",
+      description: title,
+      images: [],
+      categorySlug: "",
+    }));
+    return runPipeline(def, () => {});
+  }
+
+  function traceReason(
+    trace: Array<{ sourceAdId: string; reasons?: string[] }>,
+    id: string
+  ): string[] {
+    return trace.find((t) => t.sourceAdId === id)?.reasons ?? [];
+  }
+
+  async function expectReject(query: string, title: string) {
+    const { results, trace } = await runOne(query, title);
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("model:mismatch");
+  }
+
+  async function expectShown(query: string, title: string, tier: number) {
+    const { results, trace } = await runOne(query, title);
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(tier);
+    expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
+  }
+
+  async function expectTier3Partial(query: string, title: string) {
+    const { results, trace } = await runOne(query, title);
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(traceReason(trace, "a1")).toContain("partial-evidence");
+  }
+
+  it("tier 3: «آیفون ۱۵» + «گوشی آیفون قیمت ۱۵ میلیون»", async () => {
+    await expectTier3Partial("آیفون ۱۵", "گوشی آیفون قیمت ۱۵ میلیون");
+  });
+
+  it("tier 3: «میز ۶ نفره» + «میز غذاخوری ۸ نفره، ۶ ماه گارانتی»", async () => {
+    await expectTier3Partial("میز ۶ نفره", "میز غذاخوری ۸ نفره، ۶ ماه گارانتی");
+  });
+
+  it("tier 3: «تلویزیون ۵۵ اینچ» + «تلویزیون ۴۳ اینچ ۵۵ هزار تومان»", async () => {
+    await expectTier3Partial("تلویزیون ۵۵ اینچ", "تلویزیون ۴۳ اینچ ۵۵ هزار تومان");
+  });
+
+  it("tier 3: «لپ‌تاپ رم ۱۶ گیگ» + «لپ‌تاپ رم ۸ گیگ ۱۶ اینچ»", async () => {
+    await expectTier3Partial("لپ‌تاپ رم ۱۶ گیگ", "لپ‌تاپ رم ۸ گیگ ۱۶ اینچ");
+  });
+
+  it("tier 4: «آیفون ۱۵» + «آیفون ۱۱، ۱۵ سال سابقه فروشگاه»", async () => {
+    await expectReject("آیفون ۱۵", "آیفون ۱۱، ۱۵ سال سابقه فروشگاه");
+  });
+
+  it("tier 4: «آیفون ۱۲» + «آیفون ۱۱، ۱۲ ماه گارانتی»", async () => {
+    await expectReject("آیفون ۱۲", "آیفون ۱۱، ۱۲ ماه گارانتی");
+  });
+
+  it("tier 4: «پراید ۱۳۲» + «پراید ۱۳۱ کارکرد ۱۳۲,۰۰۰ کیلومتر»", async () => {
+    await expectReject("پراید ۱۳۲", "پراید ۱۳۱ کارکرد ۱۳۲,۰۰۰ کیلومتر");
+  });
+
+  it("tier 4: «کنسول پلی‌استیشن ۵» + «پلی‌استیشن ۴، ۵ بازی»", async () => {
+    await expectReject("کنسول پلی‌استیشن ۵", "پلی‌استیشن ۴، ۵ بازی");
+  });
+
+  it("control tier 1: «میز ۶ نفره» + «میز ۶ نفره غذاخوری»", async () => {
+    await expectShown("میز ۶ نفره", "میز ۶ نفره غذاخوری", 1);
+  });
+
+  it("control tier 1: «تلویزیون ۵۵ اینچ» + «تلویزیون سامسونگ ۵۵ اینچ»", async () => {
+    await expectShown("تلویزیون ۵۵ اینچ", "تلویزیون سامسونگ ۵۵ اینچ", 1);
+  });
+
+  // Ineffective control (ا-۵): «۱۸ هزار» is read as a price, so ۱۸
+  // never enters include — NE1 has nothing to check here.
+  it("control tier 1: «کولر گازی ۱۸ هزار» + «کولر گازی گری ۱۸ هزار»", async () => {
+    await expectShown("کولر گازی ۱۸ هزار", "کولر گازی گری ۱۸ هزار", 1);
+  });
+
+  it("control tier 1: «آیفون ۱۵ ۲۵۶» + «آیفون ۱۵ ۲۵۶ گیگ»", async () => {
+    await expectShown("آیفون ۱۵ ۲۵۶", "آیفون ۱۵ ۲۵۶ گیگ", 1);
+  });
+
+  it("control tier 1: «میز ۶ نفره» + «میز غذاخوری ۶ صندلی»", async () => {
+    await expectShown("میز ۶ نفره", "میز غذاخوری ۶ صندلی", 1);
+  });
+
+  it("control tier 1: «دوچرخه ۲۶ اینچ» + «دوچرخه ۲۶ اینچی کوهستان»", async () => {
+    await expectShown("دوچرخه ۲۶ اینچ", "دوچرخه ۲۶ اینچی کوهستان", 1);
+  });
+
+  it("control tier 1: «پژو ۲۰۶ مدل ۹۸» + «پژو ۲۰۶ مدل ۹۸ تمیز»", async () => {
+    await expectShown("پژو ۲۰۶ مدل ۹۸", "پژو ۲۰۶ مدل ۹۸ تمیز", 1);
+  });
+
+  it("control tier 4: «آیفون ۱۵ تا ۹۰ میلیون» + «آیفون ۱۴ پرو» (MM1 بی‌تغییر)", async () => {
+    await expectReject("آیفون ۱۵ تا ۹۰ میلیون", "آیفون ۱۴ پرو");
+  });
+
+  it("control tier 4 (ا-۱): «آیفون ۱۵» + «آیفون ۱۱ تا ۱۴ پرو» (تا کد را حذف نمی‌کند)", async () => {
+    await expectReject("آیفون ۱۵", "آیفون ۱۱ تا ۱۴ پرو");
+  });
+});
