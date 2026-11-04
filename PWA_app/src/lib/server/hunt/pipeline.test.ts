@@ -4349,10 +4349,11 @@ describe("HANDOFF-4b — model families: brand ← family substitution", () => {
     expect(results[0].tierReasons).toContain("partial-evidence");
   });
 
+  // به دستور مالک ۲۰۲۶-۱۱-۰۴: حذف بی‌تفاوت‌به‌حروفِ Mavic از include، آگهی را به ردیف ۱ می‌رساند.
   it("amendment 4: «پهپاد DJI، Mavic نباشه» + «پهپاد Avata 2» → shown tier 3", async () => {
     const { results } = await runOne("پهپاد DJI، Mavic نباشه", "پهپاد Avata 2");
     expect(results).toHaveLength(1);
-    expect(results[0].tier).toBe(3);
+    expect(results[0].tier).toBe(1);
   });
 
   it("amendment 4: «ماشین هیوندای» + «Santa Fe ۲۰۱۴» → tier 3, kind:brand-only", async () => {
@@ -4408,5 +4409,123 @@ describe("HANDOFF-4b — model families: brand ← family substitution", () => {
     expect(results).toHaveLength(1);
     expect(results[0].tier).toBe(3);
     expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+});
+
+describe("HANDOFF-4c0 — Latin case-insensitive generic matching (include + exclude)", () => {
+  // Full path: sentence → resolveHuntDefinition → runPipeline with a
+  // mock provider. runOne uses description = title; runOneDesc lets the
+  // description differ, so a detail-phase-only exclude can be tested.
+  async function runOneDesc(query: string, title: string, description: string) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+    });
+    if (!def) throw new Error("no definition for " + query);
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "a1", title })],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async () => ({
+      sourceAdId: "a1",
+      title,
+      price: null,
+      city: "",
+      description,
+      images: [],
+      categorySlug: "",
+    }));
+    return runPipeline(def, () => {});
+  }
+
+  async function runOne(query: string, title: string) {
+    return runOneDesc(query, title, title);
+  }
+
+  it("rejects title phase: «لپ‌تاپ، Gaming نباشه» + «لپ‌تاپ Gaming ایسوس»", async () => {
+    const { results, stats } = await runOne("لپ‌تاپ، Gaming نباشه", "لپ‌تاپ Gaming ایسوس");
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(1);
+  });
+
+  it("rejects title phase: «لپ‌تاپ، gaming نباشه» + «لپ‌تاپ Gaming ایسوس»", async () => {
+    const { results, stats } = await runOne("لپ‌تاپ، gaming نباشه", "لپ‌تاپ Gaming ایسوس");
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(1);
+  });
+
+  it("rejects title phase: «کولر گازی، Inverter نباشه» + «کولر گازی Inverter ۱۸۰۰۰»", async () => {
+    const { results, stats } = await runOne("کولر گازی، Inverter نباشه", "کولر گازی Inverter ۱۸۰۰۰");
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(1);
+  });
+
+  it("rejects title phase: «لپ‌تاپ، gaming نباشه» + «لپ‌تاپ GAMING ایسوس»", async () => {
+    const { results, stats } = await runOne("لپ‌تاپ، gaming نباشه", "لپ‌تاپ GAMING ایسوس");
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(1);
+  });
+
+  it("rejects detail phase: exclude word only in the description, capitalized", async () => {
+    const { results, stats } = await runOneDesc(
+      "لپ‌تاپ، Gaming نباشه",
+      "لپ‌تاپ ایسوس ۱۵",
+      "لپ‌تاپ Gaming با کارت گرافیک قوی"
+    );
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(0);
+  });
+
+  it("detail-phase control: same ad without the exclude word in the description is shown tier 1", async () => {
+    const { results } = await runOneDesc(
+      "لپ‌تاپ، Gaming نباشه",
+      "لپ‌تاپ ایسوس ۱۵",
+      "لپ‌تاپ با کارت گرافیک قوی"
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+  });
+
+  it("stays rejected: «لپ‌تاپ، Gaming نباشه» + «لپ‌تاپ gaming ایسوس»", async () => {
+    const { results, stats } = await runOne("لپ‌تاپ، Gaming نباشه", "لپ‌تاپ gaming ایسوس");
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(1);
+  });
+
+  it("stays rejected: «لپ‌تاپ، گیمینگ نباشه» + «لپ‌تاپ گیمینگ ایسوس»", async () => {
+    const { results, stats } = await runOne("لپ‌تاپ، گیمینگ نباشه", "لپ‌تاپ گیمینگ ایسوس");
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(1);
+  });
+
+  it("stays rejected: «پهپاد DJI، Mavic نباشه» + «پهپاد Mavic 3»", async () => {
+    const { results, stats } = await runOne("پهپاد DJI، Mavic نباشه", "پهپاد Mavic 3");
+    expect(results).toHaveLength(0);
+    expect(stats.titleRejected).toBe(1);
+  });
+
+  it("shows tier 1: «لپ‌تاپ Gaming» + «لپ‌تاپ gaming ایسوس» (was tier 3)", async () => {
+    const { results } = await runOne("لپ‌تاپ Gaming", "لپ‌تاپ gaming ایسوس");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+  });
+
+  it("shows tier 1: «کولر گازی Inverter» + «کولر گازی Inverter ۱۸۰۰۰»", async () => {
+    const { results } = await runOne("کولر گازی Inverter", "کولر گازی Inverter ۱۸۰۰۰");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+  });
+
+  it("shows tier 1 unchanged: «میز، چوبی نباشه» + «میز فلزی»", async () => {
+    const { results } = await runOne("میز، چوبی نباشه", "میز فلزی");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+  });
+
+  it("shows tier 1: «پهپاد DJI، Mavic نباشه» + «پهپاد DJI Avata 2» (was tier 3)", async () => {
+    const { results } = await runOne("پهپاد DJI، Mavic نباشه", "پهپاد DJI Avata 2");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
   });
 });

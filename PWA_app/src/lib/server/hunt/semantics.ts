@@ -452,10 +452,12 @@ function excludeTokenStream(text: string): ExcludeStreamEl[] {
       stream.push({ barrier: true });
       continue;
     }
-    const cleaned = part.replace(
-      /[()«»""''\[\]{}<>|/\\\-–—_+=*~@#$%^&`,؛]/g,
-      ""
-    );
+    // HANDOFF-4c0 F1: generic Latin exclusion matching is
+    // case-insensitive — fold Latin here, mirroring the brand stream
+    // below. Persian and digits are identity under toLowerCase.
+    const cleaned = part
+      .replace(/[()«»""''\[\]{}<>|/\\\-–—_+=*~@#$%^&`,؛]/g, "")
+      .toLowerCase();
     if (cleaned === "") continue;
     const stemmed = stemToken(cleaned);
     if (stemmed === "") continue;
@@ -471,7 +473,13 @@ export function excludeHasUnnegatedOccurrence(
   const stream = excludeTokenStream(text);
   let foundAny = false;
   for (const variant of expandSynonyms(term, category)) {
-    const variantTokens = variant.split(" ").filter(Boolean);
+    // HANDOFF-4c0 F1: the stream above is lowercased, so the variant
+    // side folds too — otherwise a capital variant would never meet a
+    // lowercased stream token.
+    const variantTokens = variant
+      .split(" ")
+      .filter(Boolean)
+      .map((t) => t.toLowerCase());
     if (variantTokens.length === 0) continue;
     for (let i = 0; i < stream.length; i++) {
       let pos = i;

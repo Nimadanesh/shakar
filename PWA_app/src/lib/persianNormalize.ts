@@ -469,7 +469,14 @@ function containsNormalizedTerm(
   // it never removes an existing match. It runs for both include and
   // exclude (both callers reach this function), with the full verdict.
   if (spacelessMatches(adText, term)) return true;
-  const adTokens = canonicalizeTokens(adTextTokens(adText), includeSynonyms);
+  // HANDOFF-4c0 F1: generic Latin matching is case-insensitive.
+  // Lowercasing AFTER canonicalization (maps are Persian-keyed, so
+  // their lookups are unaffected) folds Latin on both sides; Persian
+  // and digits are identity under toLowerCase, so they are untouched.
+  // Brand/family paths never reach here — they return earlier.
+  const adTokens = canonicalizeTokens(adTextTokens(adText), includeSynonyms).map(
+    (t) => t.toLowerCase()
+  );
   if (adTokens.length === 0) return false;
   const raw = normalizeForMatch(term);
   const keys = new Set([raw, synonymKey(term)]);
@@ -479,7 +486,7 @@ function containsNormalizedTerm(
     const keyTokens = canonicalizeTokens(
       key.split(" ").filter(Boolean),
       includeSynonyms
-    );
+    ).map((t) => t.toLowerCase());
     return sequenceMatches(adTokens, keyTokens);
   });
 }
@@ -581,13 +588,15 @@ export function spacelessMatches(adText: string, term: string): boolean {
     .split(" ")
     .filter(Boolean)
     .map(stemToken)
-    .join("");
+    .join("")
+    // HANDOFF-4c0 F1: same Latin case fold as containsNormalizedTerm.
+    .toLowerCase();
   const tokens = normalizeForMatch(
     adText.replace(MARK_RE, ` ${MARK_SENTINEL} `)
   )
     .split(" ")
     .filter(Boolean)
-    .map((t) => (t === MARK_SENTINEL ? t : stemToken(t)));
+    .map((t) => (t === MARK_SENTINEL ? t : stemToken(t).toLowerCase()));
   // Scan each sentinel-free run for a 1–3-word window whose spaceless
   // concatenation equals the term's spaceless form.
   let run: string[] = [];

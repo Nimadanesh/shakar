@@ -374,16 +374,22 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
   // subject head (include[0]) is never stripped by an exclude.
   // Price hard/softness is unchanged — only the words leave.
   {
+    // HANDOFF-4c0 F2: the negated-word removal compares case-folded
+    // tokens, so a capitalized Latin negated word («Mavic») is removed
+    // by its lowercased exclude form («mavic»). Persian and digits are
+    // identity under toLowerCase, so they are untouched.
     const removal = new Set<string>();
-    for (const t of exclude) for (const tok of tokenize(t)) removal.add(tok);
+    for (const t of exclude)
+      for (const tok of tokenize(t)) removal.add(tok.toLowerCase());
     // Absent words are not content either — the same filter the contract
     // applies to its own mustNot stems. This is what makes a soft
     // «نداشته باشه» behave like «بدون»: its words leave include too.
-    for (const t of absentAttributes) for (const tok of tokenize(t)) removal.add(tok);
+    for (const t of absentAttributes)
+      for (const tok of tokenize(t)) removal.add(tok.toLowerCase());
     for (const m of [
       "نباشه", "نباشد", "نیست", "نیستش", "نداشته", "باشه", "باشد", "نداره",
     ])
-      for (const tok of tokenize(m)) removal.add(tok);
+      for (const tok of tokenize(m)) removal.add(tok.toLowerCase());
     // Price tokens: cue + number + unit (typo units included). Only
     // the number in a price pattern is removed, so «آیفون ۱۵» keeps ۱۵.
     // HANDOFF-N: letter-numbers count too («زیر ده میل» removes ده/میل).
@@ -414,11 +420,13 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
         }
       }
     }
-    for (const tok of inert) removal.add(tok);
+    for (const tok of inert) removal.add(tok.toLowerCase());
     const keptInclude = include.filter((term, idx) => {
       if (idx === 0) return true;
       const toks = tokenize(term);
-      return !(toks.length > 0 && toks.every((t) => removal.has(t)));
+      return !(
+        toks.length > 0 && toks.every((t) => removal.has(t.toLowerCase()))
+      );
     });
     include.splice(0, include.length, ...keptInclude);
     exclude = exclude.filter((t) => {
@@ -438,7 +446,9 @@ export function resolveHuntDefinition(body: unknown): HuntDefinition | null {
         .filter(Boolean)
         .filter((tok) => {
           const toks = tokenize(tok);
-          return !(toks.length > 0 && toks.every((t) => removal.has(t)));
+          return !(
+            toks.length > 0 && toks.every((t) => removal.has(t.toLowerCase()))
+          );
         });
       if (kept.length === 0) continue;
       if (kept.every((tok) => priceCues.has(tok))) continue;
