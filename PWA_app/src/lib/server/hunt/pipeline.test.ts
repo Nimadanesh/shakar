@@ -5032,12 +5032,9 @@ describe("HANDOFF-4c2b — MM3b: query code anywhere in the pre-marker title par
     await expectShown("کنسول پلی‌استیشن ۵", "پلی‌استیشن ۴ اسلیم و ۵ دیجیتال", 3);
   });
 
-  // B1: only asserts NOT model:mismatch — the real tier (1) is reported,
-  // not locked in, because it was never executed before and may be an
-  // old leak outside 4c2b.
-  it("accepted cost: «آیفون ۱۵» + «آیفون ۱۴ مناسب ۱۵ میلیون» → NOT model:mismatch", async () => {
-    const { trace } = await runOne("آیفون ۱۵", "آیفون ۱۴ مناسب ۱۵ میلیون");
-    expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
+  // به دستور مالک ۲۰۲۶-۱۱-۰۴: عدد در نقش قیمت/مدت شاهد کد مدل نیست؛ این آگهی دوباره رد می‌شود (4c2c).
+  it("«آیفون ۱۵» + «آیفون ۱۴ مناسب ۱۵ میلیون» → ردیف ۴ (model:mismatch)", async () => {
+    await expectReject("آیفون ۱۵", "آیفون ۱۴ مناسب ۱۵ میلیون");
   });
 
   it("still tier 4: «آیفون ۱۵» + «آیفون ۱۴ پرو ۱۵۰ گیگ» (۱۵۰ برابر ۱۵ نیست)", async () => {
@@ -5050,5 +5047,101 @@ describe("HANDOFF-4c2b — MM3b: query code anywhere in the pre-marker title par
 
   it("still tier 4: «آیفون ۱۵» + «آیفون ۱۴ قابل معاوضه با ۱۵» (۱۵ بعد از نشانه‌ی معاوضه است)", async () => {
     await expectReject("آیفون ۱۵", "آیفون ۱۴ قابل معاوضه با ۱۵");
+  });
+});
+
+describe("HANDOFF-4c2c — MM3c: a number in a price/duration/count role is not a model-code witness", () => {
+  // Full path: sentence → resolveHuntDefinition → runPipeline with a
+  // mock provider. runOne uses description = title.
+  async function runOne(query: string, title: string) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+    });
+    if (!def) throw new Error("no definition for " + query);
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "a1", title })],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async () => ({
+      sourceAdId: "a1",
+      title,
+      price: null,
+      city: "",
+      description: title,
+      images: [],
+      categorySlug: "",
+    }));
+    return runPipeline(def, () => {});
+  }
+
+  function traceReason(
+    trace: Array<{ sourceAdId: string; reasons?: string[] }>,
+    id: string
+  ): string[] {
+    return trace.find((t) => t.sourceAdId === id)?.reasons ?? [];
+  }
+
+  async function expectReject(query: string, title: string) {
+    const { results, trace } = await runOne(query, title);
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("model:mismatch");
+  }
+
+  async function expectShown(query: string, title: string, tier: number) {
+    const { results, trace } = await runOne(query, title);
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(tier);
+    expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
+  }
+
+  async function expectNotMismatch(query: string, title: string) {
+    const { trace } = await runOne(query, title);
+    expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
+  }
+
+  it("tier 4: «آیفون ۱۲» + «آیفون ۱۱ پرو با ۱۲ ماه گارانتی»", async () => {
+    await expectReject("آیفون ۱۲", "آیفون ۱۱ پرو با ۱۲ ماه گارانتی");
+  });
+
+  it("tier 4: «کنسول پلی‌استیشن ۵» + «پلی‌استیشن ۴ با ۵ بازی»", async () => {
+    await expectReject("کنسول پلی‌استیشن ۵", "پلی‌استیشن ۴ با ۵ بازی");
+  });
+
+  it("tier 4: «آیفون ۱۳» + «آیفون ۱۴ پرو ۱۳ روز تست»", async () => {
+    await expectReject("آیفون ۱۳", "آیفون ۱۴ پرو ۱۳ روز تست");
+  });
+
+  it("tier 4: «کنسول پلی‌استیشن ۲» + «پلی‌استیشن ۴ با ۲ دسته»", async () => {
+    await expectReject("کنسول پلی‌استیشن ۲", "پلی‌استیشن ۴ با ۲ دسته");
+  });
+
+  it("tier 4: «پهپاد ماویک ۳» + «Mavic 2 با ۳ باتری» (شرط ۲)", async () => {
+    await expectReject("پهپاد ماویک ۳", "Mavic 2 با ۳ باتری");
+  });
+
+  it("tier 4 (C1, شرط ۱): «آیفون ۱۵» + «آیفون ۱۴ پرو و ۱۵ ماه گارانتی»", async () => {
+    await expectReject("آیفون ۱۵", "آیفون ۱۴ پرو و ۱۵ ماه گارانتی");
+  });
+
+  it("shown tier 1: «آیفون ۱۵» + «آیفون ۱۴ پرو و ۱۵ ۲۵۶ گیگ» (بعد از ۱۵، «۲۵۶» آمده، نه واحد)", async () => {
+    await expectShown("آیفون ۱۵", "آیفون ۱۴ پرو و ۱۵ ۲۵۶ گیگ", 1);
+  });
+
+  it("shown tier 1: «آیفون ۱۵» + «آیفون ۱۴ پرو، ۱۵ موجود»", async () => {
+    await expectShown("آیفون ۱۵", "آیفون ۱۴ پرو، ۱۵ موجود", 1);
+  });
+
+  it("C4: «آیفون ۱۵» + «آیفون ۱۴ پرو + ۱۵ پرو» → NOT model:mismatch", async () => {
+    await expectNotMismatch("آیفون ۱۵", "آیفون ۱۴ پرو + ۱۵ پرو");
+  });
+
+  it("C4: «آیفون ۱۵» + «iPhone 14 Pro / 15 Pro» → NOT model:mismatch", async () => {
+    await expectNotMismatch("آیفون ۱۵", "iPhone 14 Pro / 15 Pro");
+  });
+
+  it("C4: «گوشی گلکسی S23» + «Galaxy A54 / S-23 Ultra» → NOT model:mismatch", async () => {
+    await expectNotMismatch("گوشی گلکسی S23", "Galaxy A54 / S-23 Ultra");
   });
 });

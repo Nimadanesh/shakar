@@ -2287,6 +2287,53 @@ function titleModelCodes(title: string, anchor: ModelAnchor): string[] {
   return [...codes];
 }
 
+// HANDOFF-4c2c (2026-11-04) — MM3c data.
+// دانش عمومی زبان؛ نه از تیترهای مجموعه‌های طلایی یا بیرونی.
+// Short-code anchors: only these need a list position for a bare code
+// to count as a witness (peugeot, pride and galaxy codes are long
+// enough that a bare number cannot be mistaken for one).
+const MM3C_SHORT_ANCHORS: ReadonlySet<string> = new Set(["iphone", "playstation", "mavic", "avata"]);
+
+// Unit/counter words (after normalizeForMatch; Latin case-insensitive):
+// a number followed by one of these is a price, a duration or a count,
+// not a model code.
+const MM3C_UNIT_WORDS: ReadonlySet<string> = new Set(
+  [
+    "میلیون", "ملیون", "میلیارد", "ملیارد", "تومان", "تومن", "هزار",
+    "ماه", "ماهه", "روز", "روزه", "هفته", "سال", "ساله", "ساعت",
+    "گیگ", "گیگابایت", "ترابایت", "ترا", "gb", "tb", "مگاپیکسل",
+    "اینچ", "درصد", "عدد", "تا", "دسته", "بازی",
+  ].map((w) => normalizeForMatch(w))
+);
+
+// Guard word marking a list separator in the raw title. It survives
+// normalizeForMatch as one lowercase token and never collides with a
+// real word, so it can be removed again after normalization.
+const MM3C_GUARD = "zzsepzz";
+
+// Tokenize a raw title while remembering, for each normalized token,
+// whether a list separator stood immediately before it in the raw text.
+// Separator chars (/ ، , - +) are replaced by the guard word before
+// normalization (normalizeForMatch turns them into spaces); the guards
+// are then removed and converted into flags, so the token array is
+// exactly normalizeForMatch(title)'s tokens. A «و» token likewise
+// flags the token after it; a glued «و۱۵» is one token, not a «و».
+function titleTokensWithSeparatorFlags(rawTitle: string): { token: string; afterSeparator: boolean }[] {
+  const guarded = rawTitle.replace(/[/،,\-+]/g, ` ${MM3C_GUARD} `);
+  const tokens = normalizeForMatch(guarded).split(" ").filter(Boolean).map(foldLatinToken);
+  const out: { token: string; afterSeparator: boolean }[] = [];
+  let pending = false;
+  for (const token of tokens) {
+    if (token === MM3C_GUARD) {
+      pending = true;
+      continue;
+    }
+    out.push({ token, afterSeparator: pending });
+    pending = token === "و";
+  }
+  return out;
+}
+
 // MM3: empty union → off; query code in the union → off; else reject.
 function modelMismatchReject(
   queryText: string | undefined,
@@ -2300,12 +2347,24 @@ function modelMismatchReject(
   // position) switches the rule off — a shop ad that also carries the
   // wanted model is not a wrong-model ad. The anchor need not sit next
   // to this code. Only more-off: no new reject is created here.
+  // MM3c (2026-11-04): a code read counts as a witness only if
+  // condition 1 (the token after the code is not a unit/counter word)
+  // holds, and — for short-code anchors only — condition 2 (the code
+  // is the title's first token, or follows a list separator).
   {
-    const tokens = normalizeForMatch(listingTitle).split(" ").filter(Boolean).map(foldLatinToken);
-    const part = tokens.slice(0, firstExchangeMarker(tokens));
-    for (let i = 0; i < part.length; i++) {
-      const read = readModelCodeAfter(part, i, query.anchor);
-      if (read !== null && read.code === query.code) return null;
+    const flagged = titleTokensWithSeparatorFlags(listingTitle);
+    const tokens = flagged.map((f) => f.token);
+    const cut = firstExchangeMarker(tokens);
+    for (let i = 0; i < cut; i++) {
+      const read = readModelCodeAfter(tokens, i, query.anchor);
+      if (read === null || read.code !== query.code) continue;
+      const after = read.next < tokens.length ? tokens[read.next] : null;
+      if (after !== null && MM3C_UNIT_WORDS.has(after)) continue;
+      if (MM3C_SHORT_ANCHORS.has(query.anchor.id)) {
+        const afterSeparator = flagged[i].afterSeparator || (i > 0 && tokens[i - 1] === "و");
+        if (i !== 0 && !afterSeparator) continue;
+      }
+      return null;
     }
   }
   const titleCodes = titleModelCodes(listingTitle, query.anchor);
