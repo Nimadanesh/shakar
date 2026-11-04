@@ -1395,6 +1395,11 @@ const K_REJECT_REASONS = new Set([
   "kind:service-head-general",
   "direction:buyer",
   "kind:accessory-head",
+  // HANDOFF-4c2 (2026-11-04, A1 — mandatory): the model-mismatch reject
+  // must pass the second 3a site (MUST-incomplete) and the role-clash
+  // pass-through, both of which gate on this set. Without it the rule
+  // silently never fires for ads whose title lacks the query's code.
+  "model:mismatch",
 ]);
 
 /** True for a K reject reason — the pipeline's 3a sites gate on this. */
@@ -2086,6 +2091,216 @@ function generalGate(
   return null;
 }
 
+// HANDOFF-4c2 (2026-11-04) — model mismatch (MM1–MM5).
+// دانش عمومی بازار؛ نه از تیترهای مجموعه‌های طلایی یا بیرونی. قفل تا پایان داوری مجموعه ۲.
+// The rule reads ONLY the raw query text and the listing title. A query
+// with exactly one anchor and exactly one code after it, against a title
+// whose same anchor (before any exchange marker) carries only other
+// codes, rejects with model:mismatch. Any doubt (no anchor, no code,
+// several codes, several anchors, glued Persian/Arabic digits) → off.
+// Persian/Arabic digits are unified ONLY here (unifyModelDigits); no
+// other rule and no normalize function is touched.
+type ModelAnchorSpec = {
+  id: string;
+  surfaces: readonly string[];
+  code:
+    | { kind: "range"; min: number; max: number }
+    | { kind: "set"; codes: ReadonlySet<number> }
+    | { kind: "galaxy" };
+};
+
+type ModelAnchor = {
+  id: string;
+  forms: readonly (readonly string[])[];
+  code: ModelAnchorSpec["code"];
+};
+
+const MODEL_ANCHOR_SPECS: readonly ModelAnchorSpec[] = [
+  { id: "iphone", surfaces: ["آیفون", "ایفون", "iphone"], code: { kind: "range", min: 3, max: 17 } },
+  { id: "peugeot", surfaces: ["پژو", "peugeot"], code: { kind: "set", codes: new Set([206, 207, 301, 405, 407, 408, 508, 2008, 3008, 5008]) } },
+  { id: "pride", surfaces: ["پراید"], code: { kind: "set", codes: new Set([111, 131, 132, 141, 151]) } },
+  { id: "galaxy", surfaces: ["گلکسی", "galaxy"], code: { kind: "galaxy" } },
+  { id: "playstation", surfaces: ["پلی‌استیشن", "پلی استیشن", "playstation"], code: { kind: "set", codes: new Set([1, 2, 3, 4, 5]) } },
+  { id: "mavic", surfaces: ["ماویک", "mavic"], code: { kind: "set", codes: new Set([1, 2, 3, 4]) } },
+  { id: "avata", surfaces: ["آواتا", "avata"], code: { kind: "set", codes: new Set([1, 2]) } },
+];
+
+// Anchor forms normalized with normalizeForMatch (so «آیفون» and
+// «ایفون» collapse to «ایفون», and both Persian playstation spellings
+// collapse to the «پلی استیشن» sequence), Latin folded to lowercase.
+const MODEL_ANCHORS: readonly ModelAnchor[] = MODEL_ANCHOR_SPECS.map((spec) => ({
+  id: spec.id,
+  code: spec.code,
+  forms: [
+    ...new Map(
+      spec.surfaces.map((s) => {
+        const seq = normalizeForMatch(s).split(" ").filter(Boolean).map(foldLatinToken);
+        return [seq.join(" "), seq] as const;
+      })
+    ).values(),
+  ].filter((seq) => seq.length > 0),
+}));
+
+const EXCHANGE_MARKER_SEQS: readonly (readonly string[])[] = [
+  ...new Map(
+    ["معاوضه", "تعویض با", "عوض با", "به جای", "به‌جای", "بجای"].map((s) => {
+      const seq = normalizeForMatch(s).split(" ").filter(Boolean).map(foldLatinToken);
+      return [seq.join(" "), seq] as const;
+    })
+  ).values(),
+].filter((seq) => seq.length > 0);
+
+// A2: Persian ۰-۹ and Arabic ٠-٩ digits → Latin. Only this rule uses it.
+function unifyModelDigits(token: string): string {
+  return token
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+}
+
+function modelCodeOfToken(anchor: ModelAnchor, token: string): string | null {
+  const unified = unifyModelDigits(token);
+  if (anchor.code.kind === "galaxy") {
+    const m = /^([samjf])([0-9]{1,3})$/.exec(unified);
+    return m ? `${m[1]}${parseInt(m[2], 10)}` : null;
+  }
+  if (!/^[0-9]+$/.test(unified)) return null;
+  const n = parseInt(unified, 10);
+  if (anchor.code.kind === "range") {
+    return n >= anchor.code.min && n <= anchor.code.max ? String(n) : null;
+  }
+  return anchor.code.codes.has(n) ? String(n) : null;
+}
+
+// Code immediately after an anchor occurrence: one token (digits, or a
+// glued galaxy letter+digits), or a galaxy letter token followed by a
+// digit token («S 23»). Sibling words (پرو، مکس، اولترا، FE…) are never
+// codes, so they end the read.
+function readModelCodeAfter(
+  tokens: readonly string[],
+  pos: number,
+  anchor: ModelAnchor
+): { code: string; next: number } | null {
+  if (pos >= tokens.length) return null;
+  if (anchor.code.kind === "galaxy") {
+    const first = unifyModelDigits(tokens[pos]);
+    if (/^[samjf]$/.test(first) && pos + 1 < tokens.length) {
+      const second = unifyModelDigits(tokens[pos + 1]);
+      if (/^[0-9]{1,3}$/.test(second)) {
+        return { code: `${first}${parseInt(second, 10)}`, next: pos + 2 };
+      }
+    }
+  }
+  const code = modelCodeOfToken(anchor, tokens[pos]);
+  return code === null ? null : { code, next: pos + 1 };
+}
+
+// A code list: the code after the anchor, plus same-shape codes joined
+// only by adjacency (spaces, and ، , / - which normalize to spaces)
+// or a «و» token. Anything else ends the list.
+function readModelCodeList(
+  tokens: readonly string[],
+  pos: number,
+  anchor: ModelAnchor
+): { codes: string[]; end: number } {
+  const first = readModelCodeAfter(tokens, pos, anchor);
+  if (!first) return { codes: [], end: pos };
+  const codes = [first.code];
+  let i = first.next;
+  while (i < tokens.length) {
+    let j = i;
+    if (tokens[j] === "و") j += 1;
+    const next = j < tokens.length ? readModelCodeAfter(tokens, j, anchor) : null;
+    if (!next) break;
+    codes.push(next.code);
+    i = next.next;
+  }
+  return { codes, end: i };
+}
+
+function modelAnchorOccurrences(
+  tokens: readonly string[],
+  anchor: ModelAnchor
+): { start: number; formLen: number }[] {
+  const out: { start: number; formLen: number }[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    for (const form of anchor.forms) {
+      if (
+        form.length > 0 &&
+        i + form.length <= tokens.length &&
+        form.every((f, k) => tokens[i + k] === f)
+      ) {
+        out.push({ start: i, formLen: form.length });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+// MM1: exactly one anchor occurrence and exactly one code in the query.
+// A second code-shaped token anywhere later («آیفون ۱۴ یا ۱۵») also
+// switches the rule off — the query is ambiguous, not single-model.
+function queryModelCode(queryText: string): { anchor: ModelAnchor; code: string } | null {
+  const tokens = normalizeForMatch(queryText).split(" ").filter(Boolean).map(foldLatinToken);
+  const occurrences: { anchor: ModelAnchor; start: number; formLen: number }[] = [];
+  for (const anchor of MODEL_ANCHORS) {
+    for (const occ of modelAnchorOccurrences(tokens, anchor)) {
+      occurrences.push({ anchor, ...occ });
+    }
+  }
+  if (occurrences.length !== 1) return null;
+  const { anchor, start, formLen } = occurrences[0];
+  const list = readModelCodeList(tokens, start + formLen, anchor);
+  if (list.codes.length !== 1) return null;
+  for (let i = list.end; i < tokens.length; i++) {
+    if (readModelCodeAfter(tokens, i, anchor) !== null) return null;
+  }
+  return { anchor, code: list.codes[0] };
+}
+
+function firstExchangeMarker(tokens: readonly string[]): number {
+  for (let i = 0; i < tokens.length; i++) {
+    for (const marker of EXCHANGE_MARKER_SEQS) {
+      if (
+        marker.length > 0 &&
+        i + marker.length <= tokens.length &&
+        marker.every((m, k) => tokens[i + k] === m)
+      ) {
+        return i;
+      }
+    }
+  }
+  return tokens.length;
+}
+
+// MM2: union of the same anchor's code lists in the title, cut at the
+// first exchange marker. Title only — never the description.
+function titleModelCodes(title: string, anchor: ModelAnchor): string[] {
+  const tokens = normalizeForMatch(title).split(" ").filter(Boolean).map(foldLatinToken);
+  const part = tokens.slice(0, firstExchangeMarker(tokens));
+  const codes = new Set<string>();
+  for (const occ of modelAnchorOccurrences(part, anchor)) {
+    for (const code of readModelCodeList(part, occ.start + occ.formLen, anchor).codes) {
+      codes.add(code);
+    }
+  }
+  return [...codes];
+}
+
+// MM3: empty union → off; query code in the union → off; else reject.
+function modelMismatchReject(
+  queryText: string | undefined,
+  listingTitle: string | undefined
+): string | null {
+  if (!queryText || !listingTitle) return null;
+  const query = queryModelCode(queryText);
+  if (!query) return null;
+  const titleCodes = titleModelCodes(listingTitle, query.anchor);
+  if (titleCodes.length === 0) return null;
+  if (titleCodes.includes(query.code)) return null;
+  return "model:mismatch";
+}
+
 export function assessModelSpecificity(
   includeTerms: readonly string[],
   listingText: string,
@@ -2204,6 +2419,16 @@ export function assessModelSpecificity(
       brandOnly
     );
     if (g) return g;
+  }
+
+  // HANDOFF-4c2 (2026-11-04): model mismatch — the query's anchor+code
+  // differs from every code of the same anchor in the title (before any
+  // exchange marker). Runs after K/G and before partial-evidence, so it
+  // is a 3a rejection even when MUST terms are missing; the pipeline
+  // gates on model:mismatch via K_REJECT_REASONS (A1).
+  {
+    const mm = modelMismatchReject(queryText, listingTitle);
+    if (mm !== null) return { mismatch: true, reason: mm, tier: "reject" };
   }
 
   // Identity reasoning starts only from full lexical evidence; partial

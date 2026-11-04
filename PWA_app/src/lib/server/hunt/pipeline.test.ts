@@ -4776,3 +4776,180 @@ describe("HANDOFF-4c1 — fine kind for brand-only ads (FK7, FK6, FK1)", () => {
     expect(results[0].tier).toBeLessThanOrEqual(3);
   });
 });
+
+describe("HANDOFF-4c2 — model mismatch (MM1–MM5, A1, A7)", () => {
+  // Full path: sentence → resolveHuntDefinition → runPipeline with a
+  // mock provider. runOne uses description = title; runOneDesc lets the
+  // description differ, so MM2 (title only) can be tested.
+  async function runOneDesc(query: string, title: string, description: string) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+    });
+    if (!def) throw new Error("no definition for " + query);
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "a1", title })],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async () => ({
+      sourceAdId: "a1",
+      title,
+      price: null,
+      city: "",
+      description,
+      images: [],
+      categorySlug: "",
+    }));
+    return runPipeline(def, () => {});
+  }
+
+  async function runOne(query: string, title: string) {
+    return runOneDesc(query, title, title);
+  }
+
+  function traceReason(
+    trace: Array<{ sourceAdId: string; reasons?: string[] }>,
+    id: string
+  ): string[] {
+    return trace.find((t) => t.sourceAdId === id)?.reasons ?? [];
+  }
+
+  async function expectReject(query: string, title: string, desc?: string) {
+    const { results, trace } =
+      desc === undefined ? await runOne(query, title) : await runOneDesc(query, title, desc);
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("model:mismatch");
+  }
+
+  async function expectShown(query: string, title: string, tier: number, desc?: string) {
+    const { results, trace } =
+      desc === undefined ? await runOne(query, title) : await runOneDesc(query, title, desc);
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(tier);
+    expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
+  }
+
+  it("tier 4 (point 1): «آیفون ۱۵» + «آیفون ۱۴ پرو مکس قابل معاوضه با ۱۵ پرو مکس»", async () => {
+    await expectReject("آیفون ۱۵", "آیفون ۱۴ پرو مکس قابل معاوضه با ۱۵ پرو مکس");
+  });
+
+  it("tier 4 (point 2): «آیفون ۱۵» + «آیفون ۱۴ ۱۲۸ گیگ»", async () => {
+    await expectReject("آیفون ۱۵", "آیفون ۱۴ ۱۲۸ گیگ");
+  });
+
+  it("tier 4: «آیفون ۱۵» + «آیفون ١٤ تمیز» (رقم عربی)", async () => {
+    await expectReject("آیفون ۱۵", "آیفون ١٤ تمیز");
+  });
+
+  it("tier 4: «گوشی iPhone 15» + «آیفون ۱۳ پرو»", async () => {
+    await expectReject("گوشی iPhone 15", "آیفون ۱۳ پرو");
+  });
+
+  it("tier 4: «آیفون ۱۳ ۱۲۸ گیگ» + «آیفون ۱۴ پرو»", async () => {
+    await expectReject("آیفون ۱۳ ۱۲۸ گیگ", "آیفون ۱۴ پرو");
+  });
+
+  it("tier 4: «پژو ۲۰۶» + «پژو ۲۰۷ مدل ۹۸»", async () => {
+    await expectReject("پژو ۲۰۶", "پژو ۲۰۷ مدل ۹۸");
+  });
+
+  it("tier 4: «پراید ۱۱۱» + «پراید ۱۳۱ تمیز»", async () => {
+    await expectReject("پراید ۱۱۱", "پراید ۱۳۱ تمیز");
+  });
+
+  it("tier 4: «گوشی گلکسی S23» + «Galaxy A54»", async () => {
+    await expectReject("گوشی گلکسی S23", "Galaxy A54");
+  });
+
+  it("tier 4: «کنسول پلی‌استیشن ۵» + «پلی‌استیشن ۴ اسلیم»", async () => {
+    await expectReject("کنسول پلی‌استیشن ۵", "پلی‌استیشن ۴ اسلیم");
+  });
+
+  it("tier 4: «پهپاد ماویک ۳» + «Mavic 2 Pro»", async () => {
+    await expectReject("پهپاد ماویک ۳", "Mavic 2 Pro");
+  });
+
+  it("tier 4 (A7): «آیفون15» + «آیفون ۱۴ تمیز»", async () => {
+    await expectReject("آیفون15", "آیفون ۱۴ تمیز");
+  });
+
+  it("tier 4 (A7): «کنسول پلی استیشن ۵» + «پلی‌استیشن ۴ اسلیم»", async () => {
+    await expectReject("کنسول پلی استیشن ۵", "پلی‌استیشن ۴ اسلیم");
+  });
+
+  it("shown tier 1: «آیفون ۱۵» + «آیفون ۱۵ ۲۵۶ گیگ» (۲۵۶ کد آیفون نیست)", async () => {
+    await expectShown("آیفون ۱۵", "آیفون ۱۵ ۲۵۶ گیگ", 1);
+  });
+
+  it("shown tier 3: «آیفون ۱۵» + «iPhone 15 Pro» (رقم/حروف + sibling)", async () => {
+    await expectShown("آیفون ۱۵", "iPhone 15 Pro", 3);
+  });
+
+  it("shown tier 1: «آیفون ۱۵» + «آیفون ۱۳، ۱۴، ۱۵ موجود» (چندمدلی)", async () => {
+    await expectShown("آیفون ۱۵", "آیفون ۱۳، ۱۴، ۱۵ موجود", 1);
+  });
+
+  it("shown tier 1: «آیفون ۱۵» + «آیفون ۱۴ و آیفون ۱۵ پرو» (اجتماع وقوع‌ها)", async () => {
+    await expectShown("آیفون ۱۵", "آیفون ۱۴ و آیفون ۱۵ پرو", 1);
+  });
+
+  it("shown tier 3: «آیفون ۱۵» + «آیفون X تمیز» (کد ندارد)", async () => {
+    await expectShown("آیفون ۱۵", "آیفون X تمیز", 3);
+  });
+
+  it("shown tier 3: «آیفون ۱۵» + «معاوضه آیفون ۱۴ با ۱۵» (نشانه‌ی معاوضه پیش از لنگر)", async () => {
+    await expectShown("آیفون ۱۵", "معاوضه آیفون ۱۴ با ۱۵", 3);
+  });
+
+  it("shown tier 1: «آیفون ۱۵» + تیتر «آیفون ۱۵ پرو» با توضیح «قبلاً آیفون ۱۴ داشتم» (فقط تیتر)", async () => {
+    await expectShown("آیفون ۱۵", "آیفون ۱۵ پرو", 1, "قبلاً آیفون ۱۴ داشتم");
+  });
+
+  it("shown tier 1: «آیفون ۱۴ یا ۱۵» + «آیفون ۱۴» (پرسمان دو کد)", async () => {
+    await expectShown("آیفون ۱۴ یا ۱۵", "آیفون ۱۴", 1);
+  });
+
+  it("shown tier 1: «آیفون» + «آیفون ۱۴» (پرسمان کد ندارد)", async () => {
+    await expectShown("آیفون", "آیفون ۱۴", 1);
+  });
+
+  it("shown tier 1: «پژو ۲۰۶» + «پژو ۲۰۶ مدل ۹۸» (۹۸ بعد از «مدل»)", async () => {
+    await expectShown("پژو ۲۰۶", "پژو ۲۰۶ مدل ۹۸", 1);
+  });
+
+  it("shown tier 3: «پژو ۲۰۶» + «پژو ۱۴۰۰ صفر» (۱۴۰۰ کد پژو نیست)", async () => {
+    await expectShown("پژو ۲۰۶", "پژو ۱۴۰۰ صفر", 3);
+  });
+
+  it("shown tier 1: «پژو ۲۰۶ مدل ۱۴۰۱ به بالا» + «پژو ۲۰۶ تیپ ۵ مدل ۱۴۰۲»", async () => {
+    await expectShown("پژو ۲۰۶ مدل ۱۴۰۱ به بالا", "پژو ۲۰۶ تیپ ۵ مدل ۱۴۰۲", 1);
+  });
+
+  it("shown tier 1: «پراید ۱۳۱» + «پراید ۱۱۱ و ۱۳۱»", async () => {
+    await expectShown("پراید ۱۳۱", "پراید ۱۱۱ و ۱۳۱", 1);
+  });
+
+  it("shown tier 3: «گوشی گلکسی S23» + «Galaxy S23 Ultra»", async () => {
+    await expectShown("گوشی گلکسی S23", "Galaxy S23 Ultra", 3);
+  });
+
+  it("shown tier 3: «گوشی گلکسی S23» + «galaxy s23 FE»", async () => {
+    await expectShown("گوشی گلکسی S23", "galaxy s23 FE", 3);
+  });
+
+  it("shown tier 3: «گوشی گلکسی S23» + «گلکسی اس ۲۳» (حرف فارسی ← کد ندارد)", async () => {
+    await expectShown("گوشی گلکسی S23", "گلکسی اس ۲۳", 3);
+  });
+
+  it("shown tier 3: «پهپاد ماویک ۳» + «Mavic Air 2» (واژه‌ی میانی ← کد ندارد)", async () => {
+    await expectShown("پهپاد ماویک ۳", "Mavic Air 2", 3);
+  });
+
+  it("A7 gap (A3): «پژو۲۰۶» + «پژو ۲۰۷ تمیز» → rejected as today, NOT model:mismatch", async () => {
+    const { results, trace } = await runOne("پژو۲۰۶", "پژو ۲۰۷ تمیز");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("no-match");
+    expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
+  });
+});
