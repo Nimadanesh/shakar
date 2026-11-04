@@ -4870,8 +4870,12 @@ describe("HANDOFF-4c2 — model mismatch (MM1–MM5, A1, A7)", () => {
     await expectReject("پهپاد ماویک ۳", "Mavic 2 Pro");
   });
 
+  // به دستور مالک ۲۰۲۶-۱۱-۰۴ (گزینه‌ی الف): پرسمان چسبیده آگهی را در رد صفر-شاهد (pipeline.ts حدود :۱۰۶۵) می‌کُشد، پیش از قاعده
   it("tier 4 (A7): «آیفون15» + «آیفون ۱۴ تمیز»", async () => {
-    await expectReject("آیفون15", "آیفون ۱۴ تمیز");
+    const { results, trace } = await runOne("آیفون15", "آیفون ۱۴ تمیز");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("no-match");
+    expect(traceReason(trace, "a1")).not.toContain("model:mismatch");
   });
 
   it("tier 4 (A7): «کنسول پلی استیشن ۵» + «پلی‌استیشن ۴ اسلیم»", async () => {
