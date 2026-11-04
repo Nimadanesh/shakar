@@ -4,6 +4,8 @@ import {
   brandOfFamily,
   familiesOfBrand,
   familyByToken,
+  FAMILY_NEXT_WORD_KIND,
+  FINE_KIND_WORDS,
   MODEL_FAMILIES,
 } from "./modelFamilies";
 import {
@@ -100,6 +102,67 @@ describe("HANDOFF-4b — modelFamilies", () => {
       if (family.en !== "") {
         expect(BRAND_SET.has(family.en)).toBe(true);
       }
+    }
+  });
+});
+
+describe("HANDOFF-4c1 — family kinds (table 1) and tables 2 and 3", () => {
+  const byId = new Map(MODEL_FAMILIES.map((f) => [f.id, f]));
+
+  it("still has exactly 51 entries, ids and brandIds unchanged", () => {
+    expect(MODEL_FAMILIES).toHaveLength(51);
+    expect(new Set(MODEL_FAMILIES.map((f) => f.id)).size).toBe(51);
+  });
+
+  it("table 1: default kinds match the handoff list", () => {
+    expect(byId.get("ipad")?.kind).toBe("tablet");
+    expect(byId.get("macbook")?.kind).toBe("laptop");
+    expect(byId.get("airpods")?.kind).toBe("headphones");
+    expect(byId.get("xperia")?.kind).toBe("phone");
+    expect(byId.get("mavic")?.kind).toBe("drone");
+    expect(byId.get("gshock")?.kind).toBe("watch");
+    expect(byId.get("clavinova")?.kind).toBe("piano");
+    expect(byId.get("vitara")?.kind).toBe("car");
+    expect(byId.get("کوییک")?.kind).toBe("car");
+    expect(byId.get("partybox")?.kind).toBe("speaker");
+    expect(byId.get("powercore")?.kind).toBe("powerbank");
+    expect(byId.get("bravia")?.kind).toBe("tv");
+    expect(byId.get("powershot")?.kind).toBe("camera");
+    expect(byId.get("playstation")?.kind).toBe("console");
+    expect(byId.get("dedica")?.kind).toBe("coffee-machine");
+  });
+
+  it("table 1: multi-kind families have no default kind", () => {
+    for (const id of ["galaxy", "redmi", "poco", "soundcore"]) {
+      expect(byId.get(id)?.kind).toBeUndefined();
+    }
+  });
+
+  it("table 2: next-word kinds", () => {
+    expect(FAMILY_NEXT_WORD_KIND["tab"]).toBe("tablet");
+    expect(FAMILY_NEXT_WORD_KIND["تب"]).toBe("tablet");
+    expect(FAMILY_NEXT_WORD_KIND["pad"]).toBe("tablet");
+    expect(FAMILY_NEXT_WORD_KIND["watch"]).toBe("watch");
+    expect(FAMILY_NEXT_WORD_KIND["ساعت"]).toBe("watch");
+    expect(FAMILY_NEXT_WORD_KIND["buds"]).toBe("headphones");
+    expect(FAMILY_NEXT_WORD_KIND["بادز"]).toBe("headphones");
+    expect(FAMILY_NEXT_WORD_KIND["book"]).toBe("laptop");
+    expect(FAMILY_NEXT_WORD_KIND["بوک"]).toBe("laptop");
+  });
+
+  it("table 3: fine-kind forms, and نوت‌بوک deliberately absent", () => {
+    const forms = new Map(
+      FINE_KIND_WORDS.map((e) => [e.kind, e.forms] as const)
+    );
+    expect(forms.get("phone")).toContain("گوشی");
+    expect(forms.get("phone")).toContain("تلفن همراه");
+    expect(forms.get("laptop")).toContain("لپ‌تاپ");
+    expect(forms.get("watch")).toContain("ساعت هوشمند");
+    expect(forms.get("motorcycle")).toContain("موتورسیکلت");
+    for (const entry of FINE_KIND_WORDS) {
+      expect(entry.forms).not.toContain("نوت‌بوک");
+      expect(entry.forms).not.toContain("ماشین");
+      expect(entry.forms).not.toContain("ایرپاد");
     }
   });
 });

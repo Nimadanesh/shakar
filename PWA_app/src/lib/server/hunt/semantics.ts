@@ -10,7 +10,14 @@ import {
   unifyChars,
 } from "@/lib/persianNormalize";
 import { includesWord, isServiceDemandTerm, SERVICE_DEMAND_FAMILY, ROLE_WORDS } from "@/lib/interpret";
-import { adKindForTitle, HEAD_KIND, HEAD_SKIP_TOKENS } from "./kindLexicon";
+import { adKindForTitle, HEAD_KIND, HEAD_SKIP_TOKENS, queryKindForDef } from "./kindLexicon";
+import {
+  FAMILY_NEXT_WORD_KIND,
+  FINE_KIND_WORDS,
+  familyByToken,
+  type FamilyKind,
+  type ModelFamily,
+} from "@/lib/modelFamilies";
 
 /**
  * Phase-1 semantic assessments (deterministic, rule-based).
@@ -1755,6 +1762,131 @@ export function brandOtherKindRejects(
   const adKind = adKindForTitle(title);
   if (adKind === null || adKind === queryKind) return null;
   return "kind:brand-other-kind";
+}
+
+/**
+ * HANDOFF-4c1 — fine-kind reject for brand-only survivors (FK7, FK6,
+ * FK1, in that order; FK2: kind comes from the title only, never the
+ * description). Runs next to R3, after all existing rejects; it undoes
+ * no rejection. Returns the tier-4 reason, or null to keep today's
+ * behavior. tier.ts is untouched: these reasons have no reason table.
+ *
+ * - Q = table 3 on the subject word (def.include[0]). Unknown subject
+ *   (not in table 3, e.g. a brand word or an «یا» group subject) turns
+ *   the whole rule off.
+ * - H = table 3 on the title head (titleHeadTokensAfterG0Fillers,
+ *   windows of 1–3 tokens from position 0, spaceless, exact, longest
+ *   first — the HANDOFF-2ج shape). Known H decides alone.
+ * - FK6: unknown H, but kindLexicon's coarse ad kind equals the coarse
+ *   query kind → keep today's behavior.
+ * - FK1: each occurrence of a family of a QUERY brand in the title is
+ *   judged separately (1–3-token windows on MODEL_FAMILIES forms, with
+ *   the next token kept). An occurrence's kind is table 2's next-word
+ *   kind, else table 1's default. Reject only when at least one
+ *   occurrence exists, every occurrence's kind is known, and none
+ *   equals Q. Any kindless or same-kind occurrence keeps the ad.
+ */
+const FINE_KIND_SPACELESS: readonly {
+  readonly kind: FamilyKind;
+  readonly keys: ReadonlySet<string>;
+}[] = FINE_KIND_WORDS.map((entry) => ({
+  kind: entry.kind,
+  keys: new Set(
+    entry.forms.map((form) =>
+      normalizeForMatch(form).replace(/[\s\u200C]/g, "")
+    )
+  ),
+}));
+
+function fineKindOfSpaceless(spaceless: string): FamilyKind | null {
+  if (spaceless === "") return null;
+  for (const entry of FINE_KIND_SPACELESS) {
+    if (entry.keys.has(spaceless)) return entry.kind;
+  }
+  return null;
+}
+
+function fineKindOfSubjectWord(word: string): FamilyKind | null {
+  return fineKindOfSpaceless(
+    normalizeForMatch(word).replace(/[\s\u200C]/g, "")
+  );
+}
+
+function fineKindOfHead(headTokens: string[]): FamilyKind | null {
+  for (let len = Math.min(3, headTokens.length); len >= 1; len--) {
+    const joined = headTokens.slice(0, len).join("");
+    const kind = fineKindOfSpaceless(joined);
+    if (kind !== null) return kind;
+  }
+  return null;
+}
+
+interface FamilyOccurrence {
+  readonly family: ModelFamily;
+  readonly nextToken: string | undefined;
+}
+
+function familyOccurrencesInTitle(title: string): FamilyOccurrence[] {
+  const tokens = normalizeForMatch(title).split(" ").filter(Boolean);
+  const occurrences: FamilyOccurrence[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    for (let len = Math.min(3, tokens.length - i); len >= 1; len--) {
+      const family = familyByToken(tokens.slice(i, i + len).join(""));
+      if (family !== undefined) {
+        occurrences.push({
+          family,
+          nextToken: tokens[i + len],
+        });
+        break;
+      }
+    }
+  }
+  return occurrences;
+}
+
+export function fineKindReject(
+  title: string,
+  subjectWord: string,
+  def: {
+    readonly include: readonly string[];
+    readonly serviceIntent?: boolean | null;
+    readonly category: string;
+  }
+): string | null {
+  const q = fineKindOfSubjectWord(subjectWord);
+  if (q === null) return null;
+  // FK7: a known head kind decides alone.
+  const h = fineKindOfHead(titleHeadTokensAfterG0Fillers(title));
+  if (h !== null) return h === q ? null : "kind:head-other-kind";
+  // FK6: kindLexicon's coarse kinds agree → keep today's behavior.
+  const adKind = adKindForTitle(title);
+  const qKind = queryKindForDef(
+    [...def.include],
+    def.serviceIntent ?? false,
+    def.category
+  );
+  if (adKind !== null && adKind === qKind) return null;
+  // FK1: only families of a QUERY brand count.
+  const queryBrands = new Set<string>();
+  for (const term of def.include) {
+    const g = brandGroupOfTerm(term);
+    if (g !== null) queryBrands.add(g);
+  }
+  const occurrences = familyOccurrencesInTitle(title).filter((o) =>
+    queryBrands.has(o.family.brandId)
+  );
+  if (occurrences.length === 0) return null;
+  const kinds: (FamilyKind | null)[] = occurrences.map((o) => {
+    if (o.nextToken !== undefined) {
+      const nextKind =
+        FAMILY_NEXT_WORD_KIND[o.nextToken.toLowerCase()];
+      if (nextKind !== undefined) return nextKind;
+    }
+    return o.family.kind ?? null;
+  });
+  if (kinds.some((k) => k === null)) return null;
+  if (kinds.some((k) => k === q)) return null;
+  return "kind:family-other-kind";
 }
 
 function generalGate(

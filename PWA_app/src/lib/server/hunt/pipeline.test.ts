@@ -4376,18 +4376,18 @@ describe("HANDOFF-4b — model families: brand ← family substitution", () => {
     expect(stats.titleRejected).toBe(1);
   });
 
+  // به دستور مالک ۲۰۲۶-۱۱-۰۴: خانواده‌ی آیپد نوع تبلت دارد و با پرسمان گوشی فرق می‌کند، پس ردیف ۴ است.
   it("amendment 4 record: «گوشی اپل» + «iPad Pro ۱۱ اینچ» → tier 3, kind:brand-only", async () => {
-    const { results } = await runOne("گوشی اپل", "iPad Pro ۱۱ اینچ");
-    expect(results).toHaveLength(1);
-    expect(results[0].tier).toBe(3);
-    expect(results[0].tierReasons).toContain("kind:brand-only");
+    const { results, trace } = await runOne("گوشی اپل", "iPad Pro ۱۱ اینچ");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
   });
 
+  // به دستور مالک ۲۰۲۶-۱۱-۰۴: خانواده‌ی ایرپاد نوع هدفون دارد و با پرسمان گوشی فرق می‌کند، پس ردیف ۴ است.
   it("amendment 4 record: «گوشی اپل» + «ایرپاد پرو ۲» → tier 3, kind:brand-only", async () => {
-    const { results } = await runOne("گوشی اپل", "ایرپاد پرو ۲");
-    expect(results).toHaveLength(1);
-    expect(results[0].tier).toBe(3);
-    expect(results[0].tierReasons).toContain("kind:brand-only");
+    const { results, trace } = await runOne("گوشی اپل", "ایرپاد پرو ۲");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
   });
 
   it("amendment 4 record: «لپ‌تاپ اپل» + «MacBook Pro M1» → tier 3, kind:brand-only", async () => {
@@ -4397,18 +4397,18 @@ describe("HANDOFF-4b — model families: brand ← family substitution", () => {
     expect(results[0].tierReasons).toContain("kind:brand-only");
   });
 
+  // به دستور مالک ۲۰۲۶-۱۱-۰۴: واژه‌ی بعدی Watch به خانواده‌ی گلکسی نوع ساعت می‌دهد و با پرسمان گوشی فرق می‌کند، پس ردیف ۴ است.
   it("amendment 4 record: «گوشی سامسونگ» + «Galaxy Watch 5» → tier 3, kind:brand-only", async () => {
-    const { results } = await runOne("گوشی سامسونگ", "Galaxy Watch 5");
-    expect(results).toHaveLength(1);
-    expect(results[0].tier).toBe(3);
-    expect(results[0].tierReasons).toContain("kind:brand-only");
+    const { results, trace } = await runOne("گوشی سامسونگ", "Galaxy Watch 5");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
   });
 
+  // به دستور مالک ۲۰۲۶-۱۱-۰۴: واژه‌ی بعدی Tab به خانواده‌ی گلکسی نوع تبلت می‌دهد و با پرسمان گوشی فرق می‌کند، پس ردیف ۴ است.
   it("amendment 4 record: «گوشی سامسونگ» + «Galaxy Tab S8» → tier 3, kind:brand-only", async () => {
-    const { results } = await runOne("گوشی سامسونگ", "Galaxy Tab S8");
-    expect(results).toHaveLength(1);
-    expect(results[0].tier).toBe(3);
-    expect(results[0].tierReasons).toContain("kind:brand-only");
+    const { results, trace } = await runOne("گوشی سامسونگ", "Galaxy Tab S8");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
   });
 });
 
@@ -4527,5 +4527,252 @@ describe("HANDOFF-4c0 — Latin case-insensitive generic matching (include + exc
     const { results } = await runOne("پهپاد DJI، Mavic نباشه", "پهپاد DJI Avata 2");
     expect(results).toHaveLength(1);
     expect(results[0].tier).toBe(1);
+  });
+});
+
+describe("HANDOFF-4c1 — fine kind for brand-only ads (FK7, FK6, FK1)", () => {
+  // Full path: sentence → resolveHuntDefinition → runPipeline with a
+  // mock provider. runOne uses description = title; runOneDesc lets the
+  // description differ, so FK2 (title-only kind) can be tested.
+  async function runOneDesc(query: string, title: string, description: string) {
+    const def = resolveHuntDefinition({
+      query,
+      transaction: "",
+      condition: "",
+    });
+    if (!def) throw new Error("no definition for " + query);
+    mockSearchLists.mockResolvedValueOnce({
+      listings: [summary({ sourceAdId: "a1", title })],
+      hasMore: false,
+    });
+    mockGetDetail.mockImplementation(async () => ({
+      sourceAdId: "a1",
+      title,
+      price: null,
+      city: "",
+      description,
+      images: [],
+      categorySlug: "",
+    }));
+    return runPipeline(def, () => {});
+  }
+
+  async function runOne(query: string, title: string) {
+    return runOneDesc(query, title, title);
+  }
+
+  function traceReason(
+    trace: Array<{ sourceAdId: string; reasons?: string[] }>,
+    id: string
+  ): string[] {
+    return trace.find((t) => t.sourceAdId === id)?.reasons ?? [];
+  }
+
+  it("tier 4 family-other-kind: «گوشی اپل» + «آیپد پرو ۱۱ اینچ»", async () => {
+    const { results, trace } = await runOne("گوشی اپل", "آیپد پرو ۱۱ اینچ");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
+  });
+
+  it("tier 4 family-other-kind: «گوشی اپل» + «ایرپاد پرو ۲»", async () => {
+    const { results, trace } = await runOne("گوشی اپل", "ایرپاد پرو ۲");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
+  });
+
+  it("tier 4 family-other-kind: «گوشی اپل» + «مک‌بوک ایر M2»", async () => {
+    const { results, trace } = await runOne("گوشی اپل", "مک‌بوک ایر M2");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
+  });
+
+  it("tier 4 family-other-kind: «گوشی سامسونگ» + «Galaxy Watch 5»", async () => {
+    const { results, trace } = await runOne("گوشی سامسونگ", "Galaxy Watch 5");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
+  });
+
+  it("tier 4 family-other-kind: «گوشی سامسونگ» + «Galaxy Tab S8»", async () => {
+    const { results, trace } = await runOne("گوشی سامسونگ", "Galaxy Tab S8");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
+  });
+
+  it("tier 4 family-other-kind: «گوشی شیائومی» + «Redmi Pad SE»", async () => {
+    const { results, trace } = await runOne("گوشی شیائومی", "Redmi Pad SE");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
+  });
+
+  it("tier 4 family-other-kind: «تلویزیون سونی» + «پلی‌استیشن ۵ با دو دسته»", async () => {
+    const { results, trace } = await runOne("تلویزیون سونی", "پلی‌استیشن ۵ با دو دسته");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
+  });
+
+  it("tier 4 family-other-kind: «لپ‌تاپ سامسونگ» + «Galaxy Buds 2 Pro»", async () => {
+    const { results, trace } = await runOne("لپ‌تاپ سامسونگ", "Galaxy Buds 2 Pro");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
+  });
+
+  it("tier 4 family-other-kind: «موتورسیکلت سوزوکی» + «ویتارا ۲۰۱۵ تمیز»", async () => {
+    const { results, trace } = await runOne("موتورسیکلت سوزوکی", "ویتارا ۲۰۱۵ تمیز");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:family-other-kind");
+  });
+
+  it("tier 4 head-other-kind: «گوشی سامسونگ» + «تبلت سامسونگ A8»", async () => {
+    const { results, trace } = await runOne("گوشی سامسونگ", "تبلت سامسونگ A8");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:head-other-kind");
+  });
+
+  it("tier 4 head-other-kind: «گوشی سامسونگ» + «تبلت سامسونگ گلکسی تب A8»", async () => {
+    const { results, trace } = await runOne("گوشی سامسونگ", "تبلت سامسونگ گلکسی تب A8");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:head-other-kind");
+  });
+
+  it("tier 4 head-other-kind: «تبلت سامسونگ» + «گوشی سامسونگ A54»", async () => {
+    const { results, trace } = await runOne("تبلت سامسونگ", "گوشی سامسونگ A54");
+    expect(results).toHaveLength(0);
+    expect(traceReason(trace, "a1")).toContain("kind:head-other-kind");
+  });
+
+  it("shown tier 3: «تبلت اپل» + «آیپد پرو ۱۱ اینچ»", async () => {
+    const { results } = await runOne("تبلت اپل", "آیپد پرو ۱۱ اینچ");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «تبلت سامسونگ» + «Galaxy Tab S8»", async () => {
+    const { results } = await runOne("تبلت سامسونگ", "Galaxy Tab S8");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «ساعت سامسونگ» + «Galaxy Watch 5»", async () => {
+    const { results } = await runOne("ساعت سامسونگ", "Galaxy Watch 5");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «هدفون اپل» + «ایرپاد مکس»", async () => {
+    const { results } = await runOne("هدفون اپل", "ایرپاد مکس");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «لپ‌تاپ اپل» + «مک‌بوک پرو M1»", async () => {
+    const { results } = await runOne("لپ‌تاپ اپل", "مک‌بوک پرو M1");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «پیانو یاماها» + «کلاوینوا CLP 735»", async () => {
+    const { results } = await runOne("پیانو یاماها", "کلاوینوا CLP 735");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «تلویزیون سونی» + «براویا ۵۵ اینچ با پلی‌استیشن ۵ هدیه»", async () => {
+    const { results } = await runOne("تلویزیون سونی", "براویا ۵۵ اینچ با پلی‌استیشن ۵ هدیه");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «گوشی سامسونگ» + «Galaxy S23»", async () => {
+    const { results } = await runOne("گوشی سامسونگ", "Galaxy S23");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «گوشی سامسونگ» + «گلکسی S23 اولترا»", async () => {
+    const { results } = await runOne("گوشی سامسونگ", "گلکسی S23 اولترا");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «گوشی سامسونگ» + «Galaxy S23 همراه Galaxy Watch» (one kindless occurrence → off)", async () => {
+    const { results } = await runOne("گوشی سامسونگ", "Galaxy S23 همراه Galaxy Watch");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «گوشی سامسونگ» + «موبایل سامسونگ A54» (FK7: H = Q)", async () => {
+    const { results } = await runOne("گوشی سامسونگ", "موبایل سامسونگ A54");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «گوشی شیائومی» + «ردمی نوت ۱۲»", async () => {
+    const { results } = await runOne("گوشی شیائومی", "ردمی نوت ۱۲");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «ماشین تویوتا» + «کرولا ۲۰۱۰ تمیز»", async () => {
+    const { results } = await runOne("ماشین تویوتا", "کرولا ۲۰۱۰ تمیز");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «گوشی اپل» + «آیفون ۱۴ پرو ۲۵۶ همراه ایرپاد» (FK6)", async () => {
+    const { results } = await runOne("گوشی اپل", "آیفون ۱۴ پرو ۲۵۶ همراه ایرپاد");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 3: «گوشی اپل» + «موبایل آیفون ۱۳ با ایرپاد هدیه» (FK7: H = Q)", async () => {
+    const { results } = await runOne("گوشی اپل", "موبایل آیفون ۱۳ با ایرپاد هدیه");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("shown tier 1: «گوشی اپل» + «گوشی آیفون ۱۳ با ایرپاد هدیه» (not brand-only)", async () => {
+    const { results } = await runOne("گوشی اپل", "گوشی آیفون ۱۳ با ایرپاد هدیه");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+  });
+
+  it("shown tier 1: «تبلت یا گوشی سامسونگ» + «تبلت سامسونگ A8» (یا group → off)", async () => {
+    const { results } = await runOne("تبلت یا گوشی سامسونگ", "تبلت سامسونگ A8");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+  });
+
+  it("shown tier 1: «تبلت یا گوشی سامسونگ» + «گوشی سامسونگ A54» (یا group → off)", async () => {
+    const { results } = await runOne("تبلت یا گوشی سامسونگ", "گوشی سامسونگ A54");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(1);
+  });
+
+  it("shown tier 3: «گوشی اپل» + title «اپل اصل با جعبه» + description «همراه آیپد» (FK2: description makes no kind)", async () => {
+    const { results } = await runOneDesc("گوشی اپل", "اپل اصل با جعبه", "همراه آیپد");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBe(3);
+    expect(results[0].tierReasons).toContain("kind:brand-only");
+  });
+
+  it("accepted risk: «گوشی سامسونگ» + «شکلات Galaxy ۲۵۰ گرمی» → shown, tier ≤ 3", async () => {
+    const { results } = await runOne("گوشی سامسونگ", "شکلات Galaxy ۲۵۰ گرمی");
+    expect(results).toHaveLength(1);
+    expect(results[0].tier).toBeLessThanOrEqual(3);
   });
 });

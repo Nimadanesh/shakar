@@ -37,6 +37,7 @@ import {
   assessServiceTarget,
   equipmentBeforeService,
   exclusionFires,
+  fineKindReject,
   isRepairWord,
   isMixedTransactionTitle,
   rolesClash,
@@ -1235,6 +1236,22 @@ function evaluateDescription(
         huntWantsSellers,
         adRole,
         rejectedKind: otherKind,
+      };
+    }
+    // HANDOFF-4c1 FK: fine-kind reject for brand-only survivors, right
+    // after R3. No new logic here — the rule lives in semantics.ts.
+    const fineKind = fineKindReject(title, def.include[0], def);
+    if (fineKind !== null) {
+      return {
+        ...rejectedEvaluation(),
+        missingInfo,
+        providerHits,
+        goodsHits,
+        needsRepairHits,
+        dealerHits,
+        huntWantsSellers,
+        adRole,
+        rejectedKind: fineKind,
       };
     }
     brandOnly = true;
